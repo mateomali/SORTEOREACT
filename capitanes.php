@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
     $participantIds = array_map(static fn(array $p): int => (int) $p['id'], $participants);
 
     if ($matchId <= 0 || !$participants) {
-        flash('error', 'Selecciona un encuentro con convocados.');
+        flash('error', 'Selecciona un partido con convocados.');
         redirect('capitanes.php');
     }
     if (count($participants) % 2 !== 0) {
@@ -164,7 +164,7 @@ require __DIR__ . '/includes/header.php';
 <section class="page-head">
   <div>
     <h1><?= $isCaptainView ? 'Eleccion de capitan' : 'Modo capitanes' ?></h1>
-    <p class="small-muted"><?= $isCaptainView ? 'Espera tu turno y elige un jugador.' : 'Draft remoto por turnos sobre los convocados del encuentro.' ?></p>
+    <p class="small-muted"><?= $isCaptainView ? 'Espera tu turno y elige un jugador.' : 'Draft remoto por turnos sobre los convocados del partido.' ?></p>
   </div>
 </section>
 
@@ -172,7 +172,7 @@ require __DIR__ . '/includes/header.php';
 <section class="card mb-3.5">
   <form method="get" class="form-grid">
     <div class="form-row">
-      <label>Seleccionar encuentro</label>
+      <label>Seleccionar partido</label>
       <select name="match_id" onchange="this.form.submit()">
         <option value="">Elegir...</option>
         <?php foreach ($matches as $m): ?>
@@ -490,7 +490,7 @@ require __DIR__ . '/includes/header.php';
           } else if (teamView > 0 && captainToken !== '') {
             turn.innerHTML = 'Draft completo. La formacion ya no se puede editar porque el partido esta finalizado.';
           } else {
-            turn.innerHTML = 'Draft completo. Los equipos ya quedaron guardados para finalizar el encuentro.';
+            turn.innerHTML = 'Draft completo. Los equipos ya quedaron guardados para finalizar el partido.';
           }
         } else if (teamView > 0 && captainToken === '') {
           turn.innerHTML = 'Este link no tiene token de capitan. Pide al admin el link correcto.';

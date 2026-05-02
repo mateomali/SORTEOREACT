@@ -170,12 +170,12 @@ function captain_state(int $matchId): array
 {
     $match = repo_match_by_id($matchId);
     if (!$match) {
-        return ['ok' => false, 'message' => 'Encuentro no encontrado'];
+        return ['ok' => false, 'message' => 'Partido no encontrado'];
     }
 
     $draft = captain_draft_row($matchId);
     if (!$draft) {
-        return ['ok' => false, 'message' => 'No hay modo capitanes iniciado para este encuentro'];
+        return ['ok' => false, 'message' => 'No hay modo capitanes iniciado para este partido'];
     }
 
     $participants = repo_match_participants($matchId);
@@ -361,7 +361,7 @@ try {
     $stmt->execute(['mid' => $matchId]);
     $draft = $stmt->fetch();
     if (!$draft) {
-        throw new RuntimeException('No hay draft de capitanes para este encuentro.');
+        throw new RuntimeException('No hay draft de capitanes para este partido.');
     }
     if ($action === 'pick' && $draft['status'] !== 'active') {
         throw new RuntimeException('El draft no esta activo.');
@@ -379,7 +379,7 @@ try {
     if ($action === 'save_formation') {
         $match = repo_match_by_id($matchId);
         if (!$match) {
-            throw new RuntimeException('Encuentro no encontrado.');
+            throw new RuntimeException('Partido no encontrado.');
         }
         if ((string) $draft['status'] !== 'completed') {
             throw new RuntimeException('La formacion se puede ajustar cuando el draft esta completo.');
@@ -445,7 +445,7 @@ try {
     $playerStmt->execute(['mid' => $matchId, 'pid' => $playerId]);
     $row = $playerStmt->fetch();
     if (!$row) {
-        throw new RuntimeException('El jugador no pertenece a este encuentro.');
+        throw new RuntimeException('El jugador no pertenece a este partido.');
     }
     if ($row['team_number'] !== null) {
         throw new RuntimeException('Ese jugador ya fue elegido.');
@@ -460,7 +460,7 @@ try {
 
     $draftDetails = captain_draft_row($matchId);
     if (!$draftDetails) {
-        throw new RuntimeException('No hay draft de capitanes para este encuentro.');
+        throw new RuntimeException('No hay draft de capitanes para este partido.');
     }
     $availableStmt = $pdo->prepare(
         'SELECT p.id, p.skill

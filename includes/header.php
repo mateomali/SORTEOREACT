@@ -11,7 +11,7 @@ $menu = is_admin()
     ? [
         'index.php' => 'Inicio',
         'jugadores.php' => 'Jugadores',
-        'encuentros.php' => 'Encuentros',
+        'encuentros.php' => 'Partidos',
         'estadisticas.php' => 'Estadisticas',
         'logout.php' => 'Salir',
     ]

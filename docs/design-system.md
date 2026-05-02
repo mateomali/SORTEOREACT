@@ -42,7 +42,7 @@ Esta guia resume las reglas visuales que deben mantenerse para que el sitio GOOD
 - `.btn-danger`: eliminar.
 - `.btn-muted`: cancelar, volver o accion secundaria.
 - `.btn-disabled`: accion no disponible; no debe parecer clickeable.
-- En mobile, acciones multiples dentro de encuentros deben ir en `Acciones`.
+- En mobile, acciones multiples dentro de partidos deben ir en `Acciones`.
 
 ## Cards y secciones
 

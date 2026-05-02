@@ -15,7 +15,7 @@ Si tu hosting usa otro host de MySQL, cambia `DB_HOST`.
 
 ## 3) Flujo recomendado
 1. Cargar jugadores en `jugadores.php` o migrar desde CSV en `migrar_csv.php`.
-2. Crear encuentros y convocados en `encuentros.php`.
+2. Crear partidos y convocados en `encuentros.php`.
 3. Sortear equipos en `sorteo_legacy_csv.php`.
 4. Finalizar partido (goles y calificaciones) en `finalizar_partido.php`.
 5. Analizar ranking en `estadisticas.php`.

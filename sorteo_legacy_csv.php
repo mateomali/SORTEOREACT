@@ -75,7 +75,7 @@ try {
         }
     }
 } catch (Throwable $e) {
-    $legacyLoadError = 'No se pudieron cargar datos del encuentro: ' . $e->getMessage();
+    $legacyLoadError = 'No se pudieron cargar datos del partido: ' . $e->getMessage();
 }
 
 $legacyPlayersJson = json_encode($legacyPlayers, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -98,7 +98,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     <h1><span class="soccer-ball"></span> Generador de Equipos GOODFELLAS <span class="soccer-ball"></span></h1>
     <?php if ($legacyMatch): ?>
       <div class="success mb-3">
-        Encuentro: <strong><?= h((string) ($legacyMatch['title'] ?: ('Partido #' . $legacyMatch['id']))) ?></strong>
+        Partido: <strong><?= h((string) ($legacyMatch['title'] ?: ('Partido #' . $legacyMatch['id']))) ?></strong>
         | Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $legacyMatch['match_date']))) ?>
       </div>
     <?php endif; ?>
@@ -107,8 +107,8 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     <?php endif; ?>
     <div class="controls">
       <?php if ($legacyMatch): ?>
-        <button type="button" onclick="window.location.href='encuentros.php'">Volver a encuentros</button>
-        <button type="button" onclick="window.location.href='finalizar_partido.php?match_id=<?= (int) $legacyMatch['id'] ?>'">Finalizar encuentro</button>
+        <button type="button" onclick="window.location.href='encuentros.php'">Volver a partidos</button>
+        <button type="button" onclick="window.location.href='finalizar_partido.php?match_id=<?= (int) $legacyMatch['id'] ?>'">Finalizar partido</button>
       <?php else: ?>
         <button onclick="abrirModalAgregar()"><span class="text-lg">+</span> Añadir Jugador</button>
       <?php endif; ?>
@@ -465,7 +465,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function exportarJugadoresCSV() {
       if (LOCKED_MATCH_MODE) {
-        alert('En modo encuentro los jugadores se administran desde la base de datos.');
+        alert('En modo partido los jugadores se administran desde la base de datos.');
         return;
       }
       const csvContent = [
@@ -490,7 +490,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function importarJugadoresCSV(event) {
       if (LOCKED_MATCH_MODE) {
-        alert('En modo encuentro los jugadores se administran desde la base de datos.');
+        alert('En modo partido los jugadores se administran desde la base de datos.');
         event.target.value = '';
         return;
       }
@@ -688,7 +688,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function abrirModalAgregar() {
       if (LOCKED_MATCH_MODE) {
-        alert('En modo encuentro no se pueden agregar jugadores desde esta pantalla.');
+        alert('En modo partido no se pueden agregar jugadores desde esta pantalla.');
         return;
       }
       document.getElementById('addNombre').value = '';
@@ -717,7 +717,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function guardarJugador() {
       if (LOCKED_MATCH_MODE) {
-        alert('En modo encuentro no se pueden agregar jugadores desde esta pantalla.');
+        alert('En modo partido no se pueden agregar jugadores desde esta pantalla.');
         return;
       }
       const nombre = document.getElementById('addNombre').value.trim();
@@ -775,7 +775,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function eliminarJugador(index) {
       if (LOCKED_MATCH_MODE) {
-        alert('En modo encuentro no se pueden eliminar jugadores desde esta pantalla.');
+        alert('En modo partido no se pueden eliminar jugadores desde esta pantalla.');
         return;
       }
       if (confirm('¿Estás seguro de eliminar este jugador?')) {
@@ -1537,7 +1537,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function guardarSorteoEnBD() {
       if (!MATCH_ID) {
-        alert('Esta pantalla no está vinculada a un encuentro.');
+        alert('Esta pantalla no está vinculada a un partido.');
         return;
       }
       if (!lastEquipos) {
@@ -1585,7 +1585,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         const successDiv = document.getElementById('success');
         const errorDiv = document.getElementById('error');
         errorDiv.classList.add('hidden');
-        successDiv.textContent = data.message || 'Sorteo guardado correctamente en el encuentro.';
+        successDiv.textContent = data.message || 'Sorteo guardado correctamente en el partido.';
         successDiv.classList.remove('hidden');
         window.setTimeout(() => {
           window.location.href = 'encuentros.php';
@@ -1637,7 +1637,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     actualizarListaJugadores();
     if (LOCKED_MATCH_MODE && jugadores.length === 0) {
       const errorDiv = document.getElementById('error');
-      errorDiv.textContent = 'Este encuentro no tiene jugadores convocados. Cárgalos desde la pantalla de encuentros.';
+      errorDiv.textContent = 'Este partido no tiene jugadores convocados. Cárgalos desde la pantalla de partidos.';
       errorDiv.classList.remove('hidden');
     }
   </script>

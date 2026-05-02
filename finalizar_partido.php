@@ -48,11 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
-        flash('error', 'Encuentro invalido.');
+        flash('error', 'Partido invalido.');
         redirect('finalizar_partido.php');
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
-        flash('error', 'Solo se puede finalizar un encuentro con equipos ya sorteados o capitanes completos.');
+        flash('error', 'Solo se puede finalizar un partido con equipos ya sorteados o capitanes completos.');
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
     if (valuations_locked_after_deadline($match)) {
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         }
     }
     if (!$participants || $assignedCount !== count($participants) || count($teamsSeen) !== (int) $match['num_teams']) {
-        flash('error', 'El encuentro no tiene todos los jugadores asignados a equipos.');
+        flash('error', 'El partido no tiene todos los jugadores asignados a equipos.');
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
 
@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                     $parsedAwards[$code] = (int) $matchAward[1];
                     continue;
                 }
-                throw new RuntimeException('Selecciona los premios desde la lista de jugadores del encuentro.');
+                throw new RuntimeException('Selecciona los premios desde la lista de jugadores del partido.');
             }
             repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
 
@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
 
             $pdo->commit();
-            flash('success', 'Datos del encuentro guardados. Partido finalizado.');
+            flash('success', 'Datos del partido guardados. Partido finalizado.');
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -199,11 +199,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
-        flash('error', 'Encuentro invalido.');
+        flash('error', 'Partido invalido.');
         redirect('finalizar_partido.php');
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
-        flash('error', 'Solo se puede cargar resultado de un encuentro con equipos ya formados.');
+        flash('error', 'Solo se puede cargar resultado de un partido con equipos ya formados.');
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
 
@@ -257,14 +257,14 @@ $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : 
 $valuationsLocked = $selectedMatch ? valuations_locked_after_deadline($selectedMatch) : false;
 $editDetails = !$valuationsLocked && ($forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1'));
 
-$title = 'Finalizar encuentro | ' . APP_NAME;
+$title = 'Finalizar partido | ' . APP_NAME;
 $activePage = 'finalizar_partido.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
 <section class="page-head">
   <div>
-    <h1>Finalizar encuentro</h1>
+    <h1>Finalizar partido</h1>
     <p class="small-muted">Carga goles y calificacion por jugador para cerrar el partido y sumar estadisticas.</p>
   </div>
 </section>
@@ -272,7 +272,7 @@ require __DIR__ . '/includes/header.php';
 <section class="card mb-3.5">
   <form method="get" class="form-grid">
     <div class="form-row">
-      <label>Seleccionar encuentro</label>
+      <label>Seleccionar partido</label>
       <select name="match_id" onchange="this.form.submit()">
         <option value="">Elegir...</option>
         <?php foreach ($matches as $m): ?>
@@ -290,7 +290,7 @@ require __DIR__ . '/includes/header.php';
     <h3><?= h((string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']))) ?></h3>
     <p class="small-muted">Estado actual: <strong><?= h((string) $selectedMatch['status']) ?></strong></p>
     <?php if (!$groupedTeams): ?>
-      <p>No hay equipos sorteados todavia para este encuentro.</p>
+      <p>No hay equipos sorteados todavia para este partido.</p>
     <?php else: ?>
       <?php
         $matchTeams = repo_match_teams((int) $selectedMatch['id']);
@@ -304,7 +304,7 @@ require __DIR__ . '/includes/header.php';
           <div class="finish-score-head">
             <div>
               <h3>Resultado del partido</h3>
-              <p class="small-muted">Primero guarda como salio el encuentro.</p>
+              <p class="small-muted">Primero guarda como salio el partido.</p>
             </div>
           </div>
           <div class="finish-result-grid">

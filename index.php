@@ -302,7 +302,7 @@ require __DIR__ . '/includes/header.php';
 
 <section class="page-head">
   <div>
-    <h1>Encuentros</h1>
+    <h1>Partidos</h1>
     <p class="small-muted">Proximo partido, detalle de equipos e historial completo.</p>
   </div>
   <?php if (is_admin()): ?>
@@ -327,7 +327,7 @@ require __DIR__ . '/includes/header.php';
   ?>
   <section class="card home-next-card">
     <div>
-      <span class="home-kicker"><?= (string) $headerMatch['status'] === 'finalizado' ? 'Partido finalizado' : 'Proximo encuentro' ?></span>
+      <span class="home-kicker"><?= (string) $headerMatch['status'] === 'finalizado' ? 'Partido finalizado' : 'Proximo partido' ?></span>
       <h2><?= h((string) ($headerMatch['title'] ?: ('Partido #' . $headerMatch['id']))) ?></h2>
       <p class="small-muted">
         Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $headerMatch['match_date']))) ?>
@@ -344,10 +344,10 @@ require __DIR__ . '/includes/header.php';
 
 <section class="home-layout">
   <article class="card match-history">
-    <h3>Historial de encuentros</h3>
+    <h3>Historial de partidos</h3>
     <div class="match-list">
       <?php if (!$historyMatches): ?>
-        <p>No hay encuentros cargados.</p>
+        <p>No hay partidos cargados.</p>
       <?php else: ?>
         <?php foreach ($historyMatches as $match): ?>
           <?php
@@ -383,7 +383,7 @@ require __DIR__ . '/includes/header.php';
   <article class="card match-detail" data-match-detail-panel>
     <?php if (!$selectedMatch): ?>
       <h3>Detalle</h3>
-      <p>No hay encuentros para mostrar.</p>
+      <p>No hay partidos para mostrar.</p>
     <?php else: ?>
       <div class="match-detail-head">
         <div>

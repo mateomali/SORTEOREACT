@@ -136,12 +136,12 @@ if ($matchId <= 0 || !is_array($postedTeams) || !$postedTeams) {
 $match = repo_match_by_id($matchId);
 if (!$match) {
     http_response_code(404);
-    echo json_encode(['ok' => false, 'message' => 'Encuentro no encontrado']);
+    echo json_encode(['ok' => false, 'message' => 'Partido no encontrado']);
     exit;
 }
 if ($match['status'] === 'finalizado') {
     http_response_code(409);
-    echo json_encode(['ok' => false, 'message' => 'El encuentro ya esta finalizado']);
+    echo json_encode(['ok' => false, 'message' => 'El partido ya esta finalizado']);
     exit;
 }
 
@@ -171,7 +171,7 @@ foreach ($postedTeams as $teamIdx => $teamPayload) {
             $pid = (int) ($row['id'] ?? 0);
             if ($pid <= 0 || !isset($participantsById[$pid])) {
                 http_response_code(422);
-            echo json_encode(['ok' => false, 'message' => 'Hay jugadores no validos para el encuentro']);
+            echo json_encode(['ok' => false, 'message' => 'Hay jugadores no validos para el partido']);
             exit;
         }
         if (in_array($pid, $allIds, true)) {
@@ -305,7 +305,7 @@ try {
     ]);
 
     $pdo->commit();
-    echo json_encode(['ok' => true, 'message' => 'Sorteo guardado correctamente en el encuentro']);
+    echo json_encode(['ok' => true, 'message' => 'Sorteo guardado correctamente en el partido']);
 } catch (Throwable $e) {
     $pdo->rollBack();
     http_response_code(500);

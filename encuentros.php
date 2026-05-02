@@ -53,9 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0) {
             try {
                 delete_match_cascade($pdo, $id);
-                flash('success', 'Encuentro eliminado junto con convocados, equipos, capitanes, puntajes y premios.');
+                flash('success', 'Partido eliminado junto con convocados, equipos, capitanes, puntajes y premios.');
             } catch (Throwable $e) {
-                flash('error', 'No se pudo eliminar el encuentro: ' . $e->getMessage());
+                flash('error', 'No se pudo eliminar el partido: ' . $e->getMessage());
             }
         }
         redirect('encuentros.php');
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $targetPlayers = $numTeams * $playersPerTeam;
 
         if ($matchDate === '') {
-            flash('error', 'La fecha del encuentro es obligatoria.');
+            flash('error', 'La fecha del partido es obligatoria.');
             redirect($id ? 'encuentros.php?edit=' . $id : 'encuentros.php');
         }
         if (count($participants) !== $targetPlayers) {
@@ -94,11 +94,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0) {
             $existing = repo_match_by_id($id);
             if (!$existing) {
-                flash('error', 'El encuentro a editar no existe.');
+                flash('error', 'El partido a editar no existe.');
                 redirect('encuentros.php');
             }
             if ($existing['status'] === 'finalizado') {
-                flash('error', 'No se puede editar un encuentro finalizado.');
+                flash('error', 'No se puede editar un partido finalizado.');
                 redirect('encuentros.php');
             }
             $stmt = $pdo->prepare(
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             clear_match_draw_data($pdo, $id);
             repo_save_match_participants($id, $participants);
-            flash('success', 'Encuentro actualizado.');
+            flash('success', 'Partido actualizado.');
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO matches (title, match_date, num_teams, players_per_team, max_diff, status, draw_mode, formation_edit_deadline, notes)
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $newId = (int) $pdo->lastInsertId();
             repo_save_match_participants($newId, $participants);
-            flash('success', 'Encuentro creado.');
+            flash('success', 'Partido creado.');
         }
         redirect('encuentros.php');
     }
@@ -268,14 +268,14 @@ $scheduledCount = count(array_filter($matches, static fn(array $m): bool => (str
 $readyCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'sorteado'));
 $finishedCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'finalizado'));
 
-$title = 'Encuentros | ' . APP_NAME;
+$title = 'Partidos | ' . APP_NAME;
 $activePage = 'encuentros.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
 <section class="page-head">
   <div>
-    <h1>Encuentros</h1>
+    <h1>Partidos</h1>
     <p class="small-muted">Administra partidos, convocados, sorteo, capitanes y cierre de resultados.</p>
   </div>
 </section>
@@ -297,11 +297,11 @@ require __DIR__ . '/includes/header.php';
 
 <details class="encounter-drawer <?= $form['id'] ? 'is-editing' : 'is-new' ?>" <?= $form['id'] ? 'open' : '' ?>>
   <summary class="encounter-drawer-tab">
-    <span><?= $form['id'] ? 'Editar encuentro' : 'Nuevo encuentro' ?></span>
+    <span><?= $form['id'] ? 'Editar partido' : 'CREAR NUEVO PARTIDO' ?></span>
     <small><?= $targetSelection ?> convocados requeridos</small>
   </summary>
   <section class="card encounter-drawer-body">
-  <h3><?= $form['id'] ? 'Editar encuentro' : 'Nuevo encuentro' ?></h3>
+  <h3><?= $form['id'] ? 'Editar partido' : 'CREAR NUEVO PARTIDO' ?></h3>
   <form method="post">
     <input type="hidden" name="action" value="save_match">
     <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
@@ -375,7 +375,7 @@ require __DIR__ . '/includes/header.php';
         </section>
 
         <section class="participant-panel selected-panel">
-          <h4>Seleccionados para este encuentro</h4>
+          <h4>Seleccionados para este partido</h4>
           <div class="selected-player-list" data-selected-participants></div>
           <p class="small-muted" data-selected-empty>Agrega jugadores desde la lista.</p>
         </section>
@@ -383,7 +383,7 @@ require __DIR__ . '/includes/header.php';
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-primary" type="submit"><?= $form['id'] ? 'Guardar cambios' : 'Crear encuentro' ?></button>
+      <button class="btn btn-primary" type="submit"><?= $form['id'] ? 'Guardar cambios' : 'Crear partido' ?></button>
       <?php if ($form['id']): ?>
         <a class="btn btn-muted" href="encuentros.php">Cancelar</a>
       <?php endif; ?>
@@ -395,13 +395,13 @@ require __DIR__ . '/includes/header.php';
 <section class="card encounters-history">
   <div class="section-toolbar">
     <div>
-      <h3>Historial de encuentros</h3>
-      <p class="small-muted">Cada tarjeta muestra estado, cupos y acciones disponibles segun el avance del encuentro. <?= h((string) $totalMatches) ?> encuentros cargados.</p>
+      <h3>Historial de partidos</h3>
+      <p class="small-muted">Cada tarjeta muestra estado, cupos y acciones disponibles segun el avance del partido. <?= h((string) $totalMatches) ?> partidos cargados.</p>
     </div>
   </div>
 
   <?php if (!$matches): ?>
-    <p>No hay encuentros cargados.</p>
+    <p>No hay partidos cargados.</p>
   <?php else: ?>
     <div class="encounter-card-grid">
       <?php foreach ($pagedMatches as $m): ?>
@@ -449,7 +449,7 @@ require __DIR__ . '/includes/header.php';
 
           <div class="encounter-actions">
             <?php if ($isScheduled): ?>
-              <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="encuentros.php?edit=<?= $matchId ?>" aria-label="Editar encuentro" title="Editar"></a>
+              <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="encuentros.php?edit=<?= $matchId ?>" aria-label="Editar partido" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
               <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
             <?php else: ?>
@@ -470,13 +470,13 @@ require __DIR__ . '/includes/header.php';
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar encuentro y sus datos?" aria-label="Eliminar encuentro" title="Eliminar">X</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar partido y sus datos?" aria-label="Eliminar partido" title="Eliminar">X</button>
               </form>
             <?php else: ?>
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar este encuentro? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados." aria-label="Eliminar encuentro" title="Eliminar">X</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar este partido? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados." aria-label="Eliminar partido" title="Eliminar">X</button>
               </form>
             <?php endif; ?>
           </div>
@@ -505,7 +505,7 @@ require __DIR__ . '/includes/header.php';
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger" data-confirm="<?= $isScheduled ? 'Eliminar encuentro y sus datos?' : 'Eliminar este encuentro? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar</button>
+                <button class="btn btn-danger" data-confirm="<?= $isScheduled ? 'Eliminar partido y sus datos?' : 'Eliminar este partido? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar</button>
               </form>
             </div>
           </details>
@@ -513,7 +513,7 @@ require __DIR__ . '/includes/header.php';
       <?php endforeach; ?>
     </div>
     <?php if ($totalPages > 1): ?>
-      <nav class="pagination" aria-label="Paginas de encuentros">
+      <nav class="pagination" aria-label="Paginas de partidos">
         <?php if ($currentPage > 1): ?>
           <a class="pagination-link" href="encuentros.php?page=<?= $currentPage - 1 ?>">Anterior</a>
         <?php else: ?>
