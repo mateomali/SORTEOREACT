@@ -58,6 +58,7 @@ $awardDescriptions = [
     'putita' => 'Jugador no comprometido o problematico.',
     'ghost' => 'Jugador que erro mucho o participo poco.',
     'keeper' => 'Mejor arquero del partido.',
+    'goodfellas' => 'Mejor actitud y buen compañero.',
 ];
 $savedMatchAwards = $selectedMatchId > 0 ? repo_match_awards($selectedMatchId) : [];
 $playerAwardIcons = [];

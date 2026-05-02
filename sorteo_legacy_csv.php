@@ -162,11 +162,15 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     <div id="success" class="success"></div>
     <div id="equipos-generados" class="teams-container"></div>
     <div class="controls mt-5 hidden" id="download-controls">
-      <button onclick="copiarEquiposClipboard()">📋 Copiar al Portapapeles</button>
-      <button onclick="descargarEquiposJPG()">📸 Descargar como JPG</button>
-      <button onclick="descargarEquiposTexto()">📝 Descargar como Texto</button>
+      <div class="download-action-row">
+        <button onclick="copiarEquiposClipboard()">📋 Copiar al Portapapeles</button>
+        <button onclick="descargarEquiposJPG()">📸 Descargar como JPG</button>
+        <button onclick="descargarEquiposTexto()">📝 Descargar como Texto</button>
+      </div>
       <?php if ($legacyMatch): ?>
-        <button onclick="guardarSorteoEnBD()">💾 Guardar Sorteo del Encuentro</button>
+        <div class="download-save-row">
+          <button onclick="guardarSorteoEnBD()">💾 GUARDAR SORTEO</button>
+        </div>
       <?php endif; ?>
     </div>
     <div class="team-color-config">

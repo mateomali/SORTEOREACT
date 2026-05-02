@@ -20,6 +20,7 @@ $awardDescriptions = [
     'putita' => 'Jugador no comprometido o problematico.',
     'ghost' => 'Jugador que erro mucho o participo poco.',
     'keeper' => 'Mejor arquero del partido.',
+    'goodfellas' => 'Mejor actitud y buen compañero.',
 ];
 
 $dateFrom = trim((string) ($_GET['date_from'] ?? ''));
@@ -324,38 +325,96 @@ require __DIR__ . '/includes/header.php';
             <span class="award-stat-cell">
                 <?php
                   $playerAwardItems = [];
-                  $playerAwardTotal = 0;
+                  $playerGoodAwardItems = [];
+                  $playerBadAwardItems = [];
+                  $playerGoodAwardTotal = 0;
+                  $playerBadAwardTotal = 0;
                   foreach ($awardDefinitions as $code => $award) {
                       $awardCount = (int) ($row['award_' . $code] ?? 0);
                       if ($awardCount <= 0) {
                           continue;
                       }
-                      $playerAwardTotal += $awardCount;
+                      $awardType = (string) ($award['type'] ?? 'good');
+                      if ($awardType === 'bad') {
+                          $playerBadAwardTotal += $awardCount;
+                      } else {
+                          $playerGoodAwardTotal += $awardCount;
+                      }
                       $playerAwardItems[] = [
                           'icon' => (string) $award['icon'],
                           'label' => (string) $award['label'],
                           'description' => (string) ($award['description'] ?? $awardDescriptions[$code] ?? ''),
                           'count' => $awardCount,
+                          'type' => $awardType,
                       ];
+                      if ($awardType === 'bad') {
+                          $playerBadAwardItems[] = $playerAwardItems[array_key_last($playerAwardItems)];
+                      } else {
+                          $playerGoodAwardItems[] = $playerAwardItems[array_key_last($playerAwardItems)];
+                      }
                   }
                   $awardPanelId = 'awards-player-' . (int) $row['id'];
+                  $goodAwardPanelId = $awardPanelId . '-good';
+                  $badAwardPanelId = $awardPanelId . '-bad';
                 ?>
-                <button
-                  type="button"
-                  class="award-summary-button"
-                  data-awards-trigger
-                  data-awards-target="<?= h($awardPanelId) ?>"
-                  data-awards-player="<?= h((string) $row['name']) ?>"
-                  aria-label="Ver detalle estadistico de <?= h((string) $row['name']) ?>"
-                >
-                  <?php if ($playerAwardItems): ?>
-                    <span>&#127941;</span>
-                    <strong>x<?= h((string) $playerAwardTotal) ?></strong>
-                  <?php else: ?>
+                <?php if ($playerAwardItems): ?>
+                  <?php if ($playerGoodAwardTotal > 0): ?>
+                    <button
+                      type="button"
+                      class="award-summary-button"
+                      data-awards-trigger
+                      data-awards-target="<?= h($goodAwardPanelId) ?>"
+                      data-awards-player="<?= h((string) $row['name']) ?>"
+                      aria-label="Ver premios buenos de <?= h((string) $row['name']) ?>"
+                      title="Premios buenos"
+                    >
+                      <span>&#127941;</span><strong>x<?= h((string) $playerGoodAwardTotal) ?></strong>
+                    </button>
+                  <?php endif; ?>
+                  <?php if ($playerBadAwardTotal > 0): ?>
+                    <button
+                      type="button"
+                      class="award-summary-button"
+                      data-awards-trigger
+                      data-awards-target="<?= h($badAwardPanelId) ?>"
+                      data-awards-player="<?= h((string) $row['name']) ?>"
+                      aria-label="Ver premios malos de <?= h((string) $row['name']) ?>"
+                      title="Premios malos"
+                    >
+                      <span>&#129313;</span><strong>x<?= h((string) $playerBadAwardTotal) ?></strong>
+                    </button>
+                  <?php endif; ?>
+                <?php else: ?>
+                  <button
+                    type="button"
+                    class="award-summary-button"
+                    data-awards-trigger
+                    data-awards-target="<?= h($awardPanelId) ?>"
+                    data-awards-player="<?= h((string) $row['name']) ?>"
+                    aria-label="Ver detalle estadistico de <?= h((string) $row['name']) ?>"
+                  >
                     <span>+</span>
                     <strong>ver</strong>
-                  <?php endif; ?>
-                </button>
+                  </button>
+                <?php endif; ?>
+                <?php foreach ([
+                    $goodAwardPanelId => $playerGoodAwardItems,
+                    $badAwardPanelId => $playerBadAwardItems,
+                ] as $categoryPanelId => $categoryAwardItems): ?>
+                  <div id="<?= h($categoryPanelId) ?>" class="award-popover-source" hidden>
+                    <div class="award-popover-list">
+                      <?php foreach ($categoryAwardItems as $awardItem): ?>
+                        <div class="award-popover-item">
+                          <span class="award-popover-icon"><?= h($awardItem['icon']) ?></span>
+                          <span>
+                            <strong><?= h($awardItem['label']) ?> x<?= h((string) $awardItem['count']) ?></strong>
+                            <small><?= h($awardItem['description']) ?></small>
+                          </span>
+                        </div>
+                      <?php endforeach; ?>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
                 <div id="<?= h($awardPanelId) ?>" class="award-popover-source" hidden>
                   <div class="award-popover-list">
                     <?php if ($playerAwardItems): ?>
