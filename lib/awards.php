@@ -7,13 +7,13 @@ function award_definitions(): array
 {
     return [
         'player_of_match' => ['label' => 'Man of the Match', 'icon' => '🏆', 'type' => 'good'],
-        'goal_of_week' => ['label' => 'Gol de la fecha', 'icon' => '🚀', 'type' => 'good'],
+        'goal_of_week' => ['label' => 'Gol de la fecha', 'icon' => '🤯', 'type' => 'good'],
         'lyrical' => ['label' => 'Lírico', 'icon' => '🧙🏼‍♂️', 'type' => 'good'],
-        'wall' => ['label' => 'El muro', 'icon' => '🪖', 'type' => 'good'],
+        'wall' => ['label' => 'El muro', 'icon' => '🚧', 'type' => 'good'],
         'capocannoniere' => ['label' => 'Capocannoniere', 'icon' => '💣', 'type' => 'good'],
-        'terminator' => ['label' => 'Terminator', 'icon' => '🤖', 'type' => 'bad'],
+        'terminator' => ['label' => 'Terminator', 'icon' => '👊', 'type' => 'bad'],
         'tractor' => ['label' => 'Tractor', 'icon' => '🚜', 'type' => 'good'],
-        'guinda' => ['label' => 'La guinda', 'icon' => '🏈', 'type' => 'good'],
+        'guinda' => ['label' => 'La guinda', 'icon' => '🎯', 'type' => 'good'],
         'putita' => ['label' => 'La putita', 'icon' => '🏳️‍🌈', 'type' => 'bad'],
         'ghost' => ['label' => 'El fantasma', 'icon' => '👻', 'type' => 'bad'],
         'keeper' => ['label' => 'Portero imbatible', 'icon' => '🥅', 'type' => 'good'],

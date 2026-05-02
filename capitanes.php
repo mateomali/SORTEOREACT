@@ -150,8 +150,10 @@ if ($selectedMatch && $draft) {
     $captain1Link = absolute_url('capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=1&token=' . urlencode((string) ($draft['captain1_token'] ?? '')));
     $captain2Link = absolute_url('capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=2&token=' . urlencode((string) ($draft['captain2_token'] ?? '')));
     $matchLabel = (string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']));
-    $captain1Whatsapp = 'https://wa.me/?text=' . rawurlencode('Link para elegir equipo como Capitan 1 - ' . $matchLabel . ': ' . $captain1Link);
-    $captain2Whatsapp = 'https://wa.me/?text=' . rawurlencode('Link para elegir equipo como Capitan 2 - ' . $matchLabel . ': ' . $captain2Link);
+    $captain1WhatsappText = "Link para elegir equipo como Capitan 1\n" . $matchLabel . "\n\n" . $captain1Link;
+    $captain2WhatsappText = "Link para elegir equipo como Capitan 2\n" . $matchLabel . "\n\n" . $captain2Link;
+    $captain1Whatsapp = 'https://wa.me/?text=' . rawurlencode($captain1WhatsappText);
+    $captain2Whatsapp = 'https://wa.me/?text=' . rawurlencode($captain2WhatsappText);
 }
 
 $title = 'Capitanes | ' . APP_NAME;

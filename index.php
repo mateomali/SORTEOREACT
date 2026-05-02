@@ -479,17 +479,7 @@ require __DIR__ . '/includes/header.php';
 
         <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
           <section class="match-results">
-            <h3>Resultados del partido</h3>
-            <div class="stats-summary">
-              <?php foreach ($teamGoals as $team => $goals): ?>
-                <span><?= render_team_label($teamLabels[(int) $team] ?? ('Equipo ' . (int) $team)) ?>: <?= (int) $goals ?> goles</span>
-              <?php endforeach; ?>
-              <span>Total goles: <?= h((string) array_sum($teamGoals)) ?></span>
-              <span>Promedio: <?= $matchAverageRating !== null ? h(number_format($matchAverageRating, 2)) : '-' ?></span>
-              <span><?= h(team_score_line($teamGoals, $teamLabels)) ?></span>
-            </div>
-
-            <h4>Resumen del partido</h4>
+            <h3>Resumen del partido</h3>
             <div class="match-result-mobile-groups">
               <?php foreach ($teamLabels as $teamNumber => $teamLabel): ?>
                 <?php
