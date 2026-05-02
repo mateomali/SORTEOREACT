@@ -262,6 +262,12 @@
     });
   }
 
+  document.querySelectorAll('[data-dismissible-alert]').forEach((alert) => {
+    alert.querySelector('[data-dismissible-alert-close]')?.addEventListener('click', () => {
+      alert.hidden = true;
+    });
+  });
+
   const awardsPopover = document.querySelector('[data-awards-popover]');
   const awardsPopoverTitle = document.querySelector('[data-awards-popover-title]');
   const awardsPopoverBody = document.querySelector('[data-awards-popover-body]');

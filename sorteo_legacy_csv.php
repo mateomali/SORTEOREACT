@@ -299,6 +299,27 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       return teamColorMapping[equipoIndex];
     }
 
+    function getTeamColorHeart(colorName) {
+      const hearts = {
+        ROSA: '🩷',
+        AZUL: '💙',
+        VERDE: '💚',
+        NEGRO: '🖤',
+        NARANJA: '🧡'
+      };
+      return hearts[String(colorName || '').trim().toUpperCase()] || '';
+    }
+
+    function getTeamDisplayName(equipoIndex) {
+      const teamColor = getTeamColor(equipoIndex);
+      const heart = getTeamColorHeart(teamColor?.name);
+      return heart ? `EQUIPO ${heart}` : `EQUIPO ${equipoIndex + 1}`;
+    }
+
+    function getMatchupDisplayName(teamCount) {
+      return Array.from({ length: teamCount }, (_, index) => getTeamDisplayName(index)).join(' VS ');
+    }
+
     function toggleSortDropdown() {
       const dropdown = document.getElementById('sortDropdown');
       dropdown.classList.toggle('active');
@@ -1345,15 +1366,18 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     function mostrarEquipos(equipos) {
       const container = document.getElementById('equipos-generados');
       container.innerHTML = '';
+      const matchupTitle = document.createElement('div');
+      matchupTitle.className = 'sorteo-matchup-title';
+      matchupTitle.textContent = getMatchupDisplayName(equipos.length);
+      container.appendChild(matchupTitle);
       
       equipos.forEach((equipo, index) => {
         const equipoDiv = document.createElement('div');
         equipoDiv.className = 'team';
         const teamColor = getTeamColor(index);
-        let headerText = `Equipo ${index + 1}`;
+        let headerText = getTeamDisplayName(index);
         if (teamColor) {
           equipoDiv.classList.add(teamColor.class);
-          headerText += ` - ${teamColor.name}`;
         }
         
         const jugadoresOrdenados = equipo.slice().sort((a, b) => {
@@ -1470,9 +1494,9 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         return;
       }
       let texto = 'EQUIPOS GOODFELLAS\n\n';
+      texto += `${getMatchupDisplayName(equipos.length)}\n\n`;
       equipos.forEach((equipo, index) => {
-        const teamColor = getTeamColor(index);
-        texto += `Equipo ${index + 1} - ${teamColor ? teamColor.name : ''}\n`;
+        texto += `${getTeamDisplayName(index)}\n`;
         equipo.forEach(j => {
           texto += `${j.nombre} ${j.ritmo === 'lento' ? '🐢' : ''} - ${j.posicion} - ${j.puntuacion} pts\n`;
         });
@@ -1494,9 +1518,9 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         return;
       }
       let texto = '';
+      texto += `${getMatchupDisplayName(equipos.length)}\n`;
       equipos.forEach((equipo, index) => {
-        const teamColor = getTeamColor(index);
-        texto += `\n Equipo "${teamColor ? teamColor.name.toUpperCase() : 'sin color'}":\n`;
+        texto += `\n${getTeamDisplayName(index)}:\n`;
         equipo.forEach(j => {
           texto += `${j.nombre.toUpperCase()} ${j.ritmo === 'lento' ? '🐢' : ''}\n`;
         });

@@ -402,10 +402,13 @@ require __DIR__ . '/includes/header.php';
         <div class="btn-row">
           <button class="btn btn-primary" type="submit">GUARDAR VALORACIONES</button>
         </div>
-        <?php if ($detailFormError !== ''): ?>
-          <p class="flash flash-error mt-3"><?= h($detailFormError) ?></p>
-        <?php endif; ?>
       </form>
+      <?php if ($detailFormError !== ''): ?>
+        <div class="floating-form-alert" role="alert" aria-live="assertive" data-dismissible-alert>
+          <button type="button" class="floating-form-alert-close" aria-label="Cerrar aviso" data-dismissible-alert-close>x</button>
+          <span><?= h($detailFormError) ?></span>
+        </div>
+      <?php endif; ?>
       <?php elseif (!$scoreSaved): ?>
         <p class="flash flash-info">Guarda el resultado para habilitar la carga de puntajes y premios.</p>
       <?php endif; ?>
