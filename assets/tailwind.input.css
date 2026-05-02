@@ -827,15 +827,6 @@
     @apply mb-0 text-base font-extrabold text-white;
   }
 
-  .sorteo-page .accordion-header::after {
-    content: "+";
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-lg font-extrabold leading-none text-emerald-800;
-  }
-
-  .sorteo-page .accordion.active .accordion-header::after {
-    content: "-";
-  }
-
   .sorteo-page .accordion-content {
     @apply max-h-0 overflow-hidden bg-white transition-all duration-300;
   }
@@ -1093,10 +1084,6 @@
 
   .sorteo-page .position-checkboxes {
     @apply grid grid-cols-2 gap-2;
-  }
-
-  .sorteo-page .fab-add {
-    @apply fixed bottom-4 right-4 h-12 w-12 rounded-full p-0 text-2xl shadow-xl;
   }
 
   .encounters-overview {

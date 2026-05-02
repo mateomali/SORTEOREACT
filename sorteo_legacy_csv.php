@@ -253,8 +253,6 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     </div>
   </div>
 
-  <button class="fab-add" onclick="abrirModalAgregar()">+</button>
-
   <script>
     let jugadores = [];
     let editIndex = -1;
