@@ -10,6 +10,12 @@ require_admin();
 $pdo = db();
 ensure_match_awards_schema();
 $matchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
+$detailFormError = '';
+$forceEditDetails = false;
+$postedTeamGoalsData = [];
+$postedGoalsData = [];
+$postedRatingData = [];
+$postedAwardData = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_result') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
@@ -17,6 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $goalsData = $_POST['goals'] ?? [];
     $ratingData = $_POST['rating'] ?? [];
     $awardData = $_POST['awards'] ?? [];
+    $postedTeamGoalsData = is_array($teamGoalsData) ? $teamGoalsData : [];
+    $postedGoalsData = is_array($goalsData) ? $goalsData : [];
+    $postedRatingData = is_array($ratingData) ? $ratingData : [];
+    $postedAwardData = is_array($awardData) ? $awardData : [];
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
@@ -81,81 +91,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $detail = $diff > 0
                 ? 'faltan ' . $diff . ' gol' . ($diff === 1 ? '' : 'es')
                 : 'sobran ' . abs($diff) . ' gol' . (abs($diff) === 1 ? '' : 'es');
-            flash('error', "{$teamLabel}: el resultado indica {$expectedGoals} goles y los jugadores suman {$loadedGoals}; {$detail}. Corrige los goles por jugador antes de guardar.");
-            redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1');
+            $detailFormError = "{$teamLabel}: el resultado indica {$expectedGoals} goles y los jugadores suman {$loadedGoals}; {$detail}. Corrige los goles por jugador antes de guardar.";
+            $forceEditDetails = true;
+            break;
         }
     }
 
-    $pdo->beginTransaction();
-    try {
-        $saveTeamGoals = $pdo->prepare(
-            'UPDATE match_teams
-             SET goals = :goals
-             WHERE match_id = :mid AND team_number = :team_number'
-        );
-        foreach ($teams as $team) {
-            $teamNumber = (int) $team['team_number'];
-            $saveTeamGoals->execute([
-                'mid' => $matchId,
-                'team_number' => $teamNumber,
-                'goals' => max(0, (int) ($teamGoalsData[$teamNumber] ?? 0)),
-            ]);
-        }
-
-        $upd = $pdo->prepare(
-            'UPDATE match_players
-             SET goals = :goals, rating = :rating
-             WHERE match_id = :mid AND player_id = :pid'
-        );
-
-        $allowedAwardPlayerIds = [];
-        foreach ($participants as $player) {
-            $pid = (int) $player['id'];
-            if ($player['team_number'] === null) {
-                continue;
+    if ($detailFormError === '') {
+        $pdo->beginTransaction();
+        try {
+            $saveTeamGoals = $pdo->prepare(
+                'UPDATE match_teams
+                 SET goals = :goals
+                 WHERE match_id = :mid AND team_number = :team_number'
+            );
+            foreach ($teams as $team) {
+                $teamNumber = (int) $team['team_number'];
+                $saveTeamGoals->execute([
+                    'mid' => $matchId,
+                    'team_number' => $teamNumber,
+                    'goals' => max(0, (int) ($teamGoalsData[$teamNumber] ?? 0)),
+                ]);
             }
-            $allowedAwardPlayerIds[] = $pid;
-            $goals = max(0, (int) ($goalsData[$pid] ?? 0));
-            $ratingRaw = $ratingData[$pid] ?? '';
-            $rating = null;
-            if ($ratingRaw !== '' && $ratingRaw !== null) {
-                $rating = max(1.0, min(10.0, round(((float) $ratingRaw) * 2) / 2));
-            }
-            $upd->execute([
-                'mid' => $matchId,
-                'pid' => $pid,
-                'goals' => $goals,
-                'rating' => $rating,
-            ]);
-        }
 
-        $parsedAwards = [];
-        foreach (award_definitions() as $code => $_definition) {
-            $rawAward = trim((string) ($awardData[$code] ?? ''));
-            if ($rawAward === '') {
-                $parsedAwards[$code] = 0;
-                continue;
-            }
-            if (preg_match('/#(\d+)/', $rawAward, $matchAward)) {
-                $parsedAwards[$code] = (int) $matchAward[1];
-                continue;
-            }
-            throw new RuntimeException('Selecciona los premios desde la lista de jugadores del encuentro.');
-        }
-        repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
+            $upd = $pdo->prepare(
+                'UPDATE match_players
+                 SET goals = :goals, rating = :rating
+                 WHERE match_id = :mid AND player_id = :pid'
+            );
 
-        $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = NOW() WHERE id = :id');
-        $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
+            $allowedAwardPlayerIds = [];
+            foreach ($participants as $player) {
+                $pid = (int) $player['id'];
+                if ($player['team_number'] === null) {
+                    continue;
+                }
+                $allowedAwardPlayerIds[] = $pid;
+                $goals = max(0, (int) ($goalsData[$pid] ?? 0));
+                $ratingRaw = $ratingData[$pid] ?? '';
+                $rating = null;
+                if ($ratingRaw !== '' && $ratingRaw !== null) {
+                    $rating = max(1.0, min(10.0, round(((float) $ratingRaw) * 2) / 2));
+                }
+                $upd->execute([
+                    'mid' => $matchId,
+                    'pid' => $pid,
+                    'goals' => $goals,
+                    'rating' => $rating,
+                ]);
+            }
 
-        $pdo->commit();
-        flash('success', 'Datos del encuentro guardados. Partido finalizado.');
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
+            $parsedAwards = [];
+            foreach (award_definitions() as $code => $_definition) {
+                $rawAward = trim((string) ($awardData[$code] ?? ''));
+                if ($rawAward === '') {
+                    $parsedAwards[$code] = 0;
+                    continue;
+                }
+                if (preg_match('/#(\d+)/', $rawAward, $matchAward)) {
+                    $parsedAwards[$code] = (int) $matchAward[1];
+                    continue;
+                }
+                throw new RuntimeException('Selecciona los premios desde la lista de jugadores del encuentro.');
+            }
+            repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
+
+            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = NOW() WHERE id = :id');
+            $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
+
+            $pdo->commit();
+            flash('success', 'Datos del encuentro guardados. Partido finalizado.');
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            flash('error', 'No se pudo guardar: ' . $e->getMessage());
         }
-        flash('error', 'No se pudo guardar: ' . $e->getMessage());
+        redirect('finalizar_partido.php?match_id=' . $matchId);
     }
-    redirect('finalizar_partido.php?match_id=' . $matchId);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_score') {
@@ -219,7 +232,7 @@ $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['i
 $groupedTeams = $selectedMatch ? repo_grouped_team_players((int) $selectedMatch['id']) : [];
 $awardDefinitions = award_definitions();
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
-$editDetails = isset($_GET['edit_details']) && $_GET['edit_details'] === '1';
+$editDetails = $forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1');
 
 $title = 'Finalizar encuentro | ' . APP_NAME;
 $activePage = 'finalizar_partido.php';
@@ -308,7 +321,13 @@ require __DIR__ . '/includes/header.php';
         </datalist>
 
         <?php foreach ($matchTeams as $team): ?>
-          <input type="hidden" name="team_goals[<?= (int) $team['team_number'] ?>]" value="<?= h((string) ((int) ($team['goals'] ?? 0))) ?>">
+          <?php
+            $hiddenTeamNumber = (int) $team['team_number'];
+            $hiddenTeamGoals = $detailFormError !== ''
+                ? (string) max(0, (int) ($postedTeamGoalsData[$hiddenTeamNumber] ?? 0))
+                : (string) ((int) ($team['goals'] ?? 0));
+          ?>
+          <input type="hidden" name="team_goals[<?= $hiddenTeamNumber ?>]" value="<?= h($hiddenTeamGoals) ?>">
         <?php endforeach; ?>
 
         <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
@@ -326,17 +345,25 @@ require __DIR__ . '/includes/header.php';
                 <tbody>
                 <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
                   <?php foreach ($lines[$line] as $p): ?>
-                    <?php $ratingValue = $p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '5'; ?>
+                    <?php
+                      $playerId = (int) $p['id'];
+                      $goalsValue = $detailFormError !== ''
+                          ? (string) max(0, (int) ($postedGoalsData[$playerId] ?? 0))
+                          : (string) ((int) ($p['goals'] ?? 0));
+                      $ratingValue = $detailFormError !== ''
+                          ? (string) ($postedRatingData[$playerId] ?? '5')
+                          : ($p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '5');
+                    ?>
                     <tr>
                       <td data-label="Jugador">
                         <strong><?= h((string) $p['name']) ?></strong>
                         <small><?= h((string) $line) ?></small>
                       </td>
                       <td data-label="Goles">
-                        <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= (int) $p['id'] ?>]" value="<?= h((string) ((int) ($p['goals'] ?? 0))) ?>">
+                        <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>">
                       </td>
                       <td data-label="Puntuacion">
-                        <input class="finish-number-input" type="number" min="1" max="10" step="0.5" name="rating[<?= (int) $p['id'] ?>]" value="<?= h($ratingValue) ?>">
+                        <input class="finish-number-input" type="number" min="1" max="10" step="0.5" name="rating[<?= $playerId ?>]" value="<?= h($ratingValue) ?>">
                       </td>
                     </tr>
                   <?php endforeach; ?>
@@ -357,7 +384,9 @@ require __DIR__ . '/includes/header.php';
             <?php foreach ($awardDefinitions as $code => $award): ?>
               <?php
                 $savedAward = $savedAwards[$code] ?? null;
-                $savedValue = $savedAward ? (string) $savedAward['name'] . ' (#' . (int) $savedAward['player_id'] . ')' : '';
+                $savedValue = $detailFormError !== ''
+                    ? (string) ($postedAwardData[$code] ?? '')
+                    : ($savedAward ? (string) $savedAward['name'] . ' (#' . (int) $savedAward['player_id'] . ')' : '');
               ?>
               <div class="award-field">
                 <label for="award-<?= h($code) ?>">
@@ -371,8 +400,11 @@ require __DIR__ . '/includes/header.php';
         </details>
 
         <div class="btn-row">
-          <button class="btn btn-primary" type="submit">Guardar puntajes y premios</button>
+          <button class="btn btn-primary" type="submit">GUARDAR VALORACIONES</button>
         </div>
+        <?php if ($detailFormError !== ''): ?>
+          <p class="flash flash-error mt-3"><?= h($detailFormError) ?></p>
+        <?php endif; ?>
       </form>
       <?php elseif (!$scoreSaved): ?>
         <p class="flash flash-info">Guarda el resultado para habilitar la carga de puntajes y premios.</p>

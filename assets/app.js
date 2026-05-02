@@ -247,6 +247,21 @@
     updateStatsPlayerSearch();
   }
 
+  const matchDetailPanel = document.querySelector('[data-match-detail-panel]');
+  const matchDetailToggle = document.querySelector('[data-match-detail-toggle]');
+  if (matchDetailPanel && matchDetailToggle) {
+    const matchDetailLabel = matchDetailToggle.querySelector('[data-match-detail-label]');
+    matchDetailToggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      const collapsed = !matchDetailPanel.hidden;
+      matchDetailPanel.hidden = collapsed;
+      matchDetailToggle.classList.toggle('details-collapsed', collapsed);
+      if (matchDetailLabel) {
+        matchDetailLabel.textContent = collapsed ? 'Detalles' : 'Compactar';
+      }
+    });
+  }
+
   const awardsPopover = document.querySelector('[data-awards-popover]');
   const awardsPopoverTitle = document.querySelector('[data-awards-popover-title]');
   const awardsPopoverBody = document.querySelector('[data-awards-popover-body]');

@@ -19,6 +19,36 @@ $matches = $pdo->query(
        CASE WHEN m.match_date < NOW() OR m.status = 'finalizado' THEN m.match_date END DESC"
 )->fetchAll();
 
+$historyTeamsByMatch = [];
+$historyCaptainNames = [];
+$historyMatchIds = array_map(static fn(array $match): int => (int) $match['id'], $matches);
+if ($historyMatchIds) {
+    $in = implode(',', array_fill(0, count($historyMatchIds), '?'));
+    $stmtHistoryTeams = $pdo->prepare(
+        "SELECT *
+         FROM match_teams
+         WHERE match_id IN ($in)
+         ORDER BY match_id ASC, team_number ASC"
+    );
+    $stmtHistoryTeams->execute($historyMatchIds);
+    $historyCaptainIds = [];
+    foreach ($stmtHistoryTeams->fetchAll() as $teamRow) {
+        $historyTeamsByMatch[(int) $teamRow['match_id']][] = $teamRow;
+        if (!empty($teamRow['captain_player_id'])) {
+            $historyCaptainIds[(int) $teamRow['captain_player_id']] = true;
+        }
+    }
+    if ($historyCaptainIds) {
+        $captainIds = array_keys($historyCaptainIds);
+        $captainIn = implode(',', array_fill(0, count($captainIds), '?'));
+        $stmtCaptains = $pdo->prepare("SELECT id, name FROM players WHERE id IN ($captainIn)");
+        $stmtCaptains->execute($captainIds);
+        foreach ($stmtCaptains->fetchAll() as $captainRow) {
+            $historyCaptainNames[(int) $captainRow['id']] = (string) $captainRow['name'];
+        }
+    }
+}
+
 $requestedMatchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
 $selectedMatch = null;
 if ($requestedMatchId > 0) {
@@ -137,6 +167,76 @@ function team_score_line(array $teamGoals, array $teamLabels = []): string
     return implode(' - ', $parts);
 }
 
+function history_team_label(array $match, array $team, array $captainNames): string
+{
+    $teamNumber = (int) ($team['team_number'] ?? 0);
+    if (!empty($team['captain_player_id'])) {
+        return $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
+    }
+
+    $color = trim((string) ($team['color_name'] ?? ''));
+    if ($color !== '') {
+        return 'Equipo ' . strtolower($color);
+    }
+
+    if (($match['draw_mode'] ?? '') !== 'captains') {
+        $defaultColors = [1 => 'rosa', 2 => 'azul'];
+        if (isset($defaultColors[$teamNumber])) {
+            return 'Equipo ' . $defaultColors[$teamNumber];
+        }
+    }
+
+    return trim((string) ($team['team_name'] ?? '')) ?: ('Equipo ' . $teamNumber);
+}
+
+function history_team_label_short(array $match, array $team, array $captainNames): string
+{
+    if (!empty($team['captain_player_id'])) {
+        $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . (int) ($team['team_number'] ?? 0));
+        return mb_strtoupper(trim($captainName), 'UTF-8');
+    }
+
+    $teamNumber = (int) ($team['team_number'] ?? 0);
+    $color = trim((string) ($team['color_name'] ?? ''));
+    if ($color === '' && (($match['draw_mode'] ?? '') !== 'captains')) {
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $color = $defaultColors[$teamNumber] ?? '';
+    }
+
+    $heartByColor = [
+        'ROSA' => '🩷',
+        'AZUL' => '💙',
+        'VERDE' => '💚',
+        'NEGRO' => '🖤',
+        'NARANJA' => '🧡',
+    ];
+    $normalizedColor = mb_strtoupper($color, 'UTF-8');
+    if (isset($heartByColor[$normalizedColor])) {
+        return 'EQUIPO ' . $heartByColor[$normalizedColor];
+    }
+
+    $label = history_team_label($match, $team, $captainNames);
+    return mb_strtoupper(trim($label), 'UTF-8');
+}
+
+function history_match_score_line(array $match, array $teams, array $captainNames): string
+{
+    if (!$teams) {
+        return '';
+    }
+
+    $showGoals = (string) ($match['status'] ?? '') === 'finalizado'
+        || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams)) > 0;
+
+    $parts = [];
+    foreach ($teams as $team) {
+        $label = history_team_label_short($match, $team, $captainNames);
+        $parts[] = $showGoals ? ($label . ' ( ' . (int) ($team['goals'] ?? 0) . ' )') : $label;
+    }
+
+    return implode(' VS ', $parts);
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -193,16 +293,26 @@ require __DIR__ . '/includes/header.php';
           <?php
             $isSelected = $selectedMatchId === (int) $match['id'];
             $isNext = $index === 0 && (string) $match['status'] !== 'finalizado';
+            $historyScoreLine = history_match_score_line($match, $historyTeamsByMatch[(int) $match['id']] ?? [], $historyCaptainNames);
           ?>
-          <a class="match-list-item <?= $isSelected ? 'active' : '' ?>" href="index.php?match_id=<?= (int) $match['id'] ?>">
+          <a
+            class="match-list-item <?= $isSelected ? 'active' : '' ?>"
+            href="index.php?match_id=<?= (int) $match['id'] ?>"
+            <?= $isSelected ? 'data-match-detail-toggle' : '' ?>
+          >
             <span>
-              <strong><?= h((string) ($match['title'] ?: ('Partido #' . $match['id']))) ?></strong>
+              <strong>
+                <?= h((string) ($match['title'] ?: ('Partido #' . $match['id']))) ?>
+                <?php if ($historyScoreLine !== ''): ?>
+                  <span class="match-list-title-score"><?= h($historyScoreLine) ?></span>
+                <?php endif; ?>
+              </strong>
               <small><?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?> | <?= h((string) $match['participants_count']) ?> jugadores</small>
             </span>
             <span class="match-list-side">
               <?php if ($isNext): ?><em>Proximo</em><?php endif; ?>
               <span class="badge <?= $match['status'] === 'finalizado' ? 'done' : 'warn' ?>"><?= h(match_status_label((string) $match['status'])) ?></span>
-              <span class="btn btn-muted">Detalles</span>
+              <span class="btn btn-muted" data-match-detail-label><?= $isSelected ? 'Compactar' : 'Detalles' ?></span>
             </span>
           </a>
         <?php endforeach; ?>
@@ -210,7 +320,7 @@ require __DIR__ . '/includes/header.php';
     </div>
   </article>
 
-  <article class="card match-detail">
+  <article class="card match-detail" data-match-detail-panel>
     <?php if (!$selectedMatch): ?>
       <h3>Detalle</h3>
       <p>No hay encuentros para mostrar.</p>

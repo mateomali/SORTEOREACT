@@ -85,14 +85,6 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
         if (($lineCounts['ARQ'] ?? 0) !== 1) {
             return false;
         }
-        foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
-            if (($lineCounts[$line] ?? 0) > 3) {
-                return false;
-            }
-            if (($lineCounts[$line] ?? 0) < 1) {
-                return false;
-            }
-        }
         if (abs($fast - $slow) > 3) {
             return false;
         }
@@ -231,7 +223,7 @@ $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
 
 if (!validate_teams_legacy($teams, $teamSize, $maxDiff)) {
     http_response_code(422);
-    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan la diferencia maxima, posiciones, arquero o ritmo requeridos. Genera nuevamente o ajusta las posiciones.']);
+    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan la diferencia maxima, arquero o ritmo requeridos. Genera nuevamente o revisa el arquero asignado.']);
     exit;
 }
 
