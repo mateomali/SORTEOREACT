@@ -358,14 +358,14 @@ require __DIR__ . '/includes/header.php';
               <label class="player-picker-item" data-player-row data-player-id="<?= $pid ?>" data-search="<?= h($searchText) ?>">
                 <span>
                   <strong><?= h((string) $p['name']) ?></strong>
-                  <span class="small-muted"><?= h((string) $p['positions']) ?> | <?= h(pace_label((string) $p['pace'])) ?> | <?= h(number_format((float) $p['skill'], 1)) ?></span>
+                  <span class="small-muted"><?= h((string) $p['positions']) ?> | <?= h(pace_label((string) $p['pace'])) ?> | <?= h(skill_label((float) $p['skill'])) ?></span>
                 </span>
                 <input
                   type="checkbox"
                   name="participants[]"
                   value="<?= $pid ?>"
                   data-player-name="<?= h((string) $p['name']) ?>"
-                  data-player-meta="<?= h((string) $p['positions'] . ' | ' . pace_label((string) $p['pace']) . ' | ' . number_format((float) $p['skill'], 1)) ?>"
+                  data-player-meta="<?= h((string) $p['positions'] . ' | ' . pace_label((string) $p['pace']) . ' | ' . skill_label((float) $p['skill'])) ?>"
                   <?= checked_attr($checked) ?>
                 >
               </label>

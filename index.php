@@ -186,6 +186,47 @@ function team_score_line(array $teamGoals, array $teamLabels = []): string
     return implode(' - ', $parts);
 }
 
+function team_color_from_label(string $label): string
+{
+    if (preg_match('/Equipo\s*\(([^)]+)\)/i', $label, $matches) !== 1) {
+        return '';
+    }
+
+    $color = mb_strtoupper(trim($matches[1]), 'UTF-8');
+    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA'];
+    return in_array($color, $knownColors, true) ? $color : '';
+}
+
+function team_heart_color(string $color): string
+{
+    return match ($color) {
+        'ROSA' => '#ec4899',
+        'AZUL' => '#2563eb',
+        'VERDE' => '#16a34a',
+        'NEGRO' => '#111827',
+        'NARANJA' => '#f97316',
+        default => '#047857',
+    };
+}
+
+function render_team_label(string $label, ?int $goals = null): string
+{
+    $color = team_color_from_label($label);
+    $score = $goals !== null ? ' (' . (int) $goals . ')' : '';
+    if ($color === '') {
+        return h($label . $score);
+    }
+
+    $heartColor = team_heart_color($color);
+    return '<span class="team-label-with-heart" title="' . h($label) . '">' .
+        '<span>Equipo</span>' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="--team-heart-fill: ' . h($heartColor) . '">' .
+        '<path d="M12 21s-7.2-4.6-9.6-9C.4 8.4 2.3 4 6.5 4c2 0 3.7 1.1 4.6 2.7C12 5.1 13.7 4 15.7 4c4.2 0 6.1 4.4 4.1 8-2.4 4.4-9.8 9-9.8 9z" />' .
+        '</svg>' .
+        '<span class="team-label-score">' . h($score) . '</span>' .
+        '</span>';
+}
+
 function history_team_label(array $match, array $team, array $captainNames): string
 {
     $teamNumber = (int) ($team['team_number'] ?? 0);
@@ -362,7 +403,7 @@ require __DIR__ . '/includes/header.php';
               <div class="selected-player-item">
                 <span>
                   <strong><?= h((string) $player['name']) ?></strong>
-                  <small><?= h((string) $player['positions']) ?> | <?= h(pace_label((string) $player['pace'])) ?> | <?= h(number_format((float) $player['skill'], 1)) ?></small>
+                  <small><?= h((string) $player['positions']) ?> | <?= h(pace_label((string) $player['pace'])) ?> | <?= h(skill_label((float) $player['skill'])) ?></small>
                 </span>
               </div>
             <?php endforeach; ?>
@@ -374,10 +415,10 @@ require __DIR__ . '/includes/header.php';
             <article class="team-card">
               <div class="team-head">
                 <h4>
-                  <?= h($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)) ?>
-                  <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
-                    (<?= h((string) ((int) ($teamGoals[(int) $teamNumber] ?? 0))) ?>)
-                  <?php endif; ?>
+                  <?= render_team_label(
+                      $teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber),
+                      (string) $selectedMatch['status'] === 'finalizado' ? (int) ($teamGoals[(int) $teamNumber] ?? 0) : null
+                  ) ?>
                 </h4>
                 <span class="small-muted">
                   <?= h(number_format((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), 1)) ?> pts
@@ -422,7 +463,7 @@ require __DIR__ . '/includes/header.php';
                               <?php endif; ?>
                             <?php else: ?>
                               <span>
-                                <?= h(number_format((float) $player['skill'], 1)) ?>
+                                <?= h(skill_label((float) $player['skill'])) ?>
                               </span>
                             <?php endif; ?>
                           </div>
@@ -441,7 +482,7 @@ require __DIR__ . '/includes/header.php';
             <h3>Resultados del partido</h3>
             <div class="stats-summary">
               <?php foreach ($teamGoals as $team => $goals): ?>
-                <span><?= h($teamLabels[(int) $team] ?? ('Equipo ' . (int) $team)) ?>: <?= (int) $goals ?> goles</span>
+                <span><?= render_team_label($teamLabels[(int) $team] ?? ('Equipo ' . (int) $team)) ?>: <?= (int) $goals ?> goles</span>
               <?php endforeach; ?>
               <span>Total goles: <?= h((string) array_sum($teamGoals)) ?></span>
               <span>Promedio: <?= $matchAverageRating !== null ? h(number_format($matchAverageRating, 2)) : '-' ?></span>
@@ -461,7 +502,7 @@ require __DIR__ . '/includes/header.php';
                   }
                 ?>
                 <section class="mobile-result-team">
-                  <h4><?= h($teamLabel) ?> (<?= h((string) ((int) ($teamGoals[(int) $teamNumber] ?? 0))) ?>)</h4>
+                  <h4><?= render_team_label($teamLabel, (int) ($teamGoals[(int) $teamNumber] ?? 0)) ?></h4>
                   <div class="mobile-result-grid mobile-result-head">
                     <span>Jugador</span>
                     <span>Goles</span>

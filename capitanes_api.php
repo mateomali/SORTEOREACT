@@ -41,11 +41,7 @@ function primary_position(array $player): string
 
 function can_edit_captain_formation(array $match): bool
 {
-    $matchTime = strtotime((string) ($match['match_date'] ?? ''));
-    if (!$matchTime) {
-        return false;
-    }
-    return $matchTime > (time() + 3600);
+    return (string) ($match['status'] ?? '') !== 'finalizado';
 }
 
 function closest_skill_allowed_ids(array $available, float $targetSkill): array
@@ -125,15 +121,21 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     }
 
     $lastSkill = (float) $lastSkill;
-    $minSkill = $lastSkill - 1.0;
-    $maxSkill = $lastSkill + 1.0;
+    $range = 0.5;
     $allowedIds = [];
-    foreach ($available as $player) {
-        $skill = (float) ($player['skill'] ?? 0);
-        if (abs($skill - $lastSkill) <= 1.0) {
-            $allowedIds[] = (int) $player['id'];
+    while ($range <= 10.0 && !$allowedIds) {
+        foreach ($available as $player) {
+            $skill = (float) ($player['skill'] ?? 0);
+            if (abs($skill - $lastSkill) <= $range) {
+                $allowedIds[] = (int) $player['id'];
+            }
+        }
+        if (!$allowedIds) {
+            $range += 0.5;
         }
     }
+    $minSkill = $lastSkill - $range;
+    $maxSkill = $lastSkill + $range;
 
     if (!$allowedIds) {
         return [
@@ -144,6 +146,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
             'last_skill' => $lastSkill,
             'min_skill' => $minSkill,
             'max_skill' => $maxSkill,
+            'range' => $range,
             'allowed_ids' => [],
             'message' => 'No quedan jugadores dentro de la banda de puntaje. Eleccion libre.',
         ];
@@ -157,6 +160,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
         'last_skill' => $lastSkill,
         'min_skill' => $minSkill,
         'max_skill' => $maxSkill,
+        'range' => $range,
         'allowed_ids' => $allowedIds,
         'message' => 'Elegir jugadores entre ' . number_format($minSkill, 1) . ' y ' . number_format($maxSkill, 1) . ' puntos.',
     ];
@@ -381,7 +385,7 @@ try {
             throw new RuntimeException('La formacion se puede ajustar cuando el draft esta completo.');
         }
         if (!can_edit_captain_formation($match)) {
-            throw new RuntimeException('Los ajustes se bloquean 1 hora antes del partido.');
+            throw new RuntimeException('La formacion ya no se puede editar porque el partido esta finalizado.');
         }
         $assignments = $data['assignments'] ?? [];
         if (!is_array($assignments)) {
@@ -470,7 +474,7 @@ try {
         if (($pickRule['mode'] ?? '') === 'initial') {
             throw new RuntimeException('Primera eleccion restringida: debes elegir un jugador con el puntaje habilitado por el capitan rival.');
         }
-        throw new RuntimeException('Por equilibrio, este turno solo permite elegir jugadores con hasta 1 punto de diferencia del pick anterior.');
+        throw new RuntimeException('Por equilibrio, este turno solo permite elegir jugadores dentro del rango habilitado.');
     }
 
     $orderStmt = $pdo->prepare('SELECT COALESCE(MAX(pick_order), 0) + 1 FROM captain_picks WHERE match_id = :mid');

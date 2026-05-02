@@ -195,7 +195,7 @@ require __DIR__ . '/includes/header.php';
         <select name="captain1" required>
           <option value="">Elegir...</option>
           <?php foreach ($participants as $p): ?>
-            <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . number_format((float) $p['skill'], 1)) ?></option>
+            <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . skill_label((float) $p['skill'])) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -204,7 +204,7 @@ require __DIR__ . '/includes/header.php';
         <select name="captain2" required>
           <option value="">Elegir...</option>
           <?php foreach ($participants as $p): ?>
-            <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . number_format((float) $p['skill'], 1)) ?></option>
+            <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . skill_label((float) $p['skill'])) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -248,6 +248,14 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 
   <section class="captain-board" id="formacion" data-match-id="<?= (int) $selectedMatch['id'] ?>" data-team-view="<?= in_array($teamView, [1, 2], true) ? $teamView : 0 ?>" data-token="<?= h($captainToken) ?>" data-view-mode="<?= h($viewMode) ?>">
+    <div class="captain-waiting-panel" id="captainWaitingPanel" hidden>
+      <div class="captain-waiting-card" role="status" aria-live="polite">
+        <span class="captain-waiting-kicker">Modo capitanes</span>
+        <strong>ESPERANDO JUGADOR</strong>
+        <span id="captainWaitingText">Aguardando la eleccion del otro capitan.</span>
+      </div>
+    </div>
+
     <div class="captain-status card">
       <h3 id="draftTitle">Cargando...</h3>
       <p id="draftTurn" class="small-muted"></p>
@@ -288,7 +296,33 @@ require __DIR__ . '/includes/header.php';
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
 
-      const playerMeta = (p) => `${escapeHtml(p.positions)} | ${escapeHtml(p.pace_label)} | ${Number(p.skill).toFixed(1)}`;
+      const formatSkill = (value) => {
+        const number = Number(value || 0);
+        return `${Number.isInteger(number) ? String(number) : number.toFixed(1)}⭐`;
+      };
+      const playerMeta = (p) => `${escapeHtml(p.positions)} | ${escapeHtml(p.pace_label)} | ${formatSkill(p.skill)}`;
+      const teamTotalSkill = (teamNumber) => {
+        const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
+        return players.reduce((total, player) => total + Number(player.skill || 0), 0);
+      };
+
+      const updateWaitingPanel = () => {
+        const panel = document.getElementById('captainWaitingPanel');
+        const text = document.getElementById('captainWaitingText');
+        if (!panel || !state || !state.ok) return;
+
+        const isWaiting = captainToken !== ''
+          && (teamView === 1 || teamView === 2)
+          && state.draft.status === 'active'
+          && state.draft.current_team !== teamView;
+
+        panel.hidden = !isWaiting;
+        if (isWaiting && text) {
+          text.textContent = state.draft.current_captain
+            ? `Turno de ${state.draft.current_captain}.`
+            : 'Aguardando la eleccion del otro capitan.';
+        }
+      };
 
       const formationPresets = (playersCount) => {
         const fieldPlayers = Math.max(0, playersCount - 1);
@@ -355,7 +389,7 @@ require __DIR__ . '/includes/header.php';
                 ${linePlayers.length ? linePlayers.map(player => `
                   <div class="formation-player captain-formation-player">
                     <strong>${escapeHtml(player.name)}</strong>
-                    <span>${Number(player.skill).toFixed(1)} pts</span>
+                    <span>${formatSkill(player.skill)}</span>
                     <select class="captain-position-select" data-player-id="${player.id}">
                       ${positions.map(option => `<option value="${option}" ${currentPlayerPosition(container, player) === option ? 'selected' : ''}>${option}</option>`).join('')}
                     </select>
@@ -413,7 +447,7 @@ require __DIR__ . '/includes/header.php';
         const container = document.getElementById('availablePots');
         const canPick = captainToken !== '' && teamView > 0 && state.draft.status === 'active' && state.draft.current_team === teamView;
         const rule = state.pick_rule || { enforced: false, message: '' };
-        const available = rule.enforced ? state.available.filter(player => player.pick_allowed) : state.available;
+        const available = state.available || [];
         const groups = {};
         for (const pos of positions) groups[pos] = [];
         for (const player of available) {
@@ -424,9 +458,10 @@ require __DIR__ . '/includes/header.php';
           <section class="captain-pot">
             <h4>${pos}</h4>
             ${groups[pos].length ? groups[pos].map(p => `
-              <button class="captain-player" type="button" data-player-id="${p.id}" ${canPick && p.pick_allowed ? '' : 'disabled'}>
+              <button class="captain-player ${p.pick_allowed ? '' : 'not-available'}" type="button" data-player-id="${p.id}" ${canPick && p.pick_allowed ? '' : 'disabled'}>
                 <strong>${escapeHtml(p.name)}</strong>
                 <span>${playerMeta(p)}</span>
+                ${p.pick_allowed ? '' : '<span class="captain-player-unavailable">No disponible aun</span>'}
               </button>
             `).join('') : '<p class="small-muted">Sin jugadores disponibles.</p>'}
           </section>
@@ -444,14 +479,14 @@ require __DIR__ . '/includes/header.php';
           return;
         }
         document.getElementById('draftTitle').textContent = `${state.match.title} - ${state.match.participants_count} convocados`;
-        document.getElementById('team1Title').textContent = `Equipo 1 - ${state.draft.captains[1].name} (${state.teams[1].length}/${state.match.target_team_size})`;
-        document.getElementById('team2Title').textContent = `Equipo 2 - ${state.draft.captains[2].name} (${state.teams[2].length}/${state.match.target_team_size})`;
+        document.getElementById('team1Title').textContent = `Equipo 1 - ${state.draft.captains[1].name} (${state.teams[1].length}/${state.match.target_team_size}) - ${teamTotalSkill(1).toFixed(1)} pts`;
+        document.getElementById('team2Title').textContent = `Equipo 2 - ${state.draft.captains[2].name} (${state.teams[2].length}/${state.match.target_team_size}) - ${teamTotalSkill(2).toFixed(1)} pts`;
         const turn = document.getElementById('draftTurn');
         if (state.draft.status === 'completed') {
           if (teamView > 0 && captainToken !== '' && state.match.can_edit_formations) {
             turn.innerHTML = 'Draft completo. Ajusta la formacion de tu equipo y toca Guardar formacion.';
           } else if (teamView > 0 && captainToken !== '') {
-            turn.innerHTML = 'Draft completo. Los ajustes de formacion ya estan bloqueados por horario.';
+            turn.innerHTML = 'Draft completo. La formacion ya no se puede editar porque el partido esta finalizado.';
           } else {
             turn.innerHTML = 'Draft completo. Los equipos ya quedaron guardados para finalizar el encuentro.';
           }
@@ -466,6 +501,7 @@ require __DIR__ . '/includes/header.php';
         }
         renderTeam(1, 'team1List');
         renderTeam(2, 'team2List');
+        updateWaitingPanel();
         const formationOnly = state.draft.status === 'completed' && teamView > 0 && captainToken !== '';
         document.querySelector('.captain-teams-grid')?.classList.toggle('formation-only', formationOnly);
         document.querySelectorAll('[data-captain-team-card]').forEach(card => {

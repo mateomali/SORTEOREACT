@@ -64,6 +64,13 @@ function pace_label(string $pace): string
     return $pace === 'lento' ? 'Lento' : 'Rapido';
 }
 
+function skill_label(float $skill): string
+{
+    $formatted = number_format($skill, 1, '.', '');
+    $formatted = rtrim(rtrim($formatted, '0'), '.');
+    return $formatted . '⭐';
+}
+
 function allowed_positions(): array
 {
     return ['ARQ', 'DEF', 'MED', 'DEL'];

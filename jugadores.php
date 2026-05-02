@@ -179,7 +179,7 @@ require __DIR__ . '/includes/header.php';
           <article class="mobile-player-list-item" data-player-table-row data-search="<?= h($rowSearch) ?>">
             <span>
               <strong><?= h((string) $player['name']) ?></strong>
-              <small><?= h((string) $player['positions']) ?> | <?= h(pace_label((string) $player['pace'])) ?> | <?= h(number_format((float) $player['skill'], 1)) ?> pts</small>
+              <small><?= h((string) $player['positions']) ?> | <?= h(pace_label((string) $player['pace'])) ?> | <?= h(skill_label((float) $player['skill'])) ?></small>
             </span>
             <em class="<?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>">
               <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
