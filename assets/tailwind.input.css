@@ -1147,11 +1147,19 @@
     @apply relative mb-4 min-h-0 overflow-hidden rounded-2xl border border-emerald-100 bg-white p-0 shadow-sm shadow-slate-200/80;
   }
 
+  .encounter-drawer.is-new {
+    @apply border-amber-300 bg-amber-50/70 shadow-lg shadow-amber-200/60;
+  }
+
   .encounter-drawer-tab {
     position: static;
     min-height: 0;
     width: auto;
     @apply flex cursor-pointer list-none items-center justify-between gap-3 rounded-none border-0 bg-emerald-700 px-4 py-4 text-white shadow-none;
+  }
+
+  .encounter-drawer.is-new .encounter-drawer-tab {
+    @apply bg-amber-500 text-amber-950;
   }
 
   .encounter-drawer-tab::-webkit-details-marker {
@@ -1171,6 +1179,10 @@
   .encounter-drawer-tab::after {
     content: "+";
     @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-lg font-extrabold leading-none text-emerald-800;
+  }
+
+  .encounter-drawer.is-new .encounter-drawer-tab::after {
+    @apply text-amber-700;
   }
 
   .encounter-drawer[open] .encounter-drawer-tab::after {
@@ -1325,6 +1337,22 @@
   .encounter-action-menu-list .icon-captain::before,
   .encounter-action-menu-list .icon-finish::before {
     @apply shrink-0;
+  }
+
+  .pagination {
+    @apply mt-4 flex flex-wrap items-center justify-center gap-2;
+  }
+
+  .pagination-link {
+    @apply inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border border-emerald-100 bg-white px-3 py-2 text-sm font-extrabold text-emerald-900 no-underline transition hover:border-emerald-300 hover:bg-emerald-50;
+  }
+
+  .pagination-link.active {
+    @apply border-emerald-700 bg-emerald-700 text-white;
+  }
+
+  .pagination-link.disabled {
+    @apply cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 hover:border-slate-200 hover:bg-slate-100;
   }
 
   .player-picker-item {

@@ -149,6 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $activePlayers = repo_all_players(true);
 $matches = repo_matches();
+$matchesPerPage = 10;
+$totalMatches = count($matches);
+$totalPages = max(1, (int) ceil($totalMatches / $matchesPerPage));
+$currentPage = max(1, min($totalPages, (int) ($_GET['page'] ?? 1)));
+$pageOffset = ($currentPage - 1) * $matchesPerPage;
+$pagedMatches = array_slice($matches, $pageOffset, $matchesPerPage);
 
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $editing = $editId > 0 ? repo_match_by_id($editId) : null;
@@ -212,7 +218,7 @@ require __DIR__ . '/includes/header.php';
   </article>
 </section>
 
-<details class="encounter-drawer" <?= $form['id'] ? 'open' : '' ?>>
+<details class="encounter-drawer <?= $form['id'] ? 'is-editing' : 'is-new' ?>" <?= $form['id'] ? 'open' : '' ?>>
   <summary class="encounter-drawer-tab">
     <span><?= $form['id'] ? 'Editar encuentro' : 'Nuevo encuentro' ?></span>
     <small><?= $targetSelection ?> convocados requeridos</small>
@@ -313,7 +319,7 @@ require __DIR__ . '/includes/header.php';
   <div class="section-toolbar">
     <div>
       <h3>Historial de encuentros</h3>
-      <p class="small-muted">Cada tarjeta muestra estado, cupos y acciones disponibles segun el avance del encuentro.</p>
+      <p class="small-muted">Cada tarjeta muestra estado, cupos y acciones disponibles segun el avance del encuentro. <?= h((string) $totalMatches) ?> encuentros cargados.</p>
     </div>
   </div>
 
@@ -321,7 +327,7 @@ require __DIR__ . '/includes/header.php';
     <p>No hay encuentros cargados.</p>
   <?php else: ?>
     <div class="encounter-card-grid">
-      <?php foreach ($matches as $m): ?>
+      <?php foreach ($pagedMatches as $m): ?>
         <?php
           $canFinalize = (string) $m['status'] === 'sorteado';
           $isFinalized = (string) $m['status'] === 'finalizado';
@@ -423,6 +429,29 @@ require __DIR__ . '/includes/header.php';
         </article>
       <?php endforeach; ?>
     </div>
+    <?php if ($totalPages > 1): ?>
+      <nav class="pagination" aria-label="Paginas de encuentros">
+        <?php if ($currentPage > 1): ?>
+          <a class="pagination-link" href="encuentros.php?page=<?= $currentPage - 1 ?>">Anterior</a>
+        <?php else: ?>
+          <span class="pagination-link disabled">Anterior</span>
+        <?php endif; ?>
+
+        <?php for ($page = 1; $page <= $totalPages; $page++): ?>
+          <?php if ($page === $currentPage): ?>
+            <span class="pagination-link active"><?= $page ?></span>
+          <?php else: ?>
+            <a class="pagination-link" href="encuentros.php?page=<?= $page ?>"><?= $page ?></a>
+          <?php endif; ?>
+        <?php endfor; ?>
+
+        <?php if ($currentPage < $totalPages): ?>
+          <a class="pagination-link" href="encuentros.php?page=<?= $currentPage + 1 ?>">Siguiente</a>
+        <?php else: ?>
+          <span class="pagination-link disabled">Siguiente</span>
+        <?php endif; ?>
+      </nav>
+    <?php endif; ?>
   <?php endif; ?>
 </section>
 

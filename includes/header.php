@@ -12,8 +12,6 @@ $menu = is_admin()
         'index.php' => 'Inicio',
         'jugadores.php' => 'Jugadores',
         'encuentros.php' => 'Encuentros',
-        'capitanes.php' => 'Capitanes',
-        'finalizar_partido.php' => 'Finalizar',
         'estadisticas.php' => 'Estadisticas',
         'logout.php' => 'Salir',
     ]
