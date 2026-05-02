@@ -17,6 +17,24 @@ $postedGoalsData = [];
 $postedRatingData = [];
 $postedAwardData = [];
 
+function valuations_locked_after_deadline(array $match): bool
+{
+    if ((string) ($match['status'] ?? '') !== 'finalizado') {
+        return false;
+    }
+
+    $finalizedAt = trim((string) ($match['finalized_at'] ?? ''));
+    if ($finalizedAt === '') {
+        $finalizedAt = trim((string) ($match['updated_at'] ?? $match['match_date'] ?? ''));
+    }
+    $finalizedTimestamp = strtotime($finalizedAt);
+    if ($finalizedTimestamp === false) {
+        return false;
+    }
+
+    return time() >= ($finalizedTimestamp + (7 * 24 * 60 * 60));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_result') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
     $teamGoalsData = $_POST['team_goals'] ?? [];
@@ -35,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
         flash('error', 'Solo se puede finalizar un encuentro con equipos ya sorteados o capitanes completos.');
+        redirect('finalizar_partido.php?match_id=' . $matchId);
+    }
+    if (valuations_locked_after_deadline($match)) {
+        flash('error', 'Las valoraciones ya no se pueden editar porque pasaron mas de 7 dias desde la finalizacion del partido.');
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
 
@@ -232,7 +254,8 @@ $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['i
 $groupedTeams = $selectedMatch ? repo_grouped_team_players((int) $selectedMatch['id']) : [];
 $awardDefinitions = award_definitions();
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
-$editDetails = $forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1');
+$valuationsLocked = $selectedMatch ? valuations_locked_after_deadline($selectedMatch) : false;
+$editDetails = !$valuationsLocked && ($forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1'));
 
 $title = 'Finalizar encuentro | ' . APP_NAME;
 $activePage = 'finalizar_partido.php';
@@ -294,14 +317,20 @@ require __DIR__ . '/includes/header.php';
           </div>
           <div class="btn-row finish-score-actions">
             <button class="btn btn-primary" type="submit">Guardar resultado</button>
-            <?php if ($scoreSaved): ?>
+            <?php if ($scoreSaved && !$valuationsLocked): ?>
               <a class="btn btn-muted finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?>" title="Editar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></a>
+            <?php elseif ($scoreSaved && $valuationsLocked): ?>
+              <span class="btn btn-disabled finish-edit-btn" title="Pasaron mas de 7 dias desde la finalizacion del partido"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones bloqueadas</span></span>
             <?php else: ?>
               <span class="btn btn-disabled finish-edit-btn" title="Guarda el resultado para habilitar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></span>
             <?php endif; ?>
           </div>
         </form>
       </section>
+
+      <?php if ($scoreSaved && $valuationsLocked): ?>
+        <p class="flash flash-info">Las valoraciones quedaron bloqueadas porque pasaron mas de 7 dias desde la finalizacion del partido.</p>
+      <?php endif; ?>
 
       <?php if ($scoreSaved && $editDetails): ?>
       <form method="post">
