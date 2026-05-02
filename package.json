@@ -1,0 +1,21 @@
+{
+  "name": "sorteo",
+  "version": "1.0.0",
+  "description": "1. Abre phpMyAdmin. 2. Importa el archivo [`database.sql`](./database.sql). 3. Verifica que se creo la base `u552541920_futbol` y sus tablas.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i ./assets/tailwind.input.css -o ./assets/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./assets/tailwind.input.css -o ./assets/tailwind.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
+    "tailwindcss": "^4.2.4"
+  }
+}
