@@ -248,18 +248,21 @@
   }
 
   const matchDetailPanel = document.querySelector('[data-match-detail-panel]');
-  const matchDetailToggle = document.querySelector('[data-match-detail-toggle]');
-  if (matchDetailPanel && matchDetailToggle) {
-    const matchDetailLabel = matchDetailToggle.querySelector('[data-match-detail-label]');
-    matchDetailToggle.addEventListener('click', (event) => {
+  const matchDetailToggles = Array.from(document.querySelectorAll('[data-match-detail-toggle]'));
+  if (matchDetailPanel && matchDetailToggles.length) {
+    const updateMatchDetailLabels = (collapsed) => {
+      document.querySelectorAll('[data-match-detail-label]').forEach((label) => {
+        label.textContent = collapsed ? 'Detalles ↓' : 'Detalles ↑';
+      });
+    };
+    updateMatchDetailLabels(matchDetailPanel.hidden);
+    matchDetailToggles.forEach((matchDetailToggle) => matchDetailToggle.addEventListener('click', (event) => {
       event.preventDefault();
       const collapsed = !matchDetailPanel.hidden;
       matchDetailPanel.hidden = collapsed;
-      matchDetailToggle.classList.toggle('details-collapsed', collapsed);
-      if (matchDetailLabel) {
-        matchDetailLabel.textContent = collapsed ? 'Detalles' : 'Compactar';
-      }
-    });
+      matchDetailToggles.forEach((toggle) => toggle.classList.toggle('details-collapsed', collapsed));
+      updateMatchDetailLabels(collapsed);
+    }));
   }
 
   document.querySelectorAll('[data-dismissible-alert]').forEach((alert) => {
@@ -284,7 +287,8 @@
       if (!awardsPopover || !awardsPopoverBody || !source) return;
 
       if (awardsPopoverTitle) {
-        awardsPopoverTitle.textContent = `Premios - ${button.getAttribute('data-awards-player') || 'Jugador'}`;
+        awardsPopoverTitle.textContent = button.getAttribute('data-awards-title')
+          || `Premios - ${button.getAttribute('data-awards-player') || 'Jugador'}`;
       }
       awardsPopoverBody.innerHTML = source.innerHTML;
       awardsPopover.hidden = false;

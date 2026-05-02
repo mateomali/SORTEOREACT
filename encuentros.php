@@ -155,6 +155,35 @@ $totalPages = max(1, (int) ceil($totalMatches / $matchesPerPage));
 $currentPage = max(1, min($totalPages, (int) ($_GET['page'] ?? 1)));
 $pageOffset = ($currentPage - 1) * $matchesPerPage;
 $pagedMatches = array_slice($matches, $pageOffset, $matchesPerPage);
+$historyTeamsByMatch = [];
+$historyCaptainNames = [];
+$pagedMatchIds = array_map(static fn(array $match): int => (int) $match['id'], $pagedMatches);
+if ($pagedMatchIds) {
+    $in = implode(',', array_fill(0, count($pagedMatchIds), '?'));
+    $stmtHistoryTeams = $pdo->prepare(
+        "SELECT *
+         FROM match_teams
+         WHERE match_id IN ($in)
+         ORDER BY match_id ASC, team_number ASC"
+    );
+    $stmtHistoryTeams->execute($pagedMatchIds);
+    $historyCaptainIds = [];
+    foreach ($stmtHistoryTeams->fetchAll() as $teamRow) {
+        $historyTeamsByMatch[(int) $teamRow['match_id']][] = $teamRow;
+        if (!empty($teamRow['captain_player_id'])) {
+            $historyCaptainIds[(int) $teamRow['captain_player_id']] = true;
+        }
+    }
+    if ($historyCaptainIds) {
+        $captainIds = array_keys($historyCaptainIds);
+        $captainIn = implode(',', array_fill(0, count($captainIds), '?'));
+        $stmtCaptains = $pdo->prepare("SELECT id, name FROM players WHERE id IN ($captainIn)");
+        $stmtCaptains->execute($captainIds);
+        foreach ($stmtCaptains->fetchAll() as $captainRow) {
+            $historyCaptainNames[(int) $captainRow['id']] = (string) $captainRow['name'];
+        }
+    }
+}
 
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $editing = $editId > 0 ? repo_match_by_id($editId) : null;
@@ -185,6 +214,54 @@ function admin_match_status_label(string $status): string
         'sorteado' => 'Equipos listos',
         default => 'Programado',
     };
+}
+
+function admin_history_team_label(array $match, array $team, array $captainNames): string
+{
+    if (!empty($team['captain_player_id'])) {
+        $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . (int) ($team['team_number'] ?? 0));
+        return mb_strtoupper(trim($captainName), 'UTF-8');
+    }
+
+    $teamNumber = (int) ($team['team_number'] ?? 0);
+    $color = trim((string) ($team['color_name'] ?? ''));
+    if ($color === '' && (($match['draw_mode'] ?? '') !== 'captains')) {
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $color = $defaultColors[$teamNumber] ?? '';
+    }
+
+    $heartByColor = [
+        'ROSA' => '🩷',
+        'AZUL' => '💙',
+        'VERDE' => '💚',
+        'NEGRO' => '🖤',
+        'NARANJA' => '🧡',
+    ];
+    $normalizedColor = mb_strtoupper($color, 'UTF-8');
+    if (isset($heartByColor[$normalizedColor])) {
+        return 'EQUIPO ' . $heartByColor[$normalizedColor];
+    }
+
+    $label = trim((string) ($team['team_name'] ?? '')) ?: ('Equipo ' . $teamNumber);
+    return mb_strtoupper($label, 'UTF-8');
+}
+
+function admin_history_match_score_line(array $match, array $teams, array $captainNames): string
+{
+    if (!$teams) {
+        return '';
+    }
+
+    $showGoals = (string) ($match['status'] ?? '') === 'finalizado'
+        || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams)) > 0;
+
+    $parts = [];
+    foreach ($teams as $team) {
+        $label = admin_history_team_label($match, $team, $captainNames);
+        $parts[] = $showGoals ? ($label . ' ( ' . (int) ($team['goals'] ?? 0) . ' )') : $label;
+    }
+
+    return implode(' VS ', $parts);
 }
 
 $scheduledCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'programado'));
@@ -337,12 +414,18 @@ require __DIR__ . '/includes/header.php';
           $expectedPlayers = (int) $m['num_teams'] * max(1, $playersPerTeam);
           $participantsCount = (int) $m['participants_count'];
           $statusClass = $isFinalized ? 'done' : ($canFinalize ? 'ready' : 'warn');
+          $historyScoreLine = admin_history_match_score_line($m, $historyTeamsByMatch[$matchId] ?? [], $historyCaptainNames);
         ?>
         <article class="encounter-card">
           <div class="encounter-card-head">
             <div>
               <span class="encounter-date"><?= h(date('d/m/Y H:00', strtotime((string) $m['match_date']))) ?></span>
-              <h4><?= h((string) ($m['title'] ?: 'Partido #' . $m['id'])) ?></h4>
+              <h4>
+                <?= h((string) ($m['title'] ?: 'Partido #' . $m['id'])) ?>
+                <?php if ($historyScoreLine !== ''): ?>
+                  <span class="encounter-card-title-score"><?= h($historyScoreLine) ?></span>
+                <?php endif; ?>
+              </h4>
             </div>
             <span class="badge <?= h($statusClass) ?>"><?= h(admin_match_status_label((string) $m['status'])) ?></span>
           </div>
@@ -366,11 +449,11 @@ require __DIR__ . '/includes/header.php';
 
           <div class="encounter-actions">
             <?php if ($isScheduled): ?>
-              <a class="btn btn-muted icon-pencil" data-short="" href="encuentros.php?edit=<?= $matchId ?>">Editar</a>
+              <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="encuentros.php?edit=<?= $matchId ?>" aria-label="Editar encuentro" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
               <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
             <?php else: ?>
-              <span class="btn btn-disabled icon-pencil" data-short="">Editar</span>
+              <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
               <span class="btn btn-disabled icon-dice" data-short=""><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
               <span class="btn btn-disabled icon-captain" data-short="">Capitanes</span>
             <?php endif; ?>
@@ -378,7 +461,7 @@ require __DIR__ . '/includes/header.php';
             <?php if ($canFinalize): ?>
               <a class="btn btn-primary icon-finish" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar</a>
             <?php elseif ($isFinalized): ?>
-              <a class="btn btn-muted" data-short="V" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
+              <a class="btn btn-muted" data-short="V" href="finalizar_partido.php?match_id=<?= $matchId ?>" title="Ver resultado">Ver</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-finish" data-short="" title="Primero hay que generar equipos por sorteo o capitanes">Finalizar</span>
             <?php endif; ?>
@@ -387,13 +470,13 @@ require __DIR__ . '/includes/header.php';
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger" data-short="X" data-confirm="Eliminar encuentro y sus datos?">Eliminar</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar encuentro y sus datos?" aria-label="Eliminar encuentro" title="Eliminar">X</button>
               </form>
             <?php else: ?>
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger" data-short="X" data-confirm="Eliminar este encuentro? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.">Eliminar</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar este encuentro? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados." aria-label="Eliminar encuentro" title="Eliminar">X</button>
               </form>
             <?php endif; ?>
           </div>

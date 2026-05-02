@@ -154,6 +154,42 @@ $stmtRatings = $pdo->prepare($ratingSql);
 $stmtRatings->execute($params + $awardParams + ['min_matches' => $minMatches]);
 $ratings = $stmtRatings->fetchAll();
 
+$playerMatchDetails = [];
+$playerMatchDetailsSql = "SELECT
+  p.id AS player_id,
+  m.id AS match_id,
+  m.title,
+  m.match_date,
+  COALESCE(mt.goals, 0) AS team_goals,
+  (SELECT MAX(mt2.goals) FROM match_teams mt2 WHERE mt2.match_id = mp.match_id AND mt2.team_number <> mp.team_number) AS opponent_goals
+FROM match_players mp
+INNER JOIN players p ON p.id = mp.player_id
+INNER JOIN matches m ON {$matchStatsJoinSql}
+LEFT JOIN match_teams mt ON mt.match_id = mp.match_id AND mt.team_number = mp.team_number
+ORDER BY p.id ASC, m.match_date DESC, m.id DESC";
+
+$stmtPlayerMatchDetails = $pdo->prepare($playerMatchDetailsSql);
+$stmtPlayerMatchDetails->execute($params);
+foreach ($stmtPlayerMatchDetails->fetchAll() as $detailRow) {
+    $playerId = (int) $detailRow['player_id'];
+    $teamGoals = (int) ($detailRow['team_goals'] ?? 0);
+    $opponentGoals = $detailRow['opponent_goals'] !== null ? (int) $detailRow['opponent_goals'] : null;
+    if ($opponentGoals === null) {
+        continue;
+    }
+    $resultKey = 'drawn';
+    if ($teamGoals > $opponentGoals) {
+        $resultKey = 'won';
+    } elseif ($teamGoals < $opponentGoals) {
+        $resultKey = 'lost';
+    }
+    $playerMatchDetails[$playerId][$resultKey][] = [
+        'title' => (string) ($detailRow['title'] ?: ('Partido #' . $detailRow['match_id'])),
+        'date' => date('d/m/Y H:i', strtotime((string) $detailRow['match_date'])),
+        'score' => $teamGoals . ' vs ' . $opponentGoals,
+    ];
+}
+
 $captainWhere = ["m.status = 'finalizado'", "d.status = 'completed'"];
 $captainParams = [];
 if ($dateFrom !== '') {
@@ -356,7 +392,26 @@ require __DIR__ . '/includes/header.php';
                   $awardPanelId = 'awards-player-' . (int) $row['id'];
                   $goodAwardPanelId = $awardPanelId . '-good';
                   $badAwardPanelId = $awardPanelId . '-bad';
+                  $performancePanelId = 'performance-player-' . (int) $row['id'];
+                  $performanceDetails = $playerMatchDetails[(int) $row['id']] ?? [];
+                  $performanceGroups = [
+                      'won' => ['label' => 'GANADOS', 'items' => $performanceDetails['won'] ?? []],
+                      'drawn' => ['label' => 'EMPATADOS', 'items' => $performanceDetails['drawn'] ?? []],
+                      'lost' => ['label' => 'PERDIDOS', 'items' => $performanceDetails['lost'] ?? []],
+                  ];
                 ?>
+                <button
+                  type="button"
+                  class="award-summary-button award-icon-only"
+                  data-awards-trigger
+                  data-awards-target="<?= h($performancePanelId) ?>"
+                  data-awards-player="<?= h((string) $row['name']) ?>"
+                  data-awards-title="Rendimiento - <?= h((string) $row['name']) ?>"
+                  aria-label="Ver rendimiento de <?= h((string) $row['name']) ?>"
+                  title="Rendimiento"
+                >
+                  <span class="award-count-icon">&#128200;</span>
+                </button>
                 <?php if ($playerAwardItems): ?>
                   <?php if ($playerGoodAwardTotal > 0): ?>
                     <button
@@ -415,6 +470,25 @@ require __DIR__ . '/includes/header.php';
                     </div>
                   </div>
                 <?php endforeach; ?>
+                <div id="<?= h($performancePanelId) ?>" class="award-popover-source" hidden>
+                  <div class="award-popover-list">
+                    <?php foreach ($performanceGroups as $performanceGroup): ?>
+                      <div class="award-popover-item performance-popover-item">
+                        <span class="award-popover-icon"><?= h((string) count($performanceGroup['items'])) ?></span>
+                        <span>
+                          <strong><?= h($performanceGroup['label']) ?></strong>
+                          <?php if ($performanceGroup['items']): ?>
+                            <?php foreach ($performanceGroup['items'] as $matchDetail): ?>
+                              <small><?= h($matchDetail['title']) ?> | <?= h($matchDetail['date']) ?> | <?= h($matchDetail['score']) ?></small>
+                            <?php endforeach; ?>
+                          <?php else: ?>
+                            <small>Sin partidos en esta categoria.</small>
+                          <?php endif; ?>
+                        </span>
+                      </div>
+                    <?php endforeach; ?>
+                  </div>
+                </div>
                 <div id="<?= h($awardPanelId) ?>" class="award-popover-source" hidden>
                   <div class="award-popover-list">
                     <?php if ($playerAwardItems): ?>

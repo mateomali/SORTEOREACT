@@ -19,6 +19,25 @@ $matches = $pdo->query(
        CASE WHEN m.match_date < NOW() OR m.status = 'finalizado' THEN m.match_date END DESC"
 )->fetchAll();
 
+$historyMatches = $matches;
+usort($historyMatches, static function (array $a, array $b): int {
+    $dateComparison = strtotime((string) $b['match_date']) <=> strtotime((string) $a['match_date']);
+    return $dateComparison ?: ((int) $b['id'] <=> (int) $a['id']);
+});
+
+$nextMatchId = 0;
+$futureMatches = array_values(array_filter($matches, static function (array $match): bool {
+    return (string) $match['status'] !== 'finalizado'
+        && strtotime((string) $match['match_date']) >= time();
+}));
+usort($futureMatches, static function (array $a, array $b): int {
+    $dateComparison = strtotime((string) $a['match_date']) <=> strtotime((string) $b['match_date']);
+    return $dateComparison ?: ((int) $a['id'] <=> (int) $b['id']);
+});
+if ($futureMatches) {
+    $nextMatchId = (int) $futureMatches[0]['id'];
+}
+
 $historyTeamsByMatch = [];
 $historyCaptainNames = [];
 $historyMatchIds = array_map(static fn(array $match): int => (int) $match['id'], $matches);
@@ -278,7 +297,7 @@ require __DIR__ . '/includes/header.php';
         <div class="home-result-line">Resultado: <?= h(team_score_line($headerGoals, $headerTeamLabels)) ?></div>
       <?php endif; ?>
     </div>
-    <a class="btn btn-primary" href="index.php?match_id=<?= (int) $headerMatch['id'] ?>">Detalles</a>
+    <a class="btn btn-primary" href="index.php?match_id=<?= (int) $headerMatch['id'] ?>" data-match-detail-toggle data-match-detail-label>Detalles ↑</a>
   </section>
 <?php endif; ?>
 
@@ -286,13 +305,13 @@ require __DIR__ . '/includes/header.php';
   <article class="card match-history">
     <h3>Historial de encuentros</h3>
     <div class="match-list">
-      <?php if (!$matches): ?>
+      <?php if (!$historyMatches): ?>
         <p>No hay encuentros cargados.</p>
       <?php else: ?>
-        <?php foreach ($matches as $index => $match): ?>
+        <?php foreach ($historyMatches as $match): ?>
           <?php
             $isSelected = $selectedMatchId === (int) $match['id'];
-            $isNext = $index === 0 && (string) $match['status'] !== 'finalizado';
+            $isNext = $nextMatchId === (int) $match['id'];
             $historyScoreLine = history_match_score_line($match, $historyTeamsByMatch[(int) $match['id']] ?? [], $historyCaptainNames);
           ?>
           <a
@@ -312,7 +331,7 @@ require __DIR__ . '/includes/header.php';
             <span class="match-list-side">
               <?php if ($isNext): ?><em>Proximo</em><?php endif; ?>
               <span class="badge <?= $match['status'] === 'finalizado' ? 'done' : 'warn' ?>"><?= h(match_status_label((string) $match['status'])) ?></span>
-              <span class="btn btn-muted" data-match-detail-label><?= $isSelected ? 'Compactar' : 'Detalles' ?></span>
+              <span class="btn btn-muted" data-match-detail-label>Detalles ↑</span>
             </span>
           </a>
         <?php endforeach; ?>
