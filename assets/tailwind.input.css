@@ -593,7 +593,7 @@
   }
 
   .home-result-line {
-    @apply mt-3 inline-flex max-w-full whitespace-normal rounded-full border border-emerald-200 bg-white px-3 py-2 text-sm font-extrabold leading-snug text-emerald-950;
+    @apply mt-3 inline-flex max-w-full whitespace-normal text-sm font-extrabold leading-snug text-emerald-950;
   }
 
   .home-layout {
@@ -634,7 +634,23 @@
   }
 
   .match-list-title-score {
-    @apply ml-2 inline text-sm font-extrabold uppercase text-emerald-950;
+    @apply mt-2 block text-sm font-extrabold uppercase text-emerald-950;
+  }
+
+  .match-list-title-score .match-scoreboard {
+    @apply min-w-0 max-w-full gap-2 rounded-md px-2 py-1;
+  }
+
+  .match-list-title-score .scoreboard-team {
+    @apply text-xs;
+  }
+
+  .match-list-title-score .team-heart-icon {
+    @apply h-4 w-4;
+  }
+
+  .match-list-title-score .scoreboard-score {
+    @apply text-base;
   }
 
   .match-list-side {
@@ -654,7 +670,31 @@
   }
 
   .score-pill {
-    @apply max-w-full rounded-full border border-emerald-100 bg-white px-3 py-2 text-center text-sm font-extrabold leading-snug text-emerald-950;
+    @apply max-w-full rounded-lg border border-emerald-100 bg-emerald-50 p-0 text-center text-sm font-extrabold leading-snug text-emerald-950;
+  }
+
+  .match-scoreboard {
+    @apply inline-grid min-w-72 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-emerald-950 shadow-sm shadow-emerald-950/5;
+  }
+
+  .match-scoreboard .scoreboard-team {
+    @apply min-w-0 text-sm font-extrabold;
+  }
+
+  .match-scoreboard .scoreboard-team-away {
+    @apply justify-self-end;
+  }
+
+  .match-scoreboard .team-label-with-heart {
+    @apply gap-2;
+  }
+
+  .match-scoreboard .team-heart-icon {
+    @apply h-5 w-5 rounded-full bg-white p-0.5 ring-1 ring-emerald-100;
+  }
+
+  .match-scoreboard .scoreboard-score {
+    @apply rounded-md bg-white px-2 py-1 text-xl font-extrabold leading-none text-emerald-950 ring-1 ring-emerald-100;
   }
 
   .public-teams {
@@ -1276,11 +1316,27 @@
   }
 
   .encounter-card h4 {
-    @apply m-0 whitespace-nowrap text-lg;
+    @apply m-0 text-lg;
   }
 
   .encounter-card-title-score {
-    @apply ml-2 inline whitespace-nowrap text-sm font-extrabold uppercase text-emerald-950;
+    @apply mt-2 block text-sm font-extrabold uppercase text-emerald-950;
+  }
+
+  .encounter-card-title-score .match-scoreboard {
+    @apply min-w-0 max-w-full gap-2 rounded-md px-2 py-1;
+  }
+
+  .encounter-card-title-score .scoreboard-team {
+    @apply text-xs;
+  }
+
+  .encounter-card-title-score .team-heart-icon {
+    @apply h-4 w-4;
+  }
+
+  .encounter-card-title-score .scoreboard-score {
+    @apply text-base;
   }
 
   .encounter-card-metrics {
@@ -2028,6 +2084,18 @@
 
     .match-list-side {
       @apply flex-row items-center;
+    }
+
+    .match-scoreboard {
+      @apply min-w-0 w-full gap-2 px-2 py-2;
+    }
+
+    .match-scoreboard .scoreboard-team {
+      @apply text-xs;
+    }
+
+    .match-scoreboard .scoreboard-score {
+      @apply text-lg;
     }
 
     .team-card {

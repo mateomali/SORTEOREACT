@@ -264,6 +264,93 @@ function admin_history_match_score_line(array $match, array $teams, array $capta
     return implode(' VS ', $parts);
 }
 
+function admin_team_color_from_label(string $label): string
+{
+    if (preg_match('/Equipo\s*\(([^)]+)\)/i', $label, $matches) !== 1) {
+        return '';
+    }
+
+    $color = mb_strtoupper(trim($matches[1]), 'UTF-8');
+    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA'];
+    return in_array($color, $knownColors, true) ? $color : '';
+}
+
+function admin_team_heart_color(string $color): string
+{
+    return match ($color) {
+        'ROSA' => '#ec4899',
+        'AZUL' => '#2563eb',
+        'VERDE' => '#16a34a',
+        'NEGRO' => '#111827',
+        'NARANJA' => '#f97316',
+        default => '#047857',
+    };
+}
+
+function admin_render_team_label(string $label): string
+{
+    $color = admin_team_color_from_label($label);
+    if ($color === '') {
+        return h($label);
+    }
+
+    $heartColor = admin_team_heart_color($color);
+    return '<span class="team-label-with-heart" title="' . h($label) . '">' .
+        '<span>Equipo</span>' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="--team-heart-fill: ' . h($heartColor) . '">' .
+        '<path d="M12 21s-7.2-4.6-9.6-9C.4 8.4 2.3 4 6.5 4c2 0 3.7 1.1 4.6 2.7C12 5.1 13.7 4 15.7 4c4.2 0 6.1 4.4 4.1 8-2.4 4.4-9.8 9-9.8 9z" />' .
+        '</svg>' .
+        '</span>';
+}
+
+function admin_history_team_scoreboard_label(array $match, array $team, array $captainNames): string
+{
+    $teamNumber = (int) ($team['team_number'] ?? 0);
+    if (!empty($team['captain_player_id'])) {
+        $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
+        return 'Equipo (' . $captainName . ')';
+    }
+
+    $color = trim((string) ($team['color_name'] ?? ''));
+    if ($color !== '') {
+        return 'Equipo (' . mb_strtoupper($color, 'UTF-8') . ')';
+    }
+
+    if (($match['draw_mode'] ?? '') !== 'captains') {
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        if (isset($defaultColors[$teamNumber])) {
+            return 'Equipo (' . $defaultColors[$teamNumber] . ')';
+        }
+    }
+
+    return trim((string) ($team['team_name'] ?? '')) ?: ('Equipo ' . $teamNumber);
+}
+
+function admin_render_match_scoreboard(array $match, array $teams, array $captainNames): string
+{
+    if (!$teams) {
+        return '';
+    }
+
+    $items = [];
+    foreach ($teams as $team) {
+        $items[] = [
+            'label' => admin_history_team_scoreboard_label($match, $team, $captainNames),
+            'goals' => (int) ($team['goals'] ?? 0),
+        ];
+    }
+
+    if (count($items) !== 2) {
+        return h(admin_history_match_score_line($match, $teams, $captainNames));
+    }
+
+    return '<span class="match-scoreboard">' .
+        '<span class="scoreboard-team">' . admin_render_team_label($items[0]['label']) . '</span>' .
+        '<strong class="scoreboard-score">' . h((string) $items[0]['goals']) . ' - ' . h((string) $items[1]['goals']) . '</strong>' .
+        '<span class="scoreboard-team scoreboard-team-away">' . admin_render_team_label($items[1]['label']) . '</span>' .
+        '</span>';
+}
+
 $scheduledCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'programado'));
 $readyCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'sorteado'));
 $finishedCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'finalizado'));
@@ -414,7 +501,7 @@ require __DIR__ . '/includes/header.php';
           $expectedPlayers = (int) $m['num_teams'] * max(1, $playersPerTeam);
           $participantsCount = (int) $m['participants_count'];
           $statusClass = $isFinalized ? 'done' : ($canFinalize ? 'ready' : 'warn');
-          $historyScoreLine = admin_history_match_score_line($m, $historyTeamsByMatch[$matchId] ?? [], $historyCaptainNames);
+          $historyScoreboard = admin_render_match_scoreboard($m, $historyTeamsByMatch[$matchId] ?? [], $historyCaptainNames);
         ?>
         <article class="encounter-card">
           <div class="encounter-card-head">
@@ -422,8 +509,8 @@ require __DIR__ . '/includes/header.php';
               <span class="encounter-date"><?= h(date('d/m/Y H:00', strtotime((string) $m['match_date']))) ?></span>
               <h4>
                 <?= h((string) ($m['title'] ?: 'Partido #' . $m['id'])) ?>
-                <?php if ($historyScoreLine !== ''): ?>
-                  <span class="encounter-card-title-score"><?= h($historyScoreLine) ?></span>
+                <?php if ($historyScoreboard !== ''): ?>
+                  <span class="encounter-card-title-score"><?= $historyScoreboard ?></span>
                 <?php endif; ?>
               </h4>
             </div>

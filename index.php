@@ -186,6 +186,32 @@ function team_score_line(array $teamGoals, array $teamLabels = []): string
     return implode(' - ', $parts);
 }
 
+function render_match_scoreboard(array $teamGoals, array $teamLabels = []): string
+{
+    if (!$teamGoals) {
+        return h('Sin resultado cargado');
+    }
+
+    $items = [];
+    foreach ($teamGoals as $team => $goals) {
+        $label = $teamLabels[(int) $team] ?? ('Equipo ' . (int) $team);
+        $items[] = [
+            'label' => $label,
+            'goals' => (int) $goals,
+        ];
+    }
+
+    if (count($items) !== 2) {
+        return h(team_score_line($teamGoals, $teamLabels));
+    }
+
+    return '<span class="match-scoreboard">' .
+        '<span class="scoreboard-team">' . render_team_label($items[0]['label']) . '</span>' .
+        '<strong class="scoreboard-score">' . h((string) $items[0]['goals']) . ' - ' . h((string) $items[1]['goals']) . '</strong>' .
+        '<span class="scoreboard-team scoreboard-team-away">' . render_team_label($items[1]['label']) . '</span>' .
+        '</span>';
+}
+
 function team_color_from_label(string $label): string
 {
     if (preg_match('/Equipo\s*\(([^)]+)\)/i', $label, $matches) !== 1) {
@@ -297,6 +323,55 @@ function history_match_score_line(array $match, array $teams, array $captainName
     return implode(' VS ', $parts);
 }
 
+function history_team_scoreboard_label(array $match, array $team, array $captainNames): string
+{
+    $teamNumber = (int) ($team['team_number'] ?? 0);
+    if (!empty($team['captain_player_id'])) {
+        $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
+        return 'Equipo (' . $captainName . ')';
+    }
+
+    $color = trim((string) ($team['color_name'] ?? ''));
+    if ($color !== '') {
+        return 'Equipo (' . mb_strtoupper($color, 'UTF-8') . ')';
+    }
+
+    if (($match['draw_mode'] ?? '') !== 'captains') {
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        if (isset($defaultColors[$teamNumber])) {
+            return 'Equipo (' . $defaultColors[$teamNumber] . ')';
+        }
+    }
+
+    return trim((string) ($team['team_name'] ?? '')) ?: ('Equipo ' . $teamNumber);
+}
+
+function render_history_match_scoreboard(array $match, array $teams, array $captainNames): string
+{
+    if (!$teams) {
+        return '';
+    }
+
+    $teamGoals = [];
+    $teamLabels = [];
+    foreach ($teams as $team) {
+        $teamNumber = (int) ($team['team_number'] ?? 0);
+        if ($teamNumber <= 0) {
+            continue;
+        }
+        $teamGoals[$teamNumber] = (int) ($team['goals'] ?? 0);
+        $teamLabels[$teamNumber] = history_team_scoreboard_label($match, $team, $captainNames);
+    }
+
+    if (!$teamGoals) {
+        return '';
+    }
+
+    ksort($teamGoals);
+    ksort($teamLabels);
+    return render_match_scoreboard($teamGoals, $teamLabels);
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -335,7 +410,7 @@ require __DIR__ . '/includes/header.php';
         | <?= h(match_status_label((string) $headerMatch['status'])) ?>
       </p>
       <?php if ((string) $headerMatch['status'] === 'finalizado'): ?>
-        <div class="home-result-line">Resultado: <?= h(team_score_line($headerGoals, $headerTeamLabels)) ?></div>
+        <div class="home-result-line">Resultado: <?= render_match_scoreboard($headerGoals, $headerTeamLabels) ?></div>
       <?php endif; ?>
     </div>
     <a class="btn btn-primary" href="index.php?match_id=<?= (int) $headerMatch['id'] ?>" data-match-detail-toggle data-match-detail-label>Detalles ↑</a>
@@ -353,7 +428,7 @@ require __DIR__ . '/includes/header.php';
           <?php
             $isSelected = $selectedMatchId === (int) $match['id'];
             $isNext = $nextMatchId === (int) $match['id'];
-            $historyScoreLine = history_match_score_line($match, $historyTeamsByMatch[(int) $match['id']] ?? [], $historyCaptainNames);
+            $historyScoreboard = render_history_match_scoreboard($match, $historyTeamsByMatch[(int) $match['id']] ?? [], $historyCaptainNames);
           ?>
           <a
             class="match-list-item <?= $isSelected ? 'active' : '' ?>"
@@ -363,8 +438,8 @@ require __DIR__ . '/includes/header.php';
             <span>
               <strong>
                 <?= h((string) ($match['title'] ?: ('Partido #' . $match['id']))) ?>
-                <?php if ($historyScoreLine !== ''): ?>
-                  <span class="match-list-title-score"><?= h($historyScoreLine) ?></span>
+                <?php if ($historyScoreboard !== ''): ?>
+                  <span class="match-list-title-score"><?= $historyScoreboard ?></span>
                 <?php endif; ?>
               </strong>
               <small><?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?> | <?= h((string) $match['participants_count']) ?> jugadores</small>
@@ -391,7 +466,7 @@ require __DIR__ . '/includes/header.php';
           <p class="small-muted"><?= h(date('d/m/Y H:i', strtotime((string) $selectedMatch['match_date']))) ?> | <?= h(match_status_label((string) $selectedMatch['status'])) ?></p>
         </div>
         <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
-          <div class="score-pill"><?= h(team_score_line($teamGoals, $teamLabels)) ?></div>
+          <div class="score-pill"><?= render_match_scoreboard($teamGoals, $teamLabels) ?></div>
         <?php endif; ?>
       </div>
 
