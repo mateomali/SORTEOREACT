@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
+require_once __DIR__ . '/lib/schema.php';
 
 require_admin();
 
 $pdo = db();
+ensure_control_schema();
 
 function clear_match_draw_data(PDO $pdo, int $matchId): void
 {

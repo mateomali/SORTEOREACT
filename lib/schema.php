@@ -29,6 +29,104 @@ function schema_index_exists(PDO $pdo, string $table, string $index): bool
     return (int) $stmt->fetchColumn() > 0;
 }
 
+function schema_table_exists(PDO $pdo, string $table): bool
+{
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*)
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table_name'
+    );
+    $stmt->execute(['table_name' => $table]);
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+function ensure_control_tables(PDO $pdo): array
+{
+    $changes = [];
+
+    if (!schema_table_exists($pdo, 'match_awards')) {
+        $pdo->exec(
+            "CREATE TABLE match_awards (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                match_id INT UNSIGNED NOT NULL,
+                award_code VARCHAR(40) NOT NULL,
+                player_id INT UNSIGNED NOT NULL,
+                notes VARCHAR(255) NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_match_award (match_id, award_code),
+                INDEX idx_awards_player (player_id, award_code),
+                CONSTRAINT fk_match_awards_match
+                  FOREIGN KEY (match_id) REFERENCES matches(id)
+                  ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_match_awards_player
+                  FOREIGN KEY (player_id) REFERENCES players(id)
+                  ON DELETE RESTRICT ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $changes[] = 'table match_awards';
+    }
+
+    if (!schema_table_exists($pdo, 'captain_drafts')) {
+        $pdo->exec(
+            "CREATE TABLE captain_drafts (
+                match_id INT UNSIGNED PRIMARY KEY,
+                captain1_player_id INT UNSIGNED NOT NULL,
+                captain2_player_id INT UNSIGNED NOT NULL,
+                captain1_token VARCHAR(64) NOT NULL,
+                captain2_token VARCHAR(64) NOT NULL,
+                current_team TINYINT UNSIGNED NULL DEFAULT 1,
+                status ENUM('active', 'completed') NOT NULL DEFAULT 'active',
+                started_at DATETIME NULL,
+                completed_at DATETIME NULL,
+                turn_version INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_captain_drafts_match
+                  FOREIGN KEY (match_id) REFERENCES matches(id)
+                  ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_captain_drafts_captain1
+                  FOREIGN KEY (captain1_player_id) REFERENCES players(id)
+                  ON DELETE RESTRICT ON UPDATE CASCADE,
+                CONSTRAINT fk_captain_drafts_captain2
+                  FOREIGN KEY (captain2_player_id) REFERENCES players(id)
+                  ON DELETE RESTRICT ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $changes[] = 'table captain_drafts';
+    }
+
+    if (!schema_table_exists($pdo, 'captain_picks')) {
+        $pdo->exec(
+            "CREATE TABLE captain_picks (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                match_id INT UNSIGNED NOT NULL,
+                player_id INT UNSIGNED NOT NULL,
+                team_number TINYINT UNSIGNED NOT NULL,
+                picked_by_player_id INT UNSIGNED NOT NULL,
+                pick_order SMALLINT UNSIGNED NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_captain_pick_player (match_id, player_id),
+                UNIQUE KEY uniq_captain_pick_order (match_id, pick_order),
+                INDEX idx_captain_pick_match_team (match_id, team_number),
+                CONSTRAINT fk_captain_picks_match
+                  FOREIGN KEY (match_id) REFERENCES matches(id)
+                  ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_captain_picks_player
+                  FOREIGN KEY (player_id) REFERENCES players(id)
+                  ON DELETE RESTRICT ON UPDATE CASCADE,
+                CONSTRAINT fk_captain_picks_picker
+                  FOREIGN KEY (picked_by_player_id) REFERENCES players(id)
+                  ON DELETE RESTRICT ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $changes[] = 'table captain_picks';
+    }
+
+    return $changes;
+}
+
 function schema_add_column(PDO $pdo, string $table, string $column, string $definition): bool
 {
     if (schema_column_exists($pdo, $table, $column)) {
@@ -50,9 +148,16 @@ function schema_add_index(PDO $pdo, string $table, string $index, string $defini
 function ensure_control_schema(): array
 {
     $pdo = db();
-    $changes = [];
+    $changes = ensure_control_tables($pdo);
 
     $columns = [
+        ['matches', 'title', 'title VARCHAR(120) NULL AFTER id'],
+        ['matches', 'num_teams', 'num_teams TINYINT UNSIGNED NOT NULL DEFAULT 2 AFTER match_date'],
+        ['matches', 'players_per_team', 'players_per_team TINYINT UNSIGNED NOT NULL DEFAULT 9 AFTER num_teams'],
+        ['matches', 'max_diff', 'max_diff DECIMAL(4,1) NOT NULL DEFAULT 0.5 AFTER players_per_team'],
+        ['matches', 'notes', 'notes TEXT NULL AFTER public_token'],
+        ['matches', 'created_at', 'created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'],
+        ['matches', 'updated_at', 'updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'],
         ['matches', 'draw_mode', "draw_mode ENUM('none', 'random', 'captains') NOT NULL DEFAULT 'none' AFTER status"],
         ['matches', 'draw_started_at', 'draw_started_at DATETIME NULL AFTER draw_mode'],
         ['matches', 'draw_completed_at', 'draw_completed_at DATETIME NULL AFTER draw_started_at'],
