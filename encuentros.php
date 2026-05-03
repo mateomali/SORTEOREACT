@@ -10,6 +10,12 @@ require_admin();
 $pdo = db();
 ensure_control_schema();
 
+$matchAdminView = defined('MATCH_ADMIN_VIEW') ? (string) MATCH_ADMIN_VIEW : 'edit';
+$showCreateSection = in_array($matchAdminView, ['create', 'all'], true);
+$showEditSection = in_array($matchAdminView, ['edit', 'all'], true);
+$matchFormPage = 'crear_partido.php';
+$matchListPage = 'editar_partidos.php';
+
 function clear_match_draw_data(PDO $pdo, int $matchId): void
 {
     $pdo->prepare('DELETE FROM captain_picks WHERE match_id = :mid')->execute(['mid' => $matchId]);
@@ -60,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', 'No se pudo eliminar el partido: ' . $e->getMessage());
             }
         }
-        redirect('encuentros.php');
+        redirect($matchListPage);
     }
 
     if ($action === 'save_match') {
@@ -77,11 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($matchDate === '') {
             flash('error', 'La fecha del partido es obligatoria.');
-            redirect($id ? 'encuentros.php?edit=' . $id : 'encuentros.php');
+            redirect($id ? $matchFormPage . '?edit=' . $id : $matchFormPage);
         }
         if (count($participants) !== $targetPlayers) {
             flash('error', "Debes seleccionar exactamente {$targetPlayers} jugadores ({$playersPerTeam} por equipo x {$numTeams} equipos).");
-            redirect($id ? 'encuentros.php?edit=' . $id : 'encuentros.php');
+            redirect($id ? $matchFormPage . '?edit=' . $id : $matchFormPage);
         }
         if ($participants) {
             $in = implode(',', array_fill(0, count($participants), '?'));
@@ -89,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $activeStmt->execute($participants);
             if ((int) $activeStmt->fetchColumn() !== count($participants)) {
                 flash('error', 'Solo se pueden convocar jugadores con estado activo.');
-                redirect($id ? 'encuentros.php?edit=' . $id : 'encuentros.php');
+                redirect($id ? $matchFormPage . '?edit=' . $id : $matchFormPage);
             }
         }
 
@@ -97,11 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $existing = repo_match_by_id($id);
             if (!$existing) {
                 flash('error', 'El partido a editar no existe.');
-                redirect('encuentros.php');
+                redirect($matchListPage);
             }
             if ($existing['status'] === 'finalizado') {
                 flash('error', 'No se puede editar un partido finalizado.');
-                redirect('encuentros.php');
+                redirect($matchListPage);
             }
             $stmt = $pdo->prepare(
                 'UPDATE matches
@@ -144,8 +150,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newId = (int) $pdo->lastInsertId();
             repo_save_match_participants($newId, $participants);
             flash('success', 'Partido creado.');
+            redirect($matchListPage . '?focus_match=' . $newId);
         }
-        redirect('encuentros.php');
+        redirect($matchListPage);
     }
 }
 
@@ -154,21 +161,34 @@ $matches = repo_matches();
 $matchesPerPage = 10;
 $totalMatches = count($matches);
 $totalPages = max(1, (int) ceil($totalMatches / $matchesPerPage));
-$currentPage = max(1, min($totalPages, (int) ($_GET['page'] ?? 1)));
+$focusedMatchId = max(0, (int) ($_GET['focus_match'] ?? 0));
+$focusedMatchPage = 0;
+if ($focusedMatchId > 0) {
+    foreach ($matches as $focusIndex => $focusMatch) {
+        if ((int) $focusMatch['id'] === $focusedMatchId) {
+            $focusedMatchPage = intdiv($focusIndex, $matchesPerPage) + 1;
+            break;
+        }
+    }
+}
+$requestedPage = isset($_GET['page']) ? (int) $_GET['page'] : ($focusedMatchPage ?: 1);
+$currentPage = max(1, min($totalPages, $requestedPage));
 $pageOffset = ($currentPage - 1) * $matchesPerPage;
 $pagedMatches = array_slice($matches, $pageOffset, $matchesPerPage);
 $historyTeamsByMatch = [];
 $historyCaptainNames = [];
-$pagedMatchIds = array_map(static fn(array $match): int => (int) $match['id'], $pagedMatches);
-if ($pagedMatchIds) {
-    $in = implode(',', array_fill(0, count($pagedMatchIds), '?'));
+$historyAwardCounts = [];
+$historyRatingCounts = [];
+$historyMatchIds = array_map(static fn(array $match): int => (int) $match['id'], $matches);
+if ($historyMatchIds) {
+    $in = implode(',', array_fill(0, count($historyMatchIds), '?'));
     $stmtHistoryTeams = $pdo->prepare(
         "SELECT *
          FROM match_teams
          WHERE match_id IN ($in)
          ORDER BY match_id ASC, team_number ASC"
     );
-    $stmtHistoryTeams->execute($pagedMatchIds);
+    $stmtHistoryTeams->execute($historyMatchIds);
     $historyCaptainIds = [];
     foreach ($stmtHistoryTeams->fetchAll() as $teamRow) {
         $historyTeamsByMatch[(int) $teamRow['match_id']][] = $teamRow;
@@ -184,6 +204,33 @@ if ($pagedMatchIds) {
         foreach ($stmtCaptains->fetchAll() as $captainRow) {
             $historyCaptainNames[(int) $captainRow['id']] = (string) $captainRow['name'];
         }
+    }
+
+    $stmtAwardCounts = $pdo->prepare(
+        "SELECT match_id, COUNT(*) AS award_count
+         FROM match_awards
+         WHERE match_id IN ($in)
+         GROUP BY match_id"
+    );
+    $stmtAwardCounts->execute($historyMatchIds);
+    foreach ($stmtAwardCounts->fetchAll() as $awardRow) {
+        $historyAwardCounts[(int) $awardRow['match_id']] = (int) $awardRow['award_count'];
+    }
+
+    $stmtRatingCounts = $pdo->prepare(
+        "SELECT match_id,
+                COUNT(*) AS player_count,
+                SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END) AS rated_count
+         FROM match_players
+         WHERE match_id IN ($in)
+         GROUP BY match_id"
+    );
+    $stmtRatingCounts->execute($historyMatchIds);
+    foreach ($stmtRatingCounts->fetchAll() as $ratingRow) {
+        $historyRatingCounts[(int) $ratingRow['match_id']] = [
+            'player_count' => (int) $ratingRow['player_count'],
+            'rated_count' => (int) $ratingRow['rated_count'],
+        ];
     }
 }
 
@@ -208,6 +255,10 @@ $form = $editing ?: [
 ];
 $form['players_per_team'] = $form['players_per_team'] ?? 9;
 $targetSelection = (int) $form['num_teams'] * (int) $form['players_per_team'];
+$nextMatchId = $matches
+    ? (max(array_map(static fn(array $match): int => (int) $match['id'], $matches)) + 1)
+    : 1;
+$titlePlaceholder = 'Partido #' . (string) ((int) ($form['id'] ?? 0) > 0 ? (int) $form['id'] : $nextMatchId);
 
 function admin_match_status_label(string $status): string
 {
@@ -268,7 +319,7 @@ function admin_history_match_score_line(array $match, array $teams, array $capta
 
 function admin_team_color_from_label(string $label): string
 {
-    if (preg_match('/Equipo\s*\(([^)]+)\)/i', $label, $matches) !== 1) {
+    if (preg_match('/\(([^)]+)\)\s*$/i', $label, $matches) !== 1) {
         return '';
     }
 
@@ -296,11 +347,15 @@ function admin_render_team_label(string $label): string
         return h($label);
     }
 
+    $name = trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $label));
+    if ($name === '') {
+        $name = 'Equipo';
+    }
     $heartColor = admin_team_heart_color($color);
     return '<span class="team-label-with-heart" title="' . h($label) . '">' .
-        '<span>Equipo</span>' .
+        '<span>' . h($name) . '</span>' .
         '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="--team-heart-fill: ' . h($heartColor) . '">' .
-        '<path d="M12 21s-7.2-4.6-9.6-9C.4 8.4 2.3 4 6.5 4c2 0 3.7 1.1 4.6 2.7C12 5.1 13.7 4 15.7 4c4.2 0 6.1 4.4 4.1 8-2.4 4.4-9.8 9-9.8 9z" />' .
+        '<path d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
         '</svg>' .
         '</span>';
 }
@@ -310,7 +365,9 @@ function admin_history_team_scoreboard_label(array $match, array $team, array $c
     $teamNumber = (int) ($team['team_number'] ?? 0);
     if (!empty($team['captain_player_id'])) {
         $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
-        return 'Equipo (' . $captainName . ')';
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $color = trim((string) ($team['color_name'] ?? '')) ?: ($defaultColors[$teamNumber] ?? '');
+        return $color !== '' ? ($captainName . ' (' . $color . ')') : $captainName;
     }
 
     $color = trim((string) ($team['color_name'] ?? ''));
@@ -357,18 +414,23 @@ $scheduledCount = count(array_filter($matches, static fn(array $m): bool => (str
 $readyCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'sorteado'));
 $finishedCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'finalizado'));
 
-$title = 'Partidos | ' . APP_NAME;
-$activePage = 'encuentros.php';
+$pageHeading = $showCreateSection && !$showEditSection ? 'Crear partido' : 'Editar partidos';
+$pageDescription = $showCreateSection && !$showEditSection
+    ? 'Carga un nuevo partido, define cupos y selecciona los jugadores convocados.'
+    : 'Administra partidos cargados, acciones disponibles, sorteo, capitanes y resultados.';
+$title = $pageHeading . ' | ' . APP_NAME;
+$activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchListPage;
 require __DIR__ . '/includes/header.php';
 ?>
 
 <section class="page-head">
   <div>
-    <h1>Partidos</h1>
-    <p class="small-muted">Administra partidos, convocados, sorteo, capitanes y cierre de resultados.</p>
+    <h1><?= h($pageHeading) ?></h1>
+    <p class="small-muted"><?= h($pageDescription) ?></p>
   </div>
 </section>
 
+<?php if ($showEditSection): ?>
 <section class="encounters-overview">
   <article class="stat-box">
     <div class="label">Programados</div>
@@ -383,8 +445,10 @@ require __DIR__ . '/includes/header.php';
     <div class="value"><?= h((string) $finishedCount) ?></div>
   </article>
 </section>
+<?php endif; ?>
 
-<details class="encounter-drawer <?= $form['id'] ? 'is-editing' : 'is-new' ?>" <?= $form['id'] ? 'open' : '' ?>>
+<?php if ($showCreateSection): ?>
+<details class="encounter-drawer <?= $form['id'] ? 'is-editing' : 'is-new' ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
   <summary class="encounter-drawer-tab">
     <span><?= $form['id'] ? 'Editar partido' : 'CREAR NUEVO PARTIDO' ?></span>
     <small><?= $targetSelection ?> convocados requeridos</small>
@@ -398,7 +462,7 @@ require __DIR__ . '/includes/header.php';
     <div class="form-grid">
       <div class="form-row">
         <label>Titulo (opcional)</label>
-        <input type="text" name="title" value="<?= h((string) ($form['title'] ?? '')) ?>" placeholder="Mixto Jueves">
+        <input type="text" name="title" value="<?= h((string) ($form['title'] ?? '')) ?>" placeholder="<?= h($titlePlaceholder) ?>">
       </div>
       <div class="form-row">
         <label>Fecha y hora</label>
@@ -434,96 +498,167 @@ require __DIR__ . '/includes/header.php';
         <button class="btn btn-muted" type="button" data-random-select="participants">Seleccion al azar</button>
       </div>
 
-      <div class="participant-picker-layout">
-        <section class="participant-panel">
-          <h4>Elegir jugadores</h4>
-          <div class="match-player-grid" data-participant-list>
-            <?php foreach ($activePlayers as $p): ?>
-              <?php
-                $pid = (int) $p['id'];
-                $checked = in_array($pid, $editingParticipants, true);
-                $searchText = strtolower(trim((string) $p['name'] . ' ' . $p['positions'] . ' ' . pace_label((string) $p['pace']) . ' ' . number_format((float) $p['skill'], 1)));
-              ?>
-              <label class="player-picker-item" data-player-row data-player-id="<?= $pid ?>" data-search="<?= h($searchText) ?>">
-                <span>
-                  <strong><?= h((string) $p['name']) ?></strong>
-                  <span class="small-muted"><?= h((string) $p['positions']) ?> | <?= h(pace_label((string) $p['pace'])) ?> | <?= h(skill_label((float) $p['skill'])) ?></span>
-                </span>
-                <input
-                  type="checkbox"
-                  name="participants[]"
-                  value="<?= $pid ?>"
-                  data-player-name="<?= h((string) $p['name']) ?>"
-                  data-player-meta="<?= h((string) $p['positions'] . ' | ' . pace_label((string) $p['pace']) . ' | ' . skill_label((float) $p['skill'])) ?>"
-                  <?= checked_attr($checked) ?>
-                >
-              </label>
-            <?php endforeach; ?>
+      <section class="participant-panel participant-roster-panel">
+        <div class="participant-roster-head">
+          <h4>Lista de jugadores activos</h4>
+          <div class="participant-roster-counters">
+            <span><?= h((string) count($activePlayers)) ?> activos</span>
+            <span><strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong> jugadores elegidos</span>
           </div>
-          <p class="small-muted hidden" data-participant-empty>No hay jugadores que coincidan con la busqueda.</p>
-        </section>
+        </div>
+        <div class="participant-roster-list" data-participant-list>
+          <?php foreach ($activePlayers as $p): ?>
+            <?php
+              $pid = (int) $p['id'];
+              $checked = in_array($pid, $editingParticipants, true);
+              $searchText = strtolower(trim((string) $p['name'] . ' ' . $p['positions'] . ' ' . pace_label((string) $p['pace']) . ' ' . number_format((float) $p['skill'], 1)));
+            ?>
+            <article class="participant-roster-item player-picker-item" data-player-row data-player-id="<?= $pid ?>" data-search="<?= h($searchText) ?>">
+              <span>
+                <strong><?= h((string) $p['name']) ?></strong>
+                <small><?= h((string) $p['positions']) ?> | <?= h(pace_label((string) $p['pace'])) ?> | <?= h(skill_label((float) $p['skill'])) ?></small>
+              </span>
+              <span class="participant-roster-actions">
+                <button class="btn btn-danger participant-remove-button" type="button" data-remove-player-row aria-label="Quitar <?= h((string) $p['name']) ?>" title="Quitar">X</button>
+                <button class="participant-add-button" type="button" data-participant-toggle><?= $checked ? 'Agregado' : 'Agregar' ?></button>
+              </span>
+              <input
+                class="participant-hidden-checkbox"
+                type="checkbox"
+                name="participants[]"
+                value="<?= $pid ?>"
+                data-player-name="<?= h((string) $p['name']) ?>"
+                data-player-meta="<?= h((string) $p['positions'] . ' | ' . pace_label((string) $p['pace']) . ' | ' . skill_label((float) $p['skill'])) ?>"
+                <?= checked_attr($checked) ?>
+              >
+            </article>
+          <?php endforeach; ?>
+        </div>
+        <p class="small-muted hidden" data-participant-empty>No hay jugadores que coincidan con la busqueda.</p>
+      </section>
 
-        <section class="participant-panel selected-panel">
-          <h4>Seleccionados para este partido</h4>
-          <div class="selected-player-list" data-selected-participants></div>
-          <p class="small-muted" data-selected-empty>Agrega jugadores desde la lista.</p>
-        </section>
-      </div>
+      <section class="participant-panel selected-panel participant-selected-desktop">
+        <h4>Seleccionados para este partido</h4>
+        <div class="selected-player-list" data-selected-participants></div>
+        <p class="small-muted" data-selected-empty>Agrega jugadores desde la lista.</p>
+      </section>
+
+      <details class="participant-mobile-marquee" data-participant-marquee>
+        <summary>
+          <span>Jugadores elegidos</span>
+          <strong><span data-selection-count="participants">0</span> / <span data-selection-max="participants"><?= $targetSelection ?></span></strong>
+          <button class="btn btn-primary participant-mobile-submit" type="submit" data-mobile-submit disabled>
+            CONTINUAR
+          </button>
+        </summary>
+        <div class="participant-mobile-selected-list" data-selected-participants></div>
+        <p class="small-muted" data-selected-empty>Agrega jugadores desde la lista.</p>
+      </details>
     </div>
 
     <div class="btn-row">
       <button class="btn btn-primary" type="submit"><?= $form['id'] ? 'Guardar cambios' : 'Crear partido' ?></button>
       <?php if ($form['id']): ?>
-        <a class="btn btn-muted" href="encuentros.php">Cancelar</a>
+        <a class="btn btn-muted" href="<?= h($matchListPage) ?>">Cancelar</a>
       <?php endif; ?>
     </div>
   </form>
   </section>
 </details>
+<?php endif; ?>
 
+<?php if ($showEditSection): ?>
 <section class="card encounters-history">
   <div class="section-toolbar">
     <div>
       <h3>Historial de partidos</h3>
-      <p class="small-muted">Cada tarjeta muestra estado, cupos y acciones disponibles segun el avance del partido. <?= h((string) $totalMatches) ?> partidos cargados.</p>
+      <p class="small-muted">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> partidos cargados.</p>
     </div>
   </div>
 
   <?php if (!$matches): ?>
     <p>No hay partidos cargados.</p>
   <?php else: ?>
+    <div class="encounter-history-search" role="search">
+      <label for="encounterHistorySearch">Buscar historial</label>
+      <input id="encounterHistorySearch" type="search" placeholder="Fecha, partido o capitan..." autocomplete="off" data-encounter-history-search>
+      <span data-encounter-history-count><?= h((string) $totalMatches) ?> partidos</span>
+    </div>
+    <p class="small-muted encounter-history-empty" data-encounter-history-empty hidden>No hay partidos que coincidan con la busqueda.</p>
     <div class="encounter-card-grid">
-      <?php foreach ($pagedMatches as $m): ?>
+      <?php foreach ($matches as $matchIndex => $m): ?>
         <?php
           $canFinalize = (string) $m['status'] === 'sorteado';
           $isFinalized = (string) $m['status'] === 'finalizado';
           $isScheduled = (string) $m['status'] === 'programado';
           $matchId = (int) $m['id'];
+          $cardPage = intdiv($matchIndex, $matchesPerPage) + 1;
           $playersPerTeam = (int) ($m['players_per_team'] ?? ((int) $m['participants_count'] / max(1, (int) $m['num_teams'])));
           $expectedPlayers = (int) $m['num_teams'] * max(1, $playersPerTeam);
           $participantsCount = (int) $m['participants_count'];
+          $ratingStatus = $historyRatingCounts[$matchId] ?? ['player_count' => $participantsCount, 'rated_count' => 0];
+          $missingAwards = $isFinalized && (($historyAwardCounts[$matchId] ?? 0) === 0);
+          $missingRating = $isFinalized && (int) $ratingStatus['player_count'] > 0 && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
+          $hasCapacityIssue = $participantsCount !== $expectedPlayers;
+          $capacityNote = $hasCapacityIssue
+              ? ($participantsCount < $expectedPlayers
+                  ? 'Faltan ' . ($expectedPlayers - $participantsCount) . ' convocados'
+                  : 'Sobran ' . ($participantsCount - $expectedPlayers) . ' convocados')
+              : $participantsCount . ' convocados · ' . $playersPerTeam . ' por equipo';
           $statusClass = $isFinalized ? 'done' : ($canFinalize ? 'ready' : 'warn');
-          $historyScoreboard = admin_render_match_scoreboard($m, $historyTeamsByMatch[$matchId] ?? [], $historyCaptainNames);
+          $historyTeams = $historyTeamsByMatch[$matchId] ?? [];
+          $historyScoreboard = admin_render_match_scoreboard($m, $historyTeams, $historyCaptainNames);
+          $historyCaptainSearch = [];
+          foreach ($historyTeams as $historyTeam) {
+              if (!empty($historyTeam['captain_player_id'])) {
+                  $historyCaptainSearch[] = $historyCaptainNames[(int) $historyTeam['captain_player_id']] ?? '';
+              }
+          }
+          $historySearchText = implode(' ', array_filter([
+              (string) ($m['title'] ?: 'Partido #' . $m['id']),
+              (string) $m['id'],
+              date('d/m/Y', strtotime((string) $m['match_date'])),
+              date('Y-m-d', strtotime((string) $m['match_date'])),
+              date('d/m/Y H:i', strtotime((string) $m['match_date'])),
+              admin_match_status_label((string) $m['status']),
+              implode(' ', $historyCaptainSearch),
+              admin_history_match_score_line($m, $historyTeams, $historyCaptainNames),
+          ]));
+          $isFocusedMatch = $focusedMatchId === $matchId;
+          $isPageVisible = $cardPage === $currentPage;
         ?>
-        <article class="encounter-card">
+        <article
+          class="encounter-card <?= $isPageVisible ? '' : 'encounter-page-hidden' ?> <?= $isFocusedMatch ? 'is-focused' : '' ?>"
+          id="partido-admin-<?= $matchId ?>"
+          tabindex="<?= $isFocusedMatch ? '0' : '-1' ?>"
+          data-encounter-card
+          data-focus-match="<?= $isFocusedMatch ? '1' : '0' ?>"
+          data-page="<?= h((string) $cardPage) ?>"
+          data-search="<?= h(mb_strtolower($historySearchText, 'UTF-8')) ?>"
+        >
           <div class="encounter-card-head">
             <div>
               <span class="encounter-date"><?= h(date('d/m/Y H:00', strtotime((string) $m['match_date']))) ?></span>
-              <h4>
-                <?= h((string) ($m['title'] ?: 'Partido #' . $m['id'])) ?>
-                <?php if ($historyScoreboard !== ''): ?>
-                  <span class="encounter-card-title-score"><?= $historyScoreboard ?></span>
-                <?php endif; ?>
-              </h4>
+              <h4><?= h((string) ($m['title'] ?: 'Partido #' . $m['id'])) ?></h4>
             </div>
-            <span class="badge <?= h($statusClass) ?>"><?= h(admin_match_status_label((string) $m['status'])) ?></span>
           </div>
 
-          <div class="encounter-card-metrics">
-            <span><strong><?= h((string) $participantsCount) ?></strong><small>convocados</small></span>
-            <span><strong><?= h((string) $expectedPlayers) ?></strong><small>cupo</small></span>
-            <span><strong><?= h((string) $m['num_teams']) ?></strong><small>equipos</small></span>
-            <span><strong><?= h((string) $playersPerTeam) ?></strong><small>por equipo</small></span>
+          <div class="encounter-card-meta <?= $hasCapacityIssue ? 'is-warning' : '' ?>">
+            <?= h($capacityNote) ?>
+          </div>
+
+          <div class="encounter-card-score">
+            <?php if ($historyScoreboard !== ''): ?>
+              <?= $historyScoreboard ?>
+            <?php else: ?>
+              <span class="encounter-score-empty">Sin resultado</span>
+            <?php endif; ?>
+          </div>
+
+          <div class="encounter-card-status-group">
+            <span class="badge encounter-card-status <?= h($statusClass) ?>"><?= h(admin_match_status_label((string) $m['status'])) ?></span>
+            <?php if ($missingAwards): ?><span class="badge pending">Sin premios</span><?php endif; ?>
+            <?php if ($missingRating): ?><span class="badge pending">Sin puntaje</span><?php endif; ?>
           </div>
 
           <div class="encounter-state-note">
@@ -538,7 +673,7 @@ require __DIR__ . '/includes/header.php';
 
           <div class="encounter-actions">
             <?php if ($isScheduled): ?>
-              <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="encuentros.php?edit=<?= $matchId ?>" aria-label="Editar partido" title="Editar"></a>
+              <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar partido" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
               <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
             <?php else: ?>
@@ -574,27 +709,21 @@ require __DIR__ . '/includes/header.php';
             <summary>Acciones</summary>
             <div class="encounter-action-menu-list">
               <?php if ($isScheduled): ?>
-                <a class="btn btn-muted icon-pencil" href="encuentros.php?edit=<?= $matchId ?>">Editar</a>
-                <a class="btn btn-warning icon-dice" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
-                <a class="btn btn-primary icon-captain" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
-              <?php else: ?>
-                <span class="btn btn-disabled icon-pencil">Editar</span>
-                <span class="btn btn-disabled icon-dice"><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
-                <span class="btn btn-disabled icon-captain">Capitanes</span>
+                <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar partido</a>
+                <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear equipos</a>
+                <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>
-                <a class="btn btn-primary icon-finish" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar</a>
+                <a class="btn btn-primary icon-finish" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar partido</a>
               <?php elseif ($isFinalized): ?>
-                <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
-              <?php else: ?>
-                <span class="btn btn-disabled icon-finish" title="Primero hay que generar equipos por sorteo o capitanes">Finalizar</span>
+                <a class="btn btn-muted" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
               <?php endif; ?>
 
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger" data-confirm="<?= $isScheduled ? 'Eliminar partido y sus datos?' : 'Eliminar este partido? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar</button>
+                <button class="btn btn-danger" data-short="" data-confirm="<?= $isScheduled ? 'Eliminar partido y sus datos?' : 'Eliminar este partido? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar partido</button>
               </form>
             </div>
           </details>
@@ -604,7 +733,7 @@ require __DIR__ . '/includes/header.php';
     <?php if ($totalPages > 1): ?>
       <nav class="pagination" aria-label="Paginas de partidos">
         <?php if ($currentPage > 1): ?>
-          <a class="pagination-link" href="encuentros.php?page=<?= $currentPage - 1 ?>">Anterior</a>
+          <a class="pagination-link" href="<?= h($matchListPage) ?>?page=<?= $currentPage - 1 ?>">Anterior</a>
         <?php else: ?>
           <span class="pagination-link disabled">Anterior</span>
         <?php endif; ?>
@@ -613,12 +742,12 @@ require __DIR__ . '/includes/header.php';
           <?php if ($page === $currentPage): ?>
             <span class="pagination-link active"><?= $page ?></span>
           <?php else: ?>
-            <a class="pagination-link" href="encuentros.php?page=<?= $page ?>"><?= $page ?></a>
+            <a class="pagination-link" href="<?= h($matchListPage) ?>?page=<?= $page ?>"><?= $page ?></a>
           <?php endif; ?>
         <?php endfor; ?>
 
         <?php if ($currentPage < $totalPages): ?>
-          <a class="pagination-link" href="encuentros.php?page=<?= $currentPage + 1 ?>">Siguiente</a>
+          <a class="pagination-link" href="<?= h($matchListPage) ?>?page=<?= $currentPage + 1 ?>">Siguiente</a>
         <?php else: ?>
           <span class="pagination-link disabled">Siguiente</span>
         <?php endif; ?>
@@ -626,5 +755,61 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
   <?php endif; ?>
 </section>
+
+<script>
+  (() => {
+    const input = document.querySelector('[data-encounter-history-search]');
+    if (!input) return;
+
+    const cards = Array.from(document.querySelectorAll('[data-encounter-card]'));
+    const pagination = document.querySelector('.encounters-history .pagination');
+    const empty = document.querySelector('[data-encounter-history-empty]');
+    const count = document.querySelector('[data-encounter-history-count]');
+    const currentPage = '<?= h((string) $currentPage) ?>';
+    const total = cards.length;
+
+    const normalize = (value) => String(value || '')
+      .toLocaleLowerCase('es-AR')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    const applyFilter = () => {
+      const query = normalize(input.value);
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const haystack = normalize(card.dataset.search || '');
+        const matches = query === '' ? card.dataset.page === currentPage : haystack.includes(query);
+        card.classList.toggle('encounter-page-hidden', !matches);
+        if (matches) visible++;
+      });
+
+      if (pagination) {
+        pagination.hidden = query !== '';
+      }
+      if (empty) {
+        empty.hidden = visible !== 0;
+      }
+      if (count) {
+        count.textContent = query === ''
+          ? `${total} partidos`
+          : `${visible} de ${total} partidos`;
+      }
+    };
+
+    input.addEventListener('input', applyFilter);
+    applyFilter();
+
+    const focusedCard = document.querySelector('[data-focus-match="1"]');
+    if (focusedCard) {
+      window.setTimeout(() => {
+        focusedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        focusedCard.focus({ preventScroll: true });
+      }, 120);
+    }
+  })();
+</script>
+<?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -27,6 +27,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('jugadores.php');
     }
 
+    if ($action === 'toggle_active') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $nextActive = null;
+        if ($id > 0) {
+            $player = repo_player_by_id($id);
+            if ($player) {
+                $nextActive = (int) $player['active'] === 1 ? 0 : 1;
+                $stmt = $pdo->prepare('UPDATE players SET active = :active WHERE id = :id');
+                $stmt->execute(['active' => $nextActive, 'id' => $id]);
+                if (($_POST['ajax'] ?? '') === '1') {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        'ok' => true,
+                        'active' => $nextActive,
+                        'label' => $nextActive === 1 ? 'Activo' : 'Inactivo',
+                    ]);
+                    exit;
+                }
+                flash('success', $nextActive === 1 ? 'Jugador activado.' : 'Jugador desactivado.');
+            }
+        }
+        if (($_POST['ajax'] ?? '') === '1') {
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false]);
+            exit;
+        }
+        redirect('jugadores.php');
+    }
+
     if ($action === 'save') {
         $id = (int) ($_POST['id'] ?? 0);
         $name = trim((string) ($_POST['name'] ?? ''));
@@ -80,9 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
-$editing = $editId > 0 ? repo_player_by_id($editId) : null;
-$form = $editing ?: [
+$form = [
     'id' => 0,
     'name' => '',
     'positions' => '',
@@ -105,9 +133,12 @@ require __DIR__ . '/includes/header.php';
   <a class="btn btn-muted" href="migrar_csv.php">Migrar desde CSV</a>
 </section>
 
-<section class="card mb-3.5">
-  <h3><?= $form['id'] ? 'Editar jugador' : 'Agregar jugador' ?></h3>
-  <form method="post">
+<details class="card mb-3.5 player-create-drawer">
+  <summary class="player-create-summary">
+    <span>Agregar jugador</span>
+    <small>Cargar nuevo jugador</small>
+  </summary>
+  <form method="post" class="player-create-body">
     <input type="hidden" name="action" value="save">
     <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
 
@@ -150,13 +181,10 @@ require __DIR__ . '/includes/header.php';
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-primary" type="submit"><?= $form['id'] ? 'Guardar cambios' : 'Crear jugador' ?></button>
-      <?php if ($form['id']): ?>
-        <a class="btn btn-muted" href="jugadores.php">Cancelar</a>
-      <?php endif; ?>
+      <button class="btn btn-primary" type="submit">Crear jugador</button>
     </div>
   </form>
-</section>
+</details>
 
 <section class="card">
   <div class="section-toolbar">
@@ -181,15 +209,27 @@ require __DIR__ . '/includes/header.php';
               <strong><?= h((string) $player['name']) ?></strong>
               <small><?= h((string) $player['positions']) ?> | <?= h(pace_label((string) $player['pace'])) ?> | <?= h(skill_label((float) $player['skill'])) ?></small>
             </span>
-            <em class="<?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>">
-              <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
-            </em>
+            <span class="mobile-player-list-actions">
+              <form method="post" class="inline">
+                <input type="hidden" name="action" value="toggle_active">
+                <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
+                <button class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>" type="button" title="Cambiar estado" data-player-status-toggle>
+                  <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
+                </button>
+              </form>
+              <button class="btn btn-muted player-icon-button icon-pencil" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"></button>
+              <form method="post" class="inline">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
+                <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar">X</button>
+              </form>
+            </span>
           </article>
         <?php endforeach; ?>
       <?php endif; ?>
     </div>
   </details>
-  <div class="table-wrap">
+  <div class="table-wrap players-desktop-table">
     <table class="editable-table">
       <thead>
         <tr>
@@ -212,7 +252,7 @@ require __DIR__ . '/includes/header.php';
             $rowPositions = parse_positions_csv((string) $player['positions']);
             $rowSearch = strtolower(trim((string) $player['name'] . ' ' . $player['positions'] . ' ' . pace_label((string) $player['pace']) . ' ' . number_format((float) $player['skill'], 1) . ' ' . ((int) $player['active'] === 1 ? 'activo si' : 'inactivo no')));
           ?>
-          <tr data-player-table-row data-search="<?= h($rowSearch) ?>">
+          <tr data-player-table-row data-player-edit-row data-search="<?= h($rowSearch) ?>">
             <td>
               <input type="hidden" name="action" value="save" form="<?= h($rowFormId) ?>">
               <input type="hidden" name="id" value="<?= $playerId ?>" form="<?= h($rowFormId) ?>">
@@ -261,5 +301,67 @@ require __DIR__ . '/includes/header.php';
     </table>
   </div>
 </section>
+
+<?php foreach ($players as $player): ?>
+  <?php
+    $playerId = (int) $player['id'];
+    $rowPositions = parse_positions_csv((string) $player['positions']);
+  ?>
+  <dialog class="player-edit-dialog" data-player-edit-dialog="<?= $playerId ?>">
+    <form method="post" class="player-edit-panel">
+      <div class="player-edit-head">
+        <div>
+          <h3>Editar jugador</h3>
+          <p class="small-muted"><?= h((string) $player['name']) ?></p>
+        </div>
+        <button class="btn btn-muted player-icon-button" type="button" data-player-edit-close aria-label="Cerrar">X</button>
+      </div>
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" value="<?= $playerId ?>">
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Nombre</label>
+          <input type="text" name="name" required value="<?= h((string) $player['name']) ?>">
+        </div>
+        <div class="form-row">
+          <label>Ritmo</label>
+          <select name="pace">
+            <option value="rapido" <?= selected_attr(($player['pace'] ?? '') === 'rapido') ?>>Rapido</option>
+            <option value="lento" <?= selected_attr(($player['pace'] ?? '') === 'lento') ?>>Lento</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Puntuacion Base (1 a 6)</label>
+          <input type="number" name="skill" min="1" max="6" step="0.5" value="<?= h(number_format((float) $player['skill'], 1)) ?>">
+        </div>
+        <div class="form-row">
+          <label>Estado</label>
+          <label class="chip">
+            <input type="checkbox" name="active" value="1" <?= checked_attr((int) $player['active'] === 1) ?>>
+            Jugador activo
+          </label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Posiciones</label>
+        <div class="check-row">
+          <?php foreach (allowed_positions() as $pos): ?>
+            <label class="chip">
+              <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= checked_attr(in_array($pos, $rowPositions, true)) ?>>
+              <?= h($pos) ?>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" type="submit">Guardar cambios</button>
+        <button class="btn btn-muted" type="button" data-player-edit-close>Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+<?php endforeach; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

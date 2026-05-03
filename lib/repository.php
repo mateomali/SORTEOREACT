@@ -135,7 +135,9 @@ function repo_match_team_labels(array $match, array $matchTeams): array
         $teamNumber = (int) $team['team_number'];
         if (!empty($team['captain_player_id'])) {
             $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
-            $labels[$teamNumber] = 'Equipo (' . $captainName . ')';
+            $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+            $color = trim((string) ($team['color_name'] ?? '')) ?: ($defaultColors[$teamNumber] ?? '');
+            $labels[$teamNumber] = $color !== '' ? ($captainName . ' (' . $color . ')') : $captainName;
             continue;
         }
 

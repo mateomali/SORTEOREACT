@@ -7,17 +7,19 @@ $title = $title ?? APP_NAME;
 $activePage = $activePage ?? '';
 $flashMessages = consume_flash();
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/../assets/tailwind.css') ?: time());
-$menu = is_admin()
+$publicMenu = [
+    'index.php' => 'Inicio',
+    'historial.php' => 'Historial',
+    'estadisticas.php' => 'Estadisticas',
+];
+$adminMenu = is_admin()
     ? [
-        'index.php' => 'Inicio',
         'jugadores.php' => 'Jugadores',
-        'encuentros.php' => 'Partidos',
-        'estadisticas.php' => 'Estadisticas',
+        'crear_partido.php' => 'Crear partido',
+        'editar_partidos.php' => 'Editar partidos',
         'logout.php' => 'Salir',
     ]
     : [
-        'index.php' => 'Inicio',
-        'estadisticas.php' => 'Estadisticas',
         'login.php' => 'Admin',
     ];
 ?>
@@ -52,10 +54,20 @@ $menu = is_admin()
       <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">Menu</button>
     </header>
 
-    <nav class="main-nav" id="mainNav">
-      <?php foreach ($menu as $file => $label): ?>
-        <a class="<?= $activePage === $file ? 'active' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
-      <?php endforeach; ?>
+    <nav class="main-nav" id="mainNav" aria-label="Navegacion principal">
+      <div class="nav-group nav-group-public" aria-label="Opciones publicas">
+        <?php foreach ($publicMenu as $file => $label): ?>
+          <a class="<?= $activePage === $file ? 'active' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+        <?php endforeach; ?>
+      </div>
+      <div class="nav-group nav-group-admin" aria-label="<?= is_admin() ? 'Opciones admin' : 'Acceso admin' ?>">
+        <?php if (is_admin()): ?>
+          <span class="nav-group-label">Admin</span>
+        <?php endif; ?>
+        <?php foreach ($adminMenu as $file => $label): ?>
+          <a class="<?= $activePage === $file ? 'active' : '' ?> <?= $file === 'logout.php' ? 'nav-logout' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+        <?php endforeach; ?>
+      </div>
     </nav>
 
     <main class="content">

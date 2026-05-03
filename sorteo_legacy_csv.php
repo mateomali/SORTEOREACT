@@ -107,7 +107,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     <?php endif; ?>
     <div class="controls">
       <?php if ($legacyMatch): ?>
-        <button type="button" onclick="window.location.href='encuentros.php'">Volver a partidos</button>
+        <button type="button" onclick="window.location.href='editar_partidos.php'">Volver a partidos</button>
         <button type="button" onclick="window.location.href='finalizar_partido.php?match_id=<?= (int) $legacyMatch['id'] ?>'">Finalizar partido</button>
       <?php else: ?>
         <button onclick="abrirModalAgregar()"><span class="text-lg">+</span> Añadir Jugador</button>
@@ -1588,7 +1588,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         successDiv.textContent = data.message || 'Sorteo guardado correctamente en el partido.';
         successDiv.classList.remove('hidden');
         window.setTimeout(() => {
-          window.location.href = 'encuentros.php';
+          window.location.href = 'editar_partidos.php';
         }, 700);
       })
       .catch(err => {

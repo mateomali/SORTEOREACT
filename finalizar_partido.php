@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
         flash('error', 'Solo se puede finalizar un partido con equipos ya sorteados o capitanes completos.');
-        redirect('finalizar_partido.php?match_id=' . $matchId);
+        redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
     }
     if (valuations_locked_after_deadline($match)) {
         flash('error', 'Las valoraciones ya no se pueden editar porque pasaron mas de 7 dias desde la finalizacion del partido.');
@@ -245,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         }
         flash('error', 'No se pudo guardar el resultado: ' . $e->getMessage());
     }
-    redirect('finalizar_partido.php?match_id=' . $matchId);
+    redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
 }
 
 $matches = repo_matches("status IN ('sorteado','finalizado')");
@@ -318,7 +318,7 @@ require __DIR__ . '/includes/header.php';
           <div class="btn-row finish-score-actions">
             <button class="btn btn-primary" type="submit">Guardar resultado</button>
             <?php if ($scoreSaved && !$valuationsLocked): ?>
-              <a class="btn btn-muted finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?>" title="Editar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></a>
+              <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
             <?php elseif ($scoreSaved && $valuationsLocked): ?>
               <span class="btn btn-disabled finish-edit-btn" title="Pasaron mas de 7 dias desde la finalizacion del partido"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones bloqueadas</span></span>
             <?php else: ?>
@@ -359,51 +359,59 @@ require __DIR__ . '/includes/header.php';
           <input type="hidden" name="team_goals[<?= $hiddenTeamNumber ?>]" value="<?= h($hiddenTeamGoals) ?>">
         <?php endforeach; ?>
 
-        <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
-          <article class="card mb-3">
-            <h4><?= h($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)) ?></h4>
-            <div class="table-wrap">
-              <table class="finish-table">
-                <thead>
-                  <tr>
-                    <th>Jugador</th>
-                    <th>Goles</th>
-                    <th>Puntuacion</th>
-                  </tr>
-                </thead>
-                <tbody>
-                <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
-                  <?php foreach ($lines[$line] as $p): ?>
-                    <?php
-                      $playerId = (int) $p['id'];
-                      $goalsValue = $detailFormError !== ''
-                          ? (string) max(0, (int) ($postedGoalsData[$playerId] ?? 0))
-                          : (string) ((int) ($p['goals'] ?? 0));
-                      $ratingValue = $detailFormError !== ''
-                          ? (string) ($postedRatingData[$playerId] ?? '5')
-                          : ($p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '5');
-                    ?>
-                    <tr>
-                      <td data-label="Jugador">
-                        <strong><?= h((string) $p['name']) ?></strong>
-                        <small><?= h((string) $line) ?></small>
-                      </td>
-                      <td data-label="Goles">
-                        <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>">
-                      </td>
-                      <td data-label="Puntuacion">
-                        <input class="finish-number-input" type="number" min="1" max="10" step="0.5" name="rating[<?= $playerId ?>]" value="<?= h($ratingValue) ?>">
-                      </td>
-                    </tr>
-                  <?php endforeach; ?>
-                <?php endforeach; ?>
-                </tbody>
-              </table>
-            </div>
-          </article>
-        <?php endforeach; ?>
+        <details class="card finish-collapse finish-valuations" id="valoraciones" open>
+          <summary>
+            <span>Valoraciones</span>
+            <small>Goles y puntajes</small>
+          </summary>
+          <div class="finish-valuations-body">
+            <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
+              <article class="finish-rating-team">
+                <h4><?= h($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)) ?></h4>
+                <div class="table-wrap">
+                  <table class="finish-table">
+                    <thead>
+                      <tr>
+                        <th>Jugador</th>
+                        <th>Goles</th>
+                        <th>Puntuacion</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
+                      <?php foreach ($lines[$line] as $p): ?>
+                        <?php
+                          $playerId = (int) $p['id'];
+                          $goalsValue = $detailFormError !== ''
+                              ? (string) max(0, (int) ($postedGoalsData[$playerId] ?? 0))
+                              : (string) ((int) ($p['goals'] ?? 0));
+                          $ratingValue = $detailFormError !== ''
+                              ? (string) ($postedRatingData[$playerId] ?? '5')
+                              : ($p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '5');
+                        ?>
+                        <tr>
+                          <td data-label="Jugador">
+                            <strong><?= h((string) $p['name']) ?></strong>
+                            <small><?= h((string) $line) ?></small>
+                          </td>
+                          <td data-label="Goles">
+                            <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>">
+                          </td>
+                          <td data-label="Puntuacion">
+                            <input class="finish-number-input" type="number" min="1" max="10" step="0.5" name="rating[<?= $playerId ?>]" value="<?= h($ratingValue) ?>">
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        </details>
 
-        <details class="card finish-awards">
+        <details class="card finish-collapse finish-awards">
           <summary>
             <span>Premios</span>
             <small>Opcional</small>

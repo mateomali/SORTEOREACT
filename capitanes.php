@@ -254,7 +254,17 @@ require __DIR__ . '/includes/header.php';
       <div class="captain-waiting-card" role="status" aria-live="polite">
         <span class="captain-waiting-kicker">Modo capitanes</span>
         <strong>ESPERANDO JUGADOR</strong>
-        <span id="captainWaitingText">Aguardando la eleccion del otro capitan.</span>
+        <span id="captainWaitingText" class="captain-waiting-text">Aguardando la eleccion del otro capitan.</span>
+        <div class="captain-waiting-teams" aria-label="Estado actual del draft">
+          <section>
+            <h4 id="captainWaitingTeam1Title">Equipo 1</h4>
+            <div id="captainWaitingTeam1List"></div>
+          </section>
+          <section>
+            <h4 id="captainWaitingTeam2Title">Equipo 2</h4>
+            <div id="captainWaitingTeam2List"></div>
+          </section>
+        </div>
       </div>
     </div>
 
@@ -308,6 +318,20 @@ require __DIR__ . '/includes/header.php';
         return players.reduce((total, player) => total + Number(player.skill || 0), 0);
       };
 
+      const renderWaitingTeam = (teamNumber) => {
+        const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
+        const captain = state.draft.captains[teamNumber]?.name || `Equipo ${teamNumber}`;
+        const targetSize = state.match.target_team_size || players.length;
+        const title = document.getElementById(`captainWaitingTeam${teamNumber}Title`);
+        const list = document.getElementById(`captainWaitingTeam${teamNumber}List`);
+        if (!title || !list) return;
+
+        title.textContent = `${captain} (${players.length}/${targetSize}) - ${teamTotalSkill(teamNumber).toFixed(1)} pts`;
+        list.innerHTML = players.length
+          ? players.map(player => `<span>${escapeHtml(player.name)}</span>`).join('')
+          : '<em>Sin jugadores.</em>';
+      };
+
       const updateWaitingPanel = () => {
         const panel = document.getElementById('captainWaitingPanel');
         const text = document.getElementById('captainWaitingText');
@@ -323,6 +347,8 @@ require __DIR__ . '/includes/header.php';
           text.textContent = state.draft.current_captain
             ? `Turno de ${state.draft.current_captain}.`
             : 'Aguardando la eleccion del otro capitan.';
+          renderWaitingTeam(1);
+          renderWaitingTeam(2);
         }
       };
 

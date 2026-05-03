@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/config.php';
 
-$next = (string) ($_GET['next'] ?? $_POST['next'] ?? 'encuentros.php');
+$next = (string) ($_GET['next'] ?? $_POST['next'] ?? 'editar_partidos.php');
 if (
     $next === ''
     || str_contains($next, "\n")
@@ -13,7 +13,7 @@ if (
     || parse_url($next, PHP_URL_SCHEME) !== null
     || parse_url($next, PHP_URL_HOST) !== null
 ) {
-    $next = 'encuentros.php';
+    $next = 'editar_partidos.php';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

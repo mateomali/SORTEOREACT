@@ -104,15 +104,31 @@
   }
 
   .main-nav {
-    @apply flex flex-wrap gap-1 border-b border-emerald-100 bg-white px-3 py-2 max-[760px]:hidden max-[760px]:flex-col;
+    @apply flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-white px-3 py-2 max-[760px]:hidden max-[760px]:flex-col max-[760px]:items-stretch;
   }
 
   .main-nav.open {
     @apply max-[760px]:flex;
   }
 
+  .nav-group {
+    @apply flex flex-wrap items-center gap-1 max-[760px]:flex-col max-[760px]:items-stretch;
+  }
+
+  .nav-group-admin {
+    @apply border-l border-emerald-100 pl-2 max-[760px]:border-l-0 max-[760px]:border-t max-[760px]:pt-2 max-[760px]:pl-0;
+  }
+
+  .nav-group-label {
+    @apply mr-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-700 max-[760px]:mr-0 max-[760px]:w-fit;
+  }
+
   .main-nav a {
     @apply rounded-xl px-3 py-2 text-sm font-bold text-emerald-900 no-underline transition hover:bg-emerald-50;
+  }
+
+  .main-nav .nav-logout {
+    @apply text-red-700 hover:bg-red-50;
   }
 
   .main-nav a.active {
@@ -229,6 +245,10 @@
     @apply bg-green-100 text-green-800;
   }
 
+  .badge.pending {
+    @apply bg-red-100 text-red-800;
+  }
+
   .flash {
     @apply mb-3 rounded-xl border px-3 py-2 text-sm font-semibold;
   }
@@ -277,6 +297,39 @@
     @apply mb-3 hidden rounded-xl border border-emerald-100 bg-emerald-50;
   }
 
+  .player-create-drawer {
+    @apply p-0;
+  }
+
+  .player-create-summary {
+    @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3;
+  }
+
+  .player-create-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .player-create-summary span {
+    @apply text-lg font-extrabold text-emerald-950;
+  }
+
+  .player-create-summary small {
+    @apply text-xs font-semibold text-slate-500;
+  }
+
+  .player-create-summary::after {
+    content: "+";
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-lg font-extrabold leading-none text-white;
+  }
+
+  .player-create-drawer[open] .player-create-summary::after {
+    content: "-";
+  }
+
+  .player-create-body {
+    @apply border-t border-emerald-100 p-4;
+  }
+
   .mobile-full-player-list summary {
     @apply flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3;
   }
@@ -310,6 +363,10 @@
     @apply flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-2;
   }
 
+  .mobile-player-list-item > span:first-child {
+    @apply min-w-0;
+  }
+
   .mobile-player-list-item strong,
   .mobile-player-list-item small {
     @apply block;
@@ -323,16 +380,68 @@
     @apply text-xs text-slate-500;
   }
 
-  .mobile-player-list-item em {
-    @apply shrink-0 rounded-full px-2 py-1 text-[11px] font-extrabold not-italic;
+  .mobile-player-list-item em,
+  .player-status-pill {
+    @apply shrink-0 rounded-full border-0 px-2 py-1 text-[11px] font-extrabold not-italic;
   }
 
-  .mobile-player-list-item em.is-active {
+  .player-status-pill {
+    @apply cursor-pointer transition hover:scale-105;
+  }
+
+  .player-status-pill:disabled {
+    @apply cursor-wait opacity-70;
+  }
+
+  .mobile-player-list-item em.is-active,
+  .player-status-pill.is-active {
     @apply bg-green-100 text-green-800;
   }
 
-  .mobile-player-list-item em.is-inactive {
+  .mobile-player-list-item em.is-inactive,
+  .player-status-pill.is-inactive {
     @apply bg-slate-100 text-slate-500;
+  }
+
+  .mobile-player-list-actions {
+    @apply flex shrink-0 items-center gap-1.5;
+  }
+
+  .player-icon-button {
+    @apply inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl px-0 text-sm font-extrabold leading-none;
+  }
+
+  .player-icon-button.icon-pencil::before {
+    content: "";
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    @apply inline-block h-[18px] w-[18px];
+  }
+
+  .player-delete-icon {
+    @apply text-base;
+  }
+
+  .player-edit-dialog {
+    @apply m-auto w-[min(92vw,720px)] rounded-2xl border-0 bg-transparent p-0 text-left backdrop:bg-emerald-950/55;
+  }
+
+  .player-edit-panel {
+    @apply rounded-2xl border border-emerald-100 bg-white p-4 shadow-2xl shadow-emerald-950/25;
+  }
+
+  .player-edit-head {
+    @apply mb-4 flex items-start justify-between gap-3 border-b border-emerald-100 pb-3;
+  }
+
+  .player-edit-head h3,
+  .player-edit-head p {
+    @apply m-0;
+  }
+
+  .players-desktop-table {
+    @apply block;
   }
 
   .stats-summary {
@@ -589,15 +698,27 @@
   }
 
   .home-next-card {
-    @apply mb-4 flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center;
+    @apply mb-3 grid items-center gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto];
+  }
+
+  .home-next-card h2 {
+    @apply m-0 text-xl leading-tight md:text-2xl;
+  }
+
+  .home-next-card .small-muted {
+    @apply mt-0.5 text-sm leading-snug;
+  }
+
+  .home-next-card .match-detail-toggle-btn {
+    @apply min-h-10 justify-center px-4 py-2;
   }
 
   .home-kicker {
-    @apply mb-1 inline-block text-xs font-extrabold uppercase text-emerald-700;
+    @apply mb-0.5 inline-block text-[10px] font-extrabold uppercase tracking-wide text-emerald-700;
   }
 
   .home-result-line {
-    @apply mt-3 inline-flex max-w-full whitespace-normal text-sm font-extrabold leading-snug text-emerald-950;
+    @apply mt-2 inline-flex max-w-full whitespace-normal text-sm font-extrabold leading-snug text-emerald-950;
   }
 
   .home-layout {
@@ -616,8 +737,62 @@
     @apply grid grid-cols-1 gap-2;
   }
 
+  .history-search,
+  .encounter-history-search {
+    @apply mb-3 grid items-center gap-2 rounded-2xl border border-emerald-900 bg-emerald-950 p-3 shadow-lg shadow-emerald-950/15;
+    grid-template-columns: auto minmax(220px, 1fr) auto;
+  }
+
+  .history-search label,
+  .encounter-history-search label {
+    @apply m-0 text-xs font-extrabold uppercase text-emerald-50;
+  }
+
+  .history-search input,
+  .encounter-history-search input {
+    @apply rounded-xl border-white/20 bg-white px-3 py-2 text-sm text-emerald-950 placeholder:text-slate-500;
+  }
+
+  .history-search span,
+  .encounter-history-search span {
+    @apply whitespace-nowrap rounded-full bg-white/10 px-3 py-1.5 text-xs font-extrabold text-emerald-50 ring-1 ring-white/15;
+  }
+
+  .history-search-empty,
+  .encounter-history-empty {
+    @apply mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 font-bold text-amber-800;
+  }
+
   .match-list-item {
     @apply flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-slate-800 no-underline transition hover:border-emerald-300 hover:bg-emerald-50 md:flex-row md:items-center md:justify-between;
+  }
+
+  .history-match-accordion {
+    @apply block p-0;
+  }
+
+  .history-match-summary {
+    @apply flex cursor-pointer list-none flex-col gap-3 p-3 md:flex-row md:items-center md:justify-between;
+  }
+
+  .history-match-summary::-webkit-details-marker {
+    @apply hidden;
+  }
+
+  .history-match-body {
+    @apply border-t border-emerald-100 px-3 pb-3 pt-4;
+  }
+
+  .history-match-toggle {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .history-match-toggle .match-detail-toggle-symbol::before {
+    content: '+';
+  }
+
+  .history-match-accordion[open] .history-match-toggle .match-detail-toggle-symbol::before {
+    content: '-';
   }
 
   .match-list-item.active {
@@ -658,7 +833,7 @@
   }
 
   .match-list-side {
-    @apply flex shrink-0 flex-row items-center justify-between gap-2 md:justify-end;
+    @apply flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 md:justify-end;
   }
 
   .match-list-side em {
@@ -667,6 +842,22 @@
 
   .match-list-side .btn {
     @apply px-2.5 py-1.5 text-xs;
+  }
+
+  .match-detail-toggle-btn {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .match-detail-toggle-symbol {
+    @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-extrabold leading-none text-white;
+  }
+
+  .btn-primary .match-detail-toggle-symbol {
+    @apply bg-white text-emerald-800;
+  }
+
+  .match-list-item.active .match-detail-toggle-symbol {
+    @apply bg-emerald-950 text-white;
   }
 
   .match-detail-head {
@@ -1280,11 +1471,19 @@
   }
 
   .participant-search {
-    @apply mb-3 flex items-center gap-3 max-[760px]:flex-col max-[760px]:items-stretch;
+    @apply mb-3 flex items-center gap-3 rounded-2xl border border-emerald-900 bg-emerald-950 p-3 shadow-lg shadow-emerald-950/15 max-[760px]:flex-col max-[760px]:items-stretch;
   }
 
   .participant-search input[type="text"] {
-    @apply flex-1;
+    @apply flex-1 border-white/20 bg-white text-emerald-950 placeholder:text-slate-500;
+  }
+
+  .participant-search .chip {
+    @apply border-white/15 bg-white/10 text-emerald-50;
+  }
+
+  .participant-search .btn {
+    @apply bg-white text-emerald-950 hover:bg-emerald-50;
   }
 
   .participant-picker-layout {
@@ -1293,6 +1492,30 @@
 
   .participant-panel {
     @apply min-w-0 rounded-2xl border border-emerald-100 bg-white p-3;
+  }
+
+  .participant-roster-panel {
+    @apply bg-emerald-50/70;
+  }
+
+  .participant-roster-head {
+    @apply mb-2 flex flex-wrap items-center justify-between gap-2;
+  }
+
+  .participant-roster-head h4 {
+    @apply m-0;
+  }
+
+  .participant-roster-counters {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .participant-roster-counters span {
+    @apply rounded-full bg-white px-3 py-1.5 text-xs font-extrabold text-emerald-800;
+  }
+
+  .participant-roster-list {
+    @apply grid max-h-[30rem] gap-1.5 overflow-auto rounded-xl border border-emerald-100 bg-emerald-50 p-2;
   }
 
   .participant-panel h4 {
@@ -1307,12 +1530,25 @@
     @apply grid grid-cols-1 gap-2;
   }
 
+  .encounter-page-hidden {
+    display: none;
+  }
+
   .encounter-card {
-    @apply grid grid-cols-[minmax(430px,1.35fr)_minmax(270px,.85fr)_auto] items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-100;
+    @apply grid items-center gap-x-4 gap-y-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-100;
+    grid-template-columns: minmax(160px, 0.85fr) minmax(240px, 1.1fr) auto auto;
+    grid-template-areas:
+      "head score status actions"
+      "meta score status actions";
+  }
+
+  .encounter-card.is-focused {
+    @apply border-amber-300 bg-amber-50 shadow-lg shadow-amber-200/70 outline-none ring-4 ring-amber-100;
   }
 
   .encounter-card-head {
-    @apply mb-0 flex items-start justify-between gap-3;
+    @apply mb-0 min-w-0;
+    grid-area: head;
   }
 
   .encounter-date {
@@ -1323,45 +1559,48 @@
     @apply m-0 text-lg;
   }
 
-  .encounter-card-title-score {
-    @apply mt-2 block text-sm font-extrabold uppercase text-emerald-950;
+  .encounter-card-score {
+    @apply min-w-0;
+    grid-area: score;
   }
 
-  .encounter-card-title-score .match-scoreboard {
-    @apply min-w-0 max-w-full gap-2 rounded-md px-2 py-1;
+  .encounter-card-score .match-scoreboard {
+    @apply min-w-0 max-w-full justify-center gap-2 rounded-xl px-3 py-2;
   }
 
-  .encounter-card-title-score .scoreboard-team {
+  .encounter-card-score .scoreboard-team {
     @apply text-xs;
   }
 
-  .encounter-card-title-score .team-heart-icon {
+  .encounter-card-score .team-heart-icon {
     @apply h-4 w-4;
   }
 
-  .encounter-card-title-score .scoreboard-score {
+  .encounter-card-score .scoreboard-score {
     @apply text-base;
   }
 
-  .encounter-card-metrics {
-    @apply mb-0 grid grid-cols-4 gap-2;
+  .encounter-score-empty {
+    @apply inline-flex rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-extrabold text-slate-500;
   }
 
-  .encounter-card-metrics span {
-    @apply rounded-xl border border-emerald-100 bg-emerald-50 px-2 py-1.5;
+  .encounter-card-status-group {
+    @apply flex flex-wrap justify-end gap-1.5;
+    grid-area: status;
+    justify-self: end;
   }
 
-  .encounter-card-metrics strong,
-  .encounter-card-metrics small {
-    @apply block;
+  .encounter-card-status {
+    @apply w-fit;
   }
 
-  .encounter-card-metrics strong {
-    @apply text-base font-extrabold text-emerald-900;
+  .encounter-card-meta {
+    @apply text-xs font-semibold text-slate-500;
+    grid-area: meta;
   }
 
-  .encounter-card-metrics small {
-    @apply text-[10px] font-bold uppercase text-slate-500;
+  .encounter-card-meta.is-warning {
+    @apply inline-flex w-fit rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 font-extrabold text-amber-800;
   }
 
   .encounter-state-note {
@@ -1370,6 +1609,7 @@
 
   .encounter-actions {
     @apply flex min-w-0 flex-nowrap items-center justify-end gap-1.5;
+    grid-area: actions;
   }
 
   .encounter-actions .btn,
@@ -1389,10 +1629,10 @@
 
   .encounter-actions .icon-pencil::before {
     content: "";
-    background:
-      linear-gradient(135deg, transparent 0 62%, #0f172a 62% 72%, transparent 72%) 0 0/100% 100%,
-      linear-gradient(135deg, transparent 0 22%, #f8fafc 22% 34%, #0f172a 34% 48%, #f8fafc 48% 60%, transparent 60%) 0 0/100% 100%;
-    @apply inline-block h-[18px] w-[18px] -rotate-[8deg];
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    @apply inline-block h-[18px] w-[18px] text-slate-900;
   }
 
   .encounter-action-menu {
@@ -1455,11 +1695,61 @@
   }
 
   .player-picker-item {
-    @apply flex items-center justify-between gap-2 border-b border-slate-100 px-1 py-2 text-sm last:border-b-0;
+    @apply flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-2 text-sm;
   }
 
   .player-picker-item.selected {
-    @apply rounded-xl bg-emerald-50;
+    @apply bg-emerald-100 ring-1 ring-emerald-200;
+  }
+
+  .player-picker-item strong,
+  .player-picker-item small {
+    @apply block;
+  }
+
+  .player-picker-item strong {
+    @apply text-sm font-extrabold text-emerald-950;
+  }
+
+  .player-picker-item small {
+    @apply text-xs text-slate-500;
+  }
+
+  .participant-roster-actions {
+    @apply flex shrink-0 items-center gap-1.5;
+  }
+
+  .participant-add-button {
+    @apply min-h-9 rounded-full border-0 bg-emerald-100 px-3 py-1.5 text-sm font-extrabold text-emerald-800 transition hover:bg-emerald-200;
+  }
+
+  .participant-add-button.is-added {
+    @apply bg-emerald-700 text-white hover:bg-emerald-800;
+  }
+
+  .participant-add-button:disabled {
+    @apply cursor-not-allowed bg-slate-100 text-slate-400 hover:bg-slate-100;
+  }
+
+  .participant-remove-button {
+    @apply h-9 min-h-9 w-9 px-0 text-sm;
+  }
+
+  .participant-remove-button.is-disabled,
+  .participant-remove-button:disabled {
+    @apply cursor-not-allowed opacity-35;
+  }
+
+  .participant-hidden-checkbox {
+    @apply sr-only;
+  }
+
+  .participant-mobile-marquee {
+    @apply hidden;
+  }
+
+  .participant-selected-desktop {
+    @apply mt-3;
   }
 
   .selected-player-list {
@@ -1496,8 +1786,20 @@
     @apply align-middle;
   }
 
+  .editable-table tr.is-dirty {
+    @apply bg-amber-50 shadow-inner shadow-amber-200/70;
+  }
+
+  .editable-table tr.is-dirty td {
+    @apply border-amber-100;
+  }
+
+  .editable-table tr.is-dirty .table-input {
+    @apply border-amber-300 bg-amber-50 focus:border-amber-500 focus:ring-amber-100;
+  }
+
   .table-input {
-    @apply min-w-32 rounded-lg px-2 py-2;
+    @apply min-w-32 rounded-lg border-emerald-100 bg-white px-2 py-2 focus:border-emerald-500 focus:ring-emerald-100;
   }
 
   .table-number {
@@ -1542,8 +1844,7 @@
   }
 
   .captain-waiting-panel {
-    @apply fixed inset-0 z-50 flex items-center justify-center bg-emerald-950/45 px-4;
-    backdrop-filter: blur(4px);
+    @apply pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-3;
   }
 
   .captain-waiting-panel[hidden] {
@@ -1551,7 +1852,8 @@
   }
 
   .captain-waiting-card {
-    @apply w-full max-w-md rounded-2xl border border-emerald-100 bg-white px-6 py-7 text-center shadow-2xl;
+    @apply pointer-events-auto w-full max-w-3xl rounded-2xl border border-emerald-100 bg-white/95 px-4 py-4 text-center shadow-2xl shadow-emerald-950/20;
+    backdrop-filter: blur(8px);
   }
 
   .captain-waiting-kicker {
@@ -1559,11 +1861,36 @@
   }
 
   .captain-waiting-card strong {
-    @apply block text-2xl font-extrabold text-emerald-950;
+    @apply block text-xl font-extrabold text-emerald-950;
   }
 
-  .captain-waiting-card span:last-child {
+  .captain-waiting-text {
     @apply mt-2 block text-sm font-bold text-slate-500;
+  }
+
+  .captain-waiting-teams {
+    @apply mt-4 grid grid-cols-1 gap-2 text-left sm:grid-cols-2;
+  }
+
+  .captain-waiting-teams section {
+    @apply min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3;
+  }
+
+  .captain-waiting-teams h4 {
+    @apply mb-2 text-xs font-extrabold text-emerald-950;
+  }
+
+  .captain-waiting-teams div {
+    @apply flex flex-wrap gap-1.5;
+  }
+
+  .captain-waiting-teams span,
+  .captain-waiting-teams em {
+    @apply rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-slate-700;
+  }
+
+  .captain-waiting-teams em {
+    @apply text-slate-400;
   }
 
   .captain-pot {
@@ -1692,24 +2019,50 @@
     @apply mx-auto w-20 rounded-lg px-2 py-2 text-center font-extrabold;
   }
 
-  .finish-awards {
+  .finish-collapse {
     @apply mb-3 p-0;
   }
 
-  .finish-awards summary {
+  .finish-collapse summary {
     @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3;
   }
 
-  .finish-awards summary::-webkit-details-marker {
+  .finish-collapse summary::-webkit-details-marker {
     display: none;
   }
 
-  .finish-awards summary span {
+  .finish-collapse summary span {
     @apply text-lg font-extrabold text-emerald-950;
   }
 
-  .finish-awards summary small {
+  .finish-collapse summary small {
     @apply rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-extrabold uppercase text-emerald-700;
+  }
+
+  .finish-collapse summary::after {
+    content: "+";
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-lg font-extrabold leading-none text-white;
+  }
+
+  .finish-collapse[open] summary {
+    @apply border-b border-emerald-100 bg-emerald-50/60;
+  }
+
+  .finish-collapse[open] summary::after {
+    content: "-";
+    @apply bg-emerald-950;
+  }
+
+  .finish-valuations-body {
+    @apply grid gap-3 p-3;
+  }
+
+  .finish-rating-team {
+    @apply rounded-2xl border border-slate-200 bg-white p-3;
+  }
+
+  .finish-rating-team h4 {
+    @apply mb-2;
   }
 
   .finish-awards > .small-muted {
@@ -1772,7 +2125,7 @@
     }
 
     .content {
-      @apply p-3;
+      @apply p-3 pb-28;
     }
 
     .small-muted,
@@ -1854,6 +2207,80 @@
 
     .mobile-full-player-list {
       @apply block;
+    }
+
+    .players-desktop-table {
+      @apply hidden;
+    }
+
+    .participant-mobile-marquee {
+      @apply fixed inset-x-3 bottom-3 z-40 block overflow-hidden rounded-2xl border border-emerald-800 bg-emerald-950 text-white shadow-2xl shadow-emerald-950/35;
+    }
+
+    .participant-selected-desktop {
+      @apply hidden;
+    }
+
+    .participant-mobile-marquee summary {
+      @apply grid cursor-pointer list-none items-center gap-2 px-3 py-3;
+      grid-template-columns: minmax(0, 1fr) auto auto auto;
+    }
+
+    .participant-mobile-marquee summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .participant-mobile-marquee summary span {
+      @apply text-sm font-extrabold;
+    }
+
+    .participant-mobile-marquee summary strong {
+      @apply rounded-full bg-white px-3 py-1 text-sm font-extrabold text-emerald-950;
+    }
+
+    .participant-mobile-marquee summary::after {
+      content: "+";
+      @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-base font-extrabold leading-none text-white;
+    }
+
+    .participant-mobile-marquee[open] summary::after {
+      content: "-";
+    }
+
+    .participant-mobile-selected-list {
+      @apply grid max-h-[45dvh] gap-2 overflow-y-auto border-t border-white/10 bg-white p-2 text-slate-800;
+    }
+
+    .participant-mobile-marquee > .small-muted {
+      @apply m-0 border-t border-white/10 bg-white px-3 py-2 text-xs text-slate-500;
+    }
+
+    .participant-mobile-marquee .selected-player-item {
+      @apply bg-emerald-50;
+    }
+
+    .participant-mobile-submit {
+      @apply m-0 min-h-8 w-auto rounded-full bg-slate-200 px-3 py-1 text-[11px] font-extrabold text-slate-500;
+    }
+
+    .participant-mobile-submit.is-ready {
+      @apply bg-emerald-600 text-white hover:bg-emerald-700;
+    }
+
+    .participant-mobile-submit:disabled {
+      @apply cursor-not-allowed opacity-70;
+    }
+
+    .player-edit-dialog {
+      @apply fixed inset-0 m-auto h-fit max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none overflow-visible rounded-xl;
+    }
+
+    .player-edit-panel {
+      @apply max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-xl p-3;
+    }
+
+    .player-edit-head {
+      @apply sticky top-0 z-10 mb-3 bg-white pb-2;
     }
 
     .form-grid {
@@ -1940,7 +2367,15 @@
     }
 
     .participant-count {
-      @apply w-full text-center;
+      @apply hidden;
+    }
+
+    [data-selection-limit-message] {
+      @apply hidden;
+    }
+
+    .participant-roster-counters span:last-child {
+      @apply hidden;
     }
 
     .participant-picker-layout {
@@ -1948,39 +2383,69 @@
     }
 
     .encounter-card {
-      @apply grid-cols-1 gap-2 p-2.5;
+      @apply grid-cols-1 gap-1.5 p-2.5;
+      grid-template-areas:
+        "head status"
+        "score score"
+        "meta meta"
+        "actions actions";
+      grid-template-columns: minmax(0, 1fr) auto;
     }
 
-    .encounter-card-head {
-      @apply items-center;
+    .history-search,
+    .encounter-history-search {
+      @apply grid-cols-1 gap-1.5 p-2.5;
     }
 
-    .encounter-card h4 {
-      @apply whitespace-normal text-base;
-    }
-
-    .encounter-card-title-score {
-      @apply ml-0 block whitespace-normal text-xs;
-    }
-
-    .encounter-date {
+    .history-search label,
+    .encounter-history-search label {
       @apply text-[10px];
     }
 
-    .encounter-card-metrics {
-      @apply grid-cols-4 gap-1.5;
+    .history-search span,
+    .encounter-history-search span {
+      @apply w-fit text-[10px];
     }
 
-    .encounter-card-metrics span {
-      @apply px-1.5 py-1.5 text-center;
+    .encounter-card-head {
+      @apply min-w-0;
     }
 
-    .encounter-card-metrics strong {
-      @apply text-sm;
+    .encounter-card h4 {
+      @apply whitespace-normal text-sm leading-tight;
     }
 
-    .encounter-card-metrics small {
-      @apply text-[8px] leading-tight;
+    .encounter-card-score .match-scoreboard {
+      @apply w-full justify-center gap-1 rounded-lg px-2 py-1.5;
+    }
+
+    .encounter-card-score .scoreboard-team {
+      @apply text-[10px] leading-tight;
+    }
+
+    .encounter-card-score .scoreboard-score {
+      @apply px-2 py-1 text-sm;
+    }
+
+    .encounter-card-score .team-heart-icon {
+      @apply h-3.5 w-3.5;
+    }
+
+    .encounter-date {
+      @apply mb-0 text-[9px] leading-tight;
+    }
+
+    .encounter-card-meta {
+      @apply text-[10px] leading-tight;
+    }
+
+    .encounter-card-status-group {
+      @apply max-w-28 self-start;
+      justify-self: end;
+    }
+
+    .encounter-card-status-group .badge {
+      @apply px-2 py-1 text-[10px] leading-tight;
     }
 
     .encounter-actions {
@@ -1989,12 +2454,34 @@
 
     .encounter-action-menu {
       @apply block;
+      grid-area: actions;
+    }
+
+    .encounter-action-menu summary {
+      @apply min-h-8 rounded-lg px-3 py-1.5 text-xs;
+    }
+
+    .encounter-action-menu summary::after {
+      @apply h-5 w-5 text-sm;
+    }
+
+    .encounter-action-menu-list {
+      @apply mt-1.5 grid-cols-1 gap-1.5 p-1.5;
+    }
+
+    .encounter-action-menu-list .btn,
+    .encounter-action-menu-list button {
+      @apply min-h-9 justify-center px-3 py-2 text-xs leading-tight;
+    }
+
+    .encounter-action-menu-list form {
+      @apply min-w-0;
     }
 
     .encounter-action-menu-list .btn::before,
     .encounter-action-menu-list button::before {
       content: attr(data-short);
-      @apply text-sm font-extrabold leading-none;
+      @apply hidden;
     }
 
     .encounter-actions .icon-dice::before,
@@ -2017,10 +2504,10 @@
       width: 18px;
       height: 18px;
       display: inline-block;
-      background:
-        linear-gradient(135deg, transparent 0 62%, #0f172a 62% 72%, transparent 72%) 0 0 / 100% 100%,
-        linear-gradient(135deg, transparent 0 22%, #f8fafc 22% 34%, #0f172a 34% 48%, #f8fafc 48% 60%, transparent 60%) 0 0 / 100% 100%;
-      transform: rotate(-8deg);
+      background: currentColor;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+      color: #0f172a;
     }
 
     .encounter-actions .icon-captain::before,
@@ -2476,6 +2963,22 @@
       @apply items-start;
     }
 
+    .home-next-card {
+      @apply gap-2 px-3 py-2.5;
+    }
+
+    .home-next-card h2 {
+      @apply text-lg;
+    }
+
+    .home-next-card .small-muted {
+      @apply text-xs;
+    }
+
+    .home-next-card .match-detail-toggle-btn {
+      @apply min-h-9 px-3 py-1.5 text-xs;
+    }
+
     .mobile-player-list-item em {
       @apply text-[10px];
     }
@@ -2561,23 +3064,41 @@
 
     .encounter-card {
       @apply rounded-lg p-2;
+      grid-template-areas:
+        "head status"
+        "score score"
+        "meta meta"
+        "actions actions";
+      grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .encounter-card-head {
       @apply flex-col items-stretch gap-1;
     }
 
-    .encounter-card-metrics {
-      @apply grid-cols-2;
+    .encounter-card-score .match-scoreboard {
+      @apply gap-1 px-1.5 py-1;
+    }
+
+    .encounter-card-score .scoreboard-team {
+      @apply text-[9px];
+    }
+
+    .encounter-card-score .scoreboard-score {
+      @apply px-1.5 py-1 text-xs;
+    }
+
+    .encounter-card-meta {
+      @apply text-[11px];
     }
 
     .encounter-action-menu summary {
-      @apply px-2.5 py-2 text-xs;
+      @apply min-h-8 px-2.5 py-1.5 text-xs;
     }
 
     .encounter-action-menu-list .btn,
     .encounter-action-menu-list button {
-      @apply px-2 py-2 text-xs;
+      @apply min-h-9 px-3 py-2 text-xs;
     }
 
     .editable-table tr,
@@ -2590,17 +3111,17 @@
     }
 
     .stats-collapsible summary,
-    .finish-awards summary {
+    .finish-collapse summary {
       @apply gap-2 px-2.5 py-2.5;
     }
 
     .stats-collapsible summary span,
-    .finish-awards summary span {
+    .finish-collapse summary span {
       @apply min-w-0 text-sm leading-tight;
     }
 
     .stats-collapsible summary small,
-    .finish-awards summary small {
+    .finish-collapse summary small {
       @apply shrink-0 text-[10px];
     }
 
@@ -3053,7 +3574,7 @@
   }
 
   .match-list-title-score,
-  .encounter-card-title-score {
+  .encounter-card-score {
     color: #082017;
   }
 
