@@ -4,8 +4,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/db.php';
 require_once __DIR__ . '/lib/awards.php';
+require_once __DIR__ . '/lib/schema.php';
 
 $pdo = db();
+ensure_control_schema();
 ensure_match_awards_schema();
 $awardDefinitions = award_definitions();
 $awardDescriptions = [

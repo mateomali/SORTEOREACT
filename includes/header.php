@@ -36,7 +36,14 @@ $menu = is_admin()
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="ball"></div>
+        <img
+          class="brand-logo"
+          src="assets/goodfellas-logo.png"
+          alt="Goodfellas"
+          width="128"
+          height="82"
+          onerror="this.hidden=true"
+        >
         <div>
           <strong>GOODFELLAS</strong>
           <span>Gestor de Futbol</span>

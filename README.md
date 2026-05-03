@@ -6,10 +6,12 @@
 3. Verifica que se creo la base `u552541920_futbol` y sus tablas.
 
 ## 2) Configuracion
-Las credenciales de conexion ya estan en [`config.php`](./config.php):
-- DB: `u552541920_futbol`
-- Usuario: `u552541920_goodfellas`
-- Clave: `Goodfellas2026`
+Configura las credenciales desde variables de entorno antes de publicar:
+- `GOODFELLAS_DB_HOST`
+- `GOODFELLAS_DB_NAME`
+- `GOODFELLAS_DB_USER`
+- `GOODFELLAS_DB_PASS`
+- `GOODFELLAS_ADMIN_PASSWORD`
 
 Si tu hosting usa otro host de MySQL, cambia `DB_HOST`.
 

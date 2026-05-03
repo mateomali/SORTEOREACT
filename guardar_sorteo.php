@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
+require_once __DIR__ . '/lib/schema.php';
 
 require_admin();
+ensure_control_schema();
 
 if (!function_exists('repo_match_participants_basic')) {
     function repo_match_participants_basic(int $matchId): array

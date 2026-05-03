@@ -1,7 +1,5 @@
 -- Script para phpMyAdmin / MySQL
 -- Base: u552541920_futbol
--- Usuario: u552541920_goodfellas
--- Clave: Goodfellas2026
 
 CREATE DATABASE IF NOT EXISTS `u552541920_futbol`
   CHARACTER SET utf8mb4
@@ -157,7 +155,4 @@ CREATE TABLE IF NOT EXISTS captain_picks (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Si tu hosting permite privilegios, puedes ejecutar tambien:
--- CREATE USER IF NOT EXISTS 'u552541920_goodfellas'@'localhost' IDENTIFIED BY 'Goodfellas2026';
--- GRANT ALL PRIVILEGES ON `u552541920_futbol`.* TO 'u552541920_goodfellas'@'localhost';
--- FLUSH PRIVILEGES;
+-- Configura el usuario y la clave desde el panel del hosting.
