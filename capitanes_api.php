@@ -170,13 +170,13 @@ function captain_state(int $matchId): array
 {
     $match = repo_match_by_id($matchId);
     if (!$match) {
-        return ['ok' => false, 'message' => 'Partido no encontrado'];
+        return ['ok' => false, 'message' => 'Fecha no encontrada'];
     }
 
     $draft = captain_draft_row($matchId);
     if (!$draft) {
         if (!is_admin() || !in_array((string) ($match['status'] ?? ''), ['sorteado', 'finalizado'], true)) {
-            return ['ok' => false, 'message' => 'No hay modo capitanes iniciado para este partido'];
+            return ['ok' => false, 'message' => 'No hay modo capitanes iniciado para esta fecha'];
         }
     }
 
@@ -261,7 +261,7 @@ function captain_state(int $matchId): array
         'ok' => true,
         'match' => [
             'id' => (int) $match['id'],
-            'title' => (string) ($match['title'] ?: 'Partido #' . $match['id']),
+            'title' => (string) ($match['title'] ?: 'Fecha #' . $match['id']),
             'status' => (string) $match['status'],
             'match_date' => (string) $match['match_date'],
             'participants_count' => count($participants),
@@ -395,7 +395,7 @@ try {
     $stmt->execute(['mid' => $matchId]);
     $draft = $stmt->fetch();
     if (!$draft && !($action === 'save_formation' && is_admin())) {
-        throw new RuntimeException('No hay draft de capitanes para este partido.');
+        throw new RuntimeException('No hay draft de capitanes para esta fecha.');
     }
     if ($action === 'pick' && $draft['status'] !== 'active') {
         throw new RuntimeException('El draft no esta activo.');
@@ -414,7 +414,7 @@ try {
     if ($action === 'save_formation') {
         $match = repo_match_by_id($matchId);
         if (!$match) {
-            throw new RuntimeException('Partido no encontrado.');
+            throw new RuntimeException('Fecha no encontrada.');
         }
         if ($draft && (string) $draft['status'] !== 'completed') {
             throw new RuntimeException('La formacion se puede ajustar cuando el draft esta completo.');
@@ -423,7 +423,7 @@ try {
             throw new RuntimeException('La formacion se puede ajustar cuando los equipos ya estan generados.');
         }
         if (!can_edit_captain_formation($match)) {
-            throw new RuntimeException('La formacion ya no se puede editar porque el partido esta finalizado.');
+            throw new RuntimeException('La formacion ya no se puede editar porque la fecha esta finalizada.');
         }
         $assignments = $data['assignments'] ?? [];
         if (!is_array($assignments)) {
@@ -483,7 +483,7 @@ try {
     $playerStmt->execute(['mid' => $matchId, 'pid' => $playerId]);
     $row = $playerStmt->fetch();
     if (!$row) {
-        throw new RuntimeException('El jugador no pertenece a este partido.');
+        throw new RuntimeException('El jugador no pertenece a esta fecha.');
     }
     if ($row['team_number'] !== null) {
         throw new RuntimeException('Ese jugador ya fue elegido.');
@@ -498,7 +498,7 @@ try {
 
     $draftDetails = captain_draft_row($matchId);
     if (!$draftDetails) {
-        throw new RuntimeException('No hay draft de capitanes para este partido.');
+        throw new RuntimeException('No hay draft de capitanes para esta fecha.');
     }
     $availableStmt = $pdo->prepare(
         'SELECT p.id, p.skill

@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'capta
         redirect('index.php');
     }
     if ((string) ($draftByToken['match_status'] ?? '') === 'finalizado') {
-        flash('error', 'Ese partido ya finalizo.');
+        flash('error', 'Esa fecha ya finalizo.');
         redirect('index.php');
     }
 
@@ -144,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
     $participantIds = array_map(static fn(array $p): int => (int) $p['id'], $participants);
 
     if ($matchId <= 0 || !$participants) {
-        flash('error', 'Selecciona un partido con convocados.');
+        flash('error', 'Selecciona una fecha con convocados.');
         redirect('capitanes.php');
     }
     if (count($participants) % 2 !== 0) {
@@ -274,7 +274,7 @@ if ($selectedMatch && $draft) {
             $captain2Name = (string) $participant['name'];
         }
     }
-    $matchLabel = (string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']));
+    $matchLabel = (string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']));
     $captain1ShareText = "Token para elegir equipo como " . $captain1Name . "\n" . $matchLabel . "\n\n" . (string) ($draft['captain1_token'] ?? '');
     $captain2ShareText = "Token para elegir equipo como " . $captain2Name . "\n" . $matchLabel . "\n\n" . (string) ($draft['captain2_token'] ?? '');
     $captain1OpenUrl = 'capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=1&token=' . urlencode((string) ($draft['captain1_token'] ?? ''));
@@ -286,14 +286,14 @@ $activePage = 'capitanes.php';
 $backUrl = $isCaptainView
     ? 'index.php'
     : 'editar_partidos.php' . ($selectedMatch ? '#partido-admin-' . (int) $selectedMatch['id'] : '');
-$backLabel = $isCaptainView ? 'Volver al inicio' : 'Volver a partidos';
+$backLabel = $isCaptainView ? 'Volver al inicio' : 'Volver a fechas';
 require __DIR__ . '/includes/header.php';
 ?>
 
 <section class="page-head">
   <div>
     <h1><?= $isCaptainView ? 'Eleccion de capitan' : 'Modo capitanes' ?></h1>
-    <p class="small-muted"><?= $isCaptainView ? 'Espera tu turno y elige un jugador.' : 'Draft remoto por turnos sobre los convocados del partido.' ?></p>
+    <p class="small-muted"><?= $isCaptainView ? 'Espera tu turno y elige un jugador.' : 'Draft remoto por turnos sobre los convocados de la fecha.' ?></p>
   </div>
   <a class="btn btn-muted" href="<?= h($backUrl) ?>"><?= h($backLabel) ?></a>
 </section>
@@ -302,12 +302,12 @@ require __DIR__ . '/includes/header.php';
 <section class="card mb-3.5">
   <form method="get" class="form-grid">
     <div class="form-row">
-      <label>Seleccionar partido</label>
+      <label>Seleccionar fecha</label>
       <select name="match_id" onchange="this.form.submit()">
         <option value="">Elegir...</option>
         <?php foreach ($matches as $m): ?>
           <option value="<?= (int) $m['id'] ?>" <?= selected_attr($selectedMatch && (int) $selectedMatch['id'] === (int) $m['id']) ?>>
-            <?= h(date('d/m H:i', strtotime((string) $m['match_date'])) . ' - ' . ($m['title'] ?: ('Partido #' . $m['id'])) . ' [' . $m['participants_count'] . ' jugadores]') ?>
+            <?= h(date('d/m H:i', strtotime((string) $m['match_date'])) . ' - ' . ($m['title'] ?: ('Fecha #' . $m['id'])) . ' [' . $m['participants_count'] . ' jugadores]') ?>
           </option>
         <?php endforeach; ?>
       </select>
@@ -348,7 +348,7 @@ require __DIR__ . '/includes/header.php';
 <?php elseif ($selectedMatch && ($draft || $hasGeneratedTeams)): ?>
   <?php if (!$isCaptainView): ?>
   <section class="card mb-3.5">
-    <h3><?= h((string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']))) ?></h3>
+    <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
     <?php if ($draft): ?>
       <p class="small-muted">Pasa estos tokens a cada capitan. Desde Inicio pueden tocar Soy capitan, pegar el token y entrar a elegir.</p>
       <div class="grid cols-2 mb-3">
@@ -1015,9 +1015,9 @@ require __DIR__ . '/includes/header.php';
           } else if (teamView > 0 && captainToken !== '' && state.match.can_edit_formations) {
             turn.innerHTML = 'Draft completo. Ajusta la formacion de tu equipo y toca Guardar formacion.';
           } else if (teamView > 0 && captainToken !== '') {
-            turn.innerHTML = 'Draft completo. La formacion ya no se puede editar porque el partido esta finalizado.';
+            turn.innerHTML = 'Draft completo. La formacion ya no se puede editar porque la fecha esta finalizada.';
           } else {
-            turn.innerHTML = 'Draft completo. Los equipos ya quedaron guardados para finalizar el partido.';
+            turn.innerHTML = 'Draft completo. Los equipos ya quedaron guardados para finalizar la fecha.';
           }
         } else if (teamView > 0 && captainToken === '') {
           turn.innerHTML = 'Este acceso no tiene token de capitan. Vuelve a Inicio y toca Soy capitan.';

@@ -141,7 +141,7 @@ function parse_import_player_list(string $text, int $maxPlayers = 0): array
 
     if (!$items) {
         $errors[] = $maxPlayers > 0
-            ? 'No se encontro una lista numerada que empiece en 1 y llegue hasta el cupo del partido.'
+            ? 'No se encontro una lista numerada que empiece en 1 y llegue hasta el cupo de la fecha.'
             : 'No se encontro ningun jugador para importar.';
     }
 
@@ -346,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         unset($_SESSION['match_import_aliases']);
         $result = store_imported_player_list($pdo, $text, $maxPlayers);
         if ($result['errors']) {
-            flash('error', 'Hay lineas con formato invalido. Revisalas antes de crear el partido.');
+            flash('error', 'Hay lineas con formato invalido. Revisalas antes de crear la fecha.');
         } elseif ($result['missing']) {
             flash('info', 'Se importaron coincidencias. Agrega los jugadores faltantes para completar la lista.');
         } else {
@@ -395,9 +395,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0) {
             try {
                 delete_match_cascade($pdo, $id);
-                flash('success', 'Partido eliminado junto con convocados, equipos, capitanes, puntajes y premios.');
+                flash('success', 'Fecha eliminada junto con convocados, equipos, capitanes, puntajes y premios.');
             } catch (Throwable $e) {
-                flash('error', 'No se pudo eliminar el partido: ' . $e->getMessage());
+                flash('error', 'No se pudo eliminar la fecha: ' . $e->getMessage());
             }
         }
         redirect($matchListPage);
@@ -407,7 +407,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int) ($_POST['id'] ?? 0);
         $titleTxt = trim((string) ($_POST['title'] ?? ''));
         $matchDate = trim((string) ($_POST['match_date'] ?? ''));
-        $numTeams = max(2, min(6, (int) ($_POST['num_teams'] ?? 2)));
+        $numTeams = max(2, min(4, (int) ($_POST['num_teams'] ?? 2)));
         $playersPerTeam = max(1, min(12, (int) ($_POST['players_per_team'] ?? 9)));
         $maxDiff = 0.5;
         $notes = '';
@@ -416,7 +416,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $targetPlayers = $numTeams * $playersPerTeam;
 
         if ($matchDate === '') {
-            flash('error', 'La fecha del partido es obligatoria.');
+            flash('error', 'La fecha es obligatoria.');
             redirect($id ? $matchFormPage . '?edit=' . $id : $matchFormPage);
         }
         if (count($participants) !== $targetPlayers) {
@@ -436,11 +436,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0) {
             $existing = repo_match_by_id($id);
             if (!$existing) {
-                flash('error', 'El partido a editar no existe.');
+                flash('error', 'La fecha a editar no existe.');
                 redirect($matchListPage);
             }
             if ($existing['status'] === 'finalizado') {
-                flash('error', 'No se puede editar un partido finalizado.');
+                flash('error', 'No se puede editar una fecha finalizada.');
                 redirect($matchListPage);
             }
             $stmt = $pdo->prepare(
@@ -465,7 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             repo_save_match_participants($id, $participants);
             unset($_SESSION['match_import_list']);
             unset($_SESSION['match_import_aliases']);
-            flash('success', 'Partido actualizado.');
+            flash('success', 'Fecha actualizada.');
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO matches (title, match_date, num_teams, players_per_team, max_diff, status, draw_mode, formation_edit_deadline, notes)
@@ -487,7 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             repo_save_match_participants($newId, $participants);
             unset($_SESSION['match_import_list']);
             unset($_SESSION['match_import_aliases']);
-            flash('success', 'Partido creado.');
+            flash('success', 'Fecha creada.');
             redirect($matchListPage . '?focus_match=' . $newId);
         }
         redirect($matchListPage);
@@ -606,7 +606,7 @@ $targetSelection = (int) $form['num_teams'] * (int) $form['players_per_team'];
 $nextMatchId = $matches
     ? (max(array_map(static fn(array $match): int => (int) $match['id'], $matches)) + 1)
     : 1;
-$titlePlaceholder = 'Partido #' . (string) ((int) ($form['id'] ?? 0) > 0 ? (int) $form['id'] : $nextMatchId);
+$titlePlaceholder = 'Fecha #' . (string) ((int) ($form['id'] ?? 0) > 0 ? (int) $form['id'] : $nextMatchId);
 $importMatched = is_array($importList['matched'] ?? null) ? $importList['matched'] : [];
 $importMissing = is_array($importList['missing'] ?? null) ? $importList['missing'] : [];
 $importErrors = is_array($importList['errors'] ?? null) ? $importList['errors'] : [];
@@ -631,7 +631,7 @@ function admin_history_team_label(array $match, array $team, array $captainNames
     $teamNumber = (int) ($team['team_number'] ?? 0);
     $color = trim((string) ($team['color_name'] ?? ''));
     if ($color === '' && (($match['draw_mode'] ?? '') !== 'captains')) {
-        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
         $color = $defaultColors[$teamNumber] ?? '';
     }
 
@@ -657,8 +657,11 @@ function admin_history_match_score_line(array $match, array $teams, array $capta
         return '';
     }
 
-    $showGoals = (string) ($match['status'] ?? '') === 'finalizado'
-        || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams)) > 0;
+    $showGoals = count($teams) === 2
+        && (
+            (string) ($match['status'] ?? '') === 'finalizado'
+            || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams)) > 0
+        );
 
     $parts = [];
     foreach ($teams as $team) {
@@ -717,7 +720,7 @@ function admin_history_team_scoreboard_label(array $match, array $team, array $c
     $teamNumber = (int) ($team['team_number'] ?? 0);
     if (!empty($team['captain_player_id'])) {
         $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
-        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
         $color = trim((string) ($team['color_name'] ?? '')) ?: ($defaultColors[$teamNumber] ?? '');
         return $color !== '' ? ($captainName . ' (' . $color . ')') : $captainName;
     }
@@ -728,7 +731,7 @@ function admin_history_team_scoreboard_label(array $match, array $team, array $c
     }
 
     if (($match['draw_mode'] ?? '') !== 'captains') {
-        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
         if (isset($defaultColors[$teamNumber])) {
             return 'Equipo (' . $defaultColors[$teamNumber] . ')';
         }
@@ -752,7 +755,11 @@ function admin_render_match_scoreboard(array $match, array $teams, array $captai
     }
 
     if (count($items) !== 2) {
-        return h(admin_history_match_score_line($match, $teams, $captainNames));
+        $parts = [];
+        foreach ($items as $item) {
+            $parts[] = '<span class="scoreboard-team">' . admin_render_team_label((string) $item['label']) . '</span>';
+        }
+        return '<span class="match-scoreboard match-scoreboard-multi">' . implode('<span class="scoreboard-vs">vs</span>', $parts) . '</span>';
     }
 
     return '<span class="match-scoreboard">' .
@@ -766,10 +773,10 @@ $scheduledCount = count(array_filter($matches, static fn(array $m): bool => (str
 $readyCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'sorteado'));
 $finishedCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'finalizado'));
 
-$pageHeading = $showCreateSection && !$showEditSection ? 'Crear partido' : 'Editar partidos';
+$pageHeading = $showCreateSection && !$showEditSection ? 'Crear fecha' : 'Editar fechas';
 $pageDescription = $showCreateSection && !$showEditSection
-    ? 'Carga un nuevo partido, define cupos y selecciona los jugadores convocados.'
-    : 'Administra partidos cargados, acciones disponibles, sorteo, capitanes y resultados.';
+    ? 'Carga una nueva fecha, define cupos y selecciona los jugadores convocados.'
+    : 'Administra fechas cargadas, acciones disponibles, sorteo, capitanes y resultados.';
 $title = $pageHeading . ' | ' . APP_NAME;
 $activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchListPage;
 require __DIR__ . '/includes/header.php';
@@ -802,11 +809,11 @@ require __DIR__ . '/includes/header.php';
 <?php if ($showCreateSection): ?>
 <details class="encounter-drawer <?= $form['id'] ? 'is-editing' : 'is-new' ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
   <summary class="encounter-drawer-tab">
-    <span><?= $form['id'] ? 'Editar partido' : 'CREAR NUEVO PARTIDO' ?></span>
+    <span><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></span>
     <small><?= $targetSelection ?> convocados requeridos</small>
   </summary>
   <section class="card encounter-drawer-body">
-  <h3><?= $form['id'] ? 'Editar partido' : 'CREAR NUEVO PARTIDO' ?></h3>
+  <h3><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></h3>
 
   <?php if (!$form['id']): ?>
     <form id="importPlayersForm" method="post" class="hidden">
@@ -843,7 +850,7 @@ require __DIR__ . '/includes/header.php';
       </div>
       <div class="form-row">
         <label>Numero de equipos</label>
-        <input type="number" name="num_teams" min="2" max="6" value="<?= h((string) $form['num_teams']) ?>" required data-num-teams>
+        <input type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams>
       </div>
       <div class="form-row">
         <label>Jugadores por equipo</label>
@@ -916,6 +923,13 @@ require __DIR__ . '/includes/header.php';
                       <span>
                         <strong><?= h((string) $matchRow['number']) ?>.</strong>
                         <?= h((string) $matchedPlayer['name']) ?>
+                        <button
+                          type="button"
+                          class="import-list-remove"
+                          data-remove-import-participant="<?= h((string) ((int) $matchedPlayer['id'])) ?>"
+                          aria-label="Quitar <?= h((string) $matchedPlayer['name']) ?> de convocados"
+                          title="Quitar de convocados"
+                        >x</button>
                       </span>
                     <?php endforeach; ?>
                   </div>
@@ -1047,7 +1061,7 @@ require __DIR__ . '/includes/header.php';
               </span>
               <span class="participant-roster-actions">
                 <button class="btn btn-danger participant-remove-button" type="button" data-remove-player-row aria-label="Quitar <?= h((string) $p['name']) ?>" title="Quitar">X</button>
-                <button class="participant-add-button" type="button" data-participant-toggle><?= $checked ? 'Agregado' : 'Agregar' ?></button>
+                <button class="participant-add-button" type="button" data-participant-toggle><?= $checked ? 'Convocado' : 'Agregar' ?></button>
               </span>
               <input
                 class="participant-hidden-checkbox"
@@ -1068,7 +1082,7 @@ require __DIR__ . '/includes/header.php';
         <div class="selected-panel-head">
           <div>
             <span class="participant-panel-kicker">Convocados</span>
-            <h4>Seleccionados para este partido</h4>
+            <h4>Seleccionados para esta fecha</h4>
           </div>
           <span class="selected-panel-count"><strong data-selection-count="participants">0</strong>/<strong data-selection-max="participants"><?= $targetSelection ?></strong></span>
         </div>
@@ -1079,7 +1093,7 @@ require __DIR__ . '/includes/header.php';
 
       <details class="participant-mobile-marquee" data-participant-marquee>
         <summary>
-          <span>Jugadores elegidos</span>
+          <span>CONVOCADOS</span>
           <strong><span data-selection-count="participants">0</span> / <span data-selection-max="participants"><?= $targetSelection ?></span></strong>
           <button class="btn btn-primary participant-mobile-submit" type="submit" data-mobile-submit disabled>
             CONTINUAR
@@ -1091,7 +1105,7 @@ require __DIR__ . '/includes/header.php';
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-primary" type="submit"><?= $form['id'] ? 'Guardar cambios' : 'Crear partido' ?></button>
+      <button class="btn btn-primary" type="submit"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
       <?php if ($form['id']): ?>
         <a class="btn btn-muted" href="<?= h($matchListPage) ?>">Cancelar</a>
       <?php endif; ?>
@@ -1105,13 +1119,13 @@ require __DIR__ . '/includes/header.php';
 <section class="card encounters-history">
   <div class="section-toolbar">
     <div>
-      <h3>Historial de partidos</h3>
-      <p class="small-muted">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> partidos cargados.</p>
+      <h3>Historial de fechas</h3>
+      <p class="small-muted">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> fechas cargadas.</p>
     </div>
   </div>
 
   <?php if (!$matches): ?>
-    <p>No hay partidos cargados.</p>
+    <p>No hay fechas cargadas.</p>
   <?php else: ?>
     <?php if ($latestMatch): ?>
       <?php
@@ -1128,8 +1142,8 @@ require __DIR__ . '/includes/header.php';
       ?>
       <article class="encounter-latest-card">
         <div>
-          <span class="encounter-latest-kicker">Ultimo partido cargado</span>
-          <h4><?= h((string) ($latestMatch['title'] ?: ('Partido #' . $latestMatch['id']))) ?></h4>
+          <span class="encounter-latest-kicker">Ultima fecha cargada</span>
+          <h4><?= h((string) ($latestMatch['title'] ?: ('Fecha #' . $latestMatch['id']))) ?></h4>
           <p>
             <?= h(date('d/m/Y H:i', strtotime((string) $latestMatch['match_date']))) ?>
             | <?= h((string) $latestParticipantsCount) ?>/<?= h((string) $latestExpectedPlayers) ?> convocados
@@ -1158,11 +1172,11 @@ require __DIR__ . '/includes/header.php';
 
     <div class="encounter-history-search" role="search">
       <label for="encounterHistorySearch">Buscar historial</label>
-      <input id="encounterHistorySearch" type="search" placeholder="Fecha, partido o capitan..." autocomplete="off" data-encounter-history-search>
-      <span data-encounter-history-count><?= h((string) $totalMatches) ?> partidos</span>
+      <input id="encounterHistorySearch" type="search" placeholder="Fecha, capitan o resultado..." autocomplete="off" data-encounter-history-search>
+      <span data-encounter-history-count><?= h((string) $totalMatches) ?> fechas</span>
     </div>
-    <p class="small-muted encounter-history-empty" data-encounter-history-empty hidden>No hay partidos que coincidan con la busqueda.</p>
-    <div class="encounter-card-grid">
+    <p class="small-muted encounter-history-empty" data-encounter-history-empty hidden>No hay fechas que coincidan con la busqueda.</p>
+    <div class="encounter-card-grid" data-encounter-current-page="<?= h((string) $currentPage) ?>">
       <?php foreach ($matches as $matchIndex => $m): ?>
         <?php
           $canFinalize = (string) $m['status'] === 'sorteado';
@@ -1185,7 +1199,7 @@ require __DIR__ . '/includes/header.php';
               }
           }
           $historySearchText = implode(' ', array_filter([
-              (string) ($m['title'] ?: 'Partido #' . $m['id']),
+              (string) ($m['title'] ?: 'Fecha #' . $m['id']),
               (string) $m['id'],
               date('d/m/Y', strtotime((string) $m['match_date'])),
               date('Y-m-d', strtotime((string) $m['match_date'])),
@@ -1211,7 +1225,7 @@ require __DIR__ . '/includes/header.php';
           <div class="encounter-card-head">
             <div>
               <span class="encounter-date"><?= h(date('d/m/Y H:00', strtotime((string) $m['match_date']))) ?></span>
-              <h4><?= h((string) ($m['title'] ?: 'Partido #' . $m['id'])) ?></h4>
+              <h4><?= h((string) ($m['title'] ?: ('Fecha #' . $m['id']))) ?></h4>
             </div>
           </div>
 
@@ -1233,15 +1247,15 @@ require __DIR__ . '/includes/header.php';
             <?php if ($isScheduled): ?>
               Listo para editar, sortear o iniciar modo capitanes.
             <?php elseif ($canFinalize): ?>
-              Equipos generados. Solo resta finalizar el partido.
+              Equipos generados. Solo resta finalizar la fecha.
             <?php else: ?>
-              Partido cerrado. Resultado y detalle disponibles.
+              Fecha cerrada. Resultado y detalle disponibles.
             <?php endif; ?>
           </div>
 
           <div class="encounter-actions">
             <?php if ($isScheduled): ?>
-              <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar partido" title="Editar"></a>
+              <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar fecha" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
               <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
             <?php else: ?>
@@ -1266,13 +1280,13 @@ require __DIR__ . '/includes/header.php';
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar partido y sus datos?" aria-label="Eliminar partido" title="Eliminar">X</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar fecha y sus datos?" aria-label="Eliminar fecha" title="Eliminar">X</button>
               </form>
             <?php else: ?>
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar este partido? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados." aria-label="Eliminar partido" title="Eliminar">X</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar esta fecha? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados." aria-label="Eliminar fecha" title="Eliminar">X</button>
               </form>
             <?php endif; ?>
           </div>
@@ -1281,7 +1295,7 @@ require __DIR__ . '/includes/header.php';
             <summary>Acciones</summary>
             <div class="encounter-action-menu-list">
               <?php if ($isScheduled): ?>
-                <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar partido</a>
+                <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar fecha</a>
                 <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear equipos</a>
                 <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
               <?php elseif ($canEditCaptainFormation): ?>
@@ -1289,7 +1303,7 @@ require __DIR__ . '/includes/header.php';
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>
-                <a class="btn btn-primary icon-finish" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar partido</a>
+                <a class="btn btn-primary icon-finish" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar fecha</a>
               <?php elseif ($isFinalized): ?>
                 <a class="btn btn-muted" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
               <?php endif; ?>
@@ -1297,7 +1311,7 @@ require __DIR__ . '/includes/header.php';
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger" data-short="" data-confirm="<?= $isScheduled ? 'Eliminar partido y sus datos?' : 'Eliminar este partido? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar partido</button>
+                <button class="btn btn-danger" data-short="" data-confirm="<?= $isScheduled ? 'Eliminar fecha y sus datos?' : 'Eliminar esta fecha? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar fecha</button>
               </form>
             </div>
           </details>
@@ -1305,7 +1319,7 @@ require __DIR__ . '/includes/header.php';
       <?php endforeach; ?>
     </div>
     <?php if ($totalPages > 1): ?>
-      <nav class="pagination" aria-label="Paginas de partidos">
+      <nav class="pagination" aria-label="Paginas de fechas">
         <?php if ($currentPage > 1): ?>
           <a class="pagination-link" href="<?= h($matchListPage) ?>?page=<?= $currentPage - 1 ?>">Anterior</a>
         <?php else: ?>
@@ -1330,84 +1344,6 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 </section>
 
-<script>
-  (() => {
-    const input = document.querySelector('[data-encounter-history-search]');
-    if (!input) return;
-
-    const cards = Array.from(document.querySelectorAll('[data-encounter-card]'));
-    const pagination = document.querySelector('.encounters-history .pagination');
-    const empty = document.querySelector('[data-encounter-history-empty]');
-    const count = document.querySelector('[data-encounter-history-count]');
-    const overviewPanels = Array.from(document.querySelectorAll('[data-encounter-status-filter]'));
-    const currentPage = '<?= h((string) $currentPage) ?>';
-    const total = cards.length;
-    let activeStatus = '';
-
-    const normalize = (value) => String(value || '')
-      .toLocaleLowerCase('es-AR')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
-
-    const applyFilter = () => {
-      const query = normalize(input.value);
-      let visible = 0;
-
-      cards.forEach((card) => {
-        const haystack = normalize(card.dataset.search || '');
-        const matchesPage = query === '' && activeStatus === '' ? card.dataset.page === currentPage : true;
-        const matchesQuery = query === '' || haystack.includes(query);
-        const matchesStatus = activeStatus === '' || card.dataset.status === activeStatus;
-        const matches = matchesPage && matchesQuery && matchesStatus;
-        card.classList.toggle('encounter-page-hidden', !matches);
-        if (matches) visible++;
-      });
-
-      if (pagination) {
-        pagination.hidden = query !== '' || activeStatus !== '';
-      }
-      if (empty) {
-        empty.hidden = visible !== 0;
-      }
-      if (count) {
-        count.textContent = query === '' && activeStatus === ''
-          ? `${total} partidos`
-          : `${visible} de ${total} partidos`;
-      }
-      overviewPanels.forEach((panel) => {
-        const isActive = panel.dataset.encounterStatusFilter === activeStatus;
-        panel.classList.toggle('is-active', isActive);
-        panel.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      });
-    };
-
-    input.addEventListener('input', applyFilter);
-    overviewPanels.forEach((panel) => {
-      const toggleStatus = () => {
-        const nextStatus = panel.dataset.encounterStatusFilter || '';
-        activeStatus = activeStatus === nextStatus ? '' : nextStatus;
-        applyFilter();
-        document.querySelector('.encounters-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      };
-      panel.addEventListener('click', toggleStatus);
-      panel.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        toggleStatus();
-      });
-    });
-    applyFilter();
-
-    const focusedCard = document.querySelector('[data-focus-match="1"]');
-    if (focusedCard) {
-      window.setTimeout(() => {
-        focusedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        focusedCard.focus({ preventScroll: true });
-      }, 120);
-    }
-  })();
-</script>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

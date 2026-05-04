@@ -124,6 +124,28 @@ function ensure_control_tables(PDO $pdo): array
         $changes[] = 'table captain_picks';
     }
 
+    if (!schema_table_exists($pdo, 'match_round_robin_results')) {
+        $pdo->exec(
+            "CREATE TABLE match_round_robin_results (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                match_id INT UNSIGNED NOT NULL,
+                home_team_number TINYINT UNSIGNED NOT NULL,
+                away_team_number TINYINT UNSIGNED NOT NULL,
+                leg TINYINT UNSIGNED NOT NULL,
+                home_goals SMALLINT UNSIGNED NULL,
+                away_goals SMALLINT UNSIGNED NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_round_robin_fixture (match_id, home_team_number, away_team_number, leg),
+                INDEX idx_round_robin_match (match_id),
+                CONSTRAINT fk_round_robin_match
+                  FOREIGN KEY (match_id) REFERENCES matches(id)
+                  ON DELETE CASCADE ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $changes[] = 'table match_round_robin_results';
+    }
+
     return $changes;
 }
 
@@ -165,6 +187,7 @@ function ensure_control_schema(): array
         ['matches', 'formation_edit_deadline', 'formation_edit_deadline DATETIME NULL AFTER finalized_at'],
         ['matches', 'public_token', 'public_token VARCHAR(64) NULL AFTER formation_edit_deadline'],
         ['matches', 'result_notes', 'result_notes TEXT NULL AFTER notes'],
+        ['matches', 'round_robin_legs', 'round_robin_legs TINYINT UNSIGNED NOT NULL DEFAULT 2 AFTER result_notes'],
         ['match_teams', 'captain_player_id', 'captain_player_id INT UNSIGNED NULL AFTER team_name'],
         ['match_teams', 'formation_name', 'formation_name VARCHAR(80) NULL AFTER total_skill'],
         ['match_teams', 'formation_data', 'formation_data TEXT NULL AFTER formation_name'],

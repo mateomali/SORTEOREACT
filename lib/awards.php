@@ -85,7 +85,7 @@ function repo_save_match_awards(int $matchId, array $awards, array $allowedPlaye
             continue;
         }
         if (!isset($allowed[$playerId])) {
-            throw new RuntimeException('Premio invalido: el jugador no participo del partido.');
+            throw new RuntimeException('Premio invalido: el jugador no participo de la fecha.');
         }
         $upsert->execute(['mid' => $matchId, 'code' => $code, 'pid' => $playerId]);
     }

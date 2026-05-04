@@ -34,7 +34,7 @@ require __DIR__ . '/includes/header.php';
 <section class="page-head">
   <div>
     <h1>Ingreso admin</h1>
-    <p class="small-muted">Acceso para administrar jugadores, partidos, capitanes y resultados.</p>
+    <p class="small-muted">Acceso para administrar jugadores, fechas, capitanes y resultados.</p>
   </div>
   <a class="btn btn-muted" href="index.php">Volver al inicio</a>
 </section>

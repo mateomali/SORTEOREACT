@@ -135,7 +135,7 @@ function repo_match_team_labels(array $match, array $matchTeams): array
         $teamNumber = (int) $team['team_number'];
         if (!empty($team['captain_player_id'])) {
             $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
-            $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+            $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
             $color = trim((string) ($team['color_name'] ?? '')) ?: ($defaultColors[$teamNumber] ?? '');
             $labels[$teamNumber] = $color !== '' ? ($captainName . ' (' . $color . ')') : $captainName;
             continue;
@@ -148,7 +148,7 @@ function repo_match_team_labels(array $match, array $matchTeams): array
         }
 
         if (($match['draw_mode'] ?? '') !== 'captains') {
-            $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+            $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
             if (isset($defaultColors[$teamNumber])) {
                 $labels[$teamNumber] = 'Equipo (' . $defaultColors[$teamNumber] . ')';
                 continue;

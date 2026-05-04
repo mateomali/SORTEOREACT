@@ -11,17 +11,17 @@ ensure_control_schema();
 ensure_match_awards_schema();
 $awardDefinitions = award_definitions();
 $awardDescriptions = [
-    'player_of_match' => 'Jugador del partido.',
+    'player_of_match' => 'Jugador de la fecha.',
     'goal_of_week' => 'Mejor gol de la fecha.',
     'lyrical' => 'Jugada fantastica o recurso tecnico destacado.',
-    'wall' => 'Mejor defensor del partido.',
+    'wall' => 'Mejor defensor de la fecha.',
     'capocannoniere' => 'Goleador destacado de la fecha.',
     'terminator' => 'Jugador mas bruto o jugada mas fuerte.',
     'tractor' => 'Jugador mas aguerrido e intenso.',
     'guinda' => 'Mejor pase o asistencia.',
     'putita' => 'Jugador no comprometido o problematico.',
     'ghost' => 'Jugador que erro mucho o participo poco.',
-    'keeper' => 'Mejor arquero del partido.',
+    'keeper' => 'Mejor arquero de la fecha.',
     'goodfellas' => 'Mejor actitud y buen compañero.',
 ];
 
@@ -186,7 +186,7 @@ foreach ($stmtPlayerMatchDetails->fetchAll() as $detailRow) {
         $resultKey = 'lost';
     }
     $playerMatchDetails[$playerId][$resultKey][] = [
-        'title' => (string) ($detailRow['title'] ?: ('Partido #' . $detailRow['match_id'])),
+        'title' => (string) ($detailRow['title'] ?: ('Fecha #' . $detailRow['match_id'])),
         'date' => date('d/m/Y H:i', strtotime((string) $detailRow['match_date'])),
         'score' => $teamGoals . ' vs ' . $opponentGoals,
     ];
@@ -258,7 +258,7 @@ require __DIR__ . '/includes/header.php';
 <section class="page-head">
   <div>
     <h1>Estadisticas</h1>
-    <p class="small-muted">Rendimiento por jugador, capitanes y goleadores de partidos finalizados.</p>
+    <p class="small-muted">Rendimiento por jugador, capitanes y goleadores de fechas finalizadas.</p>
   </div>
 </section>
 
@@ -298,7 +298,7 @@ require __DIR__ . '/includes/header.php';
     <div class="value" data-stats-player-name>-</div>
   </article>
   <article class="stat-box">
-    <div class="label">Partidos jugados</div>
+    <div class="label">Fechas jugadas</div>
     <div class="value" data-stats-player-matches>-</div>
   </article>
   <article class="stat-box">
@@ -324,7 +324,7 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <section class="stats-summary">
-  <span><?= h((string) ((int) $summary['partidos'])) ?> partidos</span>
+  <span><?= h((string) ((int) $summary['partidos'])) ?> fechas</span>
   <span><?= h((string) ((int) $summary['jugadores'])) ?> jugadores</span>
   <span><?= h((string) ((int) $summary['goles_totales'])) ?> goles</span>
   <span>Promedio <?= $summary['promedio_general'] !== null ? h(number_format((float) $summary['promedio_general'], 2)) : '-' ?></span>
@@ -484,7 +484,7 @@ require __DIR__ . '/includes/header.php';
                               <small><?= h($matchDetail['title']) ?> | <?= h($matchDetail['date']) ?> | <?= h($matchDetail['score']) ?></small>
                             <?php endforeach; ?>
                           <?php else: ?>
-                            <small>Sin partidos en esta categoria.</small>
+                            <small>Sin fechas en esta categoria.</small>
                           <?php endif; ?>
                         </span>
                       </div>
@@ -556,7 +556,7 @@ require __DIR__ . '/includes/header.php';
         <p class="small-muted stats-compact-empty">No hay datos para este filtro.</p>
       <?php else: ?>
         <?php foreach ($scorers as $row): ?>
-          <div class="stats-compact-grid-row">
+          <div class="stats-compact-grid-row" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
             <span class="stats-compact-name"><?= h((string) $row['name']) ?></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><strong><?= h((string) $row['goles']) ?></strong></span>
@@ -588,10 +588,10 @@ require __DIR__ . '/includes/header.php';
         <span>DG</span>
       </div>
       <?php if (!$captains): ?>
-        <p class="small-muted stats-compact-empty">No hay partidos finalizados en modo capitanes para este filtro.</p>
+        <p class="small-muted stats-compact-empty">No hay fechas finalizadas en modo capitanes para este filtro.</p>
       <?php else: ?>
         <?php foreach ($captains as $row): ?>
-          <div class="stats-compact-grid-row">
+          <div class="stats-compact-grid-row" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
             <span class="stats-compact-name"><?= h((string) $row['name']) ?></span>
             <span><strong><?= h((string) $row['puntos']) ?></strong></span>
             <span><?= h((string) $row['partidos']) ?></span>
@@ -616,7 +616,7 @@ require __DIR__ . '/includes/header.php';
         <span class="award-legend-icon"><?= h((string) $award['icon']) ?></span>
         <span>
           <strong><?= h((string) $award['label']) ?></strong>
-          <small><?= h($awardDescriptions[$code] ?? 'Premio destacado del partido.') ?></small>
+          <small><?= h($awardDescriptions[$code] ?? 'Premio destacado de la fecha.') ?></small>
         </span>
       </article>
     <?php endforeach; ?>

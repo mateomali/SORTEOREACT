@@ -614,8 +614,16 @@
     @apply min-w-0 border-r border-slate-200 px-3 py-2 text-center text-sm text-slate-700 last:border-r-0;
   }
 
+  .stats-compact-grid-row.is-highlighted > span {
+    @apply bg-amber-50;
+  }
+
   .stats-compact-name {
     @apply truncate text-left font-extrabold text-slate-900;
+  }
+
+  .stats-compact-grid-row > .stats-compact-name {
+    @apply text-left;
   }
 
   .stats-compact-empty {
@@ -1020,8 +1028,20 @@
     @apply inline-grid min-w-72 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-emerald-950 shadow-sm shadow-emerald-950/5;
   }
 
+  .match-scoreboard-multi {
+    @apply inline-flex min-w-0 flex-wrap justify-center gap-2;
+  }
+
   .match-scoreboard .scoreboard-team {
     @apply min-w-0 text-sm font-extrabold;
+  }
+
+  .match-scoreboard-multi .scoreboard-team {
+    @apply rounded-lg bg-white px-2 py-1 ring-1 ring-emerald-100;
+  }
+
+  .scoreboard-vs {
+    @apply self-center text-[10px] font-extrabold uppercase text-emerald-700;
   }
 
   .match-scoreboard .scoreboard-team-away {
@@ -1139,6 +1159,42 @@
 
   .match-results {
     @apply mt-4;
+  }
+
+  .public-round-robin-results {
+    @apply mt-4;
+  }
+
+  .public-round-robin-results h3 {
+    @apply mb-2 text-base;
+  }
+
+  .public-round-robin-grid {
+    @apply grid gap-2;
+  }
+
+  .public-round-robin-card {
+    @apply rounded-xl border border-emerald-100 bg-white p-2 shadow-sm shadow-emerald-950/5;
+  }
+
+  .public-round-robin-leg {
+    @apply mb-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-800;
+  }
+
+  .public-round-robin-score {
+    @apply grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-xs font-extrabold text-emerald-950;
+  }
+
+  .public-round-robin-score > span:first-child {
+    @apply text-left;
+  }
+
+  .public-round-robin-score > span:last-child {
+    @apply text-right;
+  }
+
+  .public-round-robin-score strong {
+    @apply rounded-lg bg-emerald-950 px-2 py-1 text-sm text-white;
   }
 
   .match-result-mobile-groups {
@@ -1700,7 +1756,11 @@
   }
 
   .import-list-matches span {
-    @apply rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-950;
+    @apply inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-950;
+  }
+
+  .import-list-remove {
+    @apply inline-flex h-5 min-h-5 w-5 items-center justify-center rounded-full bg-emerald-200 p-0 text-xs font-extrabold leading-none text-emerald-950 transition hover:bg-red-100 hover:text-red-700;
   }
 
   .import-missing-list {
@@ -2035,7 +2095,8 @@
   }
 
   .player-picker-item.selected {
-    @apply bg-emerald-100 ring-1 ring-emerald-200;
+    @apply bg-emerald-100 ring-1 ring-emerald-300;
+    order: -1;
   }
 
   .player-picker-item strong,
@@ -2447,6 +2508,64 @@
     @apply mx-auto w-20 rounded-lg px-2 py-2 text-center font-extrabold;
   }
 
+  .round-robin-score-inputs {
+    @apply inline-grid grid-cols-[64px_auto_64px] items-center gap-1.5;
+  }
+
+  .round-robin-score-inputs .finish-number-input {
+    @apply w-16;
+  }
+
+  .round-robin-mode-toggle {
+    @apply mb-3 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-extrabold text-emerald-950;
+  }
+
+  .round-robin-mode-toggle input {
+    @apply h-4 w-4 accent-emerald-700;
+  }
+
+  .round-robin-table .round-robin-team-cell,
+  .round-robin-standings .round-robin-standing-team {
+    @apply min-w-0 text-left;
+  }
+
+  .round-robin-save-cell {
+    @apply text-center;
+  }
+
+  .round-robin-row-save {
+    @apply min-h-9 px-3 py-1.5 text-xs;
+  }
+
+  .round-robin-table .team-label-with-heart,
+  .round-robin-standings .team-label-with-heart {
+    @apply justify-start font-extrabold;
+  }
+
+  .round-robin-standings .round-robin-standing-team strong {
+    @apply inline-flex;
+  }
+
+  .round-robin-standings tbody tr:first-child td {
+    @apply bg-amber-50 font-extrabold text-amber-950;
+  }
+
+  .round-robin-winner-panel {
+    @apply mt-3 flex w-full max-w-full flex-col items-center justify-center gap-1 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-center text-emerald-950 shadow-lg shadow-emerald-950/10;
+  }
+
+  .round-robin-winner-panel > span {
+    @apply text-xs font-extrabold uppercase text-emerald-700;
+  }
+
+  .round-robin-winner-panel > strong {
+    @apply flex w-full min-w-0 justify-center text-lg;
+  }
+
+  .round-robin-winner-panel > small {
+    @apply text-xs font-bold text-slate-600;
+  }
+
   .finish-collapse {
     @apply mb-3 p-0;
   }
@@ -2490,7 +2609,11 @@
   }
 
   .finish-rating-team h4 {
-    @apply mb-2;
+    @apply mb-2 flex min-w-0 items-center;
+  }
+
+  .finish-rating-team h4 .team-label-with-heart {
+    @apply min-w-0 font-extrabold;
   }
 
   .finish-awards > .small-muted {
@@ -3245,6 +3368,156 @@
       @apply w-full px-1.5 py-2 text-sm;
     }
 
+    .round-robin-table tr {
+      @apply grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 rounded-2xl border-emerald-100 bg-emerald-50/40 p-2.5;
+      grid-template-areas:
+        "round round round"
+        "home score away"
+        "save save save";
+    }
+
+    .round-robin-table tr td {
+      @apply min-w-0;
+    }
+
+    .round-robin-table tr td[data-label="Cruce"] {
+      grid-area: round;
+      @apply flex items-center justify-between rounded-lg bg-white px-2.5 py-1.5 text-left text-xs font-extrabold text-emerald-900;
+    }
+
+    .round-robin-table tr td[data-label="Cruce"]::before {
+      content: "Partido";
+      @apply m-0 text-[10px] font-extrabold uppercase text-slate-500;
+      display: block;
+    }
+
+    .round-robin-table tr td[data-label="Local"] {
+      grid-area: home;
+    }
+
+    .round-robin-table tr td[data-label="Resultado"] {
+      grid-area: score;
+      @apply self-center;
+    }
+
+    .round-robin-table tr td[data-label="Visitante"] {
+      grid-area: away;
+    }
+
+    .round-robin-table tr td[data-label="Guardar"] {
+      grid-area: save;
+    }
+
+    .round-robin-table .round-robin-team-cell,
+    .round-robin-standings .round-robin-standing-team {
+      @apply text-left;
+    }
+
+    .round-robin-table .team-label-with-heart,
+    .round-robin-standings .team-label-with-heart {
+      @apply w-full min-w-0 justify-center gap-1 rounded-xl border border-emerald-100 bg-white px-2 py-2 text-center text-[11px] leading-tight shadow-sm;
+    }
+
+    .round-robin-table .team-label-with-heart > span:first-child,
+    .round-robin-standings .team-label-with-heart > span:first-child {
+      @apply min-w-0 truncate;
+    }
+
+    .round-robin-table .team-heart-icon,
+    .round-robin-standings .team-heart-icon {
+      @apply h-4 w-4 shrink-0;
+    }
+
+    .round-robin-save-cell {
+      @apply col-span-full;
+    }
+
+    .round-robin-row-save {
+      @apply min-h-9 w-full py-2 text-xs;
+    }
+
+    .round-robin-score-inputs {
+      @apply grid-cols-[44px_auto_44px] gap-1 rounded-xl bg-white px-1.5 py-1 shadow-sm;
+    }
+
+    .round-robin-score-inputs .finish-number-input {
+      @apply h-9 w-11 min-w-0 rounded-lg px-1 py-1 text-sm;
+    }
+
+    .round-robin-standings {
+      @apply border-0 bg-transparent;
+    }
+
+    .round-robin-standings tbody {
+      @apply grid gap-2;
+      counter-reset: rr-position;
+    }
+
+    .round-robin-standings tr {
+      @apply relative grid grid-cols-[minmax(0,1fr)_repeat(4,minmax(38px,auto))] gap-1.5 rounded-2xl border border-emerald-100 bg-white p-2 pl-11 shadow-sm;
+      counter-increment: rr-position;
+    }
+
+    .round-robin-standings tr::before {
+      content: counter(rr-position);
+      @apply absolute left-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-950 text-xs font-extrabold text-white;
+    }
+
+    .round-robin-standings td {
+      @apply flex min-w-0 flex-col items-center justify-center rounded-lg bg-slate-50 px-1.5 py-1 text-center text-[11px] font-extrabold leading-tight;
+    }
+
+    .round-robin-standings td::before {
+      @apply mb-0.5 block text-[9px] leading-none text-slate-500;
+      content: attr(data-label);
+    }
+
+    .round-robin-standings .round-robin-standing-team {
+      @apply col-span-full items-stretch bg-transparent p-0;
+    }
+
+    .round-robin-standings .round-robin-standing-team::before {
+      display: none;
+    }
+
+    .round-robin-standings .round-robin-standing-team .team-label-with-heart {
+      @apply border-0 bg-transparent px-0 py-0 shadow-none;
+      justify-content: flex-start;
+      text-align: left;
+    }
+
+    .round-robin-standings td[data-label="Pts"] {
+      @apply bg-emerald-950 text-white;
+    }
+
+    .round-robin-standings td[data-label="Pts"]::before {
+      @apply text-emerald-100;
+    }
+
+    .round-robin-standings td[data-label="DG"] {
+      @apply bg-amber-50 text-amber-950;
+    }
+
+    .round-robin-standings td[data-label="G"],
+    .round-robin-standings td[data-label="E"],
+    .round-robin-standings td[data-label="P"],
+    .round-robin-standings td[data-label="GC"] {
+      @apply hidden;
+    }
+
+    .finish-score-actions {
+      @apply grid grid-cols-1 gap-2;
+    }
+
+    .finish-score-actions .btn,
+    .finish-score-actions button {
+      @apply w-full;
+    }
+
+    .round-robin-winner-panel > strong {
+      @apply text-base;
+    }
+
     .finish-awards summary {
       @apply px-3 py-3;
     }
@@ -3342,6 +3615,10 @@
 
     .stats-compact-name {
       @apply truncate text-left text-[11px];
+    }
+
+    .stats-compact-grid-row > .stats-compact-name {
+      @apply text-left;
     }
 
     .stats-compact-empty {
@@ -3698,6 +3975,10 @@
     .stats-compact-grid-row > span,
     .stats-compact-name {
       @apply text-[10px];
+    }
+
+    .stats-compact-grid-row > .stats-compact-name {
+      @apply text-left;
     }
 
     .award-summary-button,
@@ -4747,4 +5028,262 @@
       display: none;
     }
   }
+
+  @media (max-width: 760px) {
+    .round-robin-winner-panel .team-label-with-heart {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .round-robin-table tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      grid-template-areas:
+        "round round round"
+        "home versus away"
+        "score score score"
+        "save save save";
+    }
+
+    .round-robin-table tr td[data-label="Cruce"] {
+      grid-area: round;
+    }
+
+    .round-robin-table tr td[data-label="Local"] {
+      grid-area: home;
+    }
+
+    .round-robin-table tr td[data-label="Resultado"] {
+      grid-area: score;
+    }
+
+    .round-robin-table tr td[data-label="Visitante"] {
+      grid-area: away;
+    }
+
+    .round-robin-table tr td[data-label="Guardar"] {
+      grid-area: save;
+    }
+
+    .round-robin-table tr::after {
+      content: "vs";
+      grid-area: versus;
+      align-self: center;
+      justify-self: center;
+      color: #047857;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .round-robin-standings tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) repeat(4, minmax(32px, auto));
+    }
+
+    .round-robin-table .team-label-with-heart {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .round-robin-table td[data-label="Resultado"]::before,
+    .round-robin-table td[data-label="Guardar"]::before {
+      text-align: left;
+    }
+
+    .round-robin-table .round-robin-team-cell::before {
+      display: none;
+    }
+
+    .round-robin-table td[data-label="Resultado"] {
+      justify-self: stretch;
+    }
+
+    .round-robin-score-inputs {
+      width: 100%;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 380px) {
+    .round-robin-table tr {
+      gap: 6px;
+      padding: 8px;
+    }
+
+    .round-robin-score-inputs {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 3px;
+      padding-inline: 4px;
+    }
+
+    .round-robin-score-inputs .finish-number-input {
+      width: 100%;
+      height: 34px;
+      font-size: 12px;
+    }
+
+    .round-robin-table .team-label-with-heart,
+    .round-robin-standings .team-label-with-heart {
+      padding-inline: 6px;
+      font-size: 10px;
+    }
+
+    .round-robin-table .team-heart-icon,
+    .round-robin-standings .team-heart-icon {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .round-robin-standings tbody {
+      gap: 6px;
+    }
+
+    .round-robin-standings tr {
+      position: relative;
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr) 42px 42px 56px;
+      grid-template-areas:
+        "rank team team team pts"
+        "rank pj gf dg pts";
+      align-items: stretch;
+      gap: 6px;
+      min-height: 0;
+      padding: 8px;
+      padding-left: 8px;
+      border-radius: 14px;
+      border: 1px solid #cfe8dc;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(7, 19, 15, 0.06);
+    }
+
+    .round-robin-standings tr::before {
+      position: static;
+      grid-area: rank;
+      align-self: center;
+      justify-self: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: #063d2b;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .round-robin-standings td {
+      min-width: 0;
+      border: 0;
+      border-radius: 10px;
+      padding: 5px 6px;
+      background: #f5faf7;
+      color: #0b241b;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.05;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .round-robin-standings td::before {
+      margin: 0 0 2px;
+      color: #60726b;
+      font-size: 9px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .round-robin-standings .round-robin-standing-team {
+      grid-area: team;
+      padding: 0;
+      background: transparent;
+      align-items: stretch;
+    }
+
+    .round-robin-standings .round-robin-standing-team .team-label-with-heart {
+      min-height: 34px;
+      width: 100%;
+      justify-content: flex-start;
+      gap: 6px;
+      border: 1px solid #bfe6d0;
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 7px 8px;
+      text-align: left;
+      box-shadow: none;
+    }
+
+    .round-robin-standings td[data-label="Pts"] {
+      grid-area: pts;
+      background: #063d2b;
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .round-robin-standings td[data-label="Pts"]::before {
+      color: #c8f3d9;
+      font-size: 10px;
+    }
+
+    .round-robin-standings td[data-label="PJ"] {
+      grid-area: pj;
+    }
+
+    .round-robin-standings td[data-label="GF"] {
+      grid-area: gf;
+    }
+
+    .round-robin-standings td[data-label="DG"] {
+      grid-area: dg;
+      background: #fff7df;
+      color: #593b00;
+    }
+
+    .round-robin-standings td[data-label="G"],
+    .round-robin-standings td[data-label="E"],
+    .round-robin-standings td[data-label="P"],
+    .round-robin-standings td[data-label="GC"] {
+      display: none;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .round-robin-standings tr {
+      grid-template-columns: 26px minmax(0, 1fr) 36px 36px 50px;
+      gap: 5px;
+      padding: 7px;
+    }
+
+    .round-robin-standings tr::before {
+      width: 24px;
+      height: 24px;
+      font-size: 11px;
+    }
+
+    .round-robin-standings td {
+      padding: 4px 5px;
+      font-size: 11px;
+    }
+
+    .round-robin-standings td[data-label="Pts"] {
+      font-size: 15px;
+    }
+
+    .round-robin-standings .round-robin-standing-team .team-label-with-heart {
+      min-height: 32px;
+      padding: 6px;
+      font-size: 11px;
+    }
+  }
+
 }

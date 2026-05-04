@@ -4,11 +4,39 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/awards.php';
+require_once __DIR__ . '/lib/schema.php';
 
-require_admin();
+$isRoundRobinAjaxRequest = $_SERVER['REQUEST_METHOD'] === 'POST'
+    && (string) ($_POST['ajax'] ?? '') === '1'
+    && in_array((string) ($_POST['action'] ?? ''), ['save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'], true);
 
-$pdo = db();
-ensure_match_awards_schema();
+function finish_json_response(array $payload, int $status = 200): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (!is_admin()) {
+    if ($isRoundRobinAjaxRequest) {
+        finish_json_response(['ok' => false, 'message' => 'La sesion admin vencio. Vuelve a ingresar y reintenta.'], 401);
+    }
+    require_admin();
+}
+
+try {
+    $pdo = db();
+    ensure_match_awards_schema();
+    ensure_round_robin_results_schema();
+    ensure_round_robin_settings_schema();
+} catch (Throwable $e) {
+    if ($isRoundRobinAjaxRequest) {
+        finish_json_response(['ok' => false, 'message' => 'No se pudo preparar la base de datos: ' . $e->getMessage()], 500);
+    }
+    throw $e;
+}
+
 $matchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
 $detailFormError = '';
 $forceEditDetails = false;
@@ -37,7 +65,7 @@ function valuations_locked_after_deadline(array $match): bool
 
 function build_match_share_summary(array $match, array $matchTeams, array $teamLabels, array $groupedTeams, array $awardDefinitions, array $savedAwards): string
 {
-    $title = (string) ($match['title'] ?: ('Partido #' . $match['id']));
+    $title = (string) ($match['title'] ?: ('Fecha #' . $match['id']));
     $date = date('d/m/Y H:i', strtotime((string) $match['match_date']));
     $teamGoals = [];
     foreach ($matchTeams as $team) {
@@ -106,6 +134,335 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
     return trim(implode("\n", $lines));
 }
 
+function ensure_round_robin_results_schema(): void
+{
+    $pdo = db();
+    if (schema_table_exists($pdo, 'match_round_robin_results')) {
+        return;
+    }
+    $pdo->exec(
+        "CREATE TABLE match_round_robin_results (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            match_id INT UNSIGNED NOT NULL,
+            home_team_number TINYINT UNSIGNED NOT NULL,
+            away_team_number TINYINT UNSIGNED NOT NULL,
+            leg TINYINT UNSIGNED NOT NULL,
+            home_goals SMALLINT UNSIGNED NULL,
+            away_goals SMALLINT UNSIGNED NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_round_robin_fixture (match_id, home_team_number, away_team_number, leg),
+            INDEX idx_round_robin_match (match_id),
+            CONSTRAINT fk_round_robin_match
+              FOREIGN KEY (match_id) REFERENCES matches(id)
+              ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+}
+
+function ensure_round_robin_settings_schema(): void
+{
+    $pdo = db();
+    if (!schema_column_exists($pdo, 'matches', 'round_robin_legs')) {
+        $pdo->exec('ALTER TABLE matches ADD COLUMN round_robin_legs TINYINT UNSIGNED NOT NULL DEFAULT 2 AFTER result_notes');
+    }
+}
+
+function normalize_round_robin_legs(mixed $value): int
+{
+    return (int) $value === 1 ? 1 : 2;
+}
+
+function round_robin_fixtures(array $teams, int $legs = 2): array
+{
+    $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], $teams);
+    sort($teamNumbers);
+    $legs = normalize_round_robin_legs($legs);
+
+    $firstLeg = [];
+    $secondLeg = [];
+    $rotation = $teamNumbers;
+    if (count($rotation) % 2 === 1) {
+        $rotation[] = 0;
+    }
+
+    $roundCount = max(0, count($rotation) - 1);
+    $half = (int) (count($rotation) / 2);
+    for ($round = 0; $round < $roundCount; $round++) {
+        for ($i = 0; $i < $half; $i++) {
+            $a = (int) $rotation[$i];
+            $b = (int) $rotation[count($rotation) - 1 - $i];
+            if ($a === 0 || $b === 0) {
+                continue;
+            }
+
+            if ($round % 2 === 1) {
+                [$a, $b] = [$b, $a];
+            }
+            $firstLeg[] = ['home' => $a, 'away' => $b, 'leg' => 1];
+            $secondLeg[] = ['home' => $b, 'away' => $a, 'leg' => 2];
+        }
+
+        $fixed = array_shift($rotation);
+        $last = array_pop($rotation);
+        array_unshift($rotation, $fixed);
+        array_splice($rotation, 1, 0, [$last]);
+    }
+
+    return $legs === 1 ? $firstLeg : array_merge($firstLeg, $secondLeg);
+}
+
+function round_robin_result_key(int $homeTeam, int $awayTeam, int $leg): string
+{
+    return $homeTeam . '-' . $awayTeam . '-' . $leg;
+}
+
+function repo_round_robin_results(int $matchId): array
+{
+    $stmt = db()->prepare(
+        'SELECT *
+         FROM match_round_robin_results
+         WHERE match_id = :mid
+         ORDER BY leg ASC, home_team_number ASC, away_team_number ASC'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $rows = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $rows[round_robin_result_key((int) $row['home_team_number'], (int) $row['away_team_number'], (int) $row['leg'])] = $row;
+    }
+    return $rows;
+}
+
+function finish_team_color_from_label(string $label): string
+{
+    if (preg_match('/\(([^)]+)\)\s*$/i', $label, $matches) !== 1) {
+        return '';
+    }
+
+    $color = mb_strtoupper(trim($matches[1]), 'UTF-8');
+    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA'];
+    return in_array($color, $knownColors, true) ? $color : '';
+}
+
+function finish_team_heart_color(string $color): string
+{
+    return match ($color) {
+        'ROSA' => '#ec4899',
+        'AZUL' => '#2563eb',
+        'VERDE' => '#16a34a',
+        'NEGRO' => '#111827',
+        'NARANJA' => '#f97316',
+        default => '#047857',
+    };
+}
+
+function finish_render_team_label(string $label): string
+{
+    $color = finish_team_color_from_label($label);
+    if ($color === '') {
+        return h($label);
+    }
+
+    $name = trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $label));
+    if ($name === '') {
+        $name = 'Equipo';
+    }
+    $heartColor = finish_team_heart_color($color);
+    return '<span class="team-label-with-heart" title="' . h($label) . '">' .
+        '<span>' . h($name) . '</span>' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="--team-heart-fill: ' . h($heartColor) . '">' .
+        '<path d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
+        '</svg>' .
+        '</span>';
+}
+
+function parse_round_robin_post_scores(array $fixtures, array $scoreData, bool $requireComplete): array
+{
+    $scores = [];
+    foreach ($fixtures as $fixture) {
+        $home = (int) $fixture['home'];
+        $away = (int) $fixture['away'];
+        $leg = (int) $fixture['leg'];
+        $key = round_robin_result_key($home, $away, $leg);
+        $homeRaw = $scoreData[$key]['home'] ?? '';
+        $awayRaw = $scoreData[$key]['away'] ?? '';
+        $homeBlank = trim((string) $homeRaw) === '';
+        $awayBlank = trim((string) $awayRaw) === '';
+
+        if ($homeBlank || $awayBlank) {
+            if ($requireComplete) {
+                throw new RuntimeException('Completa todos los cruces antes de calcular el ganador definitivo.');
+            }
+            if ($homeBlank !== $awayBlank) {
+                throw new RuntimeException('Cada cruce parcial debe tener goles para local y visitante.');
+            }
+            $scores[$key] = ['home' => null, 'away' => null];
+            continue;
+        }
+
+        $scores[$key] = [
+            'home' => max(0, (int) $homeRaw),
+            'away' => max(0, (int) $awayRaw),
+        ];
+    }
+    return $scores;
+}
+
+function save_round_robin_results(int $matchId, array $fixtures, array $scores): void
+{
+    $stmt = db()->prepare(
+        'INSERT INTO match_round_robin_results (match_id, home_team_number, away_team_number, leg, home_goals, away_goals)
+         VALUES (:mid, :home_team, :away_team, :leg, :home_goals, :away_goals)
+         ON DUPLICATE KEY UPDATE
+           home_goals = VALUES(home_goals),
+           away_goals = VALUES(away_goals),
+           updated_at = CURRENT_TIMESTAMP'
+    );
+
+    foreach ($fixtures as $fixture) {
+        $home = (int) $fixture['home'];
+        $away = (int) $fixture['away'];
+        $leg = (int) $fixture['leg'];
+        $score = $scores[round_robin_result_key($home, $away, $leg)] ?? ['home' => null, 'away' => null];
+        $stmt->execute([
+            'mid' => $matchId,
+            'home_team' => $home,
+            'away_team' => $away,
+            'leg' => $leg,
+            'home_goals' => $score['home'],
+            'away_goals' => $score['away'],
+        ]);
+    }
+}
+
+function calculate_round_robin_table(array $teams, array $fixtures, array $scores): array
+{
+    $table = [];
+    $validTeams = [];
+    foreach ($teams as $team) {
+        $teamNumber = (int) $team['team_number'];
+        $validTeams[$teamNumber] = true;
+        $table[$teamNumber] = [
+            'team_number' => $teamNumber,
+            'points' => 0,
+            'played' => 0,
+            'won' => 0,
+            'drawn' => 0,
+            'lost' => 0,
+            'gf' => 0,
+            'ga' => 0,
+            'gd' => 0,
+        ];
+    }
+
+    foreach ($fixtures as $fixture) {
+        $home = (int) $fixture['home'];
+        $away = (int) $fixture['away'];
+        $leg = (int) $fixture['leg'];
+        if (!isset($validTeams[$home], $validTeams[$away])) {
+            continue;
+        }
+
+        $score = $scores[round_robin_result_key($home, $away, $leg)] ?? null;
+        if (!$score || $score['home'] === null || $score['away'] === null) {
+            continue;
+        }
+
+        $homeGoals = (int) $score['home'];
+        $awayGoals = (int) $score['away'];
+        $table[$home]['played']++;
+        $table[$away]['played']++;
+        $table[$home]['gf'] += $homeGoals;
+        $table[$home]['ga'] += $awayGoals;
+        $table[$away]['gf'] += $awayGoals;
+        $table[$away]['ga'] += $homeGoals;
+
+        if ($homeGoals > $awayGoals) {
+            $table[$home]['points'] += 3;
+            $table[$home]['won']++;
+            $table[$away]['lost']++;
+        } elseif ($homeGoals < $awayGoals) {
+            $table[$away]['points'] += 3;
+            $table[$away]['won']++;
+            $table[$home]['lost']++;
+        } else {
+            $table[$home]['points']++;
+            $table[$away]['points']++;
+            $table[$home]['drawn']++;
+            $table[$away]['drawn']++;
+        }
+    }
+
+    foreach ($table as &$row) {
+        $row['gd'] = $row['gf'] - $row['ga'];
+    }
+    unset($row);
+
+    uasort($table, static function (array $a, array $b): int {
+        return ($b['points'] <=> $a['points'])
+            ?: ($b['gd'] <=> $a['gd'])
+            ?: ($b['gf'] <=> $a['gf'])
+            ?: ($a['team_number'] <=> $b['team_number']);
+    });
+
+    return $table;
+}
+
+function render_round_robin_standings_table(array $roundRobinTable, array $teamLabels): string
+{
+    ob_start();
+    ?>
+    <div class="table-wrap mt-3" data-round-robin-standings-wrap>
+      <table class="finish-table round-robin-standings">
+        <thead>
+          <tr>
+            <th>Equipo</th>
+            <th>Pts</th>
+            <th>PJ</th>
+            <th>G</th>
+            <th>E</th>
+            <th>P</th>
+            <th>GF</th>
+            <th>GC</th>
+            <th>DG</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($roundRobinTable as $standing): ?>
+            <?php $standingTeam = (int) $standing['team_number']; ?>
+            <tr>
+              <td data-label="Equipo" class="round-robin-standing-team"><strong><?= finish_render_team_label($teamLabels[$standingTeam] ?? ('Equipo ' . $standingTeam)) ?></strong></td>
+              <td data-label="Pts"><?= h((string) $standing['points']) ?></td>
+              <td data-label="PJ"><?= h((string) $standing['played']) ?></td>
+              <td data-label="G"><?= h((string) $standing['won']) ?></td>
+              <td data-label="E"><?= h((string) $standing['drawn']) ?></td>
+              <td data-label="P"><?= h((string) $standing['lost']) ?></td>
+              <td data-label="GF"><?= h((string) $standing['gf']) ?></td>
+              <td data-label="GC"><?= h((string) $standing['ga']) ?></td>
+              <td data-label="DG"><?= h((string) $standing['gd']) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+}
+
+function render_round_robin_winner_panel(array $winner, array $teamLabels): string
+{
+    $teamNumber = (int) ($winner['team_number'] ?? 0);
+    $label = $teamLabels[$teamNumber] ?? ('Equipo ' . $teamNumber);
+    ob_start();
+    ?>
+    <div class="round-robin-winner-panel" role="status" data-round-robin-winner-panel>
+      <span>GANADOR</span>
+      <strong><?= finish_render_team_label($label) ?></strong>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_result') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
     $teamGoalsData = $_POST['team_goals'] ?? [];
@@ -119,15 +476,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
-        flash('error', 'Partido invalido.');
+        flash('error', 'Fecha invalida.');
         redirect('finalizar_partido.php');
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
-        flash('error', 'Solo se puede finalizar un partido con equipos ya sorteados o capitanes completos.');
+        flash('error', 'Solo se puede finalizar una fecha con equipos ya sorteados o capitanes completos.');
         redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
     }
     if (valuations_locked_after_deadline($match)) {
-        flash('error', 'Las valoraciones ya no se pueden editar porque pasaron mas de 7 dias desde la finalizacion del partido.');
+        flash('error', 'Las valoraciones ya no se pueden editar porque pasaron mas de 7 dias desde la finalizacion de la fecha.');
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
 
@@ -141,7 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         }
     }
     if (!$participants || $assignedCount !== count($participants) || count($teamsSeen) !== (int) $match['num_teams']) {
-        flash('error', 'El partido no tiene todos los jugadores asignados a equipos.');
+        flash('error', 'La fecha no tiene todos los jugadores asignados a equipos.');
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
 
@@ -153,7 +510,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     foreach ($teams as $team) {
         $teamNumber = (int) $team['team_number'];
         if (!isset($teamGoalsData[$teamNumber]) || trim((string) $teamGoalsData[$teamNumber]) === '') {
-            flash('error', 'Primero carga el resultado del partido.');
+            flash('error', 'Primero carga el resultado de la fecha.');
             redirect('finalizar_partido.php?match_id=' . $matchId);
         }
     }
@@ -245,7 +602,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                     $parsedAwards[$code] = (int) $matchAward[1];
                     continue;
                 }
-                throw new RuntimeException('Selecciona los premios desde la lista de jugadores del partido.');
+                throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
             }
             repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
 
@@ -253,7 +610,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
 
             $pdo->commit();
-            flash('success', 'Datos del partido guardados. Partido finalizado.');
+            flash('success', 'Datos de la fecha guardados. Fecha finalizada.');
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -270,11 +627,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
-        flash('error', 'Partido invalido.');
+        flash('error', 'Fecha invalida.');
         redirect('finalizar_partido.php');
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
-        flash('error', 'Solo se puede cargar resultado de un partido con equipos ya formados.');
+        flash('error', 'Solo se puede cargar resultado de una fecha con equipos ya formados.');
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
 
@@ -286,7 +643,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     foreach ($teams as $team) {
         $teamNumber = (int) $team['team_number'];
         if (!isset($teamGoalsData[$teamNumber]) || trim((string) $teamGoalsData[$teamNumber]) === '') {
-            flash('error', 'Carga el resultado del partido.');
+            flash('error', 'Carga el resultado de la fecha.');
             redirect('finalizar_partido.php?match_id=' . $matchId);
         }
     }
@@ -319,6 +676,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action'] ?? ''), ['save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'], true)) {
+    $matchId = (int) ($_POST['match_id'] ?? 0);
+    $scoreData = $_POST['round_robin'] ?? [];
+    $scoreData = is_array($scoreData) ? $scoreData : [];
+    $roundRobinAction = (string) ($_POST['action'] ?? '');
+    $shouldCalculate = $roundRobinAction === 'calculate_round_robin_winner';
+    $shouldFinalizeRoundRobin = $roundRobinAction === 'finalize_round_robin_date';
+    $roundRobinLegs = normalize_round_robin_legs($_POST['round_robin_legs'] ?? 1);
+    $isAjax = (string) ($_POST['ajax'] ?? '') === '1';
+
+    $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
+    if (!$match) {
+        if ($isAjax) {
+            finish_json_response(['ok' => false, 'message' => 'Fecha invalida.'], 404);
+        }
+        flash('error', 'Fecha invalida.');
+        redirect('finalizar_partido.php');
+    }
+    if ((int) ($match['num_teams'] ?? 0) <= 2) {
+        if ($isAjax) {
+            finish_json_response(['ok' => false, 'message' => 'La modalidad todos contra todos solo aplica a fechas con mas de 2 equipos.'], 422);
+        }
+        flash('error', 'La modalidad todos contra todos solo aplica a fechas con mas de 2 equipos.');
+        redirect('finalizar_partido.php?match_id=' . $matchId);
+    }
+    if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
+        if ($isAjax) {
+            finish_json_response(['ok' => false, 'message' => 'Solo se puede cargar resultado de una fecha con equipos ya formados.'], 422);
+        }
+        flash('error', 'Solo se puede cargar resultado de una fecha con equipos ya formados.');
+        redirect('finalizar_partido.php?match_id=' . $matchId);
+    }
+
+    $teams = repo_match_teams($matchId);
+    if (count($teams) !== (int) $match['num_teams']) {
+        if ($isAjax) {
+            finish_json_response(['ok' => false, 'message' => 'Faltan datos de equipos. Vuelve a generar el sorteo o completa capitanes.'], 422);
+        }
+        flash('error', 'Faltan datos de equipos. Vuelve a generar el sorteo o completa capitanes.');
+        redirect('finalizar_partido.php?match_id=' . $matchId);
+    }
+
+    $fixtures = round_robin_fixtures($teams, $roundRobinLegs);
+    try {
+        $scores = parse_round_robin_post_scores($fixtures, $scoreData, false);
+        $playedCount = count(array_filter($scores, static fn(array $score): bool => $score['home'] !== null && $score['away'] !== null));
+        $roundRobinComplete = $playedCount === count($fixtures);
+        $table = calculate_round_robin_table($teams, $fixtures, $scores);
+        if ($shouldFinalizeRoundRobin && $playedCount === 0) {
+            throw new RuntimeException('Carga al menos un resultado antes de finalizar la fecha.');
+        }
+        $pdo->beginTransaction();
+        $saveLegs = $pdo->prepare('UPDATE matches SET round_robin_legs = :legs WHERE id = :id');
+        $saveLegs->execute(['legs' => $roundRobinLegs, 'id' => $matchId]);
+        if ($roundRobinLegs === 1) {
+            $clearSecondLeg = $pdo->prepare('DELETE FROM match_round_robin_results WHERE match_id = :mid AND leg = 2');
+            $clearSecondLeg->execute(['mid' => $matchId]);
+        }
+        save_round_robin_results($matchId, $fixtures, $scores);
+
+        if ($shouldFinalizeRoundRobin) {
+            $saveTeamGoals = $pdo->prepare(
+                'UPDATE match_teams
+                 SET goals = :goals
+                 WHERE match_id = :mid AND team_number = :team_number'
+            );
+            foreach ($table as $teamNumber => $row) {
+                $saveTeamGoals->execute([
+                    'mid' => $matchId,
+                    'team_number' => (int) $teamNumber,
+                    'goals' => (int) $row['gf'],
+                ]);
+            }
+            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()) WHERE id = :id');
+            $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
+        }
+
+        $pdo->commit();
+        if ($isAjax) {
+            $teamLabels = repo_match_team_labels($match, $teams);
+            $winner = array_values($table)[0] ?? null;
+            $winnerLabel = $winner ? ($teamLabels[(int) $winner['team_number']] ?? ('Equipo ' . (int) $winner['team_number'])) : '';
+            $message = $shouldCalculate && $winnerLabel !== ''
+                ? $winnerLabel
+                : 'Resultados parciales guardados.';
+            finish_json_response([
+                'ok' => true,
+                'message' => $message,
+                'played_count' => $playedCount,
+                'complete' => $roundRobinComplete,
+                'standings_html' => $playedCount > 0 ? render_round_robin_standings_table($table, $teamLabels) : '',
+                'winner_html' => $shouldCalculate && $winner ? render_round_robin_winner_panel($winner, $teamLabels) : '',
+            ]);
+        }
+        if ($shouldCalculate) {
+            $winner = array_values($table)[0] ?? null;
+            $teamLabels = repo_match_team_labels($match, $teams);
+            $winnerLabel = $winner ? ($teamLabels[(int) $winner['team_number']] ?? ('Equipo ' . (int) $winner['team_number'])) : 'ganador';
+            flash('success', 'Ganador actual: ' . $winnerLabel . '.');
+            redirect('finalizar_partido.php?match_id=' . $matchId);
+        }
+        if ($shouldFinalizeRoundRobin) {
+            flash('success', 'Fecha finalizada. Ya puedes cargar goles por jugador, puntajes y premios.');
+            redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
+        }
+        flash('success', 'Resultados parciales guardados.');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if ($isAjax) {
+            finish_json_response(['ok' => false, 'message' => 'No se pudo guardar el fixture: ' . $e->getMessage()], 422);
+        }
+        flash('error', 'No se pudo guardar el fixture: ' . $e->getMessage());
+    }
+    redirect('finalizar_partido.php?match_id=' . $matchId);
+}
+
 $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
 $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['id']) : [];
 $groupedTeams = $selectedMatch ? repo_grouped_team_players((int) $selectedMatch['id']) : [];
@@ -338,30 +813,52 @@ if ($referer !== '') {
     }
 }
 
-$title = 'Finalizar partido | ' . APP_NAME;
+$title = 'Finalizar fecha | ' . APP_NAME;
 $activePage = 'finalizar_partido.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
 <section class="page-head">
   <div>
-    <h1>Finalizar partido</h1>
-    <p class="small-muted">Carga goles y calificacion por jugador para cerrar el partido y sumar estadisticas.</p>
+    <h1>Finalizar fecha</h1>
+    <p class="small-muted">Carga goles y calificacion por jugador para cerrar la fecha y sumar estadisticas.</p>
   </div>
   <a class="btn btn-muted" href="<?= h($backUrl) ?>">Volver</a>
 </section>
 
 <?php if ($selectedMatch): ?>
   <section class="card mb-3.5">
-    <h3><?= h((string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']))) ?></h3>
+    <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
     <p class="small-muted">Estado actual: <strong><?= h((string) $selectedMatch['status']) ?></strong></p>
     <?php if (!$groupedTeams): ?>
-      <p>No hay equipos sorteados todavia para este partido.</p>
+      <p>No hay equipos sorteados todavia para esta fecha.</p>
     <?php else: ?>
       <?php
         $matchTeams = repo_match_teams((int) $selectedMatch['id']);
         $teamLabels = repo_match_team_labels($selectedMatch, $matchTeams);
-        $scoreSaved = (string) $selectedMatch['status'] === 'finalizado' || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $matchTeams)) > 0;
+        $isRoundRobinMatch = (int) ($selectedMatch['num_teams'] ?? 0) > 2;
+        $roundRobinLegs = normalize_round_robin_legs($selectedMatch['round_robin_legs'] ?? 2);
+        $roundRobinFixtures = $isRoundRobinMatch ? round_robin_fixtures($matchTeams, $roundRobinLegs) : [];
+        $roundRobinDisplayFixtures = $isRoundRobinMatch ? round_robin_fixtures($matchTeams, 2) : [];
+        $roundRobinResults = $isRoundRobinMatch ? repo_round_robin_results((int) $selectedMatch['id']) : [];
+        $roundRobinScores = [];
+        foreach ($roundRobinDisplayFixtures as $fixture) {
+            $fixtureKey = round_robin_result_key((int) $fixture['home'], (int) $fixture['away'], (int) $fixture['leg']);
+            $resultRow = $roundRobinResults[$fixtureKey] ?? null;
+            $roundRobinScores[$fixtureKey] = [
+                'home' => $resultRow && $resultRow['home_goals'] !== null ? (int) $resultRow['home_goals'] : null,
+                'away' => $resultRow && $resultRow['away_goals'] !== null ? (int) $resultRow['away_goals'] : null,
+            ];
+        }
+        $roundRobinPlayedCount = count(array_filter($roundRobinFixtures, static function (array $fixture) use ($roundRobinScores): bool {
+            $key = round_robin_result_key((int) $fixture['home'], (int) $fixture['away'], (int) $fixture['leg']);
+            $score = $roundRobinScores[$key] ?? null;
+            return is_array($score) && $score['home'] !== null && $score['away'] !== null;
+        }));
+        $roundRobinHasScores = $roundRobinPlayedCount > 0;
+        $roundRobinComplete = $isRoundRobinMatch && $roundRobinPlayedCount === count($roundRobinFixtures);
+        $roundRobinTable = $isRoundRobinMatch ? calculate_round_robin_table($matchTeams, $roundRobinFixtures, $roundRobinScores) : [];
+        $scoreSaved = (string) $selectedMatch['status'] === 'finalizado' || (!$isRoundRobinMatch && array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $matchTeams)) > 0);
         $hasSavedRatings = count(array_filter($participants, static fn(array $player): bool => $player['rating'] !== null && $player['rating'] !== '')) > 0;
         $hasSavedAwards = count($savedAwards) > 0;
         $canShareMatchSummary = $scoreSaved && ($hasSavedRatings || $hasSavedAwards);
@@ -370,34 +867,102 @@ require __DIR__ . '/includes/header.php';
             : '';
       ?>
       <section class="card finish-score-shell">
-        <form method="post">
-          <input type="hidden" name="action" value="save_score">
-          <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
-          <div class="finish-score-head">
-            <div>
-              <h3>Resultado del partido</h3>
-              <p class="small-muted">Primero guarda como salio el partido.</p>
-            </div>
-          </div>
-          <div class="finish-result-grid">
-            <?php foreach ($matchTeams as $team): ?>
-              <div class="finish-result-team">
-                <label><?= h($teamLabels[(int) $team['team_number']] ?? ('Equipo ' . (int) $team['team_number'])) ?></label>
-                <input type="number" min="0" step="1" name="team_goals[<?= (int) $team['team_number'] ?>]" value="<?= h((string) ((int) ($team['goals'] ?? 0))) ?>" required>
+        <?php if ($isRoundRobinMatch): ?>
+          <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>" data-round-robin-form>
+            <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+            <div class="finish-score-head">
+              <div>
+                <h3>Fixture todos contra todos</h3>
+                <p class="small-muted">Carga ida y vuelta. El sistema calcula puntos, diferencia de gol y goles totales por equipo.</p>
               </div>
-            <?php endforeach; ?>
-          </div>
-          <div class="btn-row finish-score-actions">
-            <button class="btn btn-primary" type="submit">Guardar resultado</button>
-            <?php if ($scoreSaved && !$valuationsLocked): ?>
-              <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
-            <?php elseif ($scoreSaved && $valuationsLocked): ?>
-              <span class="btn btn-disabled finish-edit-btn" title="Pasaron mas de 7 dias desde la finalizacion del partido"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones bloqueadas</span></span>
-            <?php else: ?>
-              <span class="btn btn-disabled finish-edit-btn" title="Guarda el resultado para habilitar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></span>
-            <?php endif; ?>
-          </div>
-        </form>
+            </div>
+            <label class="round-robin-mode-toggle">
+              <input type="checkbox" name="round_robin_legs" value="2" data-round-robin-legs-toggle <?= $roundRobinLegs === 2 ? 'checked' : '' ?>>
+              <span>Jugar ida y vuelta</span>
+            </label>
+            <div class="table-wrap">
+              <table class="finish-table round-robin-table">
+                <thead>
+                  <tr>
+                    <th>Cruce</th>
+                    <th>Local</th>
+                    <th>Resultado</th>
+                    <th>Visitante</th>
+                    <th>Guardar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($roundRobinDisplayFixtures as $fixture): ?>
+                    <?php
+                      $homeTeam = (int) $fixture['home'];
+                      $awayTeam = (int) $fixture['away'];
+                      $leg = (int) $fixture['leg'];
+                      $fixtureKey = round_robin_result_key($homeTeam, $awayTeam, $leg);
+                      $fixtureScore = $roundRobinScores[$fixtureKey] ?? ['home' => null, 'away' => null];
+                    ?>
+                    <tr data-round-robin-row data-round-robin-leg="<?= (int) $leg ?>" data-round-robin-home="<?= $homeTeam ?>" data-round-robin-away="<?= $awayTeam ?>">
+                      <td data-label="Cruce"><strong><?= $leg === 1 ? 'Ida' : 'Vuelta' ?></strong></td>
+                      <td data-label="Local" class="round-robin-team-cell" data-team-number="<?= $homeTeam ?>"><?= finish_render_team_label($teamLabels[$homeTeam] ?? ('Equipo ' . $homeTeam)) ?></td>
+                      <td data-label="Resultado">
+                        <div class="round-robin-score-inputs">
+                          <input class="finish-number-input" type="number" min="0" step="1" name="round_robin[<?= h($fixtureKey) ?>][home]" value="<?= $fixtureScore['home'] === null ? '' : h((string) $fixtureScore['home']) ?>" aria-label="Goles local">
+                          <span>-</span>
+                          <input class="finish-number-input" type="number" min="0" step="1" name="round_robin[<?= h($fixtureKey) ?>][away]" value="<?= $fixtureScore['away'] === null ? '' : h((string) $fixtureScore['away']) ?>" aria-label="Goles visitante">
+                        </div>
+                      </td>
+                      <td data-label="Visitante" class="round-robin-team-cell" data-team-number="<?= $awayTeam ?>"><?= finish_render_team_label($teamLabels[$awayTeam] ?? ('Equipo ' . $awayTeam)) ?></td>
+                      <td data-label="Guardar" class="round-robin-save-cell">
+                        <button class="btn btn-muted round-robin-row-save" type="submit" name="action" value="save_round_robin_scores">Guardar</button>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+            <div data-round-robin-standings-target>
+              <?php if ($roundRobinHasScores): ?>
+                <?= render_round_robin_standings_table($roundRobinTable, $teamLabels) ?>
+              <?php endif; ?>
+            </div>
+            <div data-round-robin-winner-target></div>
+            <div class="btn-row finish-score-actions">
+              <button class="btn btn-primary" type="submit" name="action" value="calculate_round_robin_winner">Calcular ganador</button>
+              <button class="btn btn-warning" type="submit" name="action" value="finalize_round_robin_date">Finalizar fecha</button>
+              <?php if ($scoreSaved && !$valuationsLocked): ?>
+                <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
+              <?php endif; ?>
+            </div>
+          </form>
+        <?php else: ?>
+          <form method="post">
+            <input type="hidden" name="action" value="save_score">
+            <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+            <div class="finish-score-head">
+              <div>
+                <h3>Resultado de la fecha</h3>
+                <p class="small-muted">Primero guarda como salio la fecha.</p>
+              </div>
+            </div>
+            <div class="finish-result-grid">
+              <?php foreach ($matchTeams as $team): ?>
+                <div class="finish-result-team">
+                  <label><?= h($teamLabels[(int) $team['team_number']] ?? ('Equipo ' . (int) $team['team_number'])) ?></label>
+                  <input type="number" min="0" step="1" name="team_goals[<?= (int) $team['team_number'] ?>]" value="<?= h((string) ((int) ($team['goals'] ?? 0))) ?>" required>
+                </div>
+              <?php endforeach; ?>
+            </div>
+            <div class="btn-row finish-score-actions">
+              <button class="btn btn-primary" type="submit">Guardar resultado</button>
+              <?php if ($scoreSaved && !$valuationsLocked): ?>
+                <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
+              <?php elseif ($scoreSaved && $valuationsLocked): ?>
+                <span class="btn btn-disabled finish-edit-btn" title="Pasaron mas de 7 dias desde la finalizacion de la fecha"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones bloqueadas</span></span>
+              <?php else: ?>
+                <span class="btn btn-disabled finish-edit-btn" title="Guarda el resultado para habilitar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></span>
+              <?php endif; ?>
+            </div>
+          </form>
+        <?php endif; ?>
       </section>
 
       <?php if ($canShareMatchSummary): ?>
@@ -415,7 +980,7 @@ require __DIR__ . '/includes/header.php';
       <?php endif; ?>
 
       <?php if ($scoreSaved && $valuationsLocked): ?>
-        <p class="flash flash-info">Las valoraciones quedaron bloqueadas porque pasaron mas de 7 dias desde la finalizacion del partido.</p>
+        <p class="flash flash-info">Las valoraciones quedaron bloqueadas porque pasaron mas de 7 dias desde la finalizacion de la fecha.</p>
       <?php endif; ?>
 
       <?php if ($scoreSaved && $editDetails): ?>
@@ -453,7 +1018,7 @@ require __DIR__ . '/includes/header.php';
           <div class="finish-valuations-body">
             <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
               <article class="finish-rating-team">
-                <h4><?= h($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)) ?></h4>
+                <h4><?= finish_render_team_label($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)) ?></h4>
                 <div class="table-wrap">
                   <table class="finish-table">
                     <thead>

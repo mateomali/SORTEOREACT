@@ -15,8 +15,8 @@ $publicMenu = [
 $adminMenu = is_admin()
     ? [
         'jugadores.php' => 'Jugadores',
-        'crear_partido.php' => 'Crear partido',
-        'editar_partidos.php' => 'Editar partidos',
+        'crear_partido.php' => 'Crear fecha',
+        'editar_partidos.php' => 'Editar fechas',
         'backup.php' => 'Backup',
         'logout.php' => 'Salir',
     ]

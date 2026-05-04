@@ -36,8 +36,8 @@ function backup_import_sections(): array
             'tables' => ['players'],
         ],
         'matches' => [
-            'label' => 'Partidos completos',
-            'description' => 'Partidos, convocados, equipos, resultados, premios y capitanes.',
+            'label' => 'Fechas completas',
+            'description' => 'Fechas, convocados, equipos, resultados, premios y capitanes.',
             'tables' => [
                 'matches',
                 'match_players',
@@ -327,7 +327,7 @@ require __DIR__ . '/includes/header.php';
 <section class="grid cols-2 backup-grid">
   <article class="card">
     <h3>Exportar backup</h3>
-    <p class="small-muted">Descarga un ZIP con archivos CSV de jugadores, partidos, equipos, premios y capitanes.</p>
+    <p class="small-muted">Descarga un ZIP con archivos CSV de jugadores, fechas, equipos, premios y capitanes.</p>
     <form method="post" class="btn-row">
       <input type="hidden" name="action" value="export_backup">
       <button class="btn btn-primary" type="submit">Descargar backup CSV</button>

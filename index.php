@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/awards.php';
+require_once __DIR__ . '/lib/schema.php';
 
 $showHistoryPage = defined('SHOW_HISTORY_PAGE') && SHOW_HISTORY_PAGE;
 $title = ($showHistoryPage ? 'Historial' : 'Inicio') . ' | ' . APP_NAME;
@@ -124,22 +125,23 @@ $groupedTeams = $selectedMatchId > 0 ? repo_grouped_team_players($selectedMatchI
 $teamTotals = $selectedMatchId > 0 ? repo_team_totals($selectedMatchId) : [];
 $matchTeams = $selectedMatchId > 0 ? repo_match_teams($selectedMatchId) : [];
 $teamLabels = $selectedMatch && $matchTeams ? repo_match_team_labels($selectedMatch, $matchTeams) : [];
+$roundRobinResults = $selectedMatchId > 0 && count($matchTeams) > 2 ? public_round_robin_results($selectedMatchId) : [];
 $teamGoals = [];
 $matchAwards = [];
 $matchAverageRating = null;
 $awardDefinitions = award_definitions();
 $awardDescriptions = [
-    'player_of_match' => 'Jugador del partido.',
+    'player_of_match' => 'Jugador de la fecha.',
     'goal_of_week' => 'Mejor gol de la fecha.',
     'lyrical' => 'Jugada fantastica o recurso tecnico destacado.',
-    'wall' => 'Mejor defensor del partido.',
+    'wall' => 'Mejor defensor de la fecha.',
     'capocannoniere' => 'Goleador destacado de la fecha.',
     'terminator' => 'Jugador mas bruto o jugada mas fuerte.',
     'tractor' => 'Jugador mas aguerrido e intenso.',
     'guinda' => 'Mejor pase o asistencia.',
     'putita' => 'Jugador no comprometido o problematico.',
     'ghost' => 'Jugador que erro mucho o participo poco.',
-    'keeper' => 'Mejor arquero del partido.',
+    'keeper' => 'Mejor arquero de la fecha.',
     'goodfellas' => 'Mejor actitud y buen compañero.',
 ];
 $savedMatchAwards = $selectedMatchId > 0 ? repo_match_awards($selectedMatchId) : [];
@@ -219,7 +221,7 @@ function team_score_line(array $teamGoals, array $teamLabels = []): string
     return implode(' - ', $parts);
 }
 
-function render_match_scoreboard(array $teamGoals, array $teamLabels = []): string
+function render_match_scoreboard(array $teamGoals, array $teamLabels = [], bool $showMultiGoals = true): string
 {
     if (!$teamGoals) {
         return h('Sin resultado cargado');
@@ -235,7 +237,11 @@ function render_match_scoreboard(array $teamGoals, array $teamLabels = []): stri
     }
 
     if (count($items) !== 2) {
-        return h(team_score_line($teamGoals, $teamLabels));
+        $parts = [];
+        foreach ($items as $item) {
+            $parts[] = '<span class="scoreboard-team">' . render_team_label((string) $item['label']) . '</span>';
+        }
+        return '<span class="match-scoreboard match-scoreboard-multi">' . implode('<span class="scoreboard-vs">vs</span>', $parts) . '</span>';
     }
 
     return '<span class="match-scoreboard">' .
@@ -243,6 +249,56 @@ function render_match_scoreboard(array $teamGoals, array $teamLabels = []): stri
         '<strong class="scoreboard-score">' . h((string) $items[0]['goals']) . ' - ' . h((string) $items[1]['goals']) . '</strong>' .
         '<span class="scoreboard-team scoreboard-team-away">' . render_team_label($items[1]['label']) . '</span>' .
         '</span>';
+}
+
+function public_round_robin_results(int $matchId): array
+{
+    if (!schema_table_exists(db(), 'match_round_robin_results')) {
+        return [];
+    }
+    $stmt = db()->prepare(
+        'SELECT *
+         FROM match_round_robin_results
+         WHERE match_id = :mid
+           AND home_goals IS NOT NULL
+           AND away_goals IS NOT NULL
+         ORDER BY leg ASC, home_team_number ASC, away_team_number ASC'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    return $stmt->fetchAll();
+}
+
+function render_public_round_robin_results(array $roundRobinResults, array $teamLabels): string
+{
+    if (!$roundRobinResults) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <section class="public-round-robin-results">
+      <h3>Cruces parciales</h3>
+      <div class="public-round-robin-grid">
+        <?php foreach ($roundRobinResults as $result): ?>
+          <?php
+            $homeTeam = (int) $result['home_team_number'];
+            $awayTeam = (int) $result['away_team_number'];
+            $homeLabel = $teamLabels[$homeTeam] ?? ('Equipo ' . $homeTeam);
+            $awayLabel = $teamLabels[$awayTeam] ?? ('Equipo ' . $awayTeam);
+          ?>
+          <article class="public-round-robin-card">
+            <span class="public-round-robin-leg"><?= ((int) $result['leg']) === 1 ? 'Ida' : 'Vuelta' ?></span>
+            <div class="public-round-robin-score">
+              <span><?= render_team_label($homeLabel) ?></span>
+              <strong><?= h((string) ((int) $result['home_goals'])) ?> - <?= h((string) ((int) $result['away_goals'])) ?></strong>
+              <span><?= render_team_label($awayLabel) ?></span>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    </section>
+    <?php
+    return (string) ob_get_clean();
 }
 
 function team_color_from_label(string $label): string
@@ -303,7 +359,7 @@ function history_team_label(array $match, array $team, array $captainNames): str
     }
 
     if (($match['draw_mode'] ?? '') !== 'captains') {
-        $defaultColors = [1 => 'rosa', 2 => 'azul'];
+        $defaultColors = [1 => 'rosa', 2 => 'azul', 3 => 'naranja', 4 => 'negro', 5 => 'verde'];
         if (isset($defaultColors[$teamNumber])) {
             return 'Equipo ' . $defaultColors[$teamNumber];
         }
@@ -322,7 +378,7 @@ function history_team_label_short(array $match, array $team, array $captainNames
     $teamNumber = (int) ($team['team_number'] ?? 0);
     $color = trim((string) ($team['color_name'] ?? ''));
     if ($color === '' && (($match['draw_mode'] ?? '') !== 'captains')) {
-        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
         $color = $defaultColors[$teamNumber] ?? '';
     }
 
@@ -348,8 +404,11 @@ function history_match_score_line(array $match, array $teams, array $captainName
         return '';
     }
 
-    $showGoals = (string) ($match['status'] ?? '') === 'finalizado'
-        || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams)) > 0;
+    $showGoals = count($teams) === 2
+        && (
+            (string) ($match['status'] ?? '') === 'finalizado'
+            || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams)) > 0
+        );
 
     $parts = [];
     foreach ($teams as $team) {
@@ -365,7 +424,7 @@ function history_team_scoreboard_label(array $match, array $team, array $captain
     $teamNumber = (int) ($team['team_number'] ?? 0);
     if (!empty($team['captain_player_id'])) {
         $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
-        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
         $color = trim((string) ($team['color_name'] ?? '')) ?: ($defaultColors[$teamNumber] ?? '');
         return $color !== '' ? ($captainName . ' (' . $color . ')') : $captainName;
     }
@@ -376,7 +435,7 @@ function history_team_scoreboard_label(array $match, array $team, array $captain
     }
 
     if (($match['draw_mode'] ?? '') !== 'captains') {
-        $defaultColors = [1 => 'ROSA', 2 => 'AZUL'];
+        $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
         if (isset($defaultColors[$teamNumber])) {
             return 'Equipo (' . $defaultColors[$teamNumber] . ')';
         }
@@ -408,7 +467,7 @@ function render_history_match_scoreboard(array $match, array $teams, array $capt
 
     ksort($teamGoals);
     ksort($teamLabels);
-    return render_match_scoreboard($teamGoals, $teamLabels);
+    return render_match_scoreboard($teamGoals, $teamLabels, (string) ($match['status'] ?? '') === 'finalizado');
 }
 
 function match_player_award_icons(array $savedMatchAwards, array $awardDefinitions): array
@@ -444,6 +503,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     $teamTotals = repo_team_totals($matchId);
     $matchTeams = repo_match_teams($matchId);
     $teamLabels = $matchTeams ? repo_match_team_labels($match, $matchTeams) : [];
+    $roundRobinResults = count($matchTeams) > 2 ? public_round_robin_results($matchId) : [];
     $teamGoals = [];
     foreach ($matchTeams as $team) {
         $teamGoals[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
@@ -570,8 +630,9 @@ function render_public_match_detail_content(array $match, array $awardDefinition
       </div>
 
       <?php if ((string) $match['status'] === 'finalizado'): ?>
+        <?= render_public_round_robin_results($roundRobinResults, $teamLabels) ?>
         <section class="match-results">
-          <h3>Resumen del partido</h3>
+          <h3>Resumen de la fecha</h3>
           <div class="match-result-mobile-groups">
             <?php foreach ($teamLabels as $teamNumber => $teamLabel): ?>
               <?php
@@ -642,7 +703,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                   <span class="award-legend-icon"><?= h((string) $award['icon']) ?></span>
                   <span>
                     <strong><?= h((string) $award['label']) ?></strong>
-                    <small><?= h($awardDescriptions[$code] ?? 'Premio destacado del partido.') ?></small>
+                    <small><?= h($awardDescriptions[$code] ?? 'Premio destacado de la fecha.') ?></small>
                   </span>
                 </article>
               <?php endforeach; ?>
@@ -660,8 +721,8 @@ require __DIR__ . '/includes/header.php';
 
 <section class="page-head">
   <div>
-    <h1><?= $showHistoryPage ? 'Historial de partidos' : 'Inicio' ?></h1>
-    <p class="small-muted"><?= $showHistoryPage ? 'Consulta partidos por fecha, capitan o resultado.' : 'Proximo partido a jugarse.' ?></p>
+    <h1><?= $showHistoryPage ? 'Historial de fechas' : 'Inicio' ?></h1>
+    <p class="small-muted"><?= $showHistoryPage ? 'Consulta fechas por dia, capitan o resultado.' : 'Proxima fecha a jugarse.' ?></p>
   </div>
   <?php if (is_admin()): ?>
     <a class="btn btn-primary" href="editar_partidos.php">Panel admin</a>
@@ -709,8 +770,8 @@ require __DIR__ . '/includes/header.php';
   ?>
   <section class="card home-next-card <?= (string) $headerMatch['status'] === 'finalizado' ? 'home-next-card-with-result' : ($headerHasCaptains ? 'home-next-card-with-captain' : '') ?>">
     <div class="home-next-main">
-      <span class="home-kicker"><?= (string) $headerMatch['status'] === 'finalizado' ? 'Datos del ultimo partido jugado' : 'Proximo partido' ?></span>
-      <h2><?= h((string) ($headerMatch['title'] ?: ('Partido #' . $headerMatch['id']))) ?></h2>
+      <span class="home-kicker"><?= (string) $headerMatch['status'] === 'finalizado' ? 'Datos de la ultima fecha jugada' : 'Proxima fecha' ?></span>
+      <h2><?= h((string) ($headerMatch['title'] ?: ('Fecha #' . $headerMatch['id']))) ?></h2>
       <p class="small-muted">
         Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $headerMatch['match_date']))) ?>
         | <?= h((string) $headerParticipantsCount) ?> jugadores
@@ -733,7 +794,7 @@ require __DIR__ . '/includes/header.php';
       </form>
     <?php endif; ?>
     <?php if ($showHistoryPage): ?>
-      <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $headerMatch['id'] ?>" data-match-detail-toggle aria-label="Ver detalles del partido">
+      <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $headerMatch['id'] ?>" data-match-detail-toggle aria-label="Ver detalles de la fecha">
         <span class="match-detail-toggle-symbol" data-match-detail-symbol>+</span>
         <span>Detalles</span>
       </a>
@@ -765,18 +826,18 @@ require __DIR__ . '/includes/header.php';
 <section class="home-layout <?= $showHistoryPage ? '' : 'home-layout-single' ?>">
   <?php if ($showHistoryPage): ?>
     <article class="card match-history">
-      <h3>Historial de partidos</h3>
+      <h3>Historial de fechas</h3>
       <?php if ($historyMatches): ?>
         <div class="history-search" role="search">
           <label for="homeHistorySearch">Buscar historial</label>
-          <input id="homeHistorySearch" type="search" placeholder="Fecha, partido o capitan..." autocomplete="off" data-home-history-search>
-          <span data-home-history-count><?= h((string) count($historyMatches)) ?> partidos</span>
+          <input id="homeHistorySearch" type="search" placeholder="Fecha, capitan o resultado..." autocomplete="off" data-home-history-search>
+          <span data-home-history-count><?= h((string) count($historyMatches)) ?> fechas</span>
         </div>
-        <p class="small-muted history-search-empty" data-home-history-empty hidden>No hay partidos que coincidan con la busqueda.</p>
+        <p class="small-muted history-search-empty" data-home-history-empty hidden>No hay fechas que coincidan con la busqueda.</p>
       <?php endif; ?>
       <div class="match-list">
         <?php if (!$historyMatches): ?>
-          <p>No hay partidos cargados.</p>
+          <p>No hay fechas cargadas.</p>
         <?php else: ?>
           <?php foreach ($historyMatches as $match): ?>
             <?php
@@ -795,7 +856,7 @@ require __DIR__ . '/includes/header.php';
                   }
               }
               $historySearchText = implode(' ', array_filter([
-                  (string) ($match['title'] ?: 'Partido #' . $match['id']),
+                  (string) ($match['title'] ?: 'Fecha #' . $match['id']),
                   (string) $match['id'],
                   date('d/m/Y', strtotime((string) $match['match_date'])),
                   date('Y-m-d', strtotime((string) $match['match_date'])),
@@ -815,7 +876,7 @@ require __DIR__ . '/includes/header.php';
               <summary class="history-match-summary">
                 <span>
                   <strong>
-                    <?= h((string) ($match['title'] ?: ('Partido #' . $match['id']))) ?>
+                    <?= h((string) ($match['title'] ?: ('Fecha #' . $match['id']))) ?>
                     <?php if ($historyScoreboard !== ''): ?>
                       <span class="match-list-title-score"><?= $historyScoreboard ?></span>
                     <?php endif; ?>
@@ -829,7 +890,7 @@ require __DIR__ . '/includes/header.php';
                   <?php if ($missingRating): ?><span class="badge pending">Sin puntaje</span><?php endif; ?>
                   <span class="btn btn-muted history-match-toggle" aria-hidden="true">
                     <span class="match-detail-toggle-symbol"></span>
-                    <span>Ver partido</span>
+                    <span>Ver detalles</span>
                   </span>
                 </span>
               </summary>
@@ -853,7 +914,7 @@ require __DIR__ . '/includes/header.php';
   <article class="card match-detail">
     <?php if (!$selectedMatch): ?>
       <h3>Detalle</h3>
-      <p>No hay partidos para mostrar.</p>
+      <p>No hay fechas para mostrar.</p>
     <?php else: ?>
       <?php
         $showDynamicCaptainDetail = isset($headerShowCaptainLive, $headerMatch)
@@ -960,8 +1021,9 @@ require __DIR__ . '/includes/header.php';
         </div>
 
         <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
+          <?= render_public_round_robin_results($roundRobinResults, $teamLabels) ?>
           <section class="match-results">
-            <h3>Resumen del partido</h3>
+            <h3>Resumen de la fecha</h3>
             <div class="match-result-mobile-groups">
               <?php foreach ($teamLabels as $teamNumber => $teamLabel): ?>
                 <?php
@@ -1032,7 +1094,7 @@ require __DIR__ . '/includes/header.php';
                     <span class="award-legend-icon"><?= h((string) $award['icon']) ?></span>
                     <span>
                       <strong><?= h((string) $award['label']) ?></strong>
-                      <small><?= h($awardDescriptions[$code] ?? 'Premio destacado del partido.') ?></small>
+                      <small><?= h($awardDescriptions[$code] ?? 'Premio destacado de la fecha.') ?></small>
                     </span>
                   </article>
                 <?php endforeach; ?>
@@ -1080,8 +1142,8 @@ require __DIR__ . '/includes/header.php';
       }
       if (count) {
         count.textContent = query === ''
-          ? `${total} partidos`
-          : `${visible} de ${total} partidos`;
+          ? `${total} fechas`
+          : `${visible} de ${total} fechas`;
       }
     };
 
