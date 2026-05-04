@@ -17,6 +17,7 @@ $adminMenu = is_admin()
         'jugadores.php' => 'Jugadores',
         'crear_partido.php' => 'Crear partido',
         'editar_partidos.php' => 'Editar partidos',
+        'backup.php' => 'Backup',
         'logout.php' => 'Salir',
     ]
     : [
