@@ -35,6 +35,77 @@ function valuations_locked_after_deadline(array $match): bool
     return time() >= ($finalizedTimestamp + (7 * 24 * 60 * 60));
 }
 
+function build_match_share_summary(array $match, array $matchTeams, array $teamLabels, array $groupedTeams, array $awardDefinitions, array $savedAwards): string
+{
+    $title = (string) ($match['title'] ?: ('Partido #' . $match['id']));
+    $date = date('d/m/Y H:i', strtotime((string) $match['match_date']));
+    $teamGoals = [];
+    foreach ($matchTeams as $team) {
+        $teamGoals[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
+    }
+    ksort($teamGoals);
+
+    $scoreParts = [];
+    foreach ($teamGoals as $teamNumber => $goals) {
+        $scoreParts[] = ($teamLabels[$teamNumber] ?? ('Equipo ' . $teamNumber)) . ' ' . $goals;
+    }
+
+    $awardsByPlayer = [];
+    foreach ($savedAwards as $code => $awardRow) {
+        $playerId = (int) ($awardRow['player_id'] ?? 0);
+        if ($playerId <= 0 || !isset($awardDefinitions[$code])) {
+            continue;
+        }
+        $awardsByPlayer[$playerId][] = [
+            'icon' => (string) $awardDefinitions[$code]['icon'],
+            'label' => (string) $awardDefinitions[$code]['label'],
+            'name' => (string) ($awardRow['name'] ?? ''),
+        ];
+    }
+
+    $lines = [
+        APP_NAME . ' - ' . $title,
+        $date,
+        '',
+        'Resultado',
+        implode(' - ', $scoreParts),
+        '',
+    ];
+
+    foreach ($groupedTeams as $teamNumber => $positionLines) {
+        $lines[] = (string) ($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber));
+        foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+            foreach ($positionLines[$line] as $player) {
+                $playerParts = ['- ' . (string) $player['name']];
+                $goals = (int) ($player['goals'] ?? 0);
+                if ($goals > 0) {
+                    $playerParts[] = $goals . ' ' . ($goals === 1 ? 'gol' : 'goles');
+                }
+                if ($player['rating'] !== null && $player['rating'] !== '') {
+                    $playerParts[] = number_format((float) $player['rating'], 1) . ' pts';
+                }
+                foreach ($awardsByPlayer[(int) $player['id']] ?? [] as $award) {
+                    $playerParts[] = $award['icon'] . ' ' . $award['label'];
+                }
+                $lines[] = implode(' | ', $playerParts);
+            }
+        }
+        $lines[] = '';
+    }
+
+    if ($savedAwards) {
+        $lines[] = 'Premios';
+        foreach ($savedAwards as $code => $awardRow) {
+            if (!isset($awardDefinitions[$code])) {
+                continue;
+            }
+            $lines[] = (string) $awardDefinitions[$code]['icon'] . ' ' . (string) $awardDefinitions[$code]['label'] . ': ' . (string) $awardRow['name'];
+        }
+    }
+
+    return trim(implode("\n", $lines));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_result') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
     $teamGoalsData = $_POST['team_goals'] ?? [];
@@ -291,6 +362,12 @@ require __DIR__ . '/includes/header.php';
         $matchTeams = repo_match_teams((int) $selectedMatch['id']);
         $teamLabels = repo_match_team_labels($selectedMatch, $matchTeams);
         $scoreSaved = (string) $selectedMatch['status'] === 'finalizado' || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $matchTeams)) > 0;
+        $hasSavedRatings = count(array_filter($participants, static fn(array $player): bool => $player['rating'] !== null && $player['rating'] !== '')) > 0;
+        $hasSavedAwards = count($savedAwards) > 0;
+        $canShareMatchSummary = $scoreSaved && ($hasSavedRatings || $hasSavedAwards);
+        $shareSummary = $canShareMatchSummary
+            ? build_match_share_summary($selectedMatch, $matchTeams, $teamLabels, $groupedTeams, $awardDefinitions, $savedAwards)
+            : '';
       ?>
       <section class="card finish-score-shell">
         <form method="post">
@@ -322,6 +399,20 @@ require __DIR__ . '/includes/header.php';
           </div>
         </form>
       </section>
+
+      <?php if ($canShareMatchSummary): ?>
+        <section class="card finish-share-card">
+          <div>
+            <h3>Compartir datos</h3>
+            <p class="small-muted">Resumen completo con resultado, equipos, puntajes y premios cargados.</p>
+          </div>
+          <textarea class="sr-only" data-finish-share-text readonly><?= h($shareSummary) ?></textarea>
+          <div class="btn-row finish-share-actions">
+            <button class="btn btn-primary" type="button" data-finish-share>Compartir resumen</button>
+            <button class="btn btn-muted" type="button" data-finish-copy>Copiar resumen</button>
+          </div>
+        </section>
+      <?php endif; ?>
 
       <?php if ($scoreSaved && $valuationsLocked): ?>
         <p class="flash flash-info">Las valoraciones quedaron bloqueadas porque pasaron mas de 7 dias desde la finalizacion del partido.</p>
@@ -447,5 +538,55 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </section>
 <?php endif; ?>
+
+<script>
+  (() => {
+    const textSource = document.querySelector('[data-finish-share-text]');
+    if (!textSource) return;
+
+    const getText = () => textSource.value || textSource.textContent || '';
+    const copyText = async (text) => {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      const input = document.createElement('textarea');
+      input.value = text;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.left = '-9999px';
+      document.body.appendChild(input);
+      input.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(input);
+      return copied;
+    };
+
+    const flashButton = (button, label) => {
+      const original = button.textContent;
+      button.textContent = label;
+      window.setTimeout(() => {
+        button.textContent = original;
+      }, 1600);
+    };
+
+    document.querySelector('[data-finish-share]')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      const text = getText();
+      if (navigator.share) {
+        await navigator.share({ text });
+        flashButton(button, 'Compartido');
+        return;
+      }
+      await copyText(text);
+      flashButton(button, 'Copiado');
+    });
+
+    document.querySelector('[data-finish-copy]')?.addEventListener('click', async (event) => {
+      await copyText(getText());
+      flashButton(event.currentTarget, 'Copiado');
+    });
+  })();
+</script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

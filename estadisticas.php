@@ -340,7 +340,7 @@ require __DIR__ . '/includes/header.php';
       <div class="stats-player-grid-head" aria-hidden="true">
         <span>Jugador</span>
         <span>PJ</span>
-        <span>G</span>
+        <span>Goles</span>
         <span>Prom</span>
         <span>Detalles</span>
       </div>
