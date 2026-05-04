@@ -1210,11 +1210,23 @@
 
     const board = root.querySelector('[data-manual-board]');
     const status = root.querySelector('[data-manual-status]');
+    const colorToolbar = root.querySelector('[data-manual-color-toolbar]');
+    const searchInput = root.querySelector('[data-manual-player-search]');
+    const mobilePanel = root.querySelector('[data-manual-mobile-panel]');
+    const formationNote = root.querySelector('[data-manual-formation-note]');
     const saveButton = root.querySelector('[data-manual-save]');
     const players = Array.isArray(config.players) ? config.players : [];
     const numTeams = Number(config.numTeams || 2);
     const playersPerTeam = Number(config.playersPerTeam || 1);
     const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
+    const teamColors = [
+      { name: 'ROSA', className: 'manual-team-rosa' },
+      { name: 'AZUL', className: 'manual-team-azul' },
+      { name: 'NARANJA', className: 'manual-team-naranja' },
+      { name: 'NEGRO', className: 'manual-team-negro' },
+      { name: 'VERDE', className: 'manual-team-verde' },
+    ];
+    const selectedTeamColors = Array.from({ length: numTeams }, (_, index) => teamColors[index % teamColors.length].name);
     const assignments = new Map(players.map((player) => [String(player.id), {
       team: '',
       position: String(player.positions || 'MED').split('/').map((p) => p.trim().toUpperCase()).find((p) => positions.includes(p)) || 'MED',
@@ -1229,6 +1241,18 @@
     })[char]);
 
     const teamLabel = (teamNumber) => `Equipo ${teamNumber}`;
+    const teamColorByName = (colorName) => teamColors.find((color) => color.name === colorName) || teamColors[0];
+    const playerSearchText = (player) => [
+      player.name,
+      player.positions,
+      player.pace,
+      Number(player.skill || 0).toFixed(1),
+    ].join(' ').toLowerCase();
+    const desktopDragEnabled = () => window.matchMedia('(min-width: 761px)').matches;
+    const mobileAssignEnabled = () => window.matchMedia('(max-width: 760px)').matches;
+    let longPressTimer = null;
+    let longPressKey = '';
+    let touchAssignActive = false;
 
     const counts = () => {
       const values = Array.from({ length: numTeams }, () => 0);
@@ -1244,36 +1268,141 @@
       return { values, pending };
     };
 
+    const teamsAreComplete = () => {
+      const current = counts();
+      const hasWrongSize = current.values.some((count) => count !== playersPerTeam);
+      return current.pending === 0 && !hasWrongSize && players.length === numTeams * playersPerTeam;
+    };
+
     const updateStatus = () => {
       const current = counts();
       const fullTeams = current.values.filter((count) => count === playersPerTeam).length;
-      const hasWrongSize = current.values.some((count) => count !== playersPerTeam);
-      const canSave = current.pending === 0 && !hasWrongSize && players.length === numTeams * playersPerTeam;
+      const canSave = teamsAreComplete();
       if (status) {
         status.className = `manual-teams-status mt-3 ${canSave ? 'is-ok' : 'is-pending'}`;
         status.textContent = canSave
-          ? 'Todos los equipos estan completos. Ya podes guardar.'
+          ? 'Todos los equipos estan completos. Ya podes elegir formaciones y guardar.'
           : `Pendientes: ${current.pending}. Equipos completos: ${fullTeams}/${numTeams}. Cada equipo debe tener ${playersPerTeam} jugadores.`;
+      }
+      if (formationNote) {
+        formationNote.textContent = canSave
+          ? 'Formaciones habilitadas. Revisa la posicion de cada jugador y guarda al final.'
+          : 'Completa todos los equipos para habilitar formaciones y guardar.';
       }
       if (saveButton) {
         saveButton.disabled = !canSave;
       }
     };
 
+    const warnTeamLimitReached = () => {
+      const message = 'Ya llegaste al maximo de jugadores.';
+      if (status) {
+        status.className = 'manual-teams-status mt-3 is-warning';
+        status.textContent = message;
+      }
+      showToast(message, 'error');
+    };
+
+    const closeMobilePanel = () => {
+      if (!mobilePanel) return;
+      mobilePanel.hidden = true;
+      mobilePanel.innerHTML = '';
+      longPressKey = '';
+      touchAssignActive = false;
+    };
+
+    const openMobilePanel = (key) => {
+      if (!mobilePanel || !mobileAssignEnabled()) return;
+      const player = players.find((item) => String(item.id) === String(key));
+      if (!player) return;
+      const current = counts();
+      longPressKey = String(key);
+      touchAssignActive = true;
+      mobilePanel.hidden = false;
+      mobilePanel.innerHTML = `
+        <div class="manual-mobile-assign-card">
+          <div class="manual-mobile-assign-head">
+            <div>
+              <span>Asignar jugador</span>
+              <strong>${escapeHtml(player.name)}</strong>
+            </div>
+            <button type="button" class="btn btn-muted" data-manual-mobile-cancel>Cancelar</button>
+          </div>
+          <div class="manual-mobile-assign-grid">
+            ${Array.from({ length: numTeams }, (_, index) => {
+              const teamNumber = index + 1;
+              const selectedColor = teamColorByName(selectedTeamColors[index]);
+              const count = current.values[index] || 0;
+              const isCurrent = String(assignments.get(String(key))?.team || '') === String(teamNumber);
+              const isFull = count >= playersPerTeam && !isCurrent;
+              return `
+                <button
+                  type="button"
+                  class="manual-mobile-team-target ${selectedColor.className} ${isCurrent ? 'is-current' : ''}"
+                  data-manual-mobile-team="${teamNumber}"
+                  ${isFull ? 'disabled' : ''}
+                >
+                  <strong aria-label="${teamLabel(teamNumber)} ${selectedColor.name}"><span class="manual-shirt-icon" aria-hidden="true"></span></strong>
+                  <span>${count}/${playersPerTeam}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    };
+
+    const clearLongPress = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    };
+
+    const renderColorToolbar = () => {
+      if (!colorToolbar) return;
+      colorToolbar.innerHTML = `
+        <div class="manual-team-color-toolbar-head">
+          <strong>Camisetas</strong>
+          <span>Elegilas antes de asignar jugadores.</span>
+        </div>
+        <div class="manual-team-color-grid">
+          ${Array.from({ length: numTeams }, (_, index) => {
+            const selectedColor = teamColorByName(selectedTeamColors[index]);
+            return `
+              <label class="manual-team-color-card ${selectedColor.className}">
+                <span>${teamLabel(index + 1)}</span>
+                <select data-manual-color="${index}">
+                  ${teamColors.map((color) => `<option value="${color.name}" ${selectedColor.name === color.name ? 'selected' : ''}>${color.name}</option>`).join('')}
+                </select>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      `;
+    };
+
     const render = () => {
       if (!board) return;
+      renderColorToolbar();
+      const query = String(searchInput?.value || '').trim().toLowerCase();
       const groups = { '': [] };
       for (let i = 1; i <= numTeams; i += 1) groups[String(i)] = [];
       players.forEach((player) => {
+        if (query !== '' && !playerSearchText(player).includes(query)) {
+          return;
+        }
         const team = String(assignments.get(String(player.id))?.team || '');
         (groups[groups[team] ? team : ''] || groups['']).push(player);
       });
+      const visibleCount = Object.values(groups).reduce((sum, group) => sum + group.length, 0);
+      const formationEnabled = teamsAreComplete();
 
       const renderPlayer = (player) => {
         const key = String(player.id);
         const assignment = assignments.get(key) || { team: '', position: 'MED' };
         return `
-          <article class="manual-player-card" data-player-id="${escapeHtml(key)}">
+          <article class="manual-player-card" data-player-id="${escapeHtml(key)}" draggable="true">
             <div>
               <strong>${escapeHtml(player.name)}</strong>
               <small>${escapeHtml(player.positions || 'MED')} | ${escapeHtml(player.pace || '')} | ${Number(player.skill || 0).toFixed(1)}</small>
@@ -1286,7 +1415,7 @@
                   return `<option value="${value}" ${assignment.team === value ? 'selected' : ''}>${teamLabel(index + 1)}</option>`;
                 }).join('')}
               </select>
-              <select data-manual-position>
+              <select data-manual-position ${formationEnabled ? '' : 'disabled'} title="${formationEnabled ? 'Elegir posicion' : 'Completa todos los equipos para habilitar formaciones'}">
                 ${positions.map((position) => `<option value="${position}" ${assignment.position === position ? 'selected' : ''}>${position}</option>`).join('')}
               </select>
             </div>
@@ -1302,24 +1431,62 @@
         ${Array.from({ length: numTeams }, (_, index) => {
           const teamNumber = index + 1;
           const group = groups[String(teamNumber)] || [];
+          const selectedColor = teamColorByName(selectedTeamColors[index]);
           return `
-            <section class="manual-team-column">
-              <header><strong>${teamLabel(teamNumber)}</strong><span>${group.length}/${playersPerTeam}</span></header>
+            <section class="manual-team-column ${selectedColor.className}" data-manual-drop-team="${teamNumber}">
+              <header><strong>${teamLabel(teamNumber)} (${selectedColor.name})</strong><span>${group.length}/${playersPerTeam}</span></header>
               <div class="manual-team-list">${group.map(renderPlayer).join('') || '<p class="small-muted">Todavia no hay jugadores.</p>'}</div>
             </section>
           `;
         }).join('')}
+        ${query !== '' && visibleCount === 0 ? '<p class="manual-player-search-empty">No hay jugadores que coincidan con la busqueda.</p>' : ''}
       `;
       updateStatus();
     };
 
+    const assignPlayerToTeam = (key, targetTeam) => {
+      const current = assignments.get(key) || { team: '', position: 'MED' };
+      const normalizedTeam = String(targetTeam || '');
+      if (normalizedTeam !== '' && normalizedTeam !== current.team) {
+        const currentCounts = counts();
+        const targetIndex = Number(normalizedTeam) - 1;
+        if ((currentCounts.values[targetIndex] || 0) >= playersPerTeam) {
+          warnTeamLimitReached();
+          return false;
+        }
+      }
+      current.team = normalizedTeam;
+      assignments.set(key, current);
+      if (searchInput && String(searchInput.value || '').trim() !== '') {
+        searchInput.value = '';
+      }
+      render();
+      return true;
+    };
+
+    searchInput?.addEventListener('input', render);
+
     board?.addEventListener('change', (event) => {
+      const colorSelect = event.target.closest('[data-manual-color]');
+      if (colorSelect) {
+        const teamIndex = Number(colorSelect.getAttribute('data-manual-color'));
+        if (teamIndex >= 0 && teamIndex < selectedTeamColors.length) {
+          selectedTeamColors[teamIndex] = String(colorSelect.value || teamColors[teamIndex % teamColors.length].name);
+          render();
+        }
+        return;
+      }
+
       const card = event.target.closest('[data-player-id]');
       if (!card) return;
       const key = String(card.getAttribute('data-player-id') || '');
       const current = assignments.get(key) || { team: '', position: 'MED' };
       if (event.target.matches('[data-manual-team]')) {
-        current.team = String(event.target.value || '');
+        const targetTeam = String(event.target.value || '');
+        if (!assignPlayerToTeam(key, targetTeam)) {
+          event.target.value = current.team;
+        }
+        return;
       }
       if (event.target.matches('[data-manual-position]')) {
         current.position = String(event.target.value || 'MED');
@@ -1328,11 +1495,117 @@
       render();
     });
 
+    colorToolbar?.addEventListener('change', (event) => {
+      if (event.target.matches('[data-manual-color]')) {
+        const teamIndex = Number(event.target.getAttribute('data-manual-color'));
+        if (teamIndex >= 0 && teamIndex < selectedTeamColors.length) {
+          selectedTeamColors[teamIndex] = String(event.target.value || teamColors[teamIndex % teamColors.length].name);
+          render();
+        }
+        return;
+      }
+    });
+
+    board?.addEventListener('dragstart', (event) => {
+      if (!desktopDragEnabled()) {
+        event.preventDefault();
+        return;
+      }
+      const card = event.target.closest('[data-player-id]');
+      if (!card) return;
+      card.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(card.getAttribute('data-player-id') || ''));
+    });
+
+    board?.addEventListener('dragend', (event) => {
+      event.target.closest('[data-player-id]')?.classList.remove('is-dragging');
+      board.querySelectorAll('.manual-team-column.is-drag-over').forEach((column) => column.classList.remove('is-drag-over'));
+    });
+
+    board?.addEventListener('dragover', (event) => {
+      if (!desktopDragEnabled()) return;
+      const column = event.target.closest('[data-manual-drop-team]');
+      if (!column) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      column.classList.add('is-drag-over');
+    });
+
+    board?.addEventListener('dragleave', (event) => {
+      const column = event.target.closest('[data-manual-drop-team]');
+      if (!column || column.contains(event.relatedTarget)) return;
+      column.classList.remove('is-drag-over');
+    });
+
+    board?.addEventListener('drop', (event) => {
+      if (!desktopDragEnabled()) return;
+      const column = event.target.closest('[data-manual-drop-team]');
+      if (!column) return;
+      event.preventDefault();
+      column.classList.remove('is-drag-over');
+      const key = event.dataTransfer.getData('text/plain');
+      if (!key) return;
+      assignPlayerToTeam(key, String(column.getAttribute('data-manual-drop-team') || ''));
+    });
+
+    board?.addEventListener('touchstart', (event) => {
+      if (!mobileAssignEnabled()) return;
+      const card = event.target.closest('[data-player-id]');
+      if (!card || event.target.closest('select, button, input')) return;
+      clearLongPress();
+      const key = String(card.getAttribute('data-player-id') || '');
+      longPressTimer = window.setTimeout(() => {
+        openMobilePanel(key);
+      }, 450);
+    }, { passive: true });
+
+    board?.addEventListener('touchmove', clearLongPress, { passive: true });
+    board?.addEventListener('touchmove', (event) => {
+      if (!touchAssignActive || !mobilePanel || mobilePanel.hidden) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-manual-mobile-team]');
+      mobilePanel.querySelectorAll('.manual-mobile-team-target.is-touch-over').forEach((button) => button.classList.remove('is-touch-over'));
+      if (target && !target.disabled) {
+        target.classList.add('is-touch-over');
+      }
+    }, { passive: true });
+    board?.addEventListener('touchend', (event) => {
+      clearLongPress();
+      if (!touchAssignActive || !longPressKey || !mobilePanel || mobilePanel.hidden) return;
+      const touch = event.changedTouches[0];
+      const target = touch
+        ? document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-manual-mobile-team]')
+        : null;
+      if (target && !target.disabled && assignPlayerToTeam(longPressKey, String(target.getAttribute('data-manual-mobile-team') || ''))) {
+        closeMobilePanel();
+        return;
+      }
+      closeMobilePanel();
+    }, { passive: true });
+    board?.addEventListener('touchcancel', clearLongPress, { passive: true });
+
+    mobilePanel?.addEventListener('click', (event) => {
+      if (event.target.closest('[data-manual-mobile-cancel]')) {
+        closeMobilePanel();
+        return;
+      }
+      const target = event.target.closest('[data-manual-mobile-team]');
+      if (!target || !longPressKey) return;
+      if (assignPlayerToTeam(longPressKey, String(target.getAttribute('data-manual-mobile-team') || ''))) {
+        closeMobilePanel();
+      }
+    });
+
     saveButton?.addEventListener('click', async () => {
       updateStatus();
       if (saveButton.disabled) return;
 
-      const teams = Array.from({ length: numTeams }, () => ({ players: [] }));
+      const teams = Array.from({ length: numTeams }, (_, index) => ({
+        color_name: teamColorByName(selectedTeamColors[index]).name,
+        players: [],
+      }));
       players.forEach((player) => {
         const assignment = assignments.get(String(player.id)) || {};
         const team = Number(assignment.team || 0);

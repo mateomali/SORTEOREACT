@@ -56,7 +56,6 @@ require __DIR__ . '/includes/header.php';
           | <?= h((string) $numTeams) ?> equipos de <?= h((string) $playersPerTeam) ?>
         </p>
       </div>
-      <button class="btn btn-primary" type="button" data-manual-save>Guardar equipos</button>
     </div>
 
     <?php if (count($players) !== $expectedPlayers): ?>
@@ -66,7 +65,20 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
 
     <div class="manual-teams-status mt-3" data-manual-status></div>
+    <div class="manual-team-color-toolbar mt-3" data-manual-color-toolbar></div>
+    <div class="manual-player-search mt-3" role="search">
+      <label for="manualPlayerSearch">Buscar jugador</label>
+      <div class="manual-player-search-box">
+        <span aria-hidden="true">🔍</span>
+        <input id="manualPlayerSearch" type="search" placeholder="Nombre, posicion, ritmo o puntaje..." autocomplete="off" data-manual-player-search>
+      </div>
+    </div>
     <div class="manual-teams-board mt-3" data-manual-board></div>
+    <div class="manual-mobile-assign-panel" data-manual-mobile-panel hidden></div>
+    <div class="manual-save-footer mt-3">
+      <p class="small-muted" data-manual-formation-note>Completa todos los equipos para habilitar formaciones y guardar.</p>
+      <button class="btn btn-primary" type="button" data-manual-save>Guardar equipos</button>
+    </div>
   </section>
 
   <script>
