@@ -1158,6 +1158,7 @@ require __DIR__ . '/includes/header.php';
             <a class="btn btn-muted" href="<?= h($matchFormPage) ?>?edit=<?= $latestId ?>">Editar</a>
             <a class="btn btn-warning" href="sorteo_legacy_csv.php?match_id=<?= $latestId ?>">Sortear</a>
             <a class="btn btn-primary" href="capitanes.php?match_id=<?= $latestId ?>">Capitanes</a>
+            <a class="btn btn-muted" href="equipos_manual.php?match_id=<?= $latestId ?>">Manual</a>
           <?php elseif ($latestCanFinalize): ?>
             <?php if ($latestCanEditCaptainFormation): ?>
               <a class="btn btn-muted" href="capitanes.php?match_id=<?= $latestId ?>#formacion">Formaciones</a>
@@ -1258,6 +1259,7 @@ require __DIR__ . '/includes/header.php';
               <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar fecha" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
               <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
+              <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Manual</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
               <span class="btn btn-disabled icon-dice" data-short=""><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
@@ -1298,6 +1300,7 @@ require __DIR__ . '/includes/header.php';
                 <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar fecha</a>
                 <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear equipos</a>
                 <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
+                <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Equipos manuales</a>
               <?php elseif ($canEditCaptainFormation): ?>
                 <a class="btn btn-muted icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>#formacion">Editar formaciones</a>
               <?php endif; ?>

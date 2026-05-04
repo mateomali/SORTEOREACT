@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS matches (
   players_per_team TINYINT UNSIGNED NOT NULL DEFAULT 9,
   max_diff DECIMAL(4,1) NOT NULL DEFAULT 0.5,
   status ENUM('programado', 'sorteado', 'finalizado') NOT NULL DEFAULT 'programado',
-  draw_mode ENUM('none', 'random', 'captains') NOT NULL DEFAULT 'none',
+  draw_mode ENUM('none', 'random', 'captains', 'manual') NOT NULL DEFAULT 'none',
   draw_started_at DATETIME NULL,
   draw_completed_at DATETIME NULL,
   finalized_at DATETIME NULL,
@@ -131,8 +131,12 @@ CREATE TABLE IF NOT EXISTS captain_drafts (
   match_id INT UNSIGNED PRIMARY KEY,
   captain1_player_id INT UNSIGNED NOT NULL,
   captain2_player_id INT UNSIGNED NOT NULL,
+  captain3_player_id INT UNSIGNED NULL,
+  captain4_player_id INT UNSIGNED NULL,
   captain1_token VARCHAR(64) NOT NULL,
   captain2_token VARCHAR(64) NOT NULL,
+  captain3_token VARCHAR(64) NULL,
+  captain4_token VARCHAR(64) NULL,
   current_team TINYINT UNSIGNED NULL DEFAULT 1,
   status ENUM('active', 'completed') NOT NULL DEFAULT 'active',
   started_at DATETIME NULL,
@@ -148,6 +152,12 @@ CREATE TABLE IF NOT EXISTS captain_drafts (
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_captain_drafts_captain2
     FOREIGN KEY (captain2_player_id) REFERENCES players(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_captain_drafts_captain3
+    FOREIGN KEY (captain3_player_id) REFERENCES players(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_captain_drafts_captain4
+    FOREIGN KEY (captain4_player_id) REFERENCES players(id)
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

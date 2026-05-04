@@ -1064,8 +1064,8 @@
     const target = form.querySelector('[data-round-robin-standings-target]');
     const winnerTarget = form.querySelector('[data-round-robin-winner-target]');
     const actionValue = submitter?.value || 'save_round_robin_scores';
-    const action = actionValue === 'calculate_round_robin_winner'
-      ? 'calculate_round_robin_winner'
+    const action = ['calculate_round_robin_winner', 'finalize_round_robin_date'].includes(actionValue)
+      ? actionValue
       : 'save_round_robin_scores';
     const rawFormData = new FormData(form);
     const formData = new FormData();
@@ -1117,7 +1117,21 @@
       if (winnerTarget) {
         winnerTarget.innerHTML = payload.winner_html || '';
       }
+      if (action === 'finalize_round_robin_date') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('edit_details', '1');
+        url.hash = 'valoraciones';
+        window.location.href = url.toString();
+        return;
+      }
       if (action !== 'calculate_round_robin_winner') {
+        const savedRow = submitter?.closest('[data-round-robin-row]');
+        if (savedRow) {
+          savedRow.classList.add('is-round-robin-saved');
+          submitter.classList.remove('btn-muted');
+          submitter.classList.add('btn-primary', 'is-saved');
+          submitter.textContent = 'Guardado';
+        }
         showToast(payload.message || 'Resultados parciales guardados.', 'success');
       }
     } catch (error) {
@@ -1129,10 +1143,23 @@
     }
   };
 
+  document.addEventListener('input', (event) => {
+    const input = event.target.closest('[data-round-robin-row] input');
+    if (!input) return;
+    const row = input.closest('[data-round-robin-row]');
+    const button = row?.querySelector('.round-robin-row-save');
+    row?.classList.remove('is-round-robin-saved');
+    if (button) {
+      button.classList.remove('btn-primary', 'is-saved');
+      button.classList.add('btn-muted');
+      button.textContent = 'Guardar';
+    }
+  });
+
   document.addEventListener('submit', (event) => {
     const roundRobinForm = event.target.closest('[data-round-robin-form]');
     const roundRobinSubmitter = event.submitter || lastRoundRobinSubmitter;
-    if (roundRobinForm && ['save_round_robin_scores', 'calculate_round_robin_winner'].includes(roundRobinSubmitter?.value || '')) {
+    if (roundRobinForm && ['save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'].includes(roundRobinSubmitter?.value || '')) {
       event.preventDefault();
       submitRoundRobinScores(roundRobinForm, roundRobinSubmitter || null);
       lastRoundRobinSubmitter = null;
@@ -1174,6 +1201,180 @@
   window.addEventListener('popstate', () => {
     partialNavigate(window.location.href, { replace: true });
   });
+
+  const initManualTeams = () => {
+    const root = document.querySelector('[data-manual-teams]');
+    const config = window.manualTeamsConfig;
+    if (!root || !config || root.dataset.ready === '1') return;
+    root.dataset.ready = '1';
+
+    const board = root.querySelector('[data-manual-board]');
+    const status = root.querySelector('[data-manual-status]');
+    const saveButton = root.querySelector('[data-manual-save]');
+    const players = Array.isArray(config.players) ? config.players : [];
+    const numTeams = Number(config.numTeams || 2);
+    const playersPerTeam = Number(config.playersPerTeam || 1);
+    const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
+    const assignments = new Map(players.map((player) => [String(player.id), {
+      team: '',
+      position: String(player.positions || 'MED').split('/').map((p) => p.trim().toUpperCase()).find((p) => positions.includes(p)) || 'MED',
+    }]));
+
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    })[char]);
+
+    const teamLabel = (teamNumber) => `Equipo ${teamNumber}`;
+
+    const counts = () => {
+      const values = Array.from({ length: numTeams }, () => 0);
+      let pending = 0;
+      players.forEach((player) => {
+        const team = Number(assignments.get(String(player.id))?.team || 0);
+        if (team >= 1 && team <= numTeams) {
+          values[team - 1] += 1;
+        } else {
+          pending += 1;
+        }
+      });
+      return { values, pending };
+    };
+
+    const updateStatus = () => {
+      const current = counts();
+      const fullTeams = current.values.filter((count) => count === playersPerTeam).length;
+      const hasWrongSize = current.values.some((count) => count !== playersPerTeam);
+      const canSave = current.pending === 0 && !hasWrongSize && players.length === numTeams * playersPerTeam;
+      if (status) {
+        status.className = `manual-teams-status mt-3 ${canSave ? 'is-ok' : 'is-pending'}`;
+        status.textContent = canSave
+          ? 'Todos los equipos estan completos. Ya podes guardar.'
+          : `Pendientes: ${current.pending}. Equipos completos: ${fullTeams}/${numTeams}. Cada equipo debe tener ${playersPerTeam} jugadores.`;
+      }
+      if (saveButton) {
+        saveButton.disabled = !canSave;
+      }
+    };
+
+    const render = () => {
+      if (!board) return;
+      const groups = { '': [] };
+      for (let i = 1; i <= numTeams; i += 1) groups[String(i)] = [];
+      players.forEach((player) => {
+        const team = String(assignments.get(String(player.id))?.team || '');
+        (groups[groups[team] ? team : ''] || groups['']).push(player);
+      });
+
+      const renderPlayer = (player) => {
+        const key = String(player.id);
+        const assignment = assignments.get(key) || { team: '', position: 'MED' };
+        return `
+          <article class="manual-player-card" data-player-id="${escapeHtml(key)}">
+            <div>
+              <strong>${escapeHtml(player.name)}</strong>
+              <small>${escapeHtml(player.positions || 'MED')} | ${escapeHtml(player.pace || '')} | ${Number(player.skill || 0).toFixed(1)}</small>
+            </div>
+            <div class="manual-player-controls">
+              <select data-manual-team>
+                <option value="">Sin equipo</option>
+                ${Array.from({ length: numTeams }, (_, index) => {
+                  const value = String(index + 1);
+                  return `<option value="${value}" ${assignment.team === value ? 'selected' : ''}>${teamLabel(index + 1)}</option>`;
+                }).join('')}
+              </select>
+              <select data-manual-position>
+                ${positions.map((position) => `<option value="${position}" ${assignment.position === position ? 'selected' : ''}>${position}</option>`).join('')}
+              </select>
+            </div>
+          </article>
+        `;
+      };
+
+      board.innerHTML = `
+        <section class="manual-team-column manual-team-column-pool">
+          <header><strong>Sin equipo</strong><span>${groups[''].length}</span></header>
+          <div class="manual-team-list">${groups[''].map(renderPlayer).join('') || '<p class="small-muted">Sin pendientes.</p>'}</div>
+        </section>
+        ${Array.from({ length: numTeams }, (_, index) => {
+          const teamNumber = index + 1;
+          const group = groups[String(teamNumber)] || [];
+          return `
+            <section class="manual-team-column">
+              <header><strong>${teamLabel(teamNumber)}</strong><span>${group.length}/${playersPerTeam}</span></header>
+              <div class="manual-team-list">${group.map(renderPlayer).join('') || '<p class="small-muted">Todavia no hay jugadores.</p>'}</div>
+            </section>
+          `;
+        }).join('')}
+      `;
+      updateStatus();
+    };
+
+    board?.addEventListener('change', (event) => {
+      const card = event.target.closest('[data-player-id]');
+      if (!card) return;
+      const key = String(card.getAttribute('data-player-id') || '');
+      const current = assignments.get(key) || { team: '', position: 'MED' };
+      if (event.target.matches('[data-manual-team]')) {
+        current.team = String(event.target.value || '');
+      }
+      if (event.target.matches('[data-manual-position]')) {
+        current.position = String(event.target.value || 'MED');
+      }
+      assignments.set(key, current);
+      render();
+    });
+
+    saveButton?.addEventListener('click', async () => {
+      updateStatus();
+      if (saveButton.disabled) return;
+
+      const teams = Array.from({ length: numTeams }, () => ({ players: [] }));
+      players.forEach((player) => {
+        const assignment = assignments.get(String(player.id)) || {};
+        const team = Number(assignment.team || 0);
+        if (team >= 1 && team <= numTeams) {
+          teams[team - 1].players.push({
+            id: Number(player.id),
+            assigned_position: positions.includes(assignment.position) ? assignment.position : 'MED',
+          });
+        }
+      });
+
+      saveButton.disabled = true;
+      saveButton.classList.add('is-loading');
+      try {
+        const response = await fetch('guardar_sorteo.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            match_id: Number(config.matchId),
+            num_teams: numTeams,
+            draw_mode: 'manual',
+            teams,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.message || 'No se pudieron guardar los equipos.');
+        }
+        showToast(payload.message || 'Equipos guardados.', 'success');
+        window.location.href = `finalizar_partido.php?match_id=${Number(config.matchId)}`;
+      } catch (error) {
+        showToast(error.message || 'No se pudieron guardar los equipos.', 'error');
+        saveButton.disabled = false;
+      } finally {
+        saveButton.classList.remove('is-loading');
+      }
+    });
+
+    render();
+  };
+
+  initManualTeams();
 
   document.querySelectorAll('[data-confirm]').forEach((el) => {
     el.addEventListener('click', (event) => {

@@ -132,6 +132,10 @@ if (!is_array($data)) {
 
 $matchId = (int) ($data['match_id'] ?? 0);
 $numTeams = max(2, min(4, (int) ($data['num_teams'] ?? 2)));
+$drawMode = (string) ($data['draw_mode'] ?? 'random');
+if (!in_array($drawMode, ['random', 'manual'], true)) {
+    $drawMode = 'random';
+}
 $postedTeams = $data['teams'] ?? [];
 
 if ($matchId <= 0 || !is_array($postedTeams) || !$postedTeams) {
@@ -228,7 +232,7 @@ $teamScores = array_map(
 );
 $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
 
-if (!validate_teams_legacy($teams, $teamSize, $maxDiff)) {
+if ($drawMode !== 'manual' && !validate_teams_legacy($teams, $teamSize, $maxDiff)) {
     http_response_code(422);
     echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan las reglas de guardado: 1 arquero por equipo, ritmo repartido de forma pareja, diferencia de puntaje valida y al menos 1 jugador en DEF/MED/DEL.']);
     exit;
@@ -237,6 +241,9 @@ if (!validate_teams_legacy($teams, $teamSize, $maxDiff)) {
 $pdo = db();
 $pdo->beginTransaction();
 try {
+    $pdo->prepare('DELETE FROM captain_picks WHERE match_id = :mid')->execute(['mid' => $matchId]);
+    $pdo->prepare('DELETE FROM captain_drafts WHERE match_id = :mid')->execute(['mid' => $matchId]);
+
     $clearPlayers = $pdo->prepare(
         'UPDATE match_players
          SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0
@@ -299,7 +306,7 @@ try {
     $updMatch = $pdo->prepare(
         'UPDATE matches
          SET status = :status, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
-             draw_mode = "random", draw_started_at = COALESCE(draw_started_at, NOW()), draw_completed_at = NOW(),
+             draw_mode = :draw_mode, draw_started_at = COALESCE(draw_started_at, NOW()), draw_completed_at = NOW(),
              formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
          WHERE id = :id'
     );
@@ -308,11 +315,12 @@ try {
         'num_teams' => $numTeams,
         'players_per_team' => $teamSize,
         'max_diff' => $maxDiff,
+        'draw_mode' => $drawMode,
         'id' => $matchId,
     ]);
 
     $pdo->commit();
-    echo json_encode(['ok' => true, 'message' => 'Sorteo guardado correctamente en la fecha']);
+    echo json_encode(['ok' => true, 'message' => $drawMode === 'manual' ? 'Equipos manuales guardados correctamente' : 'Sorteo guardado correctamente en la fecha']);
 } catch (Throwable $e) {
     $pdo->rollBack();
     http_response_code(500);

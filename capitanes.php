@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
+require_once __DIR__ . '/lib/schema.php';
+
+ensure_control_schema();
 
 $pdo = db();
 $matchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
@@ -31,7 +34,10 @@ function generated_captain_token(PDO $pdo, array $reserved = []): string
     $stmt = $pdo->prepare(
         'SELECT 1
          FROM captain_drafts
-         WHERE captain1_token = :token1 OR captain2_token = :token2
+         WHERE captain1_token = :token1
+            OR captain2_token = :token2
+            OR captain3_token = :token3
+            OR captain4_token = :token4
          LIMIT 1'
     );
 
@@ -40,13 +46,29 @@ function generated_captain_token(PDO $pdo, array $reserved = []): string
         if (in_array($token, $reserved, true)) {
             continue;
         }
-        $stmt->execute(['token1' => $token, 'token2' => $token]);
+        $stmt->execute(['token1' => $token, 'token2' => $token, 'token3' => $token, 'token4' => $token]);
         if (!$stmt->fetchColumn()) {
             return $token;
         }
     }
 
     throw new RuntimeException('No se pudo generar un token disponible.');
+}
+
+function captain_numbers_from_draft(array $draft): array
+{
+    $numbers = [];
+    foreach ([1, 2, 3, 4] as $teamNumber) {
+        if ((int) ($draft['captain' . $teamNumber . '_player_id'] ?? 0) > 0) {
+            $numbers[] = $teamNumber;
+        }
+    }
+    return $numbers ?: [1, 2];
+}
+
+function captain_token_for_team(array $draft, int $teamNumber): string
+{
+    return (string) ($draft['captain' . $teamNumber . '_token'] ?? '');
 }
 
 function stored_captain_access(PDO $pdo, int $matchId): ?array
@@ -66,12 +88,12 @@ function stored_captain_access(PDO $pdo, int $matchId): ?array
 
     $teamNumber = (int) ($stored['team'] ?? 0);
     $token = trim((string) ($stored['token'] ?? ''));
-    if (!in_array($teamNumber, [1, 2], true) || $token === '') {
+    if (!in_array($teamNumber, [1, 2, 3, 4], true) || $token === '') {
         return null;
     }
 
     $stmt = $pdo->prepare(
-        'SELECT d.captain1_token, d.captain2_token, m.status AS match_status
+        'SELECT d.*, m.status AS match_status
          FROM captain_drafts d
          INNER JOIN matches m ON m.id = d.match_id
          WHERE d.match_id = :mid
@@ -83,7 +105,7 @@ function stored_captain_access(PDO $pdo, int $matchId): ?array
         return null;
     }
 
-    $expectedToken = $teamNumber === 1 ? (string) $draft['captain1_token'] : (string) $draft['captain2_token'];
+    $expectedToken = captain_token_for_team($draft, $teamNumber);
     if ($expectedToken === '' || !hash_equals($expectedToken, $token)) {
         return null;
     }
@@ -100,13 +122,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'capta
     }
 
     $stmt = $pdo->prepare(
-        'SELECT d.match_id, d.captain1_token, d.captain2_token, m.status AS match_status
+        'SELECT d.*, m.status AS match_status
          FROM captain_drafts d
          INNER JOIN matches m ON m.id = d.match_id
-         WHERE d.captain1_token = :token1 OR d.captain2_token = :token2
+         WHERE d.captain1_token = :token1
+            OR d.captain2_token = :token2
+            OR d.captain3_token = :token3
+            OR d.captain4_token = :token4
          LIMIT 1'
     );
-    $stmt->execute(['token1' => $postedToken, 'token2' => $postedToken]);
+    $stmt->execute(['token1' => $postedToken, 'token2' => $postedToken, 'token3' => $postedToken, 'token4' => $postedToken]);
     $draftByToken = $stmt->fetch();
     if (!$draftByToken) {
         flash('error', 'Token de capitan invalido.');
@@ -117,12 +142,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'capta
         redirect('index.php');
     }
 
-    $tokenTeam = hash_equals((string) $draftByToken['captain1_token'], $postedToken) ? 1 : 2;
+    $tokenTeam = 0;
+    foreach (captain_numbers_from_draft($draftByToken) as $candidateTeam) {
+        if (hash_equals(captain_token_for_team($draftByToken, $candidateTeam), $postedToken)) {
+            $tokenTeam = $candidateTeam;
+            break;
+        }
+    }
+    if ($tokenTeam === 0) {
+        flash('error', 'Token de capitan invalido.');
+        redirect('index.php');
+    }
     remember_captain_access((int) $draftByToken['match_id'], $tokenTeam, $postedToken);
     redirect('capitanes.php?match_id=' . (int) $draftByToken['match_id'] . '&team=' . $tokenTeam . '&token=' . urlencode($postedToken));
 }
 
-if ($matchId > 0 && ($captainToken === '' || !in_array($teamView, [1, 2], true))) {
+if ($matchId > 0 && ($captainToken === '' || !in_array($teamView, [1, 2, 3, 4], true))) {
     $storedAccess = stored_captain_access($pdo, $matchId);
     if ($storedAccess) {
         $teamView = (int) $storedAccess['team'];
@@ -130,7 +165,7 @@ if ($matchId > 0 && ($captainToken === '' || !in_array($teamView, [1, 2], true))
     }
 }
 
-$isCaptainView = in_array($teamView, [1, 2], true) && $captainToken !== '';
+$isCaptainView = in_array($teamView, [1, 2, 3, 4], true) && $captainToken !== '';
 
 if (!$isCaptainView) {
     require_admin();
@@ -138,8 +173,14 @@ if (!$isCaptainView) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start_draft') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
-    $captain1 = (int) ($_POST['captain1'] ?? 0);
-    $captain2 = (int) ($_POST['captain2'] ?? 0);
+    $captainCount = (int) ($_POST['captain_count'] ?? 2);
+    $captains = [];
+    foreach ([1, 2, 3, 4] as $teamNumber) {
+        $captainId = (int) ($_POST['captain' . $teamNumber] ?? 0);
+        if ($teamNumber <= $captainCount) {
+            $captains[$teamNumber] = $captainId;
+        }
+    }
     $participants = repo_match_participants_basic($matchId);
     $participantIds = array_map(static fn(array $p): int => (int) $p['id'], $participants);
 
@@ -147,23 +188,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
         flash('error', 'Selecciona una fecha con convocados.');
         redirect('capitanes.php');
     }
-    if (count($participants) % 2 !== 0) {
-        flash('error', 'El modo capitanes requiere una cantidad par de jugadores.');
+    if (!in_array($captainCount, [2, 3, 4], true)) {
+        flash('error', 'Elige si el draft sera de 2, 3 o 4 capitanes.');
         redirect('capitanes.php?match_id=' . $matchId);
     }
-    if ($captain1 <= 0 || $captain2 <= 0 || $captain1 === $captain2 || !in_array($captain1, $participantIds, true) || !in_array($captain2, $participantIds, true)) {
-        flash('error', 'Elige dos capitanes distintos dentro de los convocados.');
+    if (count($participants) % $captainCount !== 0) {
+        flash('error', 'La cantidad de convocados debe dividirse exacto entre ' . $captainCount . ' capitanes.');
         redirect('capitanes.php?match_id=' . $matchId);
     }
-
-    $captainSkills = [];
-    foreach ($participants as $participant) {
-        $pid = (int) $participant['id'];
-        if ($pid === $captain1 || $pid === $captain2) {
-            $captainSkills[$pid] = (float) $participant['skill'];
+    $captainIds = array_values($captains);
+    if (count(array_filter($captainIds)) !== $captainCount || count(array_unique($captainIds)) !== $captainCount) {
+        flash('error', 'Elige ' . $captainCount . ' capitanes distintos.');
+        redirect('capitanes.php?match_id=' . $matchId);
+    }
+    foreach ($captainIds as $captainId) {
+        if (!in_array($captainId, $participantIds, true)) {
+            flash('error', 'Todos los capitanes deben estar dentro de los convocados.');
+            redirect('capitanes.php?match_id=' . $matchId);
         }
     }
-    $firstTeam = ($captainSkills[$captain2] ?? 0.0) < ($captainSkills[$captain1] ?? 0.0) ? 2 : 1;
+
+    $participantSkills = [];
+    foreach ($participants as $participant) {
+        $pid = (int) $participant['id'];
+        $participantSkills[$pid] = (float) $participant['skill'];
+    }
+    $orderedTeams = array_keys($captains);
+    usort($orderedTeams, static function (int $a, int $b) use ($captains, $participantSkills): int {
+        $skillCompare = ($participantSkills[$captains[$a]] ?? 0.0) <=> ($participantSkills[$captains[$b]] ?? 0.0);
+        return $skillCompare !== 0 ? $skillCompare : $a <=> $b;
+    });
+    $firstTeam = $orderedTeams[0];
 
     $pdo->beginTransaction();
     try {
@@ -176,24 +231,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
              WHERE match_id = :mid'
         )->execute(['mid' => $matchId]);
 
-        $token1 = generated_captain_token($pdo);
-        $token2 = generated_captain_token($pdo, [$token1]);
+        $tokens = [];
+        foreach ($captains as $teamNumber => $_captainId) {
+            $tokens[$teamNumber] = generated_captain_token($pdo, array_values($tokens));
+        }
         $pdo->prepare(
-            'INSERT INTO captain_drafts (match_id, captain1_player_id, captain2_player_id, captain1_token, captain2_token, current_team, status, started_at)
-             VALUES (:mid, :c1, :c2, :t1, :t2, :current_team, "active", NOW())'
-        )->execute(['mid' => $matchId, 'c1' => $captain1, 'c2' => $captain2, 't1' => $token1, 't2' => $token2, 'current_team' => $firstTeam]);
-        $pdo->prepare(
+            'INSERT INTO captain_drafts (
+                match_id,
+                captain1_player_id, captain2_player_id, captain3_player_id, captain4_player_id,
+                captain1_token, captain2_token, captain3_token, captain4_token,
+                current_team, status, started_at
+             )
+             VALUES (
+                :mid,
+                :c1, :c2, :c3, :c4,
+                :t1, :t2, :t3, :t4,
+                :current_team, "active", NOW()
+             )'
+        )->execute([
+            'mid' => $matchId,
+            'c1' => $captains[1] ?? null,
+            'c2' => $captains[2] ?? null,
+            'c3' => $captains[3] ?? null,
+            'c4' => $captains[4] ?? null,
+            't1' => $tokens[1] ?? null,
+            't2' => $tokens[2] ?? null,
+            't3' => $tokens[3] ?? null,
+            't4' => $tokens[4] ?? null,
+            'current_team' => $firstTeam,
+        ]);
+        $insertPick = $pdo->prepare(
             'INSERT INTO captain_picks (match_id, player_id, team_number, picked_by_player_id, pick_order)
              VALUES (:mid, :pid, :team, :picker, :pick_order)'
-        )->execute(['mid' => $matchId, 'pid' => $captain1, 'team' => 1, 'picker' => $captain1, 'pick_order' => 1]);
-        $pdo->prepare(
-            'INSERT INTO captain_picks (match_id, player_id, team_number, picked_by_player_id, pick_order)
-             VALUES (:mid, :pid, :team, :picker, :pick_order)'
-        )->execute(['mid' => $matchId, 'pid' => $captain2, 'team' => 2, 'picker' => $captain2, 'pick_order' => 2]);
-        $pdo->prepare('UPDATE match_players SET team_number = 1 WHERE match_id = :mid AND player_id = :pid')
-            ->execute(['mid' => $matchId, 'pid' => $captain1]);
-        $pdo->prepare('UPDATE match_players SET team_number = 2 WHERE match_id = :mid AND player_id = :pid')
-            ->execute(['mid' => $matchId, 'pid' => $captain2]);
+        );
+        $updateCaptainTeam = $pdo->prepare('UPDATE match_players SET team_number = :team WHERE match_id = :mid AND player_id = :pid');
+        foreach ($orderedTeams as $index => $teamNumber) {
+            $captainId = $captains[$teamNumber];
+            $insertPick->execute([
+                'mid' => $matchId,
+                'pid' => $captainId,
+                'team' => $teamNumber,
+                'picker' => $captainId,
+                'pick_order' => $index + 1,
+            ]);
+            $updateCaptainTeam->execute(['mid' => $matchId, 'pid' => $captainId, 'team' => $teamNumber]);
+        }
         $pdo->prepare('UPDATE matches SET status = "programado", draw_mode = "captains", draw_started_at = NOW(), draw_completed_at = NULL, finalized_at = NULL WHERE id = :mid')->execute(['mid' => $matchId]);
 
         $pdo->commit();
@@ -238,19 +320,29 @@ if ($selectedMatch) {
     $stmt = $pdo->prepare('SELECT * FROM captain_drafts WHERE match_id = :mid LIMIT 1');
     $stmt->execute(['mid' => (int) $selectedMatch['id']]);
     $draft = $stmt->fetch() ?: null;
-    $needsShortTokens = $draft
-        && (!preg_match('/^\d{4}$/', (string) ($draft['captain1_token'] ?? ''))
-            || !preg_match('/^\d{4}$/', (string) ($draft['captain2_token'] ?? '')));
+    $needsShortTokens = false;
+    if ($draft) {
+        foreach (captain_numbers_from_draft($draft) as $teamNumber) {
+            if (!preg_match('/^\d{4}$/', captain_token_for_team($draft, $teamNumber))) {
+                $needsShortTokens = true;
+                break;
+            }
+        }
+    }
     if ($needsShortTokens) {
-        $draft['captain1_token'] = generated_captain_token($pdo);
-        $draft['captain2_token'] = generated_captain_token($pdo, [(string) $draft['captain1_token']]);
-        $pdo->prepare(
-            'UPDATE captain_drafts SET captain1_token = :t1, captain2_token = :t2 WHERE match_id = :mid'
-        )->execute([
-            'mid' => (int) $selectedMatch['id'],
-            't1' => $draft['captain1_token'],
-            't2' => $draft['captain2_token'],
-        ]);
+        $tokens = [];
+        $params = ['mid' => (int) $selectedMatch['id']];
+        $sets = [];
+        foreach (captain_numbers_from_draft($draft) as $teamNumber) {
+            $token = generated_captain_token($pdo, array_values($tokens));
+            $tokens[$teamNumber] = $token;
+            $draft['captain' . $teamNumber . '_token'] = $token;
+            $sets[] = 'captain' . $teamNumber . '_token = :t' . $teamNumber;
+            $params['t' . $teamNumber] = $token;
+        }
+        if ($sets) {
+            $pdo->prepare('UPDATE captain_drafts SET ' . implode(', ', $sets) . ' WHERE match_id = :mid')->execute($params);
+        }
     }
 }
 $generatedTeams = $selectedMatch ? repo_match_teams((int) $selectedMatch['id']) : [];
@@ -258,27 +350,26 @@ $hasGeneratedTeams = $selectedMatch
     && in_array((string) ($selectedMatch['status'] ?? ''), ['sorteado', 'finalizado'], true)
     && count($generatedTeams) >= 2;
 
-$captain1Name = 'Capitan 1';
-$captain2Name = 'Capitan 2';
-$captain1ShareText = '';
-$captain2ShareText = '';
-$captain1OpenUrl = '';
-$captain2OpenUrl = '';
+$captainCards = [];
 if ($selectedMatch && $draft) {
+    $participantNames = [];
     foreach ($participants as $participant) {
         $participantId = (int) ($participant['id'] ?? 0);
-        if ($participantId === (int) ($draft['captain1_player_id'] ?? 0)) {
-            $captain1Name = (string) $participant['name'];
-        }
-        if ($participantId === (int) ($draft['captain2_player_id'] ?? 0)) {
-            $captain2Name = (string) $participant['name'];
-        }
+        $participantNames[$participantId] = (string) $participant['name'];
     }
     $matchLabel = (string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']));
-    $captain1ShareText = "Token para elegir equipo como " . $captain1Name . "\n" . $matchLabel . "\n\n" . (string) ($draft['captain1_token'] ?? '');
-    $captain2ShareText = "Token para elegir equipo como " . $captain2Name . "\n" . $matchLabel . "\n\n" . (string) ($draft['captain2_token'] ?? '');
-    $captain1OpenUrl = 'capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=1&token=' . urlencode((string) ($draft['captain1_token'] ?? ''));
-    $captain2OpenUrl = 'capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=2&token=' . urlencode((string) ($draft['captain2_token'] ?? ''));
+    foreach (captain_numbers_from_draft($draft) as $teamNumber) {
+        $captainId = (int) ($draft['captain' . $teamNumber . '_player_id'] ?? 0);
+        $name = $participantNames[$captainId] ?? ('Capitan ' . $teamNumber);
+        $token = captain_token_for_team($draft, $teamNumber);
+        $captainCards[] = [
+            'team' => $teamNumber,
+            'name' => $name,
+            'token' => $token,
+            'share_text' => "Token para elegir equipo como " . $name . "\n" . $matchLabel . "\n\n" . $token,
+            'open_url' => 'capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=' . $teamNumber . '&token=' . urlencode($token),
+        ];
+    }
 }
 
 $title = 'Capitanes | ' . APP_NAME;
@@ -323,27 +414,51 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="action" value="start_draft">
       <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
       <div class="form-row">
-        <label>Capitan equipo 1</label>
-        <select name="captain1" required>
-          <option value="">Elegir...</option>
-          <?php foreach ($participants as $p): ?>
-            <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . skill_label((float) $p['skill'])) ?></option>
-          <?php endforeach; ?>
+        <label>Cantidad de capitanes</label>
+        <select name="captain_count" id="captainCountSelect" required>
+          <option value="2">2 capitanes</option>
+          <option value="3">3 capitanes</option>
+          <option value="4">4 capitanes</option>
         </select>
       </div>
+      <?php for ($teamNumber = 1; $teamNumber <= 4; $teamNumber++): ?>
       <div class="form-row">
-        <label>Capitan equipo 2</label>
-        <select name="captain2" required>
+        <label>Capitan equipo <?= $teamNumber ?></label>
+        <select name="captain<?= $teamNumber ?>" <?= $teamNumber <= 2 ? 'required' : '' ?>>
           <option value="">Elegir...</option>
           <?php foreach ($participants as $p): ?>
             <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . skill_label((float) $p['skill'])) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
+      <?php endfor; ?>
       <div class="btn-row">
         <button class="btn btn-primary" type="submit">Iniciar modo capitanes</button>
       </div>
     </form>
+    <script>
+      (() => {
+        const countSelect = document.getElementById('captainCountSelect');
+        if (!countSelect) return;
+        const rows = [...countSelect.form.querySelectorAll('select[name^="captain"]')]
+          .filter(select => select.name !== 'captain_count')
+          .map(select => select.closest('.form-row'));
+        const syncCaptainRows = () => {
+          const count = parseInt(countSelect.value || '2', 10);
+          rows.forEach((row, index) => {
+            const enabled = index < count;
+            row.hidden = !enabled;
+            const select = row.querySelector('select');
+            select.required = enabled;
+            if (!enabled) {
+              select.value = '';
+            }
+          });
+        };
+        countSelect.addEventListener('change', syncCaptainRows);
+        syncCaptainRows();
+      })();
+    </script>
   </section>
 <?php elseif ($selectedMatch && ($draft || $hasGeneratedTeams)): ?>
   <?php if (!$isCaptainView): ?>
@@ -352,24 +467,17 @@ require __DIR__ . '/includes/header.php';
     <?php if ($draft): ?>
       <p class="small-muted">Pasa estos tokens a cada capitan. Desde Inicio pueden tocar Soy capitan, pegar el token y entrar a elegir.</p>
       <div class="grid cols-2 mb-3">
+        <?php foreach ($captainCards as $captainCard): ?>
         <div class="stat-box">
-          <div class="label">Token <?= h($captain1Name) ?></div>
-          <input type="text" readonly value="<?= h((string) ($draft['captain1_token'] ?? '')) ?>" onclick="this.select()">
+          <div class="label">Token <?= h((string) $captainCard['name']) ?></div>
+          <input type="text" readonly value="<?= h((string) $captainCard['token']) ?>" onclick="this.select()">
           <div class="captain-link-actions">
-            <button class="btn btn-primary" type="button" data-share-token="<?= h($captain1ShareText) ?>">Compartir</button>
-            <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain1_token'] ?? '')) ?>">Copiar</button>
-            <a class="btn btn-muted" href="<?= h($captain1OpenUrl) ?>">Abrir</a>
+            <button class="btn btn-primary" type="button" data-share-token="<?= h((string) $captainCard['share_text']) ?>">Compartir</button>
+            <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) $captainCard['token']) ?>">Copiar</button>
+            <a class="btn btn-muted" href="<?= h((string) $captainCard['open_url']) ?>">Abrir</a>
           </div>
         </div>
-        <div class="stat-box">
-          <div class="label">Token <?= h($captain2Name) ?></div>
-          <input type="text" readonly value="<?= h((string) ($draft['captain2_token'] ?? '')) ?>" onclick="this.select()">
-          <div class="captain-link-actions">
-            <button class="btn btn-primary" type="button" data-share-token="<?= h($captain2ShareText) ?>">Compartir</button>
-            <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain2_token'] ?? '')) ?>">Copiar</button>
-            <a class="btn btn-muted" href="<?= h($captain2OpenUrl) ?>">Abrir</a>
-          </div>
-        </div>
+        <?php endforeach; ?>
       </div>
     <?php else: ?>
       <p class="small-muted">Equipos generados. Como admin podes ajustar formaciones, usar presets y arrastrar jugadores en ambos equipos.</p>
@@ -391,7 +499,7 @@ require __DIR__ . '/includes/header.php';
     class="captain-board"
     id="formacion"
     data-match-id="<?= (int) $selectedMatch['id'] ?>"
-    data-team-view="<?= in_array($teamView, [1, 2], true) ? $teamView : 0 ?>"
+    data-team-view="<?= in_array($teamView, [1, 2, 3, 4], true) ? $teamView : 0 ?>"
     data-token="<?= h($captainToken) ?>"
     data-view-mode="<?= h($viewMode) ?>"
     data-admin-editor="<?= (!$isCaptainView && is_admin()) ? '1' : '0' ?>"
@@ -402,34 +510,19 @@ require __DIR__ . '/includes/header.php';
         <strong>ESPERANDO JUGADOR</strong>
         <span id="captainWaitingText" class="captain-waiting-text">Aguardando la eleccion del otro capitan.</span>
         <div class="captain-waiting-teams" aria-label="Estado actual del draft">
-          <section>
-            <h4 id="captainWaitingTeam1Title">Equipo 1</h4>
-            <div id="captainWaitingTeam1List"></div>
-          </section>
-          <section>
-            <h4 id="captainWaitingTeam2Title">Equipo 2</h4>
-            <div id="captainWaitingTeam2List"></div>
-          </section>
         </div>
       </div>
     </div>
 
     <div class="captain-status card">
       <h3 id="draftTitle">Cargando...</h3>
+      <div id="captainTurnBanner" class="captain-turn-banner hidden" role="status" aria-live="polite"></div>
       <p id="draftTurn" class="small-muted"></p>
       <p id="draftFormationHint" class="captain-formation-hint" hidden>Arrastra y suelta jugadores para cambiar el orden o intercambiar posiciones entre filas.</p>
       <div id="draftMessage" class="flash flash-info hidden"></div>
     </div>
 
-    <div class="grid cols-2 captain-teams-grid mt-3.5">
-      <article class="card" data-captain-team-card="1">
-        <h3 id="team1Title">Equipo 1</h3>
-        <div id="team1List" class="captain-team-list"></div>
-      </article>
-      <article class="card" data-captain-team-card="2">
-        <h3 id="team2Title">Equipo 2</h3>
-        <div id="team2List" class="captain-team-list"></div>
-      </article>
+    <div class="grid cols-2 captain-teams-grid mt-3.5" id="captainTeamsGrid">
     </div>
 
     <section class="card mt-3.5">
@@ -511,6 +604,26 @@ require __DIR__ . '/includes/header.php';
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
         return players.reduce((total, player) => total + Number(player.skill || 0), 0);
       };
+      const teamNumbers = () => (state?.match?.team_numbers || Object.keys(state?.draft?.captains || {})).map(Number).filter(Boolean);
+      const currentCaptainName = () => state?.draft?.current_captain || (state?.draft?.current_team ? state.draft.captains[state.draft.current_team]?.name : '') || '';
+      const isMyTurn = () => captainToken !== '' && teamView > 0 && state?.draft?.status === 'active' && state.draft.current_team === teamView;
+      const isMyWaitingTurn = () => captainToken !== '' && teamNumbers().includes(teamView) && state?.draft?.status === 'active' && state.draft.current_team !== teamView;
+
+      const ensureTeamCards = () => {
+        const grid = document.getElementById('captainTeamsGrid');
+        if (!grid || !state?.ok) return;
+        const existing = [...grid.querySelectorAll('[data-captain-team-card]')].map(card => parseInt(card.dataset.captainTeamCard, 10));
+        const desired = teamNumbers();
+        if (existing.length === desired.length && existing.every((team, index) => team === desired[index])) {
+          return;
+        }
+        grid.innerHTML = desired.map(teamNumber => `
+          <article class="card" data-captain-team-card="${teamNumber}">
+            <h3 id="team${teamNumber}Title">Equipo ${teamNumber}</h3>
+            <div id="team${teamNumber}List" class="captain-team-list"></div>
+          </article>
+        `).join('');
+      };
 
       const renderWaitingTeam = (teamNumber) => {
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
@@ -570,21 +683,65 @@ require __DIR__ . '/includes/header.php';
       const updateWaitingPanel = () => {
         const panel = document.getElementById('captainWaitingPanel');
         const text = document.getElementById('captainWaitingText');
+        const waitingTeams = panel?.querySelector('.captain-waiting-teams');
         if (!panel || !state || !state.ok) return;
 
-        const isWaiting = captainToken !== ''
-          && (teamView === 1 || teamView === 2)
-          && state.draft.status === 'active'
-          && state.draft.current_team !== teamView;
+        const isWaiting = isMyWaitingTurn();
 
         panel.hidden = !isWaiting;
         if (isWaiting && text) {
-          text.textContent = state.draft.current_captain
-            ? `Turno de ${state.draft.current_captain}.`
+          if (waitingTeams) {
+            waitingTeams.innerHTML = teamNumbers().map(teamNumber => `
+              <section>
+                <h4 id="captainWaitingTeam${teamNumber}Title">Equipo ${teamNumber}</h4>
+                <div id="captainWaitingTeam${teamNumber}List"></div>
+              </section>
+            `).join('');
+          }
+          text.textContent = currentCaptainName()
+            ? `Esperando a ${currentCaptainName()}.`
             : 'Aguardando la eleccion del otro capitan.';
-          renderWaitingTeam(1);
-          renderWaitingTeam(2);
+          teamNumbers().forEach(renderWaitingTeam);
         }
+      };
+
+      const updateTurnBanner = () => {
+        const banner = document.getElementById('captainTurnBanner');
+        if (!banner || !state || !state.ok) return;
+
+        banner.className = 'captain-turn-banner hidden';
+        banner.innerHTML = '';
+
+        if (state.draft.status !== 'active') {
+          return;
+        }
+
+        const captainName = currentCaptainName();
+        const currentTeam = state.draft.current_team;
+        if (!captainName || !currentTeam) {
+          return;
+        }
+
+        banner.classList.remove('hidden');
+        if (isMyTurn()) {
+          banner.classList.add('is-your-turn');
+          banner.innerHTML = `
+            <span>TU TURNO</span>
+            <strong>${escapeHtml(captainName)}, te toca elegir</strong>
+            <small>Selecciona un jugador disponible para pasar el turno.</small>
+          `;
+          return;
+        }
+
+        banner.classList.add('is-waiting-turn');
+        const waitingText = teamNumbers().includes(teamView)
+          ? 'Cuando termine su eleccion, la pantalla se actualiza sola.'
+          : 'El draft esta esperando esa eleccion para continuar.';
+        banner.innerHTML = `
+          <span>ESPERANDO A</span>
+          <strong>${escapeHtml(captainName)}</strong>
+          <small>${escapeHtml(waitingText)}</small>
+        `;
       };
 
       const formationPresets = (playersCount) => {
@@ -998,9 +1155,15 @@ require __DIR__ . '/includes/header.php';
           redirectToFormation();
           return;
         }
+        ensureTeamCards();
         document.getElementById('draftTitle').textContent = `${state.match.title} - ${state.match.participants_count} convocados`;
-        document.getElementById('team1Title').textContent = `Equipo 1 - ${state.draft.captains[1].name} (${state.teams[1].length}/${state.match.target_team_size}) - ${teamTotalSkill(1).toFixed(1)} pts`;
-        document.getElementById('team2Title').textContent = `Equipo 2 - ${state.draft.captains[2].name} (${state.teams[2].length}/${state.match.target_team_size}) - ${teamTotalSkill(2).toFixed(1)} pts`;
+        teamNumbers().forEach(teamNumber => {
+          const title = document.getElementById(`team${teamNumber}Title`);
+          const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
+          if (title) {
+            title.textContent = `Equipo ${teamNumber} - ${state.draft.captains[teamNumber].name} (${players.length}/${state.match.target_team_size}) - ${teamTotalSkill(teamNumber).toFixed(1)} pts`;
+          }
+        });
         const turn = document.getElementById('draftTurn');
         const formationHint = document.getElementById('draftFormationHint');
         const canShowFormationHint = state.draft.status === 'completed'
@@ -1009,6 +1172,7 @@ require __DIR__ . '/includes/header.php';
         if (formationHint) {
           formationHint.hidden = !canShowFormationHint;
         }
+        updateTurnBanner();
         if (state.draft.status === 'completed') {
           if (adminEditor && state.match.can_edit_formations) {
             turn.innerHTML = 'Draft completo. Como admin podes reorganizar la formacion de ambos equipos y guardar cada una.';
@@ -1022,14 +1186,13 @@ require __DIR__ . '/includes/header.php';
         } else if (teamView > 0 && captainToken === '') {
           turn.innerHTML = 'Este acceso no tiene token de capitan. Vuelve a Inicio y toca Soy capitan.';
         } else if (teamView === state.draft.current_team) {
-          turn.innerHTML = `<strong>Tu turno:</strong> elige un jugador.`;
-        } else if (teamView === 1 || teamView === 2) {
-          turn.innerHTML = `Turno de ${escapeHtml(state.draft.current_captain)}. Espera a que el otro capitan elija.`;
+          turn.innerHTML = `<strong>Tu turno:</strong> elige un jugador disponible.`;
+        } else if (teamNumbers().includes(teamView)) {
+          turn.innerHTML = `Esperando a ${escapeHtml(currentCaptainName())}. Todavia no te toca elegir.`;
         } else {
-          turn.innerHTML = `Turno de ${escapeHtml(state.draft.current_captain)}. Entra con el link del capitan correspondiente para elegir.`;
+          turn.innerHTML = `Esperando a ${escapeHtml(currentCaptainName())}. Entra con el link de ese capitan si queres elegir.`;
         }
-        renderTeam(1, 'team1List');
-        renderTeam(2, 'team2List');
+        teamNumbers().forEach(teamNumber => renderTeam(teamNumber, `team${teamNumber}List`));
         updateWaitingPanel();
         const formationOnly = state.draft.status === 'completed' && teamView > 0 && captainToken !== '';
         document.querySelector('.captain-teams-grid')?.classList.toggle('formation-only', formationOnly);

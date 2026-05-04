@@ -4,6 +4,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/sorteo.php';
+require_once __DIR__ . '/lib/schema.php';
+
+ensure_control_schema();
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -21,16 +24,68 @@ function captain_draft_row(int $matchId): ?array
                 p1.name AS captain1_name,
                 p1.skill AS captain1_skill,
                 p2.name AS captain2_name,
-                p2.skill AS captain2_skill
+                p2.skill AS captain2_skill,
+                p3.name AS captain3_name,
+                p3.skill AS captain3_skill,
+                p4.name AS captain4_name,
+                p4.skill AS captain4_skill
          FROM captain_drafts d
          INNER JOIN players p1 ON p1.id = d.captain1_player_id
          INNER JOIN players p2 ON p2.id = d.captain2_player_id
+         LEFT JOIN players p3 ON p3.id = d.captain3_player_id
+         LEFT JOIN players p4 ON p4.id = d.captain4_player_id
          WHERE d.match_id = :mid
          LIMIT 1'
     );
     $stmt->execute(['mid' => $matchId]);
     $row = $stmt->fetch();
     return $row ?: null;
+}
+
+function captain_numbers(array $draft): array
+{
+    $numbers = [];
+    foreach ([1, 2, 3, 4] as $teamNumber) {
+        if ((int) ($draft['captain' . $teamNumber . '_player_id'] ?? 0) > 0) {
+            $numbers[] = $teamNumber;
+        }
+    }
+    return $numbers ?: [1, 2];
+}
+
+function captain_count(array $draft): int
+{
+    return count(captain_numbers($draft));
+}
+
+function draft_captain_name(array $draft, int $teamNumber): string
+{
+    return (string) ($draft['captain' . $teamNumber . '_name'] ?? ('Equipo ' . $teamNumber));
+}
+
+function draft_captain_skill(array $draft, int $teamNumber): float
+{
+    return (float) ($draft['captain' . $teamNumber . '_skill'] ?? 0);
+}
+
+function captain_turn_order(array $draft): array
+{
+    $numbers = captain_numbers($draft);
+    usort($numbers, static function (int $a, int $b) use ($draft): int {
+        $skillCompare = draft_captain_skill($draft, $a) <=> draft_captain_skill($draft, $b);
+        return $skillCompare !== 0 ? $skillCompare : $a <=> $b;
+    });
+    return $numbers;
+}
+
+function next_captain_team(array $draft, int $currentTeam): int
+{
+    $numbers = captain_turn_order($draft);
+    $index = array_search($currentTeam, $numbers, true);
+    if ($index === false) {
+        return $numbers[0];
+    }
+    return $numbers[($index + 1) % count($numbers)];
 }
 
 function primary_position(array $player): string
@@ -76,16 +131,18 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
         'SELECT p.skill
          FROM captain_picks cp
          INNER JOIN players p ON p.id = cp.player_id
-         WHERE cp.match_id = :mid AND cp.pick_order > 2
+         WHERE cp.match_id = :mid AND cp.pick_order > :captain_count
          ORDER BY cp.pick_order DESC
          LIMIT 1'
     );
-    $stmt->execute(['mid' => $matchId]);
+    $captainNumbers = captain_turn_order($draft);
+    $stmt->execute(['mid' => $matchId, 'captain_count' => count($captainNumbers)]);
     $lastSkill = $stmt->fetchColumn();
     if ($lastSkill === false) {
         $currentTeam = $draft['current_team'] !== null ? (int) $draft['current_team'] : null;
-        if (($currentTeam === 1 || $currentTeam === 2) && $available) {
-            $referenceSkill = $currentTeam === 1 ? (float) $draft['captain2_skill'] : (float) $draft['captain1_skill'];
+        if (in_array($currentTeam, $captainNumbers, true) && $available) {
+            $previousTeam = $captainNumbers[(array_search($currentTeam, $captainNumbers, true) - 1 + count($captainNumbers)) % count($captainNumbers)];
+            $referenceSkill = draft_captain_skill($draft, $previousTeam);
             $allowedIds = skill_allowed_ids_in_range($available, $referenceSkill, 1.0);
             $allowedSkills = [];
             foreach ($available as $player) {
@@ -181,7 +238,14 @@ function captain_state(int $matchId): array
     }
 
     $participants = repo_match_participants($matchId);
-    $teams = [1 => [], 2 => []];
+    $teamNumbers = $draft ? captain_numbers($draft) : array_map(static fn(array $team): int => (int) $team['team_number'], repo_match_teams($matchId));
+    if (!$teamNumbers) {
+        $teamNumbers = [1, 2];
+    }
+    $teams = [];
+    foreach ($teamNumbers as $teamNumber) {
+        $teams[$teamNumber] = [];
+    }
     $available = [];
 
     foreach ($participants as $p) {
@@ -198,14 +262,14 @@ function captain_state(int $matchId): array
             'lineup_order' => $p['lineup_order'] !== null ? (int) $p['lineup_order'] : null,
             'formation_line_order' => $p['formation_line_order'] !== null ? (int) $p['formation_line_order'] : null,
         ];
-        if ($row['team_number'] === 1 || $row['team_number'] === 2) {
+        if (in_array((int) $row['team_number'], $teamNumbers, true)) {
             $teams[$row['team_number']][] = $row;
         } else {
             $available[] = $row;
         }
     }
 
-    foreach ([1, 2] as $teamNumber) {
+    foreach ($teamNumbers as $teamNumber) {
         usort($teams[$teamNumber], static function (array $a, array $b): int {
             $positionOrder = ['ARQ' => 1, 'DEF' => 2, 'MED' => 3, 'DEL' => 4];
             $positionCompare = ($positionOrder[$a['assigned_position']] ?? 99) <=> ($positionOrder[$b['assigned_position']] ?? 99);
@@ -253,9 +317,17 @@ function captain_state(int $matchId): array
     }
     unset($player);
 
-    $targetTeamSize = count($participants) > 0 ? (int) (count($participants) / 2) : 0;
+    $captainCount = $draft ? captain_count($draft) : max(2, count($teamNumbers));
+    $targetTeamSize = count($participants) > 0 ? (int) (count($participants) / $captainCount) : 0;
     $currentTeam = $draft && $draft['current_team'] !== null ? (int) $draft['current_team'] : null;
     $teamLabels = repo_match_team_labels($match, repo_match_teams($matchId));
+    $captains = [];
+    foreach ($teamNumbers as $teamNumber) {
+        $captains[$teamNumber] = [
+            'id' => $draft ? (int) ($draft['captain' . $teamNumber . '_player_id'] ?? 0) : 0,
+            'name' => $draft ? draft_captain_name($draft, $teamNumber) : (string) ($teamLabels[$teamNumber] ?? 'Equipo ' . $teamNumber),
+        ];
+    }
 
     return [
         'ok' => true,
@@ -266,24 +338,15 @@ function captain_state(int $matchId): array
             'match_date' => (string) $match['match_date'],
             'participants_count' => count($participants),
             'target_team_size' => $targetTeamSize,
+            'team_numbers' => $teamNumbers,
+            'captain_count' => $captainCount,
             'can_edit_formations' => can_edit_captain_formation($match),
         ],
         'draft' => [
             'status' => $draft ? (string) $draft['status'] : 'completed',
             'current_team' => $currentTeam,
-            'current_captain' => $draft
-                ? ($currentTeam === 1 ? (string) $draft['captain1_name'] : ($currentTeam === 2 ? (string) $draft['captain2_name'] : ''))
-                : '',
-            'captains' => [
-                1 => [
-                    'id' => $draft ? (int) $draft['captain1_player_id'] : 0,
-                    'name' => $draft ? (string) $draft['captain1_name'] : (string) ($teamLabels[1] ?? 'Equipo 1'),
-                ],
-                2 => [
-                    'id' => $draft ? (int) $draft['captain2_player_id'] : 0,
-                    'name' => $draft ? (string) $draft['captain2_name'] : (string) ($teamLabels[2] ?? 'Equipo 2'),
-                ],
-            ],
+            'current_captain' => $draft && $currentTeam ? draft_captain_name($draft, $currentTeam) : '',
+            'captains' => $captains,
         ],
         'teams' => $teams,
         'available' => $available,
@@ -298,10 +361,14 @@ function finish_captain_draft(int $matchId): void
     $stmtDraft->execute(['mid' => $matchId]);
     $draft = $stmtDraft->fetch() ?: [];
     $participants = repo_match_participants($matchId);
-    $teams = [1 => [], 2 => []];
+    $teamNumbers = $draft ? captain_numbers($draft) : [1, 2];
+    $teams = [];
+    foreach ($teamNumbers as $teamNumber) {
+        $teams[$teamNumber] = [];
+    }
     foreach ($participants as $p) {
         $teamNumber = $p['team_number'] !== null ? (int) $p['team_number'] : 0;
-        if ($teamNumber === 1 || $teamNumber === 2) {
+        if (in_array($teamNumber, $teamNumbers, true)) {
             $teams[$teamNumber][] = $p;
         }
     }
@@ -317,7 +384,7 @@ function finish_captain_draft(int $matchId): void
          WHERE match_id = :mid AND player_id = :pid'
     );
 
-    foreach ([1, 2] as $teamNumber) {
+    foreach ($teamNumbers as $teamNumber) {
         $team = $teams[$teamNumber];
         $assignmentData = build_team_position_assignment($team);
         $totalSkill = 0.0;
@@ -333,7 +400,7 @@ function finish_captain_draft(int $matchId): void
             'mid' => $matchId,
             'team_number' => $teamNumber,
             'team_name' => 'Equipo ' . $teamNumber,
-            'captain_player_id' => $teamNumber === 1 ? ($draft['captain1_player_id'] ?? null) : ($draft['captain2_player_id'] ?? null),
+            'captain_player_id' => $draft['captain' . $teamNumber . '_player_id'] ?? null,
             'total_skill' => $totalSkill,
             'formation_name' => implode('-', [$lineCounts['ARQ'], $lineCounts['DEF'], $lineCounts['MED'], $lineCounts['DEL']]),
             'formation_data' => json_encode(array_map(static function (array $p) use ($assignmentData): array {
@@ -384,7 +451,7 @@ $matchId = (int) ($data['match_id'] ?? 0);
 $teamNumber = (int) ($data['team_number'] ?? 0);
 $playerId = (int) ($data['player_id'] ?? 0);
 $token = trim((string) ($data['token'] ?? ''));
-if ($matchId <= 0 || !in_array($teamNumber, [1, 2], true) || ($action === 'pick' && $playerId <= 0)) {
+if ($matchId <= 0 || !in_array($teamNumber, [1, 2, 3, 4], true) || ($action === 'pick' && $playerId <= 0)) {
     json_response(['ok' => false, 'message' => 'Datos incompletos'], 422);
 }
 
@@ -404,8 +471,8 @@ try {
         throw new RuntimeException('No es el turno de este capitan.');
     }
 
-    $captainId = $draft ? ($teamNumber === 1 ? (int) $draft['captain1_player_id'] : (int) $draft['captain2_player_id']) : 0;
-    $expectedToken = $draft ? ($teamNumber === 1 ? (string) ($draft['captain1_token'] ?? '') : (string) ($draft['captain2_token'] ?? '')) : '';
+    $captainId = $draft ? (int) ($draft['captain' . $teamNumber . '_player_id'] ?? 0) : 0;
+    $expectedToken = $draft ? (string) ($draft['captain' . $teamNumber . '_token'] ?? '') : '';
     $isAdminFormationSave = $action === 'save_formation' && is_admin();
     if (!$isAdminFormationSave && ($expectedToken === '' || $token === '' || !hash_equals($expectedToken, $token))) {
         throw new RuntimeException('Token de capitan invalido.');
@@ -489,7 +556,7 @@ try {
         throw new RuntimeException('Ese jugador ya fue elegido.');
     }
 
-    $targetSize = (int) ($pdo->query('SELECT COUNT(*) FROM match_players WHERE match_id = ' . $matchId)->fetchColumn() / 2);
+    $targetSize = (int) ($pdo->query('SELECT COUNT(*) FROM match_players WHERE match_id = ' . $matchId)->fetchColumn() / captain_count($draft));
     $teamCountStmt = $pdo->prepare('SELECT COUNT(*) FROM match_players WHERE match_id = :mid AND team_number = :team');
     $teamCountStmt->execute(['mid' => $matchId, 'team' => $teamNumber]);
     if ((int) $teamCountStmt->fetchColumn() >= $targetSize) {
@@ -539,7 +606,7 @@ try {
     if ($remaining === 0) {
         finish_captain_draft($matchId);
     } else {
-        $nextTeam = $teamNumber === 1 ? 2 : 1;
+        $nextTeam = next_captain_team($draft, $teamNumber);
         $pdo->prepare('UPDATE captain_drafts SET current_team = :team WHERE match_id = :mid')
             ->execute(['team' => $nextTeam, 'mid' => $matchId]);
     }

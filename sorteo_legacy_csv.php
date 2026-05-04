@@ -158,7 +158,12 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     <div class="controls main-controls">
       <span id="teamDisplay" class="hidden"><?= h((string) $legacyNumTeams) ?></span>
       <span id="diffDisplay" class="hidden">0.5</span>
-      <button onclick="generarEquipos()">⚽ Generar Equipos</button>
+      <button id="generateTeamsButton" onclick="generarEquipos()">⚽ Generar Equipos</button>
+    </div>
+    <div id="generateTeamsLoading" class="draw-loading" role="status" aria-live="polite" hidden>
+      <strong>Generando equipos...</strong>
+      <span>Buscando la combinacion mas equilibrada. Esto puede tardar unos segundos.</span>
+      <div class="draw-loading-bar" aria-hidden="true"><span></span></div>
     </div>
     <div id="error" class="error"></div>
     <div id="success" class="success"></div>
@@ -558,12 +563,52 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       return posiciones.length === 1 && posiciones[0] === 'ARQ';
     }
 
+    function isEmergencyGoalkeeper(player) {
+      return player && player.emergencyGoalkeeper === true;
+    }
+
+    function prepareEmergencyGoalkeepers(players, numEquipos) {
+      const arqueros = players.filter(p => getOrderedPlayerPositions(p).includes('ARQ'));
+      const missing = Math.max(0, numEquipos - arqueros.length);
+      if (missing === 0) {
+        return { players, emergencyGoalkeepers: [] };
+      }
+
+      const emergencyIds = new Set(
+        players
+          .filter(p => !getOrderedPlayerPositions(p).includes('ARQ'))
+          .slice()
+          .sort((a, b) => (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre)))
+          .slice(0, missing)
+          .map(playerKey)
+      );
+
+      const prepared = players.map(player => {
+        if (!emergencyIds.has(playerKey(player))) {
+          return player;
+        }
+        return {
+          ...player,
+          posicion: `ARQ/${player.posicion}`,
+          emergencyGoalkeeper: true,
+        };
+      });
+
+      return {
+        players: prepared,
+        emergencyGoalkeepers: prepared.filter(player => emergencyIds.has(playerKey(player))),
+      };
+    }
+
     function buildTeamPositionAssignment(equipo) {
       const lineasCancha = ['ARQ', 'DEF', 'MED', 'DEL'];
       const maxPorLinea = MAX_FIELD_PLAYERS_PER_LINE;
       const candidatosArq = equipo
         .filter(jugador => getOrderedPlayerPositions(jugador).includes('ARQ'))
         .sort((a, b) => {
+          const emergencyA = isEmergencyGoalkeeper(a) ? 1 : 0;
+          const emergencyB = isEmergencyGoalkeeper(b) ? 1 : 0;
+          if (emergencyA !== emergencyB) return emergencyA - emergencyB;
           const pureA = isPureGoalkeeper(a) ? 0 : 1;
           const pureB = isPureGoalkeeper(b) ? 0 : 1;
           if (pureA !== pureB) return pureA - pureB;
@@ -571,7 +616,9 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
           return a.nombre.localeCompare(b.nombre);
         });
 
-      const arqueroTitular = candidatosArq[0] || null;
+      const arqueroTitular = candidatosArq[0]
+        || equipo.slice().sort((a, b) => (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre)))[0]
+        || null;
       const asignacion = new Map();
       const preferenciasPorJugador = new Map();
 
@@ -579,7 +626,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         const posiciones = getOrderedPlayerPositions(jugador);
         let preferencias = posiciones.slice();
 
-        if (jugador === arqueroTitular && posiciones.includes('ARQ')) {
+        if (jugador === arqueroTitular) {
           // El arquero titular queda fijo en el arco.
           preferencias = ['ARQ'];
         } else if (posiciones.includes('ARQ')) {
@@ -800,7 +847,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       }
       const arqueros = players.filter(p => p.posicion.includes('ARQ'));
       if (arqueros.length < numEquipos) {
-        return `Hay ${arqueros.length} jugadores que pueden atajar y se necesitan ${numEquipos}, uno por equipo.`;
+        return `Hay ${arqueros.length} arqueros naturales para ${numEquipos} equipos. Se completaran los arqueros faltantes con los jugadores de menor puntaje.`;
       }
       const arquerosPuros = arqueros.filter(isPureGoalkeeper);
       if (arquerosPuros.length > numEquipos) {
@@ -813,7 +860,24 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       return `No se encontro una combinacion que cumpla todas las reglas: diferencia maxima ${maxDiff.toFixed(1)}, 1 arquero por equipo, ritmo equilibrado, al menos DEF/MED/DEL y maximo ${MAX_FIELD_PLAYERS_PER_LINE} por linea.`;
     }
 
-    function generarEquipos() {
+    function setGeneratingTeams(isGenerating) {
+      const button = document.getElementById('generateTeamsButton');
+      const loading = document.getElementById('generateTeamsLoading');
+      if (button) {
+        button.disabled = isGenerating;
+        button.classList.toggle('is-loading', isGenerating);
+        button.textContent = isGenerating ? 'Generando...' : '⚽ Generar Equipos';
+      }
+      if (loading) {
+        loading.hidden = !isGenerating;
+      }
+    }
+
+    function waitForPaint() {
+      return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 20)));
+    }
+
+    async function generarEquipos() {
       const errorDiv = document.getElementById('error');
       const successDiv = document.getElementById('success');
       errorDiv.textContent = '';
@@ -822,7 +886,9 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       
       const numEquipos = parseInt(document.getElementById('teamDisplay').textContent);
       const maxDiff = parseFloat(document.getElementById('diffDisplay').textContent);
-      const selectedPlayers = LOCKED_MATCH_MODE ? jugadores.slice() : jugadores.filter(j => j.selected);
+      const rawSelectedPlayers = LOCKED_MATCH_MODE ? jugadores.slice() : jugadores.filter(j => j.selected);
+      const emergencyPreparation = prepareEmergencyGoalkeepers(rawSelectedPlayers, numEquipos);
+      const selectedPlayers = emergencyPreparation.players;
       
       if (isNaN(maxDiff) || maxDiff < 0) {
         errorDiv.textContent = 'La diferencia máxima debe ser un número positivo';
@@ -849,12 +915,6 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       }
       
       const arqueros = selectedPlayers.filter(p => p.posicion.includes('ARQ'));
-      if (arqueros.length < numEquipos) {
-        errorDiv.textContent = `Se necesitan mínimo ${numEquipos} arqueros`;
-        errorDiv.classList.remove('hidden');
-        return;
-      }
-      
       const arquerosPuros = arqueros.filter(isPureGoalkeeper);
       if (arquerosPuros.length > numEquipos) {
         errorDiv.textContent = `Hay ${arquerosPuros.length} arqueros puros para ${numEquipos} equipos. Debe haber como maximo 1 arquero puro por equipo.`;
@@ -862,6 +922,10 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         return;
       }
 
+      setGeneratingTeams(true);
+      await waitForPaint();
+
+      try {
       const resultado = generarEquiposConDiferenciaAuto(selectedPlayers, numEquipos, maxDiff);
       if (resultado) {
         const validation = validarEquiposDetalle(resultado.equipos, teamSize, Number(resultado.usedMaxDiff || maxDiff));
@@ -881,10 +945,17 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         if (!resultado.perfecto) {
           successDiv.textContent = `Se genero el mejor equilibrio encontrado. Diferencia de puntos: ${resultado.metricas.diffPuntos.toFixed(1)}.`;
         }
+        if (emergencyPreparation.emergencyGoalkeepers.length) {
+          const emergencyNames = emergencyPreparation.emergencyGoalkeepers.map(p => p.nombre).join(', ');
+          successDiv.textContent += ` Arqueros de emergencia: ${emergencyNames}.`;
+        }
         successDiv.classList.remove('hidden');
       } else {
         errorDiv.textContent = `No se encontro una combinacion valida aumentando la diferencia de a 0.5 hasta el maximo de 2.0 puntos. ${explicarBloqueoSorteo(selectedPlayers, numEquipos, 2)}`;
         errorDiv.classList.remove('hidden');
+      }
+      } finally {
+        setGeneratingTeams(false);
       }
     }
 

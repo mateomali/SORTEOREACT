@@ -453,11 +453,13 @@ function render_round_robin_winner_panel(array $winner, array $teamLabels): stri
 {
     $teamNumber = (int) ($winner['team_number'] ?? 0);
     $label = $teamLabels[$teamNumber] ?? ('Equipo ' . $teamNumber);
+    $points = (int) ($winner['points'] ?? 0);
     ob_start();
     ?>
     <div class="round-robin-winner-panel" role="status" data-round-robin-winner-panel>
       <span>GANADOR</span>
       <strong><?= finish_render_team_label($label) ?></strong>
+      <small><?= h((string) $points) ?> <?= $points === 1 ? 'punto' : 'puntos' ?></small>
     </div>
     <?php
     return (string) ob_get_clean();
@@ -758,8 +760,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
             $teamLabels = repo_match_team_labels($match, $teams);
             $winner = array_values($table)[0] ?? null;
             $winnerLabel = $winner ? ($teamLabels[(int) $winner['team_number']] ?? ('Equipo ' . (int) $winner['team_number'])) : '';
+            $winnerPoints = $winner ? (int) ($winner['points'] ?? 0) : 0;
             $message = $shouldCalculate && $winnerLabel !== ''
-                ? $winnerLabel
+                ? $winnerLabel . ' gano con ' . $winnerPoints . ' ' . ($winnerPoints === 1 ? 'punto' : 'puntos') . '.'
                 : 'Resultados parciales guardados.';
             finish_json_response([
                 'ok' => true,
@@ -866,13 +869,17 @@ require __DIR__ . '/includes/header.php';
             ? build_match_share_summary($selectedMatch, $matchTeams, $teamLabels, $groupedTeams, $awardDefinitions, $savedAwards)
             : '';
       ?>
-      <section class="card finish-score-shell">
+      <section class="finish-score-shell">
         <?php if ($isRoundRobinMatch): ?>
+          <details class="card finish-collapse finish-round-robin-fixture" data-round-robin-fixture-details <?= $scoreSaved ? '' : 'open' ?>>
+            <summary>
+              <span>Fixture todos contra todos</span>
+              <small><?= $scoreSaved ? 'Compactado' : 'Cargar resultados' ?></small>
+            </summary>
           <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>" data-round-robin-form>
             <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
             <div class="finish-score-head">
               <div>
-                <h3>Fixture todos contra todos</h3>
                 <p class="small-muted">Carga ida y vuelta. El sistema calcula puntos, diferencia de gol y goles totales por equipo.</p>
               </div>
             </div>
@@ -899,8 +906,9 @@ require __DIR__ . '/includes/header.php';
                       $leg = (int) $fixture['leg'];
                       $fixtureKey = round_robin_result_key($homeTeam, $awayTeam, $leg);
                       $fixtureScore = $roundRobinScores[$fixtureKey] ?? ['home' => null, 'away' => null];
+                      $fixtureSaved = $fixtureScore['home'] !== null && $fixtureScore['away'] !== null;
                     ?>
-                    <tr data-round-robin-row data-round-robin-leg="<?= (int) $leg ?>" data-round-robin-home="<?= $homeTeam ?>" data-round-robin-away="<?= $awayTeam ?>">
+                    <tr class="<?= $fixtureSaved ? 'is-round-robin-saved' : '' ?>" data-round-robin-row data-round-robin-leg="<?= (int) $leg ?>" data-round-robin-home="<?= $homeTeam ?>" data-round-robin-away="<?= $awayTeam ?>">
                       <td data-label="Cruce"><strong><?= $leg === 1 ? 'Ida' : 'Vuelta' ?></strong></td>
                       <td data-label="Local" class="round-robin-team-cell" data-team-number="<?= $homeTeam ?>"><?= finish_render_team_label($teamLabels[$homeTeam] ?? ('Equipo ' . $homeTeam)) ?></td>
                       <td data-label="Resultado">
@@ -912,7 +920,7 @@ require __DIR__ . '/includes/header.php';
                       </td>
                       <td data-label="Visitante" class="round-robin-team-cell" data-team-number="<?= $awayTeam ?>"><?= finish_render_team_label($teamLabels[$awayTeam] ?? ('Equipo ' . $awayTeam)) ?></td>
                       <td data-label="Guardar" class="round-robin-save-cell">
-                        <button class="btn btn-muted round-robin-row-save" type="submit" name="action" value="save_round_robin_scores">Guardar</button>
+                        <button class="btn <?= $fixtureSaved ? 'btn-primary is-saved' : 'btn-muted' ?> round-robin-row-save" type="submit" name="action" value="save_round_robin_scores"><?= $fixtureSaved ? 'Guardado' : 'Guardar' ?></button>
                       </td>
                     </tr>
                   <?php endforeach; ?>
@@ -933,7 +941,9 @@ require __DIR__ . '/includes/header.php';
               <?php endif; ?>
             </div>
           </form>
+          </details>
         <?php else: ?>
+          <div class="card">
           <form method="post">
             <input type="hidden" name="action" value="save_score">
             <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
@@ -962,6 +972,7 @@ require __DIR__ . '/includes/header.php';
               <?php endif; ?>
             </div>
           </form>
+          </div>
         <?php endif; ?>
       </section>
 
@@ -1087,7 +1098,7 @@ require __DIR__ . '/includes/header.php';
           </div>
         </details>
 
-        <div class="btn-row">
+        <div class="btn-row finish-valuations-actions">
           <button class="btn btn-primary" type="submit">GUARDAR VALORACIONES</button>
         </div>
       </form>

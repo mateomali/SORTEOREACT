@@ -15,6 +15,15 @@ Configura las credenciales desde variables de entorno antes de publicar:
 
 Si tu hosting usa otro host de MySQL, cambia `DB_HOST`.
 
+## Levantar servidor local
+Desde PowerShell:
+
+```powershell
+.\scripts\levantar-servidor-local.ps1
+```
+
+El script levanta MySQL de XAMPP si hace falta, inicia PHP desde `C:\xampp\php\php.exe` y muestra la URL local.
+
 ## 3) Flujo recomendado
 1. Cargar jugadores en `jugadores.php` o migrar desde CSV en `migrar_csv.php`.
 2. Crear partidos y convocados en `encuentros.php`.

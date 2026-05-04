@@ -29,6 +29,20 @@ function schema_index_exists(PDO $pdo, string $table, string $index): bool
     return (int) $stmt->fetchColumn() > 0;
 }
 
+function schema_column_type(PDO $pdo, string $table, string $column): string
+{
+    $stmt = $pdo->prepare(
+        'SELECT COLUMN_TYPE
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table_name
+           AND COLUMN_NAME = :column_name
+         LIMIT 1'
+    );
+    $stmt->execute(['table_name' => $table, 'column_name' => $column]);
+    return (string) ($stmt->fetchColumn() ?: '');
+}
+
 function schema_table_exists(PDO $pdo, string $table): bool
 {
     $stmt = $pdo->prepare(
@@ -74,8 +88,12 @@ function ensure_control_tables(PDO $pdo): array
                 match_id INT UNSIGNED PRIMARY KEY,
                 captain1_player_id INT UNSIGNED NOT NULL,
                 captain2_player_id INT UNSIGNED NOT NULL,
+                captain3_player_id INT UNSIGNED NULL,
+                captain4_player_id INT UNSIGNED NULL,
                 captain1_token VARCHAR(64) NOT NULL,
                 captain2_token VARCHAR(64) NOT NULL,
+                captain3_token VARCHAR(64) NULL,
+                captain4_token VARCHAR(64) NULL,
                 current_team TINYINT UNSIGNED NULL DEFAULT 1,
                 status ENUM('active', 'completed') NOT NULL DEFAULT 'active',
                 started_at DATETIME NULL,
@@ -91,6 +109,12 @@ function ensure_control_tables(PDO $pdo): array
                   ON DELETE RESTRICT ON UPDATE CASCADE,
                 CONSTRAINT fk_captain_drafts_captain2
                   FOREIGN KEY (captain2_player_id) REFERENCES players(id)
+                  ON DELETE RESTRICT ON UPDATE CASCADE,
+                CONSTRAINT fk_captain_drafts_captain3
+                  FOREIGN KEY (captain3_player_id) REFERENCES players(id)
+                  ON DELETE RESTRICT ON UPDATE CASCADE,
+                CONSTRAINT fk_captain_drafts_captain4
+                  FOREIGN KEY (captain4_player_id) REFERENCES players(id)
                   ON DELETE RESTRICT ON UPDATE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
@@ -167,6 +191,19 @@ function schema_add_index(PDO $pdo, string $table, string $index, string $defini
     return true;
 }
 
+function schema_ensure_draw_mode_manual(PDO $pdo): bool
+{
+    if (!schema_column_exists($pdo, 'matches', 'draw_mode')) {
+        return false;
+    }
+    $type = schema_column_type($pdo, 'matches', 'draw_mode');
+    if (str_contains($type, "'manual'")) {
+        return false;
+    }
+    $pdo->exec("ALTER TABLE matches MODIFY draw_mode ENUM('none', 'random', 'captains', 'manual') NOT NULL DEFAULT 'none'");
+    return true;
+}
+
 function ensure_control_schema(): array
 {
     $pdo = db();
@@ -180,7 +217,7 @@ function ensure_control_schema(): array
         ['matches', 'notes', 'notes TEXT NULL AFTER public_token'],
         ['matches', 'created_at', 'created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'],
         ['matches', 'updated_at', 'updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'],
-        ['matches', 'draw_mode', "draw_mode ENUM('none', 'random', 'captains') NOT NULL DEFAULT 'none' AFTER status"],
+        ['matches', 'draw_mode', "draw_mode ENUM('none', 'random', 'captains', 'manual') NOT NULL DEFAULT 'none' AFTER status"],
         ['matches', 'draw_started_at', 'draw_started_at DATETIME NULL AFTER draw_mode'],
         ['matches', 'draw_completed_at', 'draw_completed_at DATETIME NULL AFTER draw_started_at'],
         ['matches', 'finalized_at', 'finalized_at DATETIME NULL AFTER draw_completed_at'],
@@ -199,6 +236,10 @@ function ensure_control_schema(): array
         ['captain_drafts', 'started_at', 'started_at DATETIME NULL AFTER status'],
         ['captain_drafts', 'completed_at', 'completed_at DATETIME NULL AFTER started_at'],
         ['captain_drafts', 'turn_version', 'turn_version INT UNSIGNED NOT NULL DEFAULT 0 AFTER completed_at'],
+        ['captain_drafts', 'captain3_player_id', 'captain3_player_id INT UNSIGNED NULL AFTER captain2_player_id'],
+        ['captain_drafts', 'captain4_player_id', 'captain4_player_id INT UNSIGNED NULL AFTER captain3_player_id'],
+        ['captain_drafts', 'captain3_token', 'captain3_token VARCHAR(64) NULL AFTER captain2_token'],
+        ['captain_drafts', 'captain4_token', 'captain4_token VARCHAR(64) NULL AFTER captain3_token'],
         ['match_awards', 'notes', 'notes VARCHAR(255) NULL AFTER player_id'],
     ];
 
@@ -206,6 +247,10 @@ function ensure_control_schema(): array
         if (schema_add_column($pdo, $table, $column, $definition)) {
             $changes[] = "column {$table}.{$column}";
         }
+    }
+
+    if (schema_ensure_draw_mode_manual($pdo)) {
+        $changes[] = 'enum matches.draw_mode manual';
     }
 
     $indexes = [

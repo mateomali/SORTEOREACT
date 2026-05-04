@@ -23,6 +23,38 @@ function is_pure_goalkeeper(array $player): bool
     return count($positions) === 1 && $positions[0] === 'ARQ';
 }
 
+function is_emergency_goalkeeper(array $player): bool
+{
+    return !empty($player['emergency_goalkeeper']);
+}
+
+function prepare_emergency_goalkeepers(array $players, int $numTeams): array
+{
+    $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
+    $missing = max(0, $numTeams - count($goalkeepers));
+    if ($missing === 0) {
+        return $players;
+    }
+
+    $candidates = array_values(array_filter($players, static fn(array $p): bool => !in_array('ARQ', ordered_player_positions($p), true)));
+    usort($candidates, static function (array $a, array $b): int {
+        if ((float) $a['skill'] !== (float) $b['skill']) {
+            return (float) $a['skill'] <=> (float) $b['skill'];
+        }
+        return strcmp((string) $a['name'], (string) $b['name']);
+    });
+
+    $emergencyIds = array_flip(array_map(static fn(array $p): int => (int) $p['id'], array_slice($candidates, 0, $missing)));
+    return array_map(static function (array $player) use ($emergencyIds): array {
+        if (!isset($emergencyIds[(int) $player['id']])) {
+            return $player;
+        }
+        $player['positions'] = 'ARQ/' . (string) ($player['positions'] ?? '');
+        $player['emergency_goalkeeper'] = true;
+        return $player;
+    }, $players);
+}
+
 function build_team_position_assignment(array $team): array
 {
     $lines = ['ARQ', 'DEF', 'MED', 'DEL'];
@@ -30,6 +62,11 @@ function build_team_position_assignment(array $team): array
 
     $candidates = array_values(array_filter($team, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
     usort($candidates, static function (array $a, array $b): int {
+        $emergencyA = is_emergency_goalkeeper($a) ? 1 : 0;
+        $emergencyB = is_emergency_goalkeeper($b) ? 1 : 0;
+        if ($emergencyA !== $emergencyB) {
+            return $emergencyA <=> $emergencyB;
+        }
         $pureA = is_pure_goalkeeper($a) ? 0 : 1;
         $pureB = is_pure_goalkeeper($b) ? 0 : 1;
         if ($pureA !== $pureB) {
@@ -42,6 +79,16 @@ function build_team_position_assignment(array $team): array
     });
 
     $goalkeeperId = $candidates[0]['id'] ?? null;
+    if ($goalkeeperId === null && $team) {
+        $fallback = $team;
+        usort($fallback, static function (array $a, array $b): int {
+            if ((float) $a['skill'] !== (float) $b['skill']) {
+                return (float) $a['skill'] <=> (float) $b['skill'];
+            }
+            return strcmp((string) $a['name'], (string) $b['name']);
+        });
+        $goalkeeperId = $fallback[0]['id'] ?? null;
+    }
     $assignment = [];
     $preferences = [];
 
@@ -50,7 +97,7 @@ function build_team_position_assignment(array $team): array
         $pos = ordered_player_positions($player);
         $pref = $pos;
 
-        if ($goalkeeperId !== null && $id === (int) $goalkeeperId && in_array('ARQ', $pos, true)) {
+        if ($goalkeeperId !== null && $id === (int) $goalkeeperId) {
             $pref = ['ARQ'];
         } elseif (in_array('ARQ', $pos, true)) {
             $pref = array_values(array_filter($pos, static fn(string $line): bool => $line !== 'ARQ'));
@@ -265,11 +312,9 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
         return null;
     }
     $teamSize = (int) ($totalPlayers / $numTeams);
+    $players = prepare_emergency_goalkeepers($players, $numTeams);
 
     $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
-    if (count($goalkeepers) < $numTeams) {
-        return null;
-    }
 
     for ($try = 0; $try < $attempts; $try++) {
         $gkPool = $goalkeepers;
