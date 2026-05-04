@@ -1,5 +1,4 @@
 DirectoryIndex index.php
-Options -Indexes
 
 <FilesMatch "^(config\.php|database\.sql|jugadores\.csv|package(-lock)?\.json|README\.md)$">
   <IfModule mod_authz_core.c>

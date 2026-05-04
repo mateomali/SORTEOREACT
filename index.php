@@ -844,6 +844,12 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 
   <?php if (!$showHistoryPage): ?>
+  <?php
+    $hideDuplicateLiveCaptainDetail = isset($headerShowCaptainLive, $headerMatch)
+        && $headerShowCaptainLive
+        && (int) $selectedMatchId === (int) $headerMatch['id'];
+  ?>
+  <?php if (!$hideDuplicateLiveCaptainDetail): ?>
   <article class="card match-detail">
     <?php if (!$selectedMatch): ?>
       <h3>Detalle</h3>
@@ -1038,6 +1044,7 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </article>
   <?php endif; ?>
+  <?php endif; ?>
 </section>
 
 <?php if ($showHistoryPage): ?>
@@ -1091,7 +1098,6 @@ require __DIR__ . '/includes/header.php';
     const matchId = parseInt(root.dataset.matchId || '0', 10);
     const status = root.querySelector('[data-public-captain-status]');
     const teamsRoot = root.querySelector('[data-public-captain-teams]');
-    const formationRoot = document.querySelector('[data-public-captain-formation]');
     let stopped = false;
 
     const escapeHtml = (value) => String(value || '')
@@ -1155,9 +1161,6 @@ require __DIR__ . '/includes/header.php';
 
       const teamsHtml = renderTeamCard(state, 1) + renderTeamCard(state, 2);
       teamsRoot.innerHTML = teamsHtml;
-      if (formationRoot) {
-        formationRoot.innerHTML = teamsHtml;
-      }
 
       const availableCount = Array.isArray(state.available) ? state.available.length : 0;
       if (state.draft?.status === 'completed') {
