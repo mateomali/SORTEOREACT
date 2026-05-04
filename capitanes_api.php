@@ -175,7 +175,9 @@ function captain_state(int $matchId): array
 
     $draft = captain_draft_row($matchId);
     if (!$draft) {
-        return ['ok' => false, 'message' => 'No hay modo capitanes iniciado para este partido'];
+        if (!is_admin() || !in_array((string) ($match['status'] ?? ''), ['sorteado', 'finalizado'], true)) {
+            return ['ok' => false, 'message' => 'No hay modo capitanes iniciado para este partido'];
+        }
     }
 
     $participants = repo_match_participants($matchId);
@@ -238,7 +240,13 @@ function captain_state(int $matchId): array
         return strcmp((string) $a['name'], (string) $b['name']);
     });
 
-    $pickRule = captain_pick_rule($matchId, $available, $draft);
+    $pickRule = $draft ? captain_pick_rule($matchId, $available, $draft) : [
+        'active' => false,
+        'enforced' => false,
+        'mode' => 'admin_formations',
+        'allowed_ids' => [],
+        'message' => '',
+    ];
     $allowedLookup = array_flip(array_map('intval', $pickRule['allowed_ids'] ?? []));
     foreach ($available as &$player) {
         $player['pick_allowed'] = !$pickRule['enforced'] || isset($allowedLookup[(int) $player['id']]);
@@ -246,7 +254,8 @@ function captain_state(int $matchId): array
     unset($player);
 
     $targetTeamSize = count($participants) > 0 ? (int) (count($participants) / 2) : 0;
-    $currentTeam = $draft['current_team'] !== null ? (int) $draft['current_team'] : null;
+    $currentTeam = $draft && $draft['current_team'] !== null ? (int) $draft['current_team'] : null;
+    $teamLabels = repo_match_team_labels($match, repo_match_teams($matchId));
 
     return [
         'ok' => true,
@@ -260,12 +269,20 @@ function captain_state(int $matchId): array
             'can_edit_formations' => can_edit_captain_formation($match),
         ],
         'draft' => [
-            'status' => (string) $draft['status'],
+            'status' => $draft ? (string) $draft['status'] : 'completed',
             'current_team' => $currentTeam,
-            'current_captain' => $currentTeam === 1 ? (string) $draft['captain1_name'] : ($currentTeam === 2 ? (string) $draft['captain2_name'] : ''),
+            'current_captain' => $draft
+                ? ($currentTeam === 1 ? (string) $draft['captain1_name'] : ($currentTeam === 2 ? (string) $draft['captain2_name'] : ''))
+                : '',
             'captains' => [
-                1 => ['id' => (int) $draft['captain1_player_id'], 'name' => (string) $draft['captain1_name']],
-                2 => ['id' => (int) $draft['captain2_player_id'], 'name' => (string) $draft['captain2_name']],
+                1 => [
+                    'id' => $draft ? (int) $draft['captain1_player_id'] : 0,
+                    'name' => $draft ? (string) $draft['captain1_name'] : (string) ($teamLabels[1] ?? 'Equipo 1'),
+                ],
+                2 => [
+                    'id' => $draft ? (int) $draft['captain2_player_id'] : 0,
+                    'name' => $draft ? (string) $draft['captain2_name'] : (string) ($teamLabels[2] ?? 'Equipo 2'),
+                ],
             ],
         ],
         'teams' => $teams,
@@ -377,7 +394,7 @@ try {
     $stmt = $pdo->prepare('SELECT * FROM captain_drafts WHERE match_id = :mid FOR UPDATE');
     $stmt->execute(['mid' => $matchId]);
     $draft = $stmt->fetch();
-    if (!$draft) {
+    if (!$draft && !($action === 'save_formation' && is_admin())) {
         throw new RuntimeException('No hay draft de capitanes para este partido.');
     }
     if ($action === 'pick' && $draft['status'] !== 'active') {
@@ -387,9 +404,10 @@ try {
         throw new RuntimeException('No es el turno de este capitan.');
     }
 
-    $captainId = $teamNumber === 1 ? (int) $draft['captain1_player_id'] : (int) $draft['captain2_player_id'];
-    $expectedToken = $teamNumber === 1 ? (string) ($draft['captain1_token'] ?? '') : (string) ($draft['captain2_token'] ?? '');
-    if ($expectedToken === '' || $token === '' || !hash_equals($expectedToken, $token)) {
+    $captainId = $draft ? ($teamNumber === 1 ? (int) $draft['captain1_player_id'] : (int) $draft['captain2_player_id']) : 0;
+    $expectedToken = $draft ? ($teamNumber === 1 ? (string) ($draft['captain1_token'] ?? '') : (string) ($draft['captain2_token'] ?? '')) : '';
+    $isAdminFormationSave = $action === 'save_formation' && is_admin();
+    if (!$isAdminFormationSave && ($expectedToken === '' || $token === '' || !hash_equals($expectedToken, $token))) {
         throw new RuntimeException('Token de capitan invalido.');
     }
 
@@ -398,8 +416,11 @@ try {
         if (!$match) {
             throw new RuntimeException('Partido no encontrado.');
         }
-        if ((string) $draft['status'] !== 'completed') {
+        if ($draft && (string) $draft['status'] !== 'completed') {
             throw new RuntimeException('La formacion se puede ajustar cuando el draft esta completo.');
+        }
+        if (!$draft && !in_array((string) ($match['status'] ?? ''), ['sorteado', 'finalizado'], true)) {
+            throw new RuntimeException('La formacion se puede ajustar cuando los equipos ya estan generados.');
         }
         if (!can_edit_captain_formation($match)) {
             throw new RuntimeException('La formacion ya no se puede editar porque el partido esta finalizado.');

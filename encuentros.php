@@ -636,7 +636,7 @@ function admin_history_team_label(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => '🩷',
+        'ROSA' => '💗',
         'AZUL' => '💙',
         'VERDE' => '💚',
         'NEGRO' => '🖤',
@@ -1119,6 +1119,7 @@ require __DIR__ . '/includes/header.php';
         $latestIsScheduled = (string) $latestMatch['status'] === 'programado';
         $latestCanFinalize = (string) $latestMatch['status'] === 'sorteado';
         $latestIsFinalized = (string) $latestMatch['status'] === 'finalizado';
+        $latestCanEditCaptainFormation = $latestCanFinalize;
         $latestPlayersPerTeam = (int) ($latestMatch['players_per_team'] ?? ((int) $latestMatch['participants_count'] / max(1, (int) $latestMatch['num_teams'])));
         $latestExpectedPlayers = (int) $latestMatch['num_teams'] * max(1, $latestPlayersPerTeam);
         $latestParticipantsCount = (int) $latestMatch['participants_count'];
@@ -1144,6 +1145,9 @@ require __DIR__ . '/includes/header.php';
             <a class="btn btn-warning" href="sorteo_legacy_csv.php?match_id=<?= $latestId ?>">Sortear</a>
             <a class="btn btn-primary" href="capitanes.php?match_id=<?= $latestId ?>">Capitanes</a>
           <?php elseif ($latestCanFinalize): ?>
+            <?php if ($latestCanEditCaptainFormation): ?>
+              <a class="btn btn-muted" href="capitanes.php?match_id=<?= $latestId ?>#formacion">Formaciones</a>
+            <?php endif; ?>
             <a class="btn btn-primary" href="finalizar_partido.php?match_id=<?= $latestId ?>">Cargar resultado</a>
           <?php elseif ($latestIsFinalized): ?>
             <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>">Ver resultado</a>
@@ -1164,6 +1168,7 @@ require __DIR__ . '/includes/header.php';
           $canFinalize = (string) $m['status'] === 'sorteado';
           $isFinalized = (string) $m['status'] === 'finalizado';
           $isScheduled = (string) $m['status'] === 'programado';
+          $canEditCaptainFormation = $canFinalize;
           $matchId = (int) $m['id'];
           $cardPage = intdiv($matchIndex, $matchesPerPage) + 1;
           $participantsCount = (int) $m['participants_count'];
@@ -1241,7 +1246,11 @@ require __DIR__ . '/includes/header.php';
             <?php else: ?>
               <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
               <span class="btn btn-disabled icon-dice" data-short=""><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
-              <span class="btn btn-disabled icon-captain" data-short="">Capitanes</span>
+              <?php if ($canEditCaptainFormation): ?>
+                <a class="btn btn-muted icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>#formacion">Formaciones</a>
+              <?php else: ?>
+                <span class="btn btn-disabled icon-captain" data-short="">Capitanes</span>
+              <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($canFinalize): ?>
@@ -1274,6 +1283,8 @@ require __DIR__ . '/includes/header.php';
                 <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar partido</a>
                 <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear equipos</a>
                 <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
+              <?php elseif ($canEditCaptainFormation): ?>
+                <a class="btn btn-muted icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>#formacion">Editar formaciones</a>
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>

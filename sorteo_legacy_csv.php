@@ -303,7 +303,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function getTeamColorHeart(colorName) {
       const hearts = {
-        ROSA: '🩷',
+        ROSA: '💗',
         AZUL: '💙',
         VERDE: '💚',
         NEGRO: '🖤',

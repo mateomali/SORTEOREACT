@@ -27,6 +27,48 @@ function backup_tables(): array
     ];
 }
 
+function backup_import_sections(): array
+{
+    return [
+        'players' => [
+            'label' => 'Jugadores',
+            'description' => 'Plantilla de jugadores y sus datos actuales.',
+            'tables' => ['players'],
+        ],
+        'matches' => [
+            'label' => 'Partidos completos',
+            'description' => 'Partidos, convocados, equipos, resultados, premios y capitanes.',
+            'tables' => [
+                'matches',
+                'match_players',
+                'match_teams',
+                'match_awards',
+                'captain_drafts',
+                'captain_picks',
+            ],
+        ],
+    ];
+}
+
+function backup_tables_for_sections(array $sectionKeys): array
+{
+    $sections = backup_import_sections();
+    $selected = [];
+    foreach ($sectionKeys as $key) {
+        if (!isset($sections[$key])) {
+            continue;
+        }
+        foreach ($sections[$key]['tables'] as $table) {
+            $selected[$table] = true;
+        }
+    }
+
+    return array_values(array_filter(
+        backup_tables(),
+        static fn(string $table): bool => isset($selected[$table])
+    ));
+}
+
 function table_exists(PDO $pdo, string $table): bool
 {
     $stmt = $pdo->prepare(
@@ -155,15 +197,23 @@ function read_csv_from_zip(ZipArchive $zip, string $table): ?array
     return ['columns' => array_map('strval', $headers), 'rows' => $rows];
 }
 
-function import_backup_zip(PDO $pdo, string $path): array
+function import_backup_zip(PDO $pdo, string $path, array $selectedTables): array
 {
+    $selectedTables = array_values(array_filter(
+        backup_tables(),
+        static fn(string $table): bool => in_array($table, $selectedTables, true)
+    ));
+    if (!$selectedTables) {
+        throw new RuntimeException('Selecciona al menos una seccion para importar.');
+    }
+
     $zip = new ZipArchive();
     if ($zip->open($path) !== true) {
         throw new RuntimeException('No se pudo abrir el archivo ZIP.');
     }
 
     $importData = [];
-    foreach (backup_tables() as $table) {
+    foreach ($selectedTables as $table) {
         $csv = read_csv_from_zip($zip, $table);
         if ($csv !== null) {
             $importData[$table] = $csv;
@@ -179,6 +229,9 @@ function import_backup_zip(PDO $pdo, string $path): array
     try {
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
         foreach (array_reverse(backup_tables()) as $table) {
+            if (!in_array($table, $selectedTables, true)) {
+                continue;
+            }
             if (table_exists($pdo, $table)) {
                 $pdo->exec('DELETE FROM `' . str_replace('`', '``', $table) . '`');
             }
@@ -186,7 +239,7 @@ function import_backup_zip(PDO $pdo, string $path): array
 
         $counts = [];
         foreach (backup_tables() as $table) {
-            if (!isset($importData[$table])) {
+            if (!in_array($table, $selectedTables, true) || !isset($importData[$table])) {
                 continue;
             }
             $availableColumns = table_columns($pdo, $table);
@@ -234,12 +287,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
         if (empty($_POST['confirm_restore'])) {
             throw new RuntimeException('Confirma que quieres reemplazar la base actual.');
         }
-        $counts = import_backup_zip($pdo, (string) $_FILES['backup_file']['tmp_name']);
+        $sectionKeys = $_POST['import_sections'] ?? [];
+        if (!is_array($sectionKeys)) {
+            $sectionKeys = [];
+        }
+        $selectedTables = backup_tables_for_sections(array_map('strval', $sectionKeys));
+        $counts = import_backup_zip($pdo, (string) $_FILES['backup_file']['tmp_name'], $selectedTables);
         $summary = [];
         foreach ($counts as $table => $count) {
             $summary[] = $table . ': ' . $count;
         }
-        flash('success', 'Backup importado. ' . implode(' | ', $summary));
+        flash('success', 'Backup importado parcialmente. ' . implode(' | ', $summary));
     } catch (Throwable $e) {
         flash('error', 'No se pudo importar el backup: ' . $e->getMessage());
     }
@@ -262,7 +320,7 @@ require __DIR__ . '/includes/header.php';
 <section class="page-head">
   <div>
     <h1>Backup</h1>
-    <p class="small-muted">Exporta o importa una copia completa de la base de datos del sistema.</p>
+    <p class="small-muted">Exporta una copia completa o importa solo las secciones que necesites recuperar.</p>
   </div>
 </section>
 
@@ -278,19 +336,33 @@ require __DIR__ . '/includes/header.php';
 
   <article class="card">
     <h3>Importar backup</h3>
-    <p class="small-muted">Reemplaza la base actual con los datos del backup. Usa solamente archivos generados por esta pantalla.</p>
+    <p class="small-muted">Reemplaza solamente las secciones marcadas. Usa archivos generados por esta pantalla.</p>
     <form method="post" enctype="multipart/form-data" class="form-grid">
       <input type="hidden" name="action" value="import_backup">
       <div class="form-row">
         <label for="backupFile">Archivo backup .zip</label>
         <input id="backupFile" type="file" name="backup_file" accept=".zip,application/zip" required>
       </div>
+      <div class="form-row">
+        <label>Que importar</label>
+        <div class="backup-section-list">
+          <?php foreach (backup_import_sections() as $sectionKey => $section): ?>
+            <label class="inline-check">
+              <input type="checkbox" name="import_sections[]" value="<?= h($sectionKey) ?>" checked>
+              <span>
+                <strong><?= h($section['label']) ?></strong>
+                <span class="small-muted"><?= h($section['description']) ?></span>
+              </span>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
       <label class="inline-check">
         <input type="checkbox" name="confirm_restore" value="1" required>
-        Reemplazar la base actual con este backup
+        Reemplazar las secciones seleccionadas con este backup
       </label>
       <div class="btn-row">
-        <button class="btn btn-danger" type="submit" data-confirm="Esta accion reemplaza la base actual. Continuar?">Importar backup</button>
+        <button class="btn btn-danger" type="submit" data-confirm="Esta accion reemplaza las secciones seleccionadas. Continuar?">Importar seleccion</button>
       </div>
     </form>
   </article>

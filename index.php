@@ -327,7 +327,7 @@ function history_team_label_short(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => '🩷',
+        'ROSA' => '💗',
         'AZUL' => '💙',
         'VERDE' => '💚',
         'NEGRO' => '🖤',

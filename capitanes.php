@@ -253,6 +253,10 @@ if ($selectedMatch) {
         ]);
     }
 }
+$generatedTeams = $selectedMatch ? repo_match_teams((int) $selectedMatch['id']) : [];
+$hasGeneratedTeams = $selectedMatch
+    && in_array((string) ($selectedMatch['status'] ?? ''), ['sorteado', 'finalizado'], true)
+    && count($generatedTeams) >= 2;
 
 $captain1Name = 'Capitan 1';
 $captain2Name = 'Capitan 2';
@@ -307,7 +311,7 @@ require __DIR__ . '/includes/header.php';
 </section>
 <?php endif; ?>
 
-<?php if ($selectedMatch && !$draft && !$isCaptainView): ?>
+<?php if ($selectedMatch && !$draft && !$hasGeneratedTeams && !$isCaptainView): ?>
   <section class="card">
     <h3>Iniciar draft</h3>
     <form method="post" class="form-grid">
@@ -336,43 +340,57 @@ require __DIR__ . '/includes/header.php';
       </div>
     </form>
   </section>
-<?php elseif ($selectedMatch && $draft): ?>
+<?php elseif ($selectedMatch && ($draft || $hasGeneratedTeams)): ?>
   <?php if (!$isCaptainView): ?>
   <section class="card mb-3.5">
     <h3><?= h((string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']))) ?></h3>
-    <p class="small-muted">Pasa estos tokens a cada capitan. Desde Inicio pueden tocar Soy capitan, pegar el token y entrar a elegir.</p>
-    <div class="grid cols-2 mb-3">
-      <div class="stat-box">
-        <div class="label">Token <?= h($captain1Name) ?></div>
-        <input type="text" readonly value="<?= h((string) ($draft['captain1_token'] ?? '')) ?>" onclick="this.select()">
-        <div class="captain-link-actions">
-          <button class="btn btn-primary" type="button" data-share-token="<?= h($captain1ShareText) ?>">Compartir</button>
-          <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain1_token'] ?? '')) ?>">Copiar</button>
-          <a class="btn btn-muted" href="<?= h($captain1OpenUrl) ?>">Abrir</a>
+    <?php if ($draft): ?>
+      <p class="small-muted">Pasa estos tokens a cada capitan. Desde Inicio pueden tocar Soy capitan, pegar el token y entrar a elegir.</p>
+      <div class="grid cols-2 mb-3">
+        <div class="stat-box">
+          <div class="label">Token <?= h($captain1Name) ?></div>
+          <input type="text" readonly value="<?= h((string) ($draft['captain1_token'] ?? '')) ?>" onclick="this.select()">
+          <div class="captain-link-actions">
+            <button class="btn btn-primary" type="button" data-share-token="<?= h($captain1ShareText) ?>">Compartir</button>
+            <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain1_token'] ?? '')) ?>">Copiar</button>
+            <a class="btn btn-muted" href="<?= h($captain1OpenUrl) ?>">Abrir</a>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Token <?= h($captain2Name) ?></div>
+          <input type="text" readonly value="<?= h((string) ($draft['captain2_token'] ?? '')) ?>" onclick="this.select()">
+          <div class="captain-link-actions">
+            <button class="btn btn-primary" type="button" data-share-token="<?= h($captain2ShareText) ?>">Compartir</button>
+            <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain2_token'] ?? '')) ?>">Copiar</button>
+            <a class="btn btn-muted" href="<?= h($captain2OpenUrl) ?>">Abrir</a>
+          </div>
         </div>
       </div>
-      <div class="stat-box">
-        <div class="label">Token <?= h($captain2Name) ?></div>
-        <input type="text" readonly value="<?= h((string) ($draft['captain2_token'] ?? '')) ?>" onclick="this.select()">
-        <div class="captain-link-actions">
-          <button class="btn btn-primary" type="button" data-share-token="<?= h($captain2ShareText) ?>">Compartir</button>
-          <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain2_token'] ?? '')) ?>">Copiar</button>
-          <a class="btn btn-muted" href="<?= h($captain2OpenUrl) ?>">Abrir</a>
-        </div>
-      </div>
-    </div>
+    <?php else: ?>
+      <p class="small-muted">Equipos generados. Como admin podes ajustar formaciones, usar presets y arrastrar jugadores en ambos equipos.</p>
+    <?php endif; ?>
     <div class="btn-row">
       <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>">Ver equipos</a>
-      <form method="post" class="inline">
-        <input type="hidden" name="action" value="reset_draft">
-        <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
-        <button class="btn btn-danger" type="submit" data-confirm="Reiniciar el draft de capitanes?">Reiniciar</button>
-      </form>
+      <?php if ($draft): ?>
+        <form method="post" class="inline">
+          <input type="hidden" name="action" value="reset_draft">
+          <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+          <button class="btn btn-danger" type="submit" data-confirm="Reiniciar el draft de capitanes?">Reiniciar</button>
+        </form>
+      <?php endif; ?>
     </div>
   </section>
   <?php endif; ?>
 
-  <section class="captain-board" id="formacion" data-match-id="<?= (int) $selectedMatch['id'] ?>" data-team-view="<?= in_array($teamView, [1, 2], true) ? $teamView : 0 ?>" data-token="<?= h($captainToken) ?>" data-view-mode="<?= h($viewMode) ?>">
+  <section
+    class="captain-board"
+    id="formacion"
+    data-match-id="<?= (int) $selectedMatch['id'] ?>"
+    data-team-view="<?= in_array($teamView, [1, 2], true) ? $teamView : 0 ?>"
+    data-token="<?= h($captainToken) ?>"
+    data-view-mode="<?= h($viewMode) ?>"
+    data-admin-editor="<?= (!$isCaptainView && is_admin()) ? '1' : '0' ?>"
+  >
     <div class="captain-waiting-panel" id="captainWaitingPanel" hidden>
       <div class="captain-waiting-card" role="status" aria-live="polite">
         <span class="captain-waiting-kicker">Modo capitanes</span>
@@ -463,6 +481,7 @@ require __DIR__ . '/includes/header.php';
       const teamView = parseInt(board.dataset.teamView, 10);
       const captainToken = board.dataset.token || '';
       const viewMode = board.dataset.viewMode || '';
+      const adminEditor = board.dataset.adminEditor === '1';
       const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
       let state = null;
       const formationDrafts = {};
@@ -518,9 +537,10 @@ require __DIR__ . '/includes/header.php';
         return state
           && state.ok
           && state.draft.status === 'completed'
-          && teamView > 0
-          && captainToken !== ''
-          && viewMode === 'formacion';
+          && (
+            (teamView > 0 && captainToken !== '' && viewMode === 'formacion')
+            || adminEditor
+          );
       };
 
       const stopAutoRefresh = () => {
@@ -919,8 +939,12 @@ require __DIR__ . '/includes/header.php';
           && teamView === teamNumber
           && state.draft.status === 'completed'
           && state.match.can_edit_formations;
-        container.innerHTML = canEditFormation ? renderFormationEditor(teamNumber, players) : renderReadonlyTeam(players);
-        if (canEditFormation) {
+        const canAdminEditFormation = adminEditor
+          && state.draft.status === 'completed'
+          && state.match.can_edit_formations;
+        const canEditThisFormation = canEditFormation || canAdminEditFormation;
+        container.innerHTML = canEditThisFormation ? renderFormationEditor(teamNumber, players) : renderReadonlyTeam(players);
+        if (canEditThisFormation) {
           renderFormationLines(container, players);
           renderCustomFormationControls(container, players);
           container.querySelector('[data-save-formation]').addEventListener('click', () => saveFormation(teamNumber, container));
@@ -975,14 +999,15 @@ require __DIR__ . '/includes/header.php';
         const turn = document.getElementById('draftTurn');
         const formationHint = document.getElementById('draftFormationHint');
         const canShowFormationHint = state.draft.status === 'completed'
-          && teamView > 0
-          && captainToken !== ''
+          && ((teamView > 0 && captainToken !== '') || adminEditor)
           && state.match.can_edit_formations;
         if (formationHint) {
           formationHint.hidden = !canShowFormationHint;
         }
         if (state.draft.status === 'completed') {
-          if (teamView > 0 && captainToken !== '' && state.match.can_edit_formations) {
+          if (adminEditor && state.match.can_edit_formations) {
+            turn.innerHTML = 'Draft completo. Como admin podes reorganizar la formacion de ambos equipos y guardar cada una.';
+          } else if (teamView > 0 && captainToken !== '' && state.match.can_edit_formations) {
             turn.innerHTML = 'Draft completo. Ajusta la formacion de tu equipo y toca Guardar formacion.';
           } else if (teamView > 0 && captainToken !== '') {
             turn.innerHTML = 'Draft completo. La formacion ya no se puede editar porque el partido esta finalizado.';
@@ -1008,7 +1033,7 @@ require __DIR__ . '/includes/header.php';
           card.toggleAttribute('hidden', formationOnly && cardTeam !== teamView);
         });
         renderAvailable();
-        document.querySelector('#availablePots')?.closest('.card')?.toggleAttribute('hidden', state.draft.status === 'completed' && teamView > 0 && captainToken !== '');
+        document.querySelector('#availablePots')?.closest('.card')?.toggleAttribute('hidden', state.draft.status === 'completed' && ((teamView > 0 && captainToken !== '') || adminEditor));
       };
 
       const shouldRedirectToFormation = () => {
