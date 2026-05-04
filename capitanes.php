@@ -283,6 +283,10 @@ if ($selectedMatch && $draft) {
 
 $title = 'Capitanes | ' . APP_NAME;
 $activePage = 'capitanes.php';
+$backUrl = $isCaptainView
+    ? 'index.php'
+    : 'editar_partidos.php' . ($selectedMatch ? '#partido-admin-' . (int) $selectedMatch['id'] : '');
+$backLabel = $isCaptainView ? 'Volver al inicio' : 'Volver a partidos';
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -291,6 +295,7 @@ require __DIR__ . '/includes/header.php';
     <h1><?= $isCaptainView ? 'Eleccion de capitan' : 'Modo capitanes' ?></h1>
     <p class="small-muted"><?= $isCaptainView ? 'Espera tu turno y elige un jugador.' : 'Draft remoto por turnos sobre los convocados del partido.' ?></p>
   </div>
+  <a class="btn btn-muted" href="<?= h($backUrl) ?>"><?= h($backLabel) ?></a>
 </section>
 
 <?php if (!$isCaptainView): ?>

@@ -784,15 +784,15 @@ require __DIR__ . '/includes/header.php';
 
 <?php if ($showEditSection): ?>
 <section class="encounters-overview">
-  <article class="stat-box">
+  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="programado" aria-pressed="false">
     <div class="label">Programados</div>
     <div class="value"><?= h((string) $scheduledCount) ?></div>
   </article>
-  <article class="stat-box">
+  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="sorteado" aria-pressed="false">
     <div class="label">Listos para finalizar</div>
     <div class="value"><?= h((string) $readyCount) ?></div>
   </article>
-  <article class="stat-box">
+  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="finalizado" aria-pressed="false">
     <div class="label">Finalizados</div>
     <div class="value"><?= h((string) $finishedCount) ?></div>
   </article>
@@ -1205,6 +1205,7 @@ require __DIR__ . '/includes/header.php';
           data-encounter-card
           data-focus-match="<?= $isFocusedMatch ? '1' : '0' ?>"
           data-page="<?= h((string) $cardPage) ?>"
+          data-status="<?= h((string) $m['status']) ?>"
           data-search="<?= h(mb_strtolower($historySearchText, 'UTF-8')) ?>"
         >
           <div class="encounter-card-head">
@@ -1338,8 +1339,10 @@ require __DIR__ . '/includes/header.php';
     const pagination = document.querySelector('.encounters-history .pagination');
     const empty = document.querySelector('[data-encounter-history-empty]');
     const count = document.querySelector('[data-encounter-history-count]');
+    const overviewPanels = Array.from(document.querySelectorAll('[data-encounter-status-filter]'));
     const currentPage = '<?= h((string) $currentPage) ?>';
     const total = cards.length;
+    let activeStatus = '';
 
     const normalize = (value) => String(value || '')
       .toLocaleLowerCase('es-AR')
@@ -1353,25 +1356,47 @@ require __DIR__ . '/includes/header.php';
 
       cards.forEach((card) => {
         const haystack = normalize(card.dataset.search || '');
-        const matches = query === '' ? card.dataset.page === currentPage : haystack.includes(query);
+        const matchesPage = query === '' && activeStatus === '' ? card.dataset.page === currentPage : true;
+        const matchesQuery = query === '' || haystack.includes(query);
+        const matchesStatus = activeStatus === '' || card.dataset.status === activeStatus;
+        const matches = matchesPage && matchesQuery && matchesStatus;
         card.classList.toggle('encounter-page-hidden', !matches);
         if (matches) visible++;
       });
 
       if (pagination) {
-        pagination.hidden = query !== '';
+        pagination.hidden = query !== '' || activeStatus !== '';
       }
       if (empty) {
         empty.hidden = visible !== 0;
       }
       if (count) {
-        count.textContent = query === ''
+        count.textContent = query === '' && activeStatus === ''
           ? `${total} partidos`
           : `${visible} de ${total} partidos`;
       }
+      overviewPanels.forEach((panel) => {
+        const isActive = panel.dataset.encounterStatusFilter === activeStatus;
+        panel.classList.toggle('is-active', isActive);
+        panel.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
     };
 
     input.addEventListener('input', applyFilter);
+    overviewPanels.forEach((panel) => {
+      const toggleStatus = () => {
+        const nextStatus = panel.dataset.encounterStatusFilter || '';
+        activeStatus = activeStatus === nextStatus ? '' : nextStatus;
+        applyFilter();
+        document.querySelector('.encounters-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      panel.addEventListener('click', toggleStatus);
+      panel.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleStatus();
+      });
+    });
     applyFilter();
 
     const focusedCard = document.querySelector('[data-focus-match="1"]');

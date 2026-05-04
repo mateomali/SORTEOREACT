@@ -264,7 +264,7 @@ require __DIR__ . '/includes/header.php';
 
 <details class="card stats-filter-menu mb-3.5">
   <summary>Filtros</summary>
-  <form method="get" class="stats-filter-grid">
+  <form method="get" class="stats-filter-grid" data-partial-form data-partial-target="main.content">
     <div class="form-row">
       <label>Desde</label>
       <input type="date" name="date_from" value="<?= h($dateFrom) ?>">
@@ -275,7 +275,7 @@ require __DIR__ . '/includes/header.php';
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" type="submit">Aplicar</button>
-      <a class="btn btn-muted" href="estadisticas.php">Limpiar</a>
+      <a class="btn btn-muted" href="estadisticas.php" data-partial-link data-partial-target="main.content">Limpiar</a>
     </div>
   </form>
 </details>
@@ -545,30 +545,26 @@ require __DIR__ . '/includes/header.php';
     <small><?= h((string) count($scorers)) ?> jugadores</small>
   </summary>
   <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th>Jugador</th>
-          <th>Partidos</th>
-          <th>Goles</th>
-          <th>Goles/partido</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php if (!$scorers): ?>
-          <tr><td colspan="4">No hay datos para este filtro.</td></tr>
-        <?php else: ?>
-          <?php foreach ($scorers as $row): ?>
-            <tr>
-              <td data-label="Jugador"><?= h((string) $row['name']) ?></td>
-              <td data-label="Partidos"><?= h((string) $row['partidos']) ?></td>
-              <td data-label="Goles"><strong><?= h((string) $row['goles']) ?></strong></td>
-              <td data-label="Goles/partido"><?= h(number_format((float) $row['gol_por_partido'], 2)) ?></td>
-            </tr>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </tbody>
-    </table>
+    <div class="stats-compact-grid stats-scorers-grid">
+      <div class="stats-compact-grid-head" aria-hidden="true">
+        <span>Jugador</span>
+        <span>PJ</span>
+        <span>Goles</span>
+        <span>G/P</span>
+      </div>
+      <?php if (!$scorers): ?>
+        <p class="small-muted stats-compact-empty">No hay datos para este filtro.</p>
+      <?php else: ?>
+        <?php foreach ($scorers as $row): ?>
+          <div class="stats-compact-grid-row">
+            <span class="stats-compact-name"><?= h((string) $row['name']) ?></span>
+            <span><?= h((string) $row['partidos']) ?></span>
+            <span><strong><?= h((string) $row['goles']) ?></strong></span>
+            <span><?= h(number_format((float) $row['gol_por_partido'], 2)) ?></span>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
   </div>
 </details>
 
@@ -579,40 +575,36 @@ require __DIR__ . '/includes/header.php';
   </summary>
   <p class="small-muted">Victoria 3 puntos, empate 1 punto.</p>
   <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th>Capitan</th>
-          <th>Pts</th>
-          <th>PJ</th>
-          <th>G</th>
-          <th>E</th>
-          <th>P</th>
-          <th>GF</th>
-          <th>GC</th>
-          <th>DG</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php if (!$captains): ?>
-          <tr><td colspan="9">No hay partidos finalizados en modo capitanes para este filtro.</td></tr>
-        <?php else: ?>
-          <?php foreach ($captains as $row): ?>
-            <tr>
-              <td data-label="Capitan"><?= h((string) $row['name']) ?></td>
-              <td data-label="Pts"><strong><?= h((string) $row['puntos']) ?></strong></td>
-              <td data-label="PJ"><?= h((string) $row['partidos']) ?></td>
-              <td data-label="G"><?= h((string) $row['ganados']) ?></td>
-              <td data-label="E"><?= h((string) $row['empatados']) ?></td>
-              <td data-label="P"><?= h((string) $row['perdidos']) ?></td>
-              <td data-label="GF"><?= h((string) $row['goles_favor']) ?></td>
-              <td data-label="GC"><?= h((string) $row['goles_contra']) ?></td>
-              <td data-label="DG"><?= h((string) $row['diferencia_gol']) ?></td>
-            </tr>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </tbody>
-    </table>
+    <div class="stats-compact-grid stats-captains-grid">
+      <div class="stats-compact-grid-head" aria-hidden="true">
+        <span>Capitan</span>
+        <span>Pts</span>
+        <span>PJ</span>
+        <span>G</span>
+        <span>E</span>
+        <span>P</span>
+        <span>GF</span>
+        <span>GC</span>
+        <span>DG</span>
+      </div>
+      <?php if (!$captains): ?>
+        <p class="small-muted stats-compact-empty">No hay partidos finalizados en modo capitanes para este filtro.</p>
+      <?php else: ?>
+        <?php foreach ($captains as $row): ?>
+          <div class="stats-compact-grid-row">
+            <span class="stats-compact-name"><?= h((string) $row['name']) ?></span>
+            <span><strong><?= h((string) $row['puntos']) ?></strong></span>
+            <span><?= h((string) $row['partidos']) ?></span>
+            <span><?= h((string) $row['ganados']) ?></span>
+            <span><?= h((string) $row['empatados']) ?></span>
+            <span><?= h((string) $row['perdidos']) ?></span>
+            <span><?= h((string) $row['goles_favor']) ?></span>
+            <span><?= h((string) $row['goles_contra']) ?></span>
+            <span><?= h((string) $row['diferencia_gol']) ?></span>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
   </div>
 </details>
 

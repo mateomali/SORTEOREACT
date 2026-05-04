@@ -579,6 +579,49 @@
     @apply font-extrabold text-slate-900;
   }
 
+  .stats-compact-grid {
+    @apply overflow-hidden rounded-xl border border-slate-200 bg-white;
+  }
+
+  .stats-compact-grid-head,
+  .stats-compact-grid-row {
+    @apply grid;
+  }
+
+  .stats-scorers-grid .stats-compact-grid-head,
+  .stats-scorers-grid .stats-compact-grid-row {
+    @apply grid-cols-[minmax(0,1.4fr)_88px_88px_108px];
+  }
+
+  .stats-captains-grid .stats-compact-grid-head,
+  .stats-captains-grid .stats-compact-grid-row {
+    @apply grid-cols-[minmax(0,1.45fr)_64px_64px_56px_56px_56px_64px_64px_64px];
+  }
+
+  .stats-compact-grid-head span {
+    @apply min-w-0 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-extrabold uppercase tracking-wide text-slate-500 last:border-r-0;
+  }
+
+  .stats-compact-grid-head span:first-child {
+    @apply text-left;
+  }
+
+  .stats-compact-grid-row {
+    @apply border-b border-slate-200 last:border-b-0;
+  }
+
+  .stats-compact-grid-row > span {
+    @apply min-w-0 border-r border-slate-200 px-3 py-2 text-center text-sm text-slate-700 last:border-r-0;
+  }
+
+  .stats-compact-name {
+    @apply truncate text-left font-extrabold text-slate-900;
+  }
+
+  .stats-compact-empty {
+    @apply m-0 p-3;
+  }
+
   .award-stat-cell {
     @apply inline-flex min-w-56 flex-wrap items-center gap-1.5;
   }
@@ -1226,6 +1269,10 @@
     @apply my-3 flex flex-wrap items-center gap-2;
   }
 
+  .sorteo-page .sorteo-backbar {
+    @apply mb-3 flex justify-start;
+  }
+
   .sorteo-page .main-controls {
     @apply justify-center;
   }
@@ -1499,6 +1546,22 @@
 
   .encounters-overview {
     @apply mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3;
+  }
+
+  .encounter-overview-panel {
+    @apply cursor-pointer select-none transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100;
+  }
+
+  .encounter-overview-panel.is-active {
+    @apply border-emerald-500 bg-emerald-50 shadow-lg shadow-emerald-100;
+  }
+
+  .encounter-overview-panel.is-active .label {
+    @apply text-emerald-800;
+  }
+
+  .encounter-overview-panel.is-active .value {
+    @apply text-emerald-950;
   }
 
   .encounter-drawer {
@@ -3244,11 +3307,45 @@
     }
 
     .stats-player-grid .award-summary-button {
-      @apply min-h-0 px-1.5 py-1 text-[11px] leading-none;
+      @apply min-h-7 px-1.5 py-1 text-[11px] leading-none;
     }
 
     .stats-player-grid .award-empty {
       @apply text-[11px] text-slate-500;
+    }
+
+    .stats-compact-grid {
+      @apply rounded-lg;
+    }
+
+    .stats-scorers-grid .stats-compact-grid-head,
+    .stats-scorers-grid .stats-compact-grid-row {
+      grid-template-columns: minmax(0, 1fr) 34px 40px 42px;
+    }
+
+    .stats-captains-grid .stats-compact-grid-head,
+    .stats-captains-grid .stats-compact-grid-row {
+      grid-template-columns: minmax(0, 1fr) 36px 34px repeat(6, 26px);
+    }
+
+    .stats-compact-grid-head span {
+      @apply px-1 py-2 text-center text-[9px] leading-tight tracking-normal;
+    }
+
+    .stats-compact-grid-head span:first-child {
+      @apply text-left;
+    }
+
+    .stats-compact-grid-row > span {
+      @apply px-1 py-1.5 text-center text-[11px] leading-tight;
+    }
+
+    .stats-compact-name {
+      @apply truncate text-left text-[11px];
+    }
+
+    .stats-compact-empty {
+      @apply p-2 text-xs;
     }
 
     .award-chip-list {
@@ -3577,6 +3674,30 @@
 
     .stats-player-grid-row .award-stat-cell {
       @apply flex-wrap justify-start gap-1;
+    }
+
+    .stats-scorers-grid .stats-compact-grid-head,
+    .stats-scorers-grid .stats-compact-grid-row {
+      grid-template-columns: minmax(0, 1fr) 30px 36px 38px;
+    }
+
+    .stats-captains-grid .stats-compact-grid-head,
+    .stats-captains-grid .stats-compact-grid-row {
+      grid-template-columns: minmax(0, 1fr) 32px 30px repeat(6, 24px);
+    }
+
+    .stats-compact-grid-head span,
+    .stats-compact-grid-row > span {
+      @apply px-0.5;
+    }
+
+    .stats-compact-grid-head span {
+      @apply text-[8px];
+    }
+
+    .stats-compact-grid-row > span,
+    .stats-compact-name {
+      @apply text-[10px];
     }
 
     .award-summary-button,
@@ -4166,9 +4287,106 @@
   .sorteo-page .team-rosa {
     background: #fff0f3;
   }
+
+  .content {
+    position: relative;
+  }
+
+  .content.is-partial-loading {
+    opacity: 0.72;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+  }
+
+  .content.is-partial-loading::before {
+    content: "";
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    z-index: 80;
+    width: 34px;
+    height: 34px;
+    margin-left: -17px;
+    border: 3px solid rgba(6, 61, 43, 0.15);
+    border-top-color: #063d2b;
+    border-radius: 999px;
+    animation: gf-spin 700ms linear infinite;
+  }
+
+  .app-toast-stack {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 90;
+    display: grid;
+    width: min(360px, calc(100vw - 32px));
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .app-toast {
+    transform: translateY(0);
+    border: 1px solid #cfe0d9;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 16px 40px rgba(7, 19, 15, 0.18);
+    color: #10231d;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+    padding: 11px 12px;
+    animation: gf-toast-in 180ms ease-out;
+  }
+
+  .app-toast-success {
+    border-color: #b9dfcd;
+    background: #f0fbf5;
+    color: #07563d;
+  }
+
+  .app-toast-error {
+    border-color: #f1b8b8;
+    background: #fff4f4;
+    color: #9b1c1c;
+  }
+
+  .app-toast.is-leaving {
+    animation: gf-toast-out 180ms ease-in forwards;
+  }
+
+  @keyframes gf-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes gf-toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+
+  @keyframes gf-toast-out {
+    to {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+    }
+  }
 }
 
 @layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+
   @media (max-width: 760px) {
     body,
     .sorteo-page {
@@ -4199,6 +4417,334 @@
     .editable-table tr,
     .finish-table tr {
       box-shadow: 0 6px 18px rgba(11, 42, 30, 0.05);
+    }
+
+    .app-shell {
+      min-height: 100dvh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      backdrop-filter: blur(12px);
+    }
+
+    .menu-toggle {
+      min-height: 36px;
+      border-radius: 9px;
+      padding: 7px 10px;
+    }
+
+    .main-nav.open {
+      position: sticky;
+      top: 58px;
+      z-index: 55;
+      box-shadow: 0 12px 28px rgba(7, 19, 15, 0.12);
+    }
+
+    .content {
+      padding: 10px;
+      background: #f4faf7;
+    }
+
+    .page-head {
+      margin-bottom: 10px;
+      gap: 8px;
+      padding-bottom: 10px;
+    }
+
+    .topbar {
+      min-height: 60px;
+      padding: 8px 10px;
+    }
+
+    .brand {
+      gap: 8px;
+    }
+
+    .brand-logo {
+      height: 46px;
+      max-width: 108px;
+    }
+
+    .brand strong {
+      font-size: 0.78rem;
+    }
+
+    .brand span {
+      font-size: 0.68rem;
+    }
+
+    .main-nav {
+      gap: 7px;
+      padding: 8px 10px;
+    }
+
+    .nav-group {
+      gap: 6px;
+    }
+
+    .main-nav a {
+      min-height: 36px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+    }
+
+    .page-head h1 {
+      margin-bottom: 2px;
+      font-size: 1.35rem;
+      line-height: 1.08;
+    }
+
+    .small-muted,
+    .page-head p {
+      font-size: 0.78rem;
+      line-height: 1.28;
+    }
+
+    .card {
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 8px 18px rgba(7, 19, 15, 0.055);
+    }
+
+    .stats-filter-menu summary,
+    .stats-collapsible summary,
+    .player-create-summary,
+    .finish-awards summary {
+      min-height: 44px;
+      padding: 10px 12px;
+    }
+
+    .stats-filter-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .stats-filter-grid .btn-row {
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    label {
+      margin-bottom: 4px;
+      font-size: 0.76rem;
+    }
+
+    input[type="text"],
+    input[type="search"],
+    input[type="password"],
+    input[type="number"],
+    input[type="datetime-local"],
+    input[type="date"],
+    select,
+    textarea {
+      min-height: 38px;
+      border-radius: 9px;
+      padding: 8px 10px;
+      font-size: 0.88rem;
+    }
+
+    textarea {
+      min-height: 84px;
+    }
+
+    button,
+    .btn {
+      min-height: 38px;
+      border-radius: 9px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      line-height: 1.15;
+    }
+
+    .btn-primary,
+    .btn-danger {
+      box-shadow: 0 7px 14px rgba(7, 19, 15, 0.12);
+    }
+
+    .btn-row {
+      gap: 7px;
+    }
+
+    .form-grid {
+      gap: 8px;
+    }
+
+    .form-row {
+      margin-bottom: 7px;
+    }
+
+    .check-row {
+      gap: 6px;
+    }
+
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .stats-summary span,
+    .badge,
+    .chip,
+    .mini-chip {
+      border-radius: 10px;
+      padding: 7px 8px;
+      font-size: 0.72rem;
+      line-height: 1.15;
+    }
+
+    .stats-player-result {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stat-box {
+      padding: 9px;
+      border-radius: 11px;
+    }
+
+    .stat-box .value {
+      font-size: 1.05rem;
+      line-height: 1.1;
+    }
+
+    .stat-box .label {
+      font-size: 0.68rem;
+      line-height: 1.15;
+    }
+
+    .stats-compact-grid {
+      border-radius: 10px;
+    }
+
+    .stats-scorers-grid .stats-compact-grid-head,
+    .stats-scorers-grid .stats-compact-grid-row {
+      grid-template-columns: minmax(0, 1fr) 34px 40px 42px;
+    }
+
+    .stats-captains-grid .stats-compact-grid-head,
+    .stats-captains-grid .stats-compact-grid-row {
+      grid-template-columns: minmax(0, 1fr) 36px 34px repeat(6, 26px);
+    }
+
+    .stats-compact-grid-head span {
+      padding: 7px 1px;
+      font-size: 9px;
+      letter-spacing: 0;
+      line-height: 1.05;
+    }
+
+    .stats-compact-grid-row > span {
+      padding: 7px 1px;
+      font-size: 11px;
+      line-height: 1.05;
+    }
+
+    .stats-compact-name {
+      font-size: 11px;
+      text-align: left;
+    }
+
+    .award-floating-panel {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .award-floating-card {
+      width: 100%;
+      max-width: none;
+      max-height: 82dvh;
+      border-radius: 18px 18px 0 0;
+    }
+
+    .award-floating-head {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #ffffff;
+    }
+
+    .mobile-player-list-item,
+    .player-picker-item,
+    .selected-player-item,
+    .match-list-item,
+    .encounter-card {
+      border-radius: 11px;
+    }
+
+    .mobile-player-list-item,
+    .selected-player-item,
+    .player-picker-item,
+    .match-list-item {
+      padding: 9px;
+    }
+
+    .mobile-player-list-item strong,
+    .selected-player-item strong,
+    .player-picker-item strong,
+    .match-list-item strong {
+      font-size: 0.86rem;
+      line-height: 1.15;
+    }
+
+    .mobile-player-list-item small,
+    .selected-player-item small,
+    .player-picker-item small,
+    .match-list-item small {
+      font-size: 0.7rem;
+      line-height: 1.2;
+    }
+
+    .team-card,
+    .participant-panel,
+    .captain-pot,
+    .mobile-result-team {
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .app-toast-stack {
+      right: 10px;
+      bottom: 10px;
+      width: calc(100vw - 20px);
+    }
+  }
+
+  @media (min-width: 390px) and (max-width: 760px) {
+    .content {
+      padding: 12px;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .app-shell {
+      width: 98%;
+      margin-block: 12px;
+    }
+
+    .content {
+      padding: 18px;
+    }
+
+    .grid.cols-3,
+    .stats-player-result {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .mobile-full-player-list {
+      display: block;
+    }
+
+    .players-desktop-table {
+      display: none;
     }
   }
 }

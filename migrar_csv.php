@@ -122,6 +122,7 @@ require __DIR__ . '/includes/header.php';
     <h1>Migracion desde CSV</h1>
     <p class="small-muted">Importa jugadores desde el archivo historico al nuevo modelo en base de datos.</p>
   </div>
+  <a class="btn btn-muted" href="jugadores.php">Volver a jugadores</a>
 </section>
 
 <section class="grid cols-2">

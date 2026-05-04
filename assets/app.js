@@ -5,6 +5,163 @@
     toggle.addEventListener('click', () => nav.classList.toggle('open'));
   }
 
+  const getMainContent = () => document.querySelector('main.content');
+
+  const showToast = (message, type = 'info') => {
+    if (!message) return;
+    let stack = document.querySelector('[data-toast-stack]');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.className = 'app-toast-stack';
+      stack.setAttribute('data-toast-stack', '');
+      document.body.appendChild(stack);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `app-toast app-toast-${type}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.textContent = message;
+    stack.appendChild(toast);
+
+    window.setTimeout(() => {
+      toast.classList.add('is-leaving');
+      window.setTimeout(() => toast.remove(), 220);
+    }, type === 'error' ? 4200 : 2600);
+  };
+
+  const setBusy = (el, busy) => {
+    if (!el) return;
+    el.classList.toggle('is-partial-loading', busy);
+    el.setAttribute('aria-busy', busy ? 'true' : 'false');
+  };
+
+  const collapseMobileDetails = (root = document) => {
+    if (!window.matchMedia('(max-width: 760px)').matches) return;
+    root.querySelectorAll('details[data-mobile-collapsed]').forEach((details) => {
+      details.open = false;
+    });
+  };
+
+  const updateActiveNavigation = (nextDocument) => {
+    const nextNav = nextDocument.querySelector('#mainNav');
+    const currentNav = document.querySelector('#mainNav');
+    if (!nextNav || !currentNav) return;
+    currentNav.innerHTML = nextNav.innerHTML;
+    currentNav.classList.remove('open');
+  };
+
+  const updateStatsPlayerSearch = (input = document.querySelector('[data-stats-player-search]')) => {
+    const statsPlayerSearch = input;
+    const statsPlayerResult = document.querySelector('[data-stats-player-result]');
+    const statsPlayerRows = Array.from(document.querySelectorAll('[data-stats-player-row]'));
+    if (!statsPlayerSearch || !statsPlayerResult || !statsPlayerRows.length) return;
+
+    const query = statsPlayerSearch.value.trim().toLowerCase();
+    statsPlayerRows.forEach((row) => row.classList.remove('is-highlighted'));
+
+    if (query === '') {
+      statsPlayerResult.hidden = true;
+      statsPlayerRows.forEach((row) => {
+        row.classList.remove('hidden');
+      });
+      return;
+    }
+
+    const exact = statsPlayerRows.find((row) => (row.dataset.playerName || '').toLowerCase() === query);
+    const partial = statsPlayerRows.find((row) => (row.dataset.playerName || '').toLowerCase().includes(query));
+    const selected = exact || partial;
+
+    statsPlayerRows.forEach((row) => {
+      const name = (row.dataset.playerName || '').toLowerCase();
+      row.classList.toggle('hidden', !name.includes(query));
+    });
+
+    if (!selected) {
+      statsPlayerResult.hidden = true;
+      return;
+    }
+
+    selected.classList.add('is-highlighted');
+    statsPlayerResult.hidden = false;
+    document.querySelector('[data-stats-player-name]').textContent = selected.dataset.playerName || '-';
+    document.querySelector('[data-stats-player-matches]').textContent = selected.dataset.matches || '-';
+    document.querySelector('[data-stats-player-goals]').textContent = selected.dataset.goals || '-';
+    document.querySelector('[data-stats-player-rating]').textContent = selected.dataset.rating || '-';
+    document.querySelector('[data-stats-player-pg]').textContent = selected.dataset.pg || '0';
+    document.querySelector('[data-stats-player-pe]').textContent = selected.dataset.pe || '0';
+    document.querySelector('[data-stats-player-pp]').textContent = selected.dataset.pp || '0';
+  };
+
+  const openAwardsPopover = (button) => {
+    const sourceId = button.getAttribute('data-awards-target');
+    const source = sourceId ? document.getElementById(sourceId) : null;
+    const awardsPopover = document.querySelector('[data-awards-popover]');
+    const awardsPopoverTitle = document.querySelector('[data-awards-popover-title]');
+    const awardsPopoverBody = document.querySelector('[data-awards-popover-body]');
+    if (!awardsPopover || !awardsPopoverBody || !source) return;
+
+    if (awardsPopoverTitle) {
+      awardsPopoverTitle.textContent = button.getAttribute('data-awards-title')
+        || `Premios - ${button.getAttribute('data-awards-player') || 'Jugador'}`;
+    }
+    awardsPopoverBody.innerHTML = source.innerHTML;
+    awardsPopover.hidden = false;
+  };
+
+  const closeAwardsPopover = () => {
+    const awardsPopover = document.querySelector('[data-awards-popover]');
+    const awardsPopoverBody = document.querySelector('[data-awards-popover-body]');
+    if (!awardsPopover) return;
+    awardsPopover.hidden = true;
+    if (awardsPopoverBody) awardsPopoverBody.innerHTML = '';
+  };
+
+  const hydrateDynamicContent = (root = document) => {
+    collapseMobileDetails(root);
+    updateStatsPlayerSearch(root.querySelector?.('[data-stats-player-search]') || undefined);
+  };
+
+  const partialNavigate = async (url, { replace = false, source = null } = {}) => {
+    const content = getMainContent();
+    if (!content) {
+      window.location.href = url;
+      return;
+    }
+
+    setBusy(content, true);
+    if (source) source.classList.add('is-loading');
+
+    try {
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'X-Requested-With': 'fetch', Accept: 'text/html' },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const html = await response.text();
+      const nextDocument = new DOMParser().parseFromString(html, 'text/html');
+      const nextContent = nextDocument.querySelector('main.content');
+      if (!nextContent) throw new Error('Missing partial content');
+
+      document.title = nextDocument.title || document.title;
+      updateActiveNavigation(nextDocument);
+      content.replaceChildren(...Array.from(nextContent.childNodes));
+      hydrateDynamicContent(content);
+      if (replace) {
+        window.history.replaceState({ partial: true }, '', url);
+      } else {
+        window.history.pushState({ partial: true }, '', url);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast('Vista actualizada', 'success');
+    } catch (error) {
+      showToast('No se pudo actualizar sin recargar. Abriendo la pagina completa.', 'error');
+      window.location.href = url;
+    } finally {
+      setBusy(content, false);
+      if (source) source.classList.remove('is-loading');
+    }
+  };
+
   const getParticipantLimit = () => {
     const teams = Number.parseInt(document.querySelector('[data-num-teams]')?.value || '2', 10);
     const playersPerTeam = Number.parseInt(document.querySelector('[data-players-per-team]')?.value || '9', 10);
@@ -483,53 +640,16 @@
     }
   });
 
-  const statsPlayerSearch = document.querySelector('[data-stats-player-search]');
-  const statsPlayerResult = document.querySelector('[data-stats-player-result]');
-  const statsPlayerRows = Array.from(document.querySelectorAll('[data-stats-player-row]'));
-  const updateStatsPlayerSearch = () => {
-    if (!statsPlayerSearch || !statsPlayerResult || !statsPlayerRows.length) return;
+  document.addEventListener('input', (event) => {
+    const input = event.target.closest('[data-stats-player-search]');
+    if (input) updateStatsPlayerSearch(input);
+  });
 
-    const query = statsPlayerSearch.value.trim().toLowerCase();
-    statsPlayerRows.forEach((row) => row.classList.remove('is-highlighted'));
-
-    if (query === '') {
-      statsPlayerResult.hidden = true;
-      statsPlayerRows.forEach((row) => {
-        row.classList.remove('hidden');
-      });
-      return;
-    }
-
-    const exact = statsPlayerRows.find((row) => (row.dataset.playerName || '').toLowerCase() === query);
-    const partial = statsPlayerRows.find((row) => (row.dataset.playerName || '').toLowerCase().includes(query));
-    const selected = exact || partial;
-
-    statsPlayerRows.forEach((row) => {
-      const name = (row.dataset.playerName || '').toLowerCase();
-      row.classList.toggle('hidden', !name.includes(query));
-    });
-
-    if (!selected) {
-      statsPlayerResult.hidden = true;
-      return;
-    }
-
-    selected.classList.add('is-highlighted');
-    statsPlayerResult.hidden = false;
-    document.querySelector('[data-stats-player-name]').textContent = selected.dataset.playerName || '-';
-    document.querySelector('[data-stats-player-matches]').textContent = selected.dataset.matches || '-';
-    document.querySelector('[data-stats-player-goals]').textContent = selected.dataset.goals || '-';
-    document.querySelector('[data-stats-player-rating]').textContent = selected.dataset.rating || '-';
-    document.querySelector('[data-stats-player-pg]').textContent = selected.dataset.pg || '0';
-    document.querySelector('[data-stats-player-pe]').textContent = selected.dataset.pe || '0';
-    document.querySelector('[data-stats-player-pp]').textContent = selected.dataset.pp || '0';
-  };
-
-  if (statsPlayerSearch) {
-    statsPlayerSearch.addEventListener('input', updateStatsPlayerSearch);
-    statsPlayerSearch.addEventListener('change', updateStatsPlayerSearch);
-    updateStatsPlayerSearch();
-  }
+  document.addEventListener('change', (event) => {
+    const input = event.target.closest('[data-stats-player-search]');
+    if (input) updateStatsPlayerSearch(input);
+  });
+  updateStatsPlayerSearch();
 
   const matchDetailPanel = document.querySelector('[data-match-detail-panel]');
   const matchDetailToggles = Array.from(document.querySelectorAll('[data-match-detail-toggle]'));
@@ -569,48 +689,28 @@
     });
   });
 
-  const awardsPopover = document.querySelector('[data-awards-popover]');
-  const awardsPopoverTitle = document.querySelector('[data-awards-popover-title]');
-  const awardsPopoverBody = document.querySelector('[data-awards-popover-body]');
-  const closeAwardsPopover = () => {
-    if (!awardsPopover) return;
-    awardsPopover.hidden = true;
-    if (awardsPopoverBody) awardsPopoverBody.innerHTML = '';
-  };
-
-  document.querySelectorAll('[data-awards-trigger]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const sourceId = button.getAttribute('data-awards-target');
-      const source = sourceId ? document.getElementById(sourceId) : null;
-      if (!awardsPopover || !awardsPopoverBody || !source) return;
-
-      if (awardsPopoverTitle) {
-        awardsPopoverTitle.textContent = button.getAttribute('data-awards-title')
-          || `Premios - ${button.getAttribute('data-awards-player') || 'Jugador'}`;
-      }
-      awardsPopoverBody.innerHTML = source.innerHTML;
-      awardsPopover.hidden = false;
-    });
-  });
-
-  document.querySelector('[data-awards-popover-close]')?.addEventListener('click', closeAwardsPopover);
-  awardsPopover?.addEventListener('click', (event) => {
-    if (event.target === awardsPopover) {
+  document.addEventListener('click', (event) => {
+    const awardsTrigger = event.target.closest('[data-awards-trigger]');
+    if (awardsTrigger) {
+      openAwardsPopover(awardsTrigger);
+      return;
+    }
+    if (event.target.closest('[data-awards-popover-close]')) {
+      closeAwardsPopover();
+      return;
+    }
+    if (event.target.matches('[data-awards-popover]')) {
       closeAwardsPopover();
     }
   });
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeAwardsPopover();
     }
   });
 
-  const mobileCollapsedDetails = Array.from(document.querySelectorAll('details[data-mobile-collapsed]'));
-  if (mobileCollapsedDetails.length && window.matchMedia('(max-width: 760px)').matches) {
-    mobileCollapsedDetails.forEach((details) => {
-      details.open = false;
-    });
-  }
+  collapseMobileDetails();
 
   document.querySelectorAll('[data-num-teams], [data-players-per-team]').forEach((input) => {
     input.addEventListener('input', () => {
@@ -621,6 +721,36 @@
       updateImportPlayerLimit();
       updateSelectionCount('participants');
     });
+  });
+
+  document.addEventListener('submit', (event) => {
+    const form = event.target.closest('form[data-partial-form]');
+    if (!form || String(form.method || 'get').toLowerCase() !== 'get') return;
+
+    event.preventDefault();
+    const url = new URL(form.action || window.location.href, window.location.href);
+    const formData = new FormData(form);
+    url.search = '';
+    formData.forEach((value, key) => {
+      if (String(value).trim() !== '') {
+        url.searchParams.append(key, value);
+      }
+    });
+    partialNavigate(url.toString(), { source: form });
+  });
+
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('a[data-partial-link]');
+    if (!link || link.target || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    event.preventDefault();
+    partialNavigate(url.toString(), { source: link });
+  });
+
+  window.addEventListener('popstate', () => {
+    partialNavigate(window.location.href, { replace: true });
   });
 
   document.querySelectorAll('[data-confirm]').forEach((el) => {
