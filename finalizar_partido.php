@@ -570,12 +570,32 @@ require __DIR__ . '/includes/header.php';
       }, 1600);
     };
 
+    const openAndroidShareSheet = (text) => {
+      const isAndroid = /Android/i.test(navigator.userAgent || '');
+      if (!isAndroid) {
+        return false;
+      }
+      const encodedText = encodeURIComponent(text);
+      window.location.href = `intent://share/#Intent;action=android.intent.action.SEND;type=text/plain;S.android.intent.extra.TEXT=${encodedText};end`;
+      return true;
+    };
+
     document.querySelector('[data-finish-share]')?.addEventListener('click', async (event) => {
       const button = event.currentTarget;
       const text = getText();
       if (navigator.share) {
-        await navigator.share({ text });
-        flashButton(button, 'Compartido');
+        try {
+          await navigator.share({ text });
+          flashButton(button, 'Compartido');
+          return;
+        } catch (error) {
+          if (error?.name === 'AbortError') {
+            return;
+          }
+        }
+      }
+      if (openAndroidShareSheet(text)) {
+        flashButton(button, 'Abriendo...');
         return;
       }
       await copyText(text);

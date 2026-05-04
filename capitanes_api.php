@@ -44,16 +44,16 @@ function can_edit_captain_formation(array $match): bool
     return (string) ($match['status'] ?? '') !== 'finalizado';
 }
 
-function closest_skill_allowed_ids(array $available, float $targetSkill): array
+function skill_allowed_ids_in_range(array $available, float $targetSkill, float $range = 1.0): array
 {
-    $exactIds = [];
+    $ids = [];
     foreach ($available as $player) {
-        if ((float) ($player['skill'] ?? 0) === $targetSkill) {
-            $exactIds[] = (int) $player['id'];
+        if (abs((float) ($player['skill'] ?? 0) - $targetSkill) <= $range) {
+            $ids[] = (int) $player['id'];
         }
     }
-    if ($exactIds) {
-        return $exactIds;
+    if ($ids) {
+        return $ids;
     }
 
     $closestDistance = null;
@@ -86,7 +86,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
         $currentTeam = $draft['current_team'] !== null ? (int) $draft['current_team'] : null;
         if (($currentTeam === 1 || $currentTeam === 2) && $available) {
             $referenceSkill = $currentTeam === 1 ? (float) $draft['captain2_skill'] : (float) $draft['captain1_skill'];
-            $allowedIds = closest_skill_allowed_ids($available, $referenceSkill);
+            $allowedIds = skill_allowed_ids_in_range($available, $referenceSkill, 1.0);
             $allowedSkills = [];
             foreach ($available as $player) {
                 if (in_array((int) $player['id'], $allowedIds, true)) {
@@ -104,7 +104,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
                 'min_skill' => null,
                 'max_skill' => null,
                 'allowed_ids' => $allowedIds,
-                'message' => 'Primera eleccion: buscar ' . number_format($referenceSkill, 1) . ' puntos. Habilitado: ' . implode(', ', $allowedSkills) . '.',
+                'message' => 'Primera eleccion: jugadores entre ' . number_format($referenceSkill - 1.0, 1) . ' y ' . number_format($referenceSkill + 1.0, 1) . ' puntos. Habilitado: ' . implode(', ', $allowedSkills) . '.',
             ];
         }
         return [
@@ -121,7 +121,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     }
 
     $lastSkill = (float) $lastSkill;
-    $range = 0.5;
+    $range = 1.0;
     $allowedIds = [];
     while ($range <= 10.0 && !$allowedIds) {
         foreach ($available as $player) {
