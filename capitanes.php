@@ -8,23 +8,132 @@ $pdo = db();
 $matchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
 $teamView = isset($_GET['team']) ? (int) $_GET['team'] : 0;
 $captainToken = trim((string) ($_GET['token'] ?? ''));
-$isCaptainView = in_array($teamView, [1, 2], true) && $captainToken !== '';
 $viewMode = (string) ($_GET['view'] ?? '');
+
+function captain_access_cookie_name(int $matchId): string
+{
+    return 'captain_access_' . $matchId;
+}
+
+function remember_captain_access(int $matchId, int $teamNumber, string $token): void
+{
+    $_SESSION['captain_access'][$matchId] = ['team' => $teamNumber, 'token' => $token];
+    setcookie(captain_access_cookie_name($matchId), $teamNumber . '|' . $token, [
+        'expires' => time() + 60 * 60 * 24 * 30,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+function generated_captain_token(PDO $pdo, array $reserved = []): string
+{
+    $stmt = $pdo->prepare(
+        'SELECT 1
+         FROM captain_drafts
+         WHERE captain1_token = :token1 OR captain2_token = :token2
+         LIMIT 1'
+    );
+
+    for ($attempt = 0; $attempt < 100; $attempt++) {
+        $token = (string) random_int(1000, 9999);
+        if (in_array($token, $reserved, true)) {
+            continue;
+        }
+        $stmt->execute(['token1' => $token, 'token2' => $token]);
+        if (!$stmt->fetchColumn()) {
+            return $token;
+        }
+    }
+
+    throw new RuntimeException('No se pudo generar un token disponible.');
+}
+
+function stored_captain_access(PDO $pdo, int $matchId): ?array
+{
+    if ($matchId <= 0) {
+        return null;
+    }
+
+    $stored = $_SESSION['captain_access'][$matchId] ?? null;
+    if (!is_array($stored)) {
+        $cookie = (string) ($_COOKIE[captain_access_cookie_name($matchId)] ?? '');
+        if ($cookie !== '' && str_contains($cookie, '|')) {
+            [$team, $token] = explode('|', $cookie, 2);
+            $stored = ['team' => (int) $team, 'token' => trim($token)];
+        }
+    }
+
+    $teamNumber = (int) ($stored['team'] ?? 0);
+    $token = trim((string) ($stored['token'] ?? ''));
+    if (!in_array($teamNumber, [1, 2], true) || $token === '') {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT d.captain1_token, d.captain2_token, m.status AS match_status
+         FROM captain_drafts d
+         INNER JOIN matches m ON m.id = d.match_id
+         WHERE d.match_id = :mid
+         LIMIT 1'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $draft = $stmt->fetch();
+    if (!$draft || (string) ($draft['match_status'] ?? '') === 'finalizado') {
+        return null;
+    }
+
+    $expectedToken = $teamNumber === 1 ? (string) $draft['captain1_token'] : (string) $draft['captain2_token'];
+    if ($expectedToken === '' || !hash_equals($expectedToken, $token)) {
+        return null;
+    }
+
+    remember_captain_access($matchId, $teamNumber, $token);
+    return ['team' => $teamNumber, 'token' => $token];
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'captain_token_login') {
+    $postedToken = trim((string) ($_POST['captain_token'] ?? ''));
+    if ($postedToken === '') {
+        flash('error', 'Ingresa el token de capitan.');
+        redirect('index.php');
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT d.match_id, d.captain1_token, d.captain2_token, m.status AS match_status
+         FROM captain_drafts d
+         INNER JOIN matches m ON m.id = d.match_id
+         WHERE d.captain1_token = :token1 OR d.captain2_token = :token2
+         LIMIT 1'
+    );
+    $stmt->execute(['token1' => $postedToken, 'token2' => $postedToken]);
+    $draftByToken = $stmt->fetch();
+    if (!$draftByToken) {
+        flash('error', 'Token de capitan invalido.');
+        redirect('index.php');
+    }
+    if ((string) ($draftByToken['match_status'] ?? '') === 'finalizado') {
+        flash('error', 'Ese partido ya finalizo.');
+        redirect('index.php');
+    }
+
+    $tokenTeam = hash_equals((string) $draftByToken['captain1_token'], $postedToken) ? 1 : 2;
+    remember_captain_access((int) $draftByToken['match_id'], $tokenTeam, $postedToken);
+    redirect('capitanes.php?match_id=' . (int) $draftByToken['match_id']);
+}
+
+if ($matchId > 0 && ($captainToken === '' || !in_array($teamView, [1, 2], true)) && !is_admin()) {
+    $storedAccess = stored_captain_access($pdo, $matchId);
+    if ($storedAccess) {
+        $teamView = (int) $storedAccess['team'];
+        $captainToken = (string) $storedAccess['token'];
+    }
+}
+
+$isCaptainView = in_array($teamView, [1, 2], true) && $captainToken !== '';
 
 if (!$isCaptainView) {
     require_admin();
-}
-
-function absolute_url(string $path): string
-{
-    if (APP_PUBLIC_URL !== '') {
-        return rtrim(APP_PUBLIC_URL, '/') . '/' . ltrim($path, '/');
-    }
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-    $scheme = $https ? 'https' : 'http';
-    $host = (string) ($_SERVER['HTTP_HOST'] ?? '127.0.0.1:8000');
-    $base = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? ''))), '/');
-    return $scheme . '://' . $host . ($base === '' ? '' : $base) . '/' . ltrim($path, '/');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start_draft') {
@@ -67,8 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
              WHERE match_id = :mid'
         )->execute(['mid' => $matchId]);
 
-        $token1 = bin2hex(random_bytes(16));
-        $token2 = bin2hex(random_bytes(16));
+        $token1 = generated_captain_token($pdo);
+        $token2 = generated_captain_token($pdo, [$token1]);
         $pdo->prepare(
             'INSERT INTO captain_drafts (match_id, captain1_player_id, captain2_player_id, captain1_token, captain2_token, current_team, status, started_at)
              VALUES (:mid, :c1, :c2, :t1, :t2, :current_team, "active", NOW())'
@@ -129,9 +238,12 @@ if ($selectedMatch) {
     $stmt = $pdo->prepare('SELECT * FROM captain_drafts WHERE match_id = :mid LIMIT 1');
     $stmt->execute(['mid' => (int) $selectedMatch['id']]);
     $draft = $stmt->fetch() ?: null;
-    if ($draft && ((string) ($draft['captain1_token'] ?? '') === '' || (string) ($draft['captain2_token'] ?? '') === '')) {
-        $draft['captain1_token'] = (string) ($draft['captain1_token'] ?: bin2hex(random_bytes(16)));
-        $draft['captain2_token'] = (string) ($draft['captain2_token'] ?: bin2hex(random_bytes(16)));
+    $needsShortTokens = $draft
+        && (!preg_match('/^\d{4}$/', (string) ($draft['captain1_token'] ?? ''))
+            || !preg_match('/^\d{4}$/', (string) ($draft['captain2_token'] ?? '')));
+    if ($needsShortTokens) {
+        $draft['captain1_token'] = generated_captain_token($pdo);
+        $draft['captain2_token'] = generated_captain_token($pdo, [(string) $draft['captain1_token']]);
         $pdo->prepare(
             'UPDATE captain_drafts SET captain1_token = :t1, captain2_token = :t2 WHERE match_id = :mid'
         )->execute([
@@ -142,18 +254,27 @@ if ($selectedMatch) {
     }
 }
 
-$captain1Link = '';
-$captain2Link = '';
-$captain1Whatsapp = '';
-$captain2Whatsapp = '';
+$captain1Name = 'Capitan 1';
+$captain2Name = 'Capitan 2';
+$captain1ShareText = '';
+$captain2ShareText = '';
+$captain1OpenUrl = '';
+$captain2OpenUrl = '';
 if ($selectedMatch && $draft) {
-    $captain1Link = absolute_url('capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=1&token=' . urlencode((string) ($draft['captain1_token'] ?? '')));
-    $captain2Link = absolute_url('capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=2&token=' . urlencode((string) ($draft['captain2_token'] ?? '')));
+    foreach ($participants as $participant) {
+        $participantId = (int) ($participant['id'] ?? 0);
+        if ($participantId === (int) ($draft['captain1_player_id'] ?? 0)) {
+            $captain1Name = (string) $participant['name'];
+        }
+        if ($participantId === (int) ($draft['captain2_player_id'] ?? 0)) {
+            $captain2Name = (string) $participant['name'];
+        }
+    }
     $matchLabel = (string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']));
-    $captain1WhatsappText = "Link para elegir equipo como Capitan 1\n" . $matchLabel . "\n\n" . $captain1Link;
-    $captain2WhatsappText = "Link para elegir equipo como Capitan 2\n" . $matchLabel . "\n\n" . $captain2Link;
-    $captain1Whatsapp = 'https://wa.me/?text=' . rawurlencode($captain1WhatsappText);
-    $captain2Whatsapp = 'https://wa.me/?text=' . rawurlencode($captain2WhatsappText);
+    $captain1ShareText = "Token para elegir equipo como " . $captain1Name . "\n" . $matchLabel . "\n\n" . (string) ($draft['captain1_token'] ?? '');
+    $captain2ShareText = "Token para elegir equipo como " . $captain2Name . "\n" . $matchLabel . "\n\n" . (string) ($draft['captain2_token'] ?? '');
+    $captain1OpenUrl = 'capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=1&token=' . urlencode((string) ($draft['captain1_token'] ?? ''));
+    $captain2OpenUrl = 'capitanes.php?match_id=' . (int) $selectedMatch['id'] . '&team=2&token=' . urlencode((string) ($draft['captain2_token'] ?? ''));
 }
 
 $title = 'Capitanes | ' . APP_NAME;
@@ -219,22 +340,24 @@ require __DIR__ . '/includes/header.php';
   <?php if (!$isCaptainView): ?>
   <section class="card mb-3.5">
     <h3><?= h((string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']))) ?></h3>
-    <p class="small-muted">Pasa estos links a cada capitan. Cada link tiene un token propio y solo permite elegir para ese equipo.</p>
+    <p class="small-muted">Pasa estos tokens a cada capitan. Desde Inicio pueden tocar Soy capitan, pegar el token y entrar a elegir.</p>
     <div class="grid cols-2 mb-3">
       <div class="stat-box">
-        <div class="label">Link capitan 1</div>
-        <input type="text" readonly value="<?= h($captain1Link) ?>" onclick="this.select()">
-        <div class="btn-row captain-link-actions">
-          <a class="btn btn-primary" href="<?= h($captain1Link) ?>">Abrir</a>
-          <a class="btn btn-whatsapp" href="<?= h($captain1Whatsapp) ?>" target="_blank" rel="noopener">WhatsApp</a>
+        <div class="label">Token <?= h($captain1Name) ?></div>
+        <input type="text" readonly value="<?= h((string) ($draft['captain1_token'] ?? '')) ?>" onclick="this.select()">
+        <div class="captain-link-actions">
+          <button class="btn btn-primary" type="button" data-share-token="<?= h($captain1ShareText) ?>">Compartir</button>
+          <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain1_token'] ?? '')) ?>">Copiar</button>
+          <a class="btn btn-muted" href="<?= h($captain1OpenUrl) ?>">Abrir</a>
         </div>
       </div>
       <div class="stat-box">
-        <div class="label">Link capitan 2</div>
-        <input type="text" readonly value="<?= h($captain2Link) ?>" onclick="this.select()">
-        <div class="btn-row captain-link-actions">
-          <a class="btn btn-warning" href="<?= h($captain2Link) ?>">Abrir</a>
-          <a class="btn btn-whatsapp" href="<?= h($captain2Whatsapp) ?>" target="_blank" rel="noopener">WhatsApp</a>
+        <div class="label">Token <?= h($captain2Name) ?></div>
+        <input type="text" readonly value="<?= h((string) ($draft['captain2_token'] ?? '')) ?>" onclick="this.select()">
+        <div class="captain-link-actions">
+          <button class="btn btn-primary" type="button" data-share-token="<?= h($captain2ShareText) ?>">Compartir</button>
+          <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) ($draft['captain2_token'] ?? '')) ?>">Copiar</button>
+          <a class="btn btn-muted" href="<?= h($captain2OpenUrl) ?>">Abrir</a>
         </div>
       </div>
     </div>
@@ -292,6 +415,47 @@ require __DIR__ . '/includes/header.php';
   </section>
 
   <script>
+    (() => {
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+        const input = document.createElement('textarea');
+        input.value = text;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.left = '-9999px';
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(input);
+        return copied;
+      };
+
+      document.querySelectorAll('[data-copy-token]').forEach(button => {
+        button.addEventListener('click', async () => {
+          await copyText(button.dataset.copyToken || '');
+          button.textContent = 'Copiado';
+          window.setTimeout(() => { button.textContent = 'Copiar'; }, 1600);
+        });
+      });
+
+      document.querySelectorAll('[data-share-token]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const text = button.dataset.shareToken || '';
+          if (navigator.share) {
+            await navigator.share({ text });
+            button.textContent = 'Compartido';
+          } else {
+            await copyText(text);
+            button.textContent = 'Copiado';
+          }
+          window.setTimeout(() => { button.textContent = 'Compartir'; }, 1600);
+        });
+      });
+    })();
+
     (() => {
       const board = document.querySelector('.captain-board');
       const matchId = parseInt(board.dataset.matchId, 10);
@@ -519,7 +683,7 @@ require __DIR__ . '/includes/header.php';
             turn.innerHTML = 'Draft completo. Los equipos ya quedaron guardados para finalizar el partido.';
           }
         } else if (teamView > 0 && captainToken === '') {
-          turn.innerHTML = 'Este link no tiene token de capitan. Pide al admin el link correcto.';
+          turn.innerHTML = 'Este acceso no tiene token de capitan. Vuelve a Inicio y toca Soy capitan.';
         } else if (teamView === state.draft.current_team) {
           turn.innerHTML = `<strong>Tu turno:</strong> elige un jugador.`;
         } else if (teamView === 1 || teamView === 2) {

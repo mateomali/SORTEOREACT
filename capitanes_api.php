@@ -373,7 +373,7 @@ try {
     $captainId = $teamNumber === 1 ? (int) $draft['captain1_player_id'] : (int) $draft['captain2_player_id'];
     $expectedToken = $teamNumber === 1 ? (string) ($draft['captain1_token'] ?? '') : (string) ($draft['captain2_token'] ?? '');
     if ($expectedToken === '' || $token === '' || !hash_equals($expectedToken, $token)) {
-        throw new RuntimeException('Link de capitan invalido.');
+        throw new RuntimeException('Token de capitan invalido.');
     }
 
     if ($action === 'save_formation') {

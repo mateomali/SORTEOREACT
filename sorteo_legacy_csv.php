@@ -270,6 +270,8 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     const PRELOADED_JUGADORES = <?= $legacyPlayersJson ?: '[]' ?>;
     const HISTORICAL_TEAMMATE_PAIRS = <?= $legacyPairHistoryJson ?: '{}' ?>;
     const LOCKED_MATCH_MODE = MATCH_ID > 0;
+    const MAX_FIELD_PLAYERS_PER_LINE = 5;
+    const REQUIRED_FIELD_LINES = ['DEF', 'MED', 'DEL'];
 
     function normalizarPosiciones(rawPosiciones) {
       return String(rawPosiciones || '')
@@ -507,7 +509,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
             return {
               nombre: nombre.replace(/""/g, '"'),
               posicion,
-              ritmo: ritmo.toLowerCase(),
+              ritmo: normalizarRitmo(ritmo),
               puntuacion: parseFloat(puntuacion),
               selected: true
             };
@@ -556,7 +558,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function buildTeamPositionAssignment(equipo) {
       const lineasCancha = ['ARQ', 'DEF', 'MED', 'DEL'];
-      const maxPorLinea = 3;
+      const maxPorLinea = MAX_FIELD_PLAYERS_PER_LINE;
       const candidatosArq = equipo
         .filter(jugador => getOrderedPlayerPositions(jugador).includes('ARQ'))
         .sort((a, b) => {
@@ -784,6 +786,31 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       }
     }
 
+    function explicarBloqueoSorteo(players, numEquipos, maxDiff) {
+      if (players.length === 0) return 'No hay jugadores seleccionados.';
+      if (players.length % numEquipos !== 0) {
+        return `Hay ${players.length} jugadores seleccionados y no se pueden dividir en ${numEquipos} equipos iguales.`;
+      }
+      const teamSize = players.length / numEquipos;
+      const maxTeamSizeByFormation = 1 + (MAX_FIELD_PLAYERS_PER_LINE * REQUIRED_FIELD_LINES.length);
+      if (teamSize > maxTeamSizeByFormation) {
+        return `Cada equipo tendria ${teamSize} jugadores. La regla actual permite maximo 1 arquero y ${MAX_FIELD_PLAYERS_PER_LINE} por linea de campo (${maxTeamSizeByFormation} por equipo).`;
+      }
+      const arqueros = players.filter(p => p.posicion.includes('ARQ'));
+      if (arqueros.length < numEquipos) {
+        return `Hay ${arqueros.length} jugadores que pueden atajar y se necesitan ${numEquipos}, uno por equipo.`;
+      }
+      const arquerosPuros = arqueros.filter(isPureGoalkeeper);
+      if (arquerosPuros.length > numEquipos) {
+        return `Hay ${arquerosPuros.length} arqueros puros para ${numEquipos} equipos. Como el arquero es una sola plaza, sobra al menos un arquero puro.`;
+      }
+      const missingLines = REQUIRED_FIELD_LINES.filter(linea => players.filter(p => getOrderedPlayerPositions(p).includes(linea)).length < numEquipos);
+      if (missingLines.length) {
+        return `Faltan jugadores para cubrir todas las lineas en cada equipo. Lineas con menos de ${numEquipos} opciones: ${missingLines.join(', ')}.`;
+      }
+      return `No se encontro una combinacion que cumpla todas las reglas: diferencia maxima ${maxDiff.toFixed(1)}, 1 arquero por equipo, ritmo equilibrado, al menos DEF/MED/DEL y maximo ${MAX_FIELD_PLAYERS_PER_LINE} por linea.`;
+    }
+
     function generarEquipos() {
       const errorDiv = document.getElementById('error');
       const successDiv = document.getElementById('success');
@@ -797,7 +824,6 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       
       if (isNaN(maxDiff) || maxDiff < 0) {
         errorDiv.textContent = 'La diferencia máxima debe ser un número positivo';
-        errorDiv.textContent = 'No se pudo generar un reparto con estos jugadores. Revisa cantidad de arqueros y cantidad de convocados.';
         errorDiv.classList.remove('hidden');
         return;
       }
@@ -813,15 +839,9 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       }
 
       const teamSize = selectedPlayers.length / numEquipos;
-      if (teamSize > 12) {
-        errorDiv.textContent = `Con ${teamSize} jugadores por equipo no se puede respetar el tope de 3 por línea (máximo 12 por equipo).`;
-        errorDiv.classList.remove('hidden');
-        return;
-      }
-      
-      const lentos = selectedPlayers.filter(p => p.ritmo === 'lento');
-      if (lentos.length < numEquipos) {
-        errorDiv.textContent = `Se necesitan mínimo ${numEquipos} jugadores "lentos"`;
+      const maxTeamSizeByFormation = 1 + (MAX_FIELD_PLAYERS_PER_LINE * REQUIRED_FIELD_LINES.length);
+      if (teamSize > maxTeamSizeByFormation) {
+        errorDiv.textContent = `Con ${teamSize} jugadores por equipo no se puede respetar la formacion: maximo 1 arquero y ${MAX_FIELD_PLAYERS_PER_LINE} por linea de campo (maximo ${maxTeamSizeByFormation} por equipo).`;
         errorDiv.classList.remove('hidden');
         return;
       }
@@ -842,9 +862,16 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
       const resultado = generarEquiposConDiferenciaAuto(selectedPlayers, numEquipos, maxDiff);
       if (resultado) {
+        const validation = validarEquiposDetalle(resultado.equipos, teamSize, Number(resultado.usedMaxDiff || maxDiff));
+        if (!validation.ok) {
+          errorDiv.textContent = validation.reason;
+          errorDiv.classList.remove('hidden');
+          return;
+        }
         lastEquipos = resultado.equipos;
         document.getElementById('diffDisplay').textContent = Number(resultado.usedMaxDiff || maxDiff).toFixed(1);
         mostrarEquipos(resultado.equipos);
+        moveTeamColorConfigForMobile();
         successDiv.textContent = `Equipos generados exitosamente con diferencia máxima de ${maxDiff}`;
         if (resultado.perfecto) {
           successDiv.textContent = `Equipos generados con diferencia maxima ${Number(resultado.usedMaxDiff || maxDiff).toFixed(1)}.`;
@@ -854,9 +881,18 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         }
         successDiv.classList.remove('hidden');
       } else {
-        errorDiv.textContent = `No se encontró una combinación válida en 50000 intentos con diferencia máxima de ${maxDiff}. Intenta aumentar la diferencia máxima.`;
+        errorDiv.textContent = `No se encontro una combinacion valida aumentando la diferencia de a 0.5 hasta el maximo de 2.0 puntos. ${explicarBloqueoSorteo(selectedPlayers, numEquipos, 2)}`;
         errorDiv.classList.remove('hidden');
       }
+    }
+
+    function moveTeamColorConfigForMobile() {
+      if (!window.matchMedia('(max-width: 760px)').matches) return;
+      const colorConfig = document.querySelector('.team-color-config');
+      const teamsContainer = document.getElementById('equipos-generados');
+      if (!colorConfig || !teamsContainer || colorConfig.dataset.mobileMoved === '1') return;
+      teamsContainer.parentNode.insertBefore(colorConfig, teamsContainer);
+      colorConfig.dataset.mobileMoved = '1';
     }
 
     function clonarEquipos(equipos) {
@@ -913,18 +949,19 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       const diffRapidos = Math.max(...rapidos) - Math.min(...rapidos);
 
       const repeatPenalty = historicalRepeatPenalty(equipos);
-      let penalidad = diffPuntos * 1000 + diffLentos * 140 + diffRapidos * 80 + repeatPenalty;
+      let penalidad = diffLentos * 1600 + diffPuntos * 1000 + diffRapidos * 120 + repeatPenalty;
       let hardOk = true;
 
-      const minFieldLine = Math.floor((teamSize - 1) / 3);
-      const maxFieldLine = Math.ceil((teamSize - 1) / 3);
+      const fieldPlayers = Math.max(0, teamSize - 1);
+      const minFieldLine = fieldPlayers >= 3 ? 1 : 0;
+      const maxFieldLine = MAX_FIELD_PLAYERS_PER_LINE;
 
       for (const stat of stats) {
         if (stat.arqueros !== 1) {
           penalidad += Math.abs(stat.arqueros - 1) * 100000;
           hardOk = false;
         }
-        for (const linea of ['DEF', 'MED', 'DEL']) {
+        for (const linea of REQUIRED_FIELD_LINES) {
           const cantidad = stat.lineas[linea] || 0;
           if (cantidad < minFieldLine) penalidad += (minFieldLine - cantidad) * 25000;
           if (cantidad > maxFieldLine) penalidad += (cantidad - maxFieldLine) * 25000;
@@ -935,7 +972,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         && diffPuntos <= maxDiff
         && diffLentos <= 1
         && equipos.every(equipo => equipo.length === teamSize)
-        && stats.every(stat => ['DEF', 'MED', 'DEL'].every(linea => (stat.lineas[linea] || 0) >= minFieldLine && (stat.lineas[linea] || 0) <= maxFieldLine));
+        && stats.every(stat => REQUIRED_FIELD_LINES.every(linea => (stat.lineas[linea] || 0) >= minFieldLine && (stat.lineas[linea] || 0) <= maxFieldLine));
 
       return { penalidad, perfecto, diffPuntos, diffLentos, diffRapidos, repeatPenalty, stats };
     }
@@ -1091,124 +1128,62 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     }
 
     function generarEquiposConDiferenciaAuto(players, numEquipos, initialDiff = 0.5) {
-      let mejorResultado = null;
-      const start = Math.max(0.5, initialDiff || 0.5);
-      for (let diff = start; diff <= 20; diff += 0.5) {
+      const start = Math.min(2, Math.max(0.5, initialDiff || 0.5));
+      for (let diff = start; diff <= 2; diff += 0.5) {
         const resultado = generarEquiposOptimos(players, numEquipos, diff);
-        if (resultado) {
+        if (resultado && resultado.perfecto) {
           resultado.usedMaxDiff = diff;
-          mejorResultado = resultado;
-          if (resultado.perfecto) {
-            return resultado;
-          }
-        }
-      }
-      return mejorResultado;
-    }
-
-    function generarEquiposValidos(players, numEquipos, maxDiff) {
-      const teamSize = players.length / numEquipos;
-      for (let intento = 0; intento < 50000; intento++) {
-        // Separar jugadores por tipo
-        const arqueros = players.filter(p => p.posicion.includes('ARQ')).sort(() => Math.random() - 0.5);
-        
-        const arquerosTitulares = arqueros.slice(0, numEquipos);
-        const jugadoresDeCampo = players.filter(p => !arquerosTitulares.includes(p));
-        const lentosCampo = jugadoresDeCampo.filter(p => p.ritmo === 'lento').sort(() => Math.random() - 0.5);
-        const rapidosCampo = jugadoresDeCampo.filter(p => p.ritmo === 'rápido').sort(() => Math.random() - 0.5);
-
-        const equipos = Array.from({length: numEquipos}, () => []);
-        const puntosPorEquipo = new Array(numEquipos).fill(0);
-        
-        // Asignar arqueros balanceados
-        for (let i = 0; i < arquerosTitulares.length; i++) {
-          equipos[i].push(arquerosTitulares[i]);
-          puntosPorEquipo[i] += arquerosTitulares[i].puntuacion;
-        }
-        
-        // Asignar lentos no-arqueros balanceados
-        for (let i = 0; i < lentosCampo.length; i++) {
-          const equipoIndex = i % numEquipos;
-          equipos[equipoIndex].push(lentosCampo[i]);
-          puntosPorEquipo[equipoIndex] += lentosCampo[i].puntuacion;
-        }
-        
-        // Asignar rápidos al equipo con menor puntuación
-        const rapidosOrdenados = [...rapidosCampo].sort((a, b) => b.puntuacion - a.puntuacion);
-        for (const jugador of rapidosOrdenados) {
-          let minPuntos = Infinity;
-          let equipoIndex = 0;
-          let equiposDisponibles = [];
-          
-          // Encontrar equipos con espacio disponible
-          for (let i = 0; i < numEquipos; i++) {
-            if (equipos[i].length < teamSize) {
-              equiposDisponibles.push(i);
-            }
-          }
-          
-          // Si hay equipos disponibles, seleccionar el de menor puntuación
-          if (equiposDisponibles.length > 0) {
-            for (let i of equiposDisponibles) {
-              if (puntosPorEquipo[i] < minPuntos) {
-                minPuntos = puntosPorEquipo[i];
-                equipoIndex = i;
-              }
-            }
-          } else {
-            // Si no hay espacio en ningún equipo, asignar al primero
-            equipoIndex = 0;
-          }
-          
-          equipos[equipoIndex].push(jugador);
-          puntosPorEquipo[equipoIndex] += jugador.puntuacion;
-        }
-        
-        // Verificar restricciones
-        if (validarEquipos(equipos, teamSize, maxDiff)) {
-          return equipos;
+          return resultado;
         }
       }
       return null;
     }
 
-    function validarEquipos(equipos, teamSize, maxDiff) {
+    function validarEquiposDetalle(equipos, teamSize, maxDiff) {
       let puntuaciones = [];
-      
-      for (const equipo of equipos) {
-        // Verificar tamaño del equipo
-        if (equipo.length !== teamSize) return false;
 
-        // Verificar posiciones obligatorias con una sola plaza de arquero.
+      for (let equipoIndex = 0; equipoIndex < equipos.length; equipoIndex++) {
+        const equipo = equipos[equipoIndex];
+        const nombreEquipo = getTeamDisplayName(equipoIndex);
+        if (equipo.length !== teamSize) {
+          return { ok: false, reason: `${nombreEquipo} tiene ${equipo.length} jugadores y debe tener ${teamSize}.` };
+        }
+
         const { asignacion, arquerosAsignados, lineaMaximaValida } = buildTeamPositionAssignment(equipo);
         if (arquerosAsignados !== 1) {
-          return false;
+          return { ok: false, reason: `${nombreEquipo} queda con ${arquerosAsignados} arqueros asignados. Cada equipo debe tener exactamente 1 arquero.` };
         }
         if (!lineaMaximaValida) {
-          return false;
+          return { ok: false, reason: `${nombreEquipo} supera el limite de ${MAX_FIELD_PLAYERS_PER_LINE} jugadores en una linea de campo.` };
         }
-        const posiciones = new Set(asignacion.values());        
+        const posiciones = new Set(asignacion.values());
         const posicionesRequeridas = ['ARQ', 'DEF', 'MED', 'DEL'];
         if (!posicionesRequeridas.every(p => posiciones.has(p))) {
-          return false;
+          const faltantes = posicionesRequeridas.filter(p => !posiciones.has(p)).join(', ');
+          return { ok: false, reason: `${nombreEquipo} no cubre todas las lineas requeridas. Falta: ${faltantes}.` };
         }
-        
-        // Calcular puntuación total
+
         const puntuacion = equipo.reduce((sum, j) => sum + j.puntuacion, 0);
         puntuaciones.push(puntuacion);
-        
-        // Verificar balance de ritmos
-        const rapidos = equipo.filter(j => j.ritmo === 'rápido').length;
-        const lentos = equipo.filter(j => j.ritmo === 'lento').length;
-        if (Math.abs(rapidos - lentos) > 3) {
-          return false;
-        }
+
       }
-      
-      // Verificar diferencia máxima de puntuación
+
       const max = Math.max(...puntuaciones);
       const min = Math.min(...puntuaciones);
-      return (max - min) <= maxDiff;
+      const diff = max - min;
+      if (diff > maxDiff) {
+        return { ok: false, reason: `La diferencia de puntaje entre equipos es ${diff.toFixed(1)} y el maximo permitido es ${maxDiff.toFixed(1)}.` };
+      }
+      const lentosPorEquipo = equipos.map(equipo => equipo.filter(j => j.ritmo === 'lento').length);
+      const diffLentos = Math.max(...lentosPorEquipo) - Math.min(...lentosPorEquipo);
+      if (diffLentos > 1) {
+        return { ok: false, reason: `Los equipos no reparten el ritmo de forma pareja: lentos por equipo ${lentosPorEquipo.join(' / ')}.` };
+      }
+      return { ok: true, reason: '' };
+    }
+
+    function validarEquipos(equipos, teamSize, maxDiff) {
+      return validarEquiposDetalle(equipos, teamSize, maxDiff).ok;
     }
 
     function playerKey(jugador) {
@@ -1222,7 +1197,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         for (let med = 0; med <= fieldPlayers - def; med++) {
           const del = fieldPlayers - def - med;
           if (fieldPlayers >= 3 && (def < 1 || med < 1 || del < 1)) continue;
-          if (fieldPlayers >= 6 && Math.max(def, med, del) > Math.ceil(fieldPlayers / 3) + 1) continue;
+          if (Math.max(def, med, del) > MAX_FIELD_PLAYERS_PER_LINE) continue;
           const values = [def, med, del];
           const balance = Math.max(...values) - Math.min(...values);
           candidates.push({ DEF: def, MED: med, DEL: del, value: `${def}-${med}-${del}`, balance });
@@ -1259,9 +1234,9 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       if (selectedFormation === 'custom') {
         const custom = customFormations[teamIndex] || defaultFormationCounts(teamSize);
         return {
-          DEF: Math.max(0, parseInt(custom.DEF || 0, 10)),
-          MED: Math.max(0, parseInt(custom.MED || 0, 10)),
-          DEL: Math.max(0, parseInt(custom.DEL || 0, 10))
+          DEF: Math.min(MAX_FIELD_PLAYERS_PER_LINE, Math.max(0, parseInt(custom.DEF || 0, 10))),
+          MED: Math.min(MAX_FIELD_PLAYERS_PER_LINE, Math.max(0, parseInt(custom.MED || 0, 10))),
+          DEL: Math.min(MAX_FIELD_PLAYERS_PER_LINE, Math.max(0, parseInt(custom.DEL || 0, 10)))
         };
       }
       const parts = selectedFormation.split('-').map(value => parseInt(value, 10));
@@ -1285,7 +1260,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       if (!customFormations[teamIndex] && lastEquipos && lastEquipos[teamIndex]) {
         customFormations[teamIndex] = defaultFormationCounts(lastEquipos[teamIndex].length);
       }
-      customFormations[teamIndex][line] = Math.max(0, parseInt(value || '0', 10));
+      customFormations[teamIndex][line] = Math.min(MAX_FIELD_PLAYERS_PER_LINE, Math.max(0, parseInt(value || '0', 10)));
       teamFormations[teamIndex] = 'custom';
       if (lastEquipos) mostrarEquipos(lastEquipos);
     }
@@ -1433,11 +1408,11 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
             </select>
             <div class="team-custom-formation ${customVisible ? '' : 'hidden'}">
               <span>DEF</span>
-              <input type="number" min="0" max="12" value="${custom.DEF}" onchange="onTeamCustomFormationChange(${index}, 'DEF', this.value)">
+              <input type="number" min="0" max="${MAX_FIELD_PLAYERS_PER_LINE}" value="${custom.DEF}" onchange="onTeamCustomFormationChange(${index}, 'DEF', this.value)">
               <span>MED</span>
-              <input type="number" min="0" max="12" value="${custom.MED}" onchange="onTeamCustomFormationChange(${index}, 'MED', this.value)">
+              <input type="number" min="0" max="${MAX_FIELD_PLAYERS_PER_LINE}" value="${custom.MED}" onchange="onTeamCustomFormationChange(${index}, 'MED', this.value)">
               <span>DEL</span>
-              <input type="number" min="0" max="12" value="${custom.DEL}" onchange="onTeamCustomFormationChange(${index}, 'DEL', this.value)">
+              <input type="number" min="0" max="${MAX_FIELD_PLAYERS_PER_LINE}" value="${custom.DEL}" onchange="onTeamCustomFormationChange(${index}, 'DEL', this.value)">
             </div>
           </div>
           <div class="team-formation">
@@ -1640,7 +1615,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       errorDiv.textContent = 'Este partido no tiene jugadores convocados. Cárgalos desde la pantalla de partidos.';
       errorDiv.classList.remove('hidden');
     }
-  </script>
+</script>
 </body>
 </html>
 

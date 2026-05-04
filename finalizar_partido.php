@@ -248,7 +248,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
 }
 
-$matches = repo_matches("status IN ('sorteado','finalizado')");
 $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
 $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['id']) : [];
 $groupedTeams = $selectedMatch ? repo_grouped_team_players((int) $selectedMatch['id']) : [];
@@ -256,6 +255,17 @@ $awardDefinitions = award_definitions();
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
 $valuationsLocked = $selectedMatch ? valuations_locked_after_deadline($selectedMatch) : false;
 $editDetails = !$valuationsLocked && ($forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1'));
+$backUrl = 'editar_partidos.php';
+$referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
+if ($referer !== '') {
+    $refererParts = parse_url($referer);
+    $currentHost = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    $refererHost = (string) ($refererParts['host'] ?? '');
+    $refererPath = (string) ($refererParts['path'] ?? '');
+    if ($refererHost === $currentHost && !str_ends_with($refererPath, '/finalizar_partido.php')) {
+        $backUrl = $referer;
+    }
+}
 
 $title = 'Finalizar partido | ' . APP_NAME;
 $activePage = 'finalizar_partido.php';
@@ -267,22 +277,7 @@ require __DIR__ . '/includes/header.php';
     <h1>Finalizar partido</h1>
     <p class="small-muted">Carga goles y calificacion por jugador para cerrar el partido y sumar estadisticas.</p>
   </div>
-</section>
-
-<section class="card mb-3.5">
-  <form method="get" class="form-grid">
-    <div class="form-row">
-      <label>Seleccionar partido</label>
-      <select name="match_id" onchange="this.form.submit()">
-        <option value="">Elegir...</option>
-        <?php foreach ($matches as $m): ?>
-          <option value="<?= (int) $m['id'] ?>" <?= selected_attr($selectedMatch && (int) $selectedMatch['id'] === (int) $m['id']) ?>>
-            <?= h(date('d/m H:i', strtotime((string) $m['match_date'])) . ' - ' . ($m['title'] ?: ('Partido #' . $m['id'])) . ' [' . $m['status'] . ']') ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-  </form>
+  <a class="btn btn-muted" href="<?= h($backUrl) ?>">Volver</a>
 </section>
 
 <?php if ($selectedMatch): ?>

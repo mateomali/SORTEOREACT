@@ -158,6 +158,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $activePlayers = repo_all_players(true);
 $matches = repo_matches();
+$latestMatch = null;
+foreach ($matches as $candidateMatch) {
+    if (!$latestMatch || (int) $candidateMatch['id'] > (int) $latestMatch['id']) {
+        $latestMatch = $candidateMatch;
+    }
+}
 $matchesPerPage = 10;
 $totalMatches = count($matches);
 $totalPages = max(1, (int) ceil($totalMatches / $matchesPerPage));
@@ -579,6 +585,45 @@ require __DIR__ . '/includes/header.php';
   <?php if (!$matches): ?>
     <p>No hay partidos cargados.</p>
   <?php else: ?>
+    <?php if ($latestMatch): ?>
+      <?php
+        $latestId = (int) $latestMatch['id'];
+        $latestIsScheduled = (string) $latestMatch['status'] === 'programado';
+        $latestCanFinalize = (string) $latestMatch['status'] === 'sorteado';
+        $latestIsFinalized = (string) $latestMatch['status'] === 'finalizado';
+        $latestPlayersPerTeam = (int) ($latestMatch['players_per_team'] ?? ((int) $latestMatch['participants_count'] / max(1, (int) $latestMatch['num_teams'])));
+        $latestExpectedPlayers = (int) $latestMatch['num_teams'] * max(1, $latestPlayersPerTeam);
+        $latestParticipantsCount = (int) $latestMatch['participants_count'];
+        $latestTeams = $historyTeamsByMatch[$latestId] ?? [];
+        $latestScoreboard = admin_render_match_scoreboard($latestMatch, $latestTeams, $historyCaptainNames);
+      ?>
+      <article class="encounter-latest-card">
+        <div>
+          <span class="encounter-latest-kicker">Ultimo partido cargado</span>
+          <h4><?= h((string) ($latestMatch['title'] ?: ('Partido #' . $latestMatch['id']))) ?></h4>
+          <p>
+            <?= h(date('d/m/Y H:i', strtotime((string) $latestMatch['match_date']))) ?>
+            | <?= h((string) $latestParticipantsCount) ?>/<?= h((string) $latestExpectedPlayers) ?> convocados
+            | <?= h(admin_match_status_label((string) $latestMatch['status'])) ?>
+          </p>
+          <?php if ($latestScoreboard !== ''): ?>
+            <div class="encounter-latest-score"><?= $latestScoreboard ?></div>
+          <?php endif; ?>
+        </div>
+        <div class="encounter-latest-actions">
+          <?php if ($latestIsScheduled): ?>
+            <a class="btn btn-muted" href="<?= h($matchFormPage) ?>?edit=<?= $latestId ?>">Editar</a>
+            <a class="btn btn-warning" href="sorteo_legacy_csv.php?match_id=<?= $latestId ?>">Sortear</a>
+            <a class="btn btn-primary" href="capitanes.php?match_id=<?= $latestId ?>">Capitanes</a>
+          <?php elseif ($latestCanFinalize): ?>
+            <a class="btn btn-primary" href="finalizar_partido.php?match_id=<?= $latestId ?>">Cargar resultado</a>
+          <?php elseif ($latestIsFinalized): ?>
+            <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>">Ver resultado</a>
+          <?php endif; ?>
+        </div>
+      </article>
+    <?php endif; ?>
+
     <div class="encounter-history-search" role="search">
       <label for="encounterHistorySearch">Buscar historial</label>
       <input id="encounterHistorySearch" type="search" placeholder="Fecha, partido o capitan..." autocomplete="off" data-encounter-history-search>
@@ -593,18 +638,10 @@ require __DIR__ . '/includes/header.php';
           $isScheduled = (string) $m['status'] === 'programado';
           $matchId = (int) $m['id'];
           $cardPage = intdiv($matchIndex, $matchesPerPage) + 1;
-          $playersPerTeam = (int) ($m['players_per_team'] ?? ((int) $m['participants_count'] / max(1, (int) $m['num_teams'])));
-          $expectedPlayers = (int) $m['num_teams'] * max(1, $playersPerTeam);
           $participantsCount = (int) $m['participants_count'];
           $ratingStatus = $historyRatingCounts[$matchId] ?? ['player_count' => $participantsCount, 'rated_count' => 0];
           $missingAwards = $isFinalized && (($historyAwardCounts[$matchId] ?? 0) === 0);
           $missingRating = $isFinalized && (int) $ratingStatus['player_count'] > 0 && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
-          $hasCapacityIssue = $participantsCount !== $expectedPlayers;
-          $capacityNote = $hasCapacityIssue
-              ? ($participantsCount < $expectedPlayers
-                  ? 'Faltan ' . ($expectedPlayers - $participantsCount) . ' convocados'
-                  : 'Sobran ' . ($participantsCount - $expectedPlayers) . ' convocados')
-              : $participantsCount . ' convocados · ' . $playersPerTeam . ' por equipo';
           $statusClass = $isFinalized ? 'done' : ($canFinalize ? 'ready' : 'warn');
           $historyTeams = $historyTeamsByMatch[$matchId] ?? [];
           $historyScoreboard = admin_render_match_scoreboard($m, $historyTeams, $historyCaptainNames);
@@ -625,10 +662,11 @@ require __DIR__ . '/includes/header.php';
               admin_history_match_score_line($m, $historyTeams, $historyCaptainNames),
           ]));
           $isFocusedMatch = $focusedMatchId === $matchId;
+          $isLatestMatch = $latestMatch && (int) $latestMatch['id'] === $matchId;
           $isPageVisible = $cardPage === $currentPage;
         ?>
         <article
-          class="encounter-card <?= $isPageVisible ? '' : 'encounter-page-hidden' ?> <?= $isFocusedMatch ? 'is-focused' : '' ?>"
+          class="encounter-card <?= $isPageVisible ? '' : 'encounter-page-hidden' ?> <?= $isFocusedMatch ? 'is-focused' : '' ?> <?= $isLatestMatch ? 'is-latest' : '' ?>"
           id="partido-admin-<?= $matchId ?>"
           tabindex="<?= $isFocusedMatch ? '0' : '-1' ?>"
           data-encounter-card
@@ -641,10 +679,6 @@ require __DIR__ . '/includes/header.php';
               <span class="encounter-date"><?= h(date('d/m/Y H:00', strtotime((string) $m['match_date']))) ?></span>
               <h4><?= h((string) ($m['title'] ?: 'Partido #' . $m['id'])) ?></h4>
             </div>
-          </div>
-
-          <div class="encounter-card-meta <?= $hasCapacityIssue ? 'is-warning' : '' ?>">
-            <?= h($capacityNote) ?>
           </div>
 
           <div class="encounter-card-score">

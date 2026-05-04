@@ -682,20 +682,56 @@ require __DIR__ . '/includes/header.php';
     $headerParticipantsCount = isset($headerMatch['participants_count'])
         ? (int) $headerMatch['participants_count']
         : count(repo_match_participants((int) $headerMatch['id']));
+    $headerHasCaptains = (string) ($headerMatch['draw_mode'] ?? '') === 'captains'
+        && (string) ($headerMatch['status'] ?? '') !== 'finalizado';
+    $headerCaptainDraftStatus = '';
+    if ($headerHasCaptains) {
+        $stmtHeaderDraft = $pdo->prepare('SELECT status FROM captain_drafts WHERE match_id = :mid LIMIT 1');
+        $stmtHeaderDraft->execute(['mid' => (int) $headerMatch['id']]);
+        $headerCaptainDraftStatus = (string) ($stmtHeaderDraft->fetchColumn() ?: '');
+    }
+    $headerShowCaptainLive = $headerHasCaptains && $headerCaptainDraftStatus !== 'completed';
+    $headerCaptainSavedToken = '';
+    if ($headerHasCaptains) {
+        $headerMatchId = (int) $headerMatch['id'];
+        $storedCaptainAccess = $_SESSION['captain_access'][$headerMatchId] ?? null;
+        if (is_array($storedCaptainAccess)) {
+            $headerCaptainSavedToken = trim((string) ($storedCaptainAccess['token'] ?? ''));
+        }
+        if ($headerCaptainSavedToken === '') {
+            $storedCaptainCookie = (string) ($_COOKIE['captain_access_' . $headerMatchId] ?? '');
+            if ($storedCaptainCookie !== '' && str_contains($storedCaptainCookie, '|')) {
+                [, $storedCaptainToken] = explode('|', $storedCaptainCookie, 2);
+                $headerCaptainSavedToken = trim($storedCaptainToken);
+            }
+        }
+    }
   ?>
-  <section class="card home-next-card">
-    <div>
-      <span class="home-kicker"><?= (string) $headerMatch['status'] === 'finalizado' ? 'Partido finalizado' : 'Proximo partido' ?></span>
+  <section class="card home-next-card <?= (string) $headerMatch['status'] === 'finalizado' ? 'home-next-card-with-result' : ($headerHasCaptains ? 'home-next-card-with-captain' : '') ?>">
+    <div class="home-next-main">
+      <span class="home-kicker"><?= (string) $headerMatch['status'] === 'finalizado' ? 'Datos del ultimo partido jugado' : 'Proximo partido' ?></span>
       <h2><?= h((string) ($headerMatch['title'] ?: ('Partido #' . $headerMatch['id']))) ?></h2>
       <p class="small-muted">
         Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $headerMatch['match_date']))) ?>
         | <?= h((string) $headerParticipantsCount) ?> jugadores
         | <?= h(match_status_label((string) $headerMatch['status'])) ?>
       </p>
-      <?php if ((string) $headerMatch['status'] === 'finalizado'): ?>
-        <div class="home-result-line">Resultado: <?= render_match_scoreboard($headerGoals, $headerTeamLabels) ?></div>
-      <?php endif; ?>
     </div>
+    <?php if ((string) $headerMatch['status'] === 'finalizado'): ?>
+      <div class="home-result-line">
+        <span>Resultado</span>
+        <?= render_match_scoreboard($headerGoals, $headerTeamLabels) ?>
+      </div>
+    <?php elseif ($headerHasCaptains): ?>
+      <form class="home-captain-access" method="post" action="capitanes.php">
+        <input type="hidden" name="action" value="captain_token_login">
+        <label for="homeCaptainToken">Token de capitan</label>
+        <div>
+          <input id="homeCaptainToken" type="text" name="captain_token" placeholder="Pegar token" autocomplete="off" inputmode="numeric" maxlength="4" value="<?= h($headerCaptainSavedToken) ?>" required>
+          <button class="btn btn-primary" type="submit">Soy capitan</button>
+        </div>
+      </form>
+    <?php endif; ?>
     <?php if ($showHistoryPage): ?>
       <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $headerMatch['id'] ?>" data-match-detail-toggle aria-label="Ver detalles del partido">
         <span class="match-detail-toggle-symbol" data-match-detail-symbol>+</span>
@@ -703,6 +739,27 @@ require __DIR__ . '/includes/header.php';
       </a>
     <?php endif; ?>
   </section>
+  <?php if ($headerShowCaptainLive): ?>
+    <section class="card home-captain-live" data-public-captain-live data-match-id="<?= (int) $headerMatch['id'] ?>">
+      <div class="home-captain-live-head">
+        <div>
+          <span class="home-kicker">Sorteo en vivo</span>
+          <h3>Equipos por capitanes</h3>
+        </div>
+        <span class="home-captain-live-status" data-public-captain-status>Actualizando...</span>
+      </div>
+      <div class="home-captain-live-teams" data-public-captain-teams>
+        <article>
+          <h4>Equipo 1</h4>
+          <p class="small-muted">Esperando datos...</p>
+        </article>
+        <article>
+          <h4>Equipo 2</h4>
+          <p class="small-muted">Esperando datos...</p>
+        </article>
+      </div>
+    </section>
+  <?php endif; ?>
 <?php endif; ?>
 
 <section class="home-layout <?= $showHistoryPage ? '' : 'home-layout-single' ?>">
@@ -763,7 +820,7 @@ require __DIR__ . '/includes/header.php';
                       <span class="match-list-title-score"><?= $historyScoreboard ?></span>
                     <?php endif; ?>
                   </strong>
-                  <small><?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?> | <?= h((string) $match['participants_count']) ?> jugadores</small>
+                  <small><?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?></small>
                 </span>
                 <span class="match-list-side">
                   <?php if ($isNext): ?><em>Proximo</em><?php endif; ?>
@@ -792,17 +849,29 @@ require __DIR__ . '/includes/header.php';
       <h3>Detalle</h3>
       <p>No hay partidos para mostrar.</p>
     <?php else: ?>
-      <div class="match-detail-head">
-        <div>
-          <h3><?= h((string) ($selectedMatch['title'] ?: ('Partido #' . $selectedMatch['id']))) ?></h3>
-          <p class="small-muted"><?= h(date('d/m/Y H:i', strtotime((string) $selectedMatch['match_date']))) ?> | <?= h(match_status_label((string) $selectedMatch['status'])) ?></p>
+      <?php
+        $showDynamicCaptainDetail = isset($headerShowCaptainLive, $headerMatch)
+            && $headerShowCaptainLive
+            && (int) $selectedMatch['id'] === (int) $headerMatch['id'];
+      ?>
+      <?php if ($showDynamicCaptainDetail): ?>
+        <div class="grid cols-2 public-teams" data-public-captain-formation>
+          <article class="team-card">
+            <div class="team-head">
+              <h4>Equipo 1</h4>
+              <span class="small-muted">Esperando datos...</span>
+            </div>
+            <div class="team-formation"></div>
+          </article>
+          <article class="team-card">
+            <div class="team-head">
+              <h4>Equipo 2</h4>
+              <span class="small-muted">Esperando datos...</span>
+            </div>
+            <div class="team-formation"></div>
+          </article>
         </div>
-        <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
-          <div class="score-pill"><?= render_match_scoreboard($teamGoals, $teamLabels) ?></div>
-        <?php endif; ?>
-      </div>
-
-      <?php if (!$groupedTeams): ?>
+      <?php elseif (!$groupedTeams): ?>
         <p>Los equipos todavia no fueron formados. Cuando esten sorteados o elegidos por capitanes, se mostrara la formacion aca.</p>
         <?php if ($participants): ?>
           <div class="selected-player-list public-player-list">
@@ -1011,6 +1080,117 @@ require __DIR__ . '/includes/header.php';
 
     input.addEventListener('input', applyFilter);
     applyFilter();
+  })();
+</script>
+<?php elseif (!empty($headerHasCaptains)): ?>
+<script>
+  (() => {
+    const root = document.querySelector('[data-public-captain-live]');
+    if (!root) return;
+
+    const matchId = parseInt(root.dataset.matchId || '0', 10);
+    const status = root.querySelector('[data-public-captain-status]');
+    const teamsRoot = root.querySelector('[data-public-captain-teams]');
+    const formationRoot = document.querySelector('[data-public-captain-formation]');
+    let stopped = false;
+
+    const escapeHtml = (value) => String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+    const formatSkill = (value) => {
+      const number = Number(value || 0);
+      return Number.isInteger(number) ? String(number) : number.toFixed(1);
+    };
+
+    const teamTotalSkill = (players) => players.reduce((total, player) => total + Number(player.skill || 0), 0);
+
+    const renderFormation = (players) => {
+      const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
+      return positions.map((position) => {
+        const linePlayers = players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === position);
+        const playerHtml = linePlayers.length
+          ? linePlayers.map((player) => `
+              <div class="formation-player">
+                <strong>${escapeHtml(player.name)}</strong>
+                <span>${escapeHtml(player.positions)} | ${escapeHtml(player.pace_label)} | ${formatSkill(player.skill)} pts</span>
+              </div>
+            `).join('')
+          : '<span class="formation-player empty-slot">-</span>';
+
+        return `
+          <div class="formation-line">
+            <div class="line-label">${position}</div>
+            <div class="line-players">${playerHtml}</div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    const renderTeamCard = (state, teamNumber) => {
+      const players = state.teams?.[teamNumber] || [];
+      const captainName = state.draft?.captains?.[teamNumber]?.name || `Equipo ${teamNumber}`;
+      const targetSize = Number(state.match?.target_team_size || 0);
+      const totalSkill = teamTotalSkill(players);
+
+      return `
+        <article class="team-card">
+          <div class="team-head">
+            <h4>${escapeHtml(captainName)}</h4>
+            <span class="small-muted">${players.length}/${targetSize} jugadores | ${totalSkill.toFixed(1)} pts</span>
+          </div>
+          <div class="team-formation">${renderFormation(players)}</div>
+        </article>
+      `;
+    };
+
+    const render = (state) => {
+      if (!state.ok) {
+        status.textContent = state.message || 'No se pudo cargar el sorteo.';
+        return;
+      }
+
+      const teamsHtml = renderTeamCard(state, 1) + renderTeamCard(state, 2);
+      teamsRoot.innerHTML = teamsHtml;
+      if (formationRoot) {
+        formationRoot.innerHTML = teamsHtml;
+      }
+
+      const availableCount = Array.isArray(state.available) ? state.available.length : 0;
+      if (state.draft?.status === 'completed') {
+        stopped = true;
+        root.hidden = true;
+        return;
+      }
+
+      if (state.draft?.current_captain) {
+        status.textContent = `Turno de ${state.draft.current_captain} | ${availableCount} disponibles`;
+      } else {
+        status.textContent = `${availableCount} jugadores disponibles`;
+      }
+
+    };
+
+    const loadState = async () => {
+      if (stopped || !matchId) return;
+      try {
+        const response = await fetch(`capitanes_api.php?action=state&match_id=${matchId}`, { cache: 'no-store' });
+        const state = await response.json();
+        render(state);
+      } catch (error) {
+        status.textContent = 'Reintentando actualizacion...';
+      }
+    };
+
+    loadState();
+    const timer = window.setInterval(loadState, 3000);
+    window.addEventListener('beforeunload', () => {
+      stopped = true;
+      window.clearInterval(timer);
+    });
   })();
 </script>
 <?php endif; ?>

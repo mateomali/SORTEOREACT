@@ -59,13 +59,13 @@ function normalize_assigned_position_legacy(?string $assigned, array $player): s
 function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): bool
 {
     $scores = [];
+    $slowCounts = [];
     foreach ($teams as $team) {
         if (count($team) !== $teamSize) {
             return false;
         }
 
         $lineCounts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
-        $fast = 0;
         $slow = 0;
         $score = 0.0;
 
@@ -79,21 +79,26 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
             $score += (float) ($player['skill'] ?? 0);
             if (($player['pace'] ?? '') === 'lento') {
                 $slow++;
-            } else {
-                $fast++;
             }
         }
 
         if (($lineCounts['ARQ'] ?? 0) !== 1) {
             return false;
         }
-        if (abs($fast - $slow) > 3) {
-            return false;
+        foreach (['DEF', 'MED', 'DEL'] as $line) {
+            if (($lineCounts[$line] ?? 0) < 1 || ($lineCounts[$line] ?? 0) > 5) {
+                return false;
+            }
         }
         $scores[] = $score;
+        $slowCounts[] = $slow;
     }
 
-    return (max($scores) - min($scores)) <= $maxDiff;
+    if ((max($scores) - min($scores)) > $maxDiff) {
+        return false;
+    }
+
+    return (max($slowCounts) - min($slowCounts)) <= 1;
 }
 
 function team_formation_summary_legacy(array $team): string
@@ -225,7 +230,7 @@ $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
 
 if (!validate_teams_legacy($teams, $teamSize, $maxDiff)) {
     http_response_code(422);
-    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan la diferencia maxima, arquero o ritmo requeridos. Genera nuevamente o revisa el arquero asignado.']);
+    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan las reglas de guardado: 1 arquero por equipo, ritmo repartido de forma pareja, diferencia de puntaje valida y al menos 1 jugador en DEF/MED/DEL.']);
     exit;
 }
 

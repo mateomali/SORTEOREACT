@@ -26,7 +26,7 @@ function is_pure_goalkeeper(array $player): bool
 function build_team_position_assignment(array $team): array
 {
     $lines = ['ARQ', 'DEF', 'MED', 'DEL'];
-    $maxPerLine = 3;
+    $maxPerLine = 5;
 
     $candidates = array_values(array_filter($team, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
     usort($candidates, static function (array $a, array $b): int {
@@ -79,7 +79,7 @@ function build_team_position_assignment(array $team): array
     while ($changed) {
         $changed = false;
         $lineCount = $countLines($assignment);
-        $overloaded = array_values(array_filter($lines, static fn(string $line): bool => $lineCount[$line] > 3));
+        $overloaded = array_values(array_filter($lines, static fn(string $line): bool => $lineCount[$line] > $maxPerLine));
         usort($overloaded, static fn(string $a, string $b): int => $lineCount[$b] <=> $lineCount[$a]);
 
         if (!$overloaded) {
@@ -172,6 +172,7 @@ function build_team_position_assignment(array $team): array
 function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
 {
     $scores = [];
+    $slowCounts = [];
     foreach ($teams as $team) {
         if (count($team) !== $teamSize) {
             return false;
@@ -193,23 +194,22 @@ function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
         }
 
         $score = 0.0;
-        $fast = 0;
         $slow = 0;
         foreach ($team as $player) {
             $score += (float) $player['skill'];
             if (($player['pace'] ?? '') === 'lento') {
                 $slow++;
-            } else {
-                $fast++;
             }
         }
-        if (abs($fast - $slow) > 3) {
-            return false;
-        }
         $scores[] = $score;
+        $slowCounts[] = $slow;
     }
 
-    return ((max($scores) - min($scores)) <= $maxDiff);
+    if ((max($scores) - min($scores)) > $maxDiff) {
+        return false;
+    }
+
+    return (max($slowCounts) - min($slowCounts)) <= 1;
 }
 
 function decorate_teams(array $teams): array
