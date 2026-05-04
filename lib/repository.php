@@ -42,7 +42,7 @@ function repo_match_by_id(int $id): ?array
 function repo_match_participants(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.goals, mp.rating
+        'SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.lineup_order, mp.formation_line_order, mp.goals, mp.rating
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid

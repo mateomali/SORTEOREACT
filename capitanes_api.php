@@ -193,6 +193,8 @@ function captain_state(int $matchId): array
             'skill' => (float) $p['skill'],
             'team_number' => $p['team_number'] !== null ? (int) $p['team_number'] : null,
             'assigned_position' => $p['assigned_position'] !== null ? (string) $p['assigned_position'] : primary_position($p),
+            'lineup_order' => $p['lineup_order'] !== null ? (int) $p['lineup_order'] : null,
+            'formation_line_order' => $p['formation_line_order'] !== null ? (int) $p['formation_line_order'] : null,
         ];
         if ($row['team_number'] === 1 || $row['team_number'] === 2) {
             $teams[$row['team_number']][] = $row;
@@ -203,6 +205,21 @@ function captain_state(int $matchId): array
 
     foreach ([1, 2] as $teamNumber) {
         usort($teams[$teamNumber], static function (array $a, array $b): int {
+            $positionOrder = ['ARQ' => 1, 'DEF' => 2, 'MED' => 3, 'DEL' => 4];
+            $positionCompare = ($positionOrder[$a['assigned_position']] ?? 99) <=> ($positionOrder[$b['assigned_position']] ?? 99);
+            if ($positionCompare !== 0) {
+                return $positionCompare;
+            }
+            $lineOrderA = $a['formation_line_order'] ?? 999;
+            $lineOrderB = $b['formation_line_order'] ?? 999;
+            if ($lineOrderA !== $lineOrderB) {
+                return $lineOrderA <=> $lineOrderB;
+            }
+            $lineupA = $a['lineup_order'] ?? 999;
+            $lineupB = $b['lineup_order'] ?? 999;
+            if ($lineupA !== $lineupB) {
+                return $lineupA <=> $lineupB;
+            }
             if ((float) $b['skill'] !== (float) $a['skill']) {
                 return (float) $b['skill'] <=> (float) $a['skill'];
             }

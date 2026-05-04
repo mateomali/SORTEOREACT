@@ -119,10 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'capta
 
     $tokenTeam = hash_equals((string) $draftByToken['captain1_token'], $postedToken) ? 1 : 2;
     remember_captain_access((int) $draftByToken['match_id'], $tokenTeam, $postedToken);
-    redirect('capitanes.php?match_id=' . (int) $draftByToken['match_id']);
+    redirect('capitanes.php?match_id=' . (int) $draftByToken['match_id'] . '&team=' . $tokenTeam . '&token=' . urlencode($postedToken));
 }
 
-if ($matchId > 0 && ($captainToken === '' || !in_array($teamView, [1, 2], true)) && !is_admin()) {
+if ($matchId > 0 && ($captainToken === '' || !in_array($teamView, [1, 2], true))) {
     $storedAccess = stored_captain_access($pdo, $matchId);
     if ($storedAccess) {
         $teamView = (int) $storedAccess['team'];
@@ -394,6 +394,7 @@ require __DIR__ . '/includes/header.php';
     <div class="captain-status card">
       <h3 id="draftTitle">Cargando...</h3>
       <p id="draftTurn" class="small-muted"></p>
+      <p id="draftFormationHint" class="captain-formation-hint" hidden>Arrastra y suelta jugadores para cambiar el orden o intercambiar posiciones entre filas.</p>
       <div id="draftMessage" class="flash flash-info hidden"></div>
     </div>
 
@@ -464,6 +465,11 @@ require __DIR__ . '/includes/header.php';
       const viewMode = board.dataset.viewMode || '';
       const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
       let state = null;
+      const formationDrafts = {};
+      const formationOrders = {};
+      let formationInteractionUntil = 0;
+      let hasRenderedState = false;
+      let pollingTimer = null;
 
       const escapeHtml = (value) => String(value)
         .replaceAll('&', '&amp;')
@@ -495,6 +501,46 @@ require __DIR__ . '/includes/header.php';
           ? players.map(player => `<span>${escapeHtml(player.name)}</span>`).join('')
           : '<em>Sin jugadores.</em>';
       };
+
+      const markFormationInteraction = () => {
+        formationInteractionUntil = Date.now() + 5000;
+      };
+
+      const isFormationInteractionActive = () => {
+        const active = document.activeElement;
+        return Date.now() < formationInteractionUntil
+          || active?.classList?.contains('captain-position-select')
+          || active?.closest?.('.captain-formation-field')
+          || active?.closest?.('.captain-board button, .captain-board select, .captain-board input');
+      };
+
+      const shouldStopAutoRefresh = () => {
+        return state
+          && state.ok
+          && state.draft.status === 'completed'
+          && teamView > 0
+          && captainToken !== ''
+          && viewMode === 'formacion';
+      };
+
+      const stopAutoRefresh = () => {
+        if (pollingTimer) {
+          window.clearInterval(pollingTimer);
+          pollingTimer = null;
+        }
+      };
+
+      board.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button, select, input, .captain-formation-player')) {
+          markFormationInteraction();
+        }
+      });
+
+      board.addEventListener('focusin', (event) => {
+        if (event.target.closest('button, select, input, .captain-formation-field')) {
+          markFormationInteraction();
+        }
+      });
 
       const updateWaitingPanel = () => {
         const panel = document.getElementById('captainWaitingPanel');
@@ -537,7 +583,7 @@ require __DIR__ . '/includes/header.php';
       const applyFormationPreset = (container, players, presetIndex) => {
         const preset = formationPresets(players.length)[presetIndex];
         if (!preset) return;
-        const selects = Array.from(container.querySelectorAll('.captain-position-select'));
+        const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
         const goalkeeper = players.find(p => String(p.positions).split('/').includes('ARQ')) || players[0];
         const remaining = players.filter(p => p.id !== goalkeeper.id);
         const assignments = {};
@@ -557,29 +603,212 @@ require __DIR__ . '/includes/header.php';
         remaining.filter(p => !assignments[p.id]).forEach(p => {
           assignments[p.id] = p.primary_position && p.primary_position !== 'ARQ' ? p.primary_position : 'MED';
         });
-        selects.forEach(select => {
-          const next = assignments[parseInt(select.dataset.playerId, 10)];
-          if (next) select.value = next;
-        });
+        if (teamNumber > 0) {
+          formationDrafts[teamNumber] = { ...(formationDrafts[teamNumber] || {}), ...assignments };
+        }
         renderFormationLines(container, players);
+        renderCustomFormationControls(container, players);
+      };
+
+      const fieldLineCounts = (teamNumber, players) => {
+        const counts = { DEF: 0, MED: 0, DEL: 0 };
+        players.forEach((player) => {
+          const position = formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || 'MED';
+          if (counts[position] !== undefined) {
+            counts[position]++;
+          }
+        });
+        return counts;
+      };
+
+      const normalizeCustomCounts = (currentCounts, changedLine, nextValue, total) => {
+        const lines = ['DEF', 'MED', 'DEL'];
+        const counts = { ...currentCounts };
+        counts[changedLine] = Math.max(0, Math.min(total, Number(nextValue) || 0));
+        let remaining = total - counts[changedLine];
+        const others = lines.filter(line => line !== changedLine);
+        const originalOtherTotal = others.reduce((sum, line) => sum + (currentCounts[line] || 0), 0);
+
+        others.forEach((line, index) => {
+          if (index === others.length - 1) {
+            counts[line] = remaining;
+            return;
+          }
+          const share = originalOtherTotal > 0
+            ? Math.min(remaining, Math.round(remaining * ((currentCounts[line] || 0) / originalOtherTotal)))
+            : Math.floor(remaining / (others.length - index));
+          counts[line] = Math.max(0, share);
+          remaining -= counts[line];
+        });
+
+        return counts;
+      };
+
+      const applyFormationCounts = (container, players, counts) => {
+        const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
+        ensureFormationState(teamNumber, players);
+        const currentGoalkeeper = players.find(player => formationDrafts[teamNumber]?.[player.id] === 'ARQ');
+        const capableGoalkeeper = players.find(player => String(player.positions).split('/').includes('ARQ'));
+        const goalkeeper = currentGoalkeeper || capableGoalkeeper || players[0];
+        const fieldPlayers = orderedFormationPlayers(teamNumber, players, 'DEF')
+          .concat(orderedFormationPlayers(teamNumber, players, 'MED'))
+          .concat(orderedFormationPlayers(teamNumber, players, 'DEL'))
+          .concat(players.filter(player => player.id !== goalkeeper?.id && formationDrafts[teamNumber]?.[player.id] === 'ARQ'))
+          .filter(player => player.id !== goalkeeper?.id);
+
+        if (goalkeeper) {
+          formationDrafts[teamNumber][goalkeeper.id] = 'ARQ';
+        }
+
+        let cursor = 0;
+        ['DEF', 'MED', 'DEL'].forEach((line) => {
+          const needed = counts[line] || 0;
+          for (let i = 0; i < needed && cursor < fieldPlayers.length; i++, cursor++) {
+            formationDrafts[teamNumber][fieldPlayers[cursor].id] = line;
+          }
+        });
+
+        renderFormationLines(container, players);
+        renderCustomFormationControls(container, players);
+      };
+
+      const renderCustomFormationControls = (container, players) => {
+        const panel = container.querySelector('[data-custom-formation-panel]');
+        if (!panel) return;
+        const presetSelect = container.querySelector('[data-formation-preset]');
+        const isCustom = !presetSelect || presetSelect.value === '';
+        panel.hidden = !isCustom;
+        if (!isCustom) return;
+
+        const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
+        ensureFormationState(teamNumber, players);
+        const total = Math.max(0, players.length - 1);
+        const counts = fieldLineCounts(teamNumber, players);
+        panel.innerHTML = `
+          <span class="captain-custom-total">${counts.DEF + counts.MED + counts.DEL}/${total} jugadores de campo</span>
+          ${['DEF', 'MED', 'DEL'].map(line => `
+            <label class="captain-custom-count">
+              <span>${line}</span>
+              <button type="button" data-custom-line="${line}" data-custom-delta="-1">-</button>
+              <input type="number" min="0" max="${total}" value="${counts[line]}" data-custom-line-input="${line}">
+              <button type="button" data-custom-line="${line}" data-custom-delta="1">+</button>
+            </label>
+          `).join('')}
+        `;
+
+        panel.querySelectorAll('[data-custom-delta]').forEach((button) => {
+          button.addEventListener('click', () => {
+            markFormationInteraction();
+            const line = button.dataset.customLine;
+            const delta = Number(button.dataset.customDelta || 0);
+            const current = fieldLineCounts(teamNumber, players);
+            applyFormationCounts(container, players, normalizeCustomCounts(current, line, (current[line] || 0) + delta, total));
+          });
+        });
+
+        panel.querySelectorAll('[data-custom-line-input]').forEach((input) => {
+          input.addEventListener('change', () => {
+            markFormationInteraction();
+            const line = input.dataset.customLineInput;
+            const current = fieldLineCounts(teamNumber, players);
+            applyFormationCounts(container, players, normalizeCustomCounts(current, line, input.value, total));
+          });
+        });
       };
 
       const currentPlayerPosition = (container, player) => {
-        const select = container.querySelector(`.captain-position-select[data-player-id="${player.id}"]`);
-        return select ? select.value : (player.assigned_position || player.primary_position || 'MED');
+        const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
+        return formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || 'MED';
+      };
+
+      const ensureFormationState = (teamNumber, players) => {
+        formationDrafts[teamNumber] = formationDrafts[teamNumber] || {};
+        const knownIds = new Set(players.map(player => Number(player.id)));
+        players.forEach((player) => {
+          if (!formationDrafts[teamNumber][player.id]) {
+            formationDrafts[teamNumber][player.id] = player.assigned_position || player.primary_position || 'MED';
+          }
+        });
+        const goalkeeper = players.find(player => formationDrafts[teamNumber][player.id] === 'ARQ')
+          || players.find(player => String(player.positions).split('/').includes('ARQ'))
+          || players[0];
+        if (goalkeeper) {
+          formationDrafts[teamNumber][goalkeeper.id] = 'ARQ';
+          players.forEach((player) => {
+            if (player.id !== goalkeeper.id && formationDrafts[teamNumber][player.id] === 'ARQ') {
+              formationDrafts[teamNumber][player.id] = player.primary_position && player.primary_position !== 'ARQ' ? player.primary_position : 'MED';
+            }
+          });
+        }
+        formationOrders[teamNumber] = (formationOrders[teamNumber] || []).filter(id => knownIds.has(Number(id)));
+        players.forEach((player) => {
+          if (!formationOrders[teamNumber].includes(Number(player.id))) {
+            formationOrders[teamNumber].push(Number(player.id));
+          }
+        });
+      };
+
+      const orderedFormationPlayers = (teamNumber, players, position) => {
+        const order = formationOrders[teamNumber] || [];
+        return players
+          .filter(player => (formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || 'MED') === position)
+          .sort((a, b) => {
+            const indexA = order.indexOf(Number(a.id));
+            const indexB = order.indexOf(Number(b.id));
+            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+          });
+      };
+
+      const moveFormationPlayer = (teamNumber, fromId, toId, position) => {
+        if (!fromId || !toId || fromId === toId) return false;
+        if ((formationDrafts[teamNumber]?.[fromId] || '') !== position || (formationDrafts[teamNumber]?.[toId] || '') !== position) {
+          return false;
+        }
+        const order = formationOrders[teamNumber] || [];
+        const fromIndex = order.indexOf(Number(fromId));
+        const toIndex = order.indexOf(Number(toId));
+        if (fromIndex === -1 || toIndex === -1) return false;
+        const [moved] = order.splice(fromIndex, 1);
+        order.splice(toIndex, 0, moved);
+        formationOrders[teamNumber] = order;
+        return true;
+      };
+
+      const swapFormationPlayers = (teamNumber, fromId, toId) => {
+        if (!fromId || !toId || fromId === toId) return false;
+        const sourcePosition = formationDrafts[teamNumber]?.[fromId] || '';
+        const targetPosition = formationDrafts[teamNumber]?.[toId] || '';
+        if (!sourcePosition || !targetPosition) return false;
+        if (sourcePosition === targetPosition) {
+          return moveFormationPlayer(teamNumber, fromId, toId, sourcePosition);
+        }
+
+        formationDrafts[teamNumber][fromId] = targetPosition;
+        formationDrafts[teamNumber][toId] = sourcePosition;
+
+        const order = formationOrders[teamNumber] || [];
+        const fromIndex = order.indexOf(Number(fromId));
+        const toIndex = order.indexOf(Number(toId));
+        if (fromIndex !== -1 && toIndex !== -1) {
+          [order[fromIndex], order[toIndex]] = [order[toIndex], order[fromIndex]];
+        }
+        formationOrders[teamNumber] = order;
+        return true;
       };
 
       const renderFormationLines = (container, players) => {
         const field = container.querySelector('.captain-formation-field');
         if (!field) return;
+        const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
+        ensureFormationState(teamNumber, players);
         field.innerHTML = positions.map(pos => {
-          const linePlayers = players.filter(player => currentPlayerPosition(container, player) === pos);
+          const linePlayers = orderedFormationPlayers(teamNumber, players, pos);
           return `
             <div class="formation-line captain-formation-line">
               <div class="line-label">${pos}</div>
-              <div class="line-players">
+              <div class="line-players" data-formation-line="${pos}">
                 ${linePlayers.length ? linePlayers.map(player => `
-                  <div class="formation-player captain-formation-player">
+                  <div class="formation-player captain-formation-player" draggable="true" data-drag-player-id="${player.id}" data-drag-position="${pos}">
                     <strong>${escapeHtml(player.name)}</strong>
                     <span>${formatSkill(player.skill)}</span>
                     <select class="captain-position-select" data-player-id="${player.id}">
@@ -592,7 +821,71 @@ require __DIR__ . '/includes/header.php';
           `;
         }).join('');
         field.querySelectorAll('.captain-position-select').forEach(select => {
-          select.addEventListener('change', () => renderFormationLines(container, players));
+          ['pointerdown', 'mousedown', 'touchstart', 'focus'].forEach((eventName) => {
+            select.addEventListener(eventName, markFormationInteraction);
+          });
+          select.addEventListener('change', () => {
+            const playerId = parseInt(select.dataset.playerId, 10);
+            formationDrafts[teamNumber][playerId] = select.value;
+            const order = formationOrders[teamNumber] || [];
+            formationOrders[teamNumber] = order.filter(id => Number(id) !== playerId).concat(playerId);
+          });
+          select.addEventListener('blur', () => {
+            formationInteractionUntil = Date.now() + 80;
+            window.setTimeout(() => {
+              if (!isFormationInteractionActive()) {
+                renderFormationLines(container, players);
+              }
+            }, 120);
+          });
+        });
+        field.querySelectorAll('.captain-position-select').forEach(select => {
+          select.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              select.blur();
+            }
+          });
+        });
+        field.addEventListener('focusout', () => {
+          formationInteractionUntil = Date.now() + 80;
+          window.setTimeout(() => {
+            if (!isFormationInteractionActive()) {
+              renderFormationLines(container, players);
+            }
+          }, 160);
+        }, { once: true });
+        field.querySelectorAll('[data-drag-player-id]').forEach(card => {
+          card.addEventListener('dragstart', (event) => {
+            if (event.target.closest?.('.captain-position-select')) {
+              event.preventDefault();
+              return;
+            }
+            markFormationInteraction();
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', `${card.dataset.dragPlayerId}|${card.dataset.dragPosition}`);
+            card.classList.add('is-dragging');
+          });
+          card.addEventListener('dragend', () => {
+            card.classList.remove('is-dragging');
+          });
+          card.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            card.classList.add('is-drag-over');
+          });
+          card.addEventListener('dragleave', () => {
+            card.classList.remove('is-drag-over');
+          });
+          card.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const [sourceId] = String(event.dataTransfer.getData('text/plain') || '').split('|');
+            card.classList.remove('is-drag-over');
+            const changed = swapFormationPlayers(teamNumber, Number(sourceId), Number(card.dataset.dragPlayerId));
+            if (changed) {
+              formationInteractionUntil = Date.now() + 80;
+              renderFormationLines(container, players);
+            }
+          });
         });
       };
 
@@ -603,8 +896,10 @@ require __DIR__ . '/includes/header.php';
             <option value="">Personalizada</option>
             ${formationPresets(players.length).map((preset, index) => `<option value="${index}">${escapeHtml(preset.name)}</option>`).join('')}
           </select>
+          <div class="captain-custom-formation" data-custom-formation-panel></div>
         </div>
         <div class="team-formation captain-formation-field"></div>
+        <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar formacion</button>
       `;
 
@@ -618,6 +913,7 @@ require __DIR__ . '/includes/header.php';
 
       const renderTeam = (teamNumber, containerId) => {
         const container = document.getElementById(containerId);
+        container.dataset.formationTeam = String(teamNumber);
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
         const canEditFormation = captainToken !== ''
           && teamView === teamNumber
@@ -626,10 +922,13 @@ require __DIR__ . '/includes/header.php';
         container.innerHTML = canEditFormation ? renderFormationEditor(teamNumber, players) : renderReadonlyTeam(players);
         if (canEditFormation) {
           renderFormationLines(container, players);
+          renderCustomFormationControls(container, players);
           container.querySelector('[data-save-formation]').addEventListener('click', () => saveFormation(teamNumber, container));
           container.querySelector('[data-formation-preset]')?.addEventListener('change', (event) => {
             if (event.target.value !== '') {
               applyFormationPreset(container, players, parseInt(event.target.value, 10));
+            } else {
+              renderCustomFormationControls(container, players);
             }
           });
         }
@@ -650,7 +949,7 @@ require __DIR__ . '/includes/header.php';
           <section class="captain-pot">
             <h4>${pos}</h4>
             ${groups[pos].length ? groups[pos].map(p => `
-              <button class="captain-player ${p.pick_allowed ? '' : 'not-available'}" type="button" data-player-id="${p.id}" ${canPick && p.pick_allowed ? '' : 'disabled'}>
+              <button class="captain-player ${p.pick_allowed ? '' : 'not-available'} ${canPick && p.pick_allowed ? 'is-pickable' : ''}" type="button" data-player-id="${p.id}" ${canPick && p.pick_allowed ? '' : 'disabled'}>
                 <strong>${escapeHtml(p.name)}</strong>
                 <span>${playerMeta(p)}</span>
                 ${p.pick_allowed ? '' : '<span class="captain-player-unavailable">No disponible aun</span>'}
@@ -674,6 +973,14 @@ require __DIR__ . '/includes/header.php';
         document.getElementById('team1Title').textContent = `Equipo 1 - ${state.draft.captains[1].name} (${state.teams[1].length}/${state.match.target_team_size}) - ${teamTotalSkill(1).toFixed(1)} pts`;
         document.getElementById('team2Title').textContent = `Equipo 2 - ${state.draft.captains[2].name} (${state.teams[2].length}/${state.match.target_team_size}) - ${teamTotalSkill(2).toFixed(1)} pts`;
         const turn = document.getElementById('draftTurn');
+        const formationHint = document.getElementById('draftFormationHint');
+        const canShowFormationHint = state.draft.status === 'completed'
+          && teamView > 0
+          && captainToken !== ''
+          && state.match.can_edit_formations;
+        if (formationHint) {
+          formationHint.hidden = !canShowFormationHint;
+        }
         if (state.draft.status === 'completed') {
           if (teamView > 0 && captainToken !== '' && state.match.can_edit_formations) {
             turn.innerHTML = 'Draft completo. Ajusta la formacion de tu equipo y toca Guardar formacion.';
@@ -720,14 +1027,25 @@ require __DIR__ . '/includes/header.php';
         window.location.replace(url.toString());
       };
 
-      const loadState = async () => {
+      const loadState = async ({ forceRender = false } = {}) => {
         const response = await fetch(`capitanes_api.php?action=state&match_id=${matchId}`, { cache: 'no-store' });
         state = await response.json();
         if (shouldRedirectToFormation()) {
           redirectToFormation();
           return;
         }
+        if (!forceRender && hasRenderedState && shouldStopAutoRefresh()) {
+          stopAutoRefresh();
+          return;
+        }
+        if (!forceRender && isFormationInteractionActive()) {
+          return;
+        }
         render();
+        hasRenderedState = true;
+        if (shouldStopAutoRefresh()) {
+          stopAutoRefresh();
+        }
       };
 
       const showMessage = (message, type = 'info') => {
@@ -746,7 +1064,7 @@ require __DIR__ . '/includes/header.php';
         const data = await response.json();
         if (!data.ok) {
           showMessage(data.message || 'No se pudo elegir el jugador.', 'error');
-          await loadState();
+          await loadState({ forceRender: true });
           return;
         }
         state = data;
@@ -756,12 +1074,21 @@ require __DIR__ . '/includes/header.php';
         }
         showMessage('Jugador elegido. Turno actualizado.', 'success');
         render();
+        hasRenderedState = true;
       };
 
       const saveFormation = async (teamNumber, container) => {
-        const assignments = Array.from(container.querySelectorAll('.captain-position-select')).map(select => ({
-          player_id: parseInt(select.dataset.playerId, 10),
-          assigned_position: select.value
+        const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
+        const draft = formationDrafts[teamNumber] || {};
+        const order = formationOrders[teamNumber] || players.map(player => Number(player.id));
+        const orderedPlayers = [...players].sort((a, b) => {
+          const indexA = order.indexOf(Number(a.id));
+          const indexB = order.indexOf(Number(b.id));
+          return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+        });
+        const assignments = orderedPlayers.map(player => ({
+          player_id: parseInt(player.id, 10),
+          assigned_position: draft[player.id] || player.assigned_position || player.primary_position || 'MED'
         }));
         const response = await fetch('capitanes_api.php?action=save_formation', {
           method: 'POST',
@@ -771,16 +1098,30 @@ require __DIR__ . '/includes/header.php';
         const data = await response.json();
         if (!data.ok) {
           showMessage(data.message || 'No se pudo guardar la formacion.', 'error');
-          await loadState();
+          await loadState({ forceRender: true });
           return;
         }
         state = data;
-        showMessage('Formacion guardada.', 'success');
+        formationDrafts[teamNumber] = {};
+        formationOrders[teamNumber] = [];
+        (state.teams[String(teamNumber)] || state.teams[teamNumber] || []).forEach((player) => {
+          formationDrafts[teamNumber][player.id] = player.assigned_position || player.primary_position || 'MED';
+          formationOrders[teamNumber].push(Number(player.id));
+        });
         render();
+        hasRenderedState = true;
+        const message = document.querySelector(`[data-formation-message="${teamNumber}"]`);
+        if (message) {
+          message.className = 'captain-formation-message flash flash-success';
+          message.textContent = 'Formacion guardada.';
+          window.setTimeout(() => {
+            message.classList.add('hidden');
+          }, 2200);
+        }
       };
 
-      loadState();
-      setInterval(loadState, 2500);
+      loadState({ forceRender: true });
+      pollingTimer = window.setInterval(() => loadState(), 2500);
     })();
   </script>
 <?php endif; ?>

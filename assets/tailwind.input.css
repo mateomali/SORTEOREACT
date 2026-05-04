@@ -1975,6 +1975,10 @@
     @apply border-amber-200 bg-amber-50 text-amber-800;
   }
 
+  .captain-formation-hint {
+    @apply mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900;
+  }
+
   .captain-link-actions {
     @apply mt-2 grid grid-cols-3 gap-2;
   }
@@ -2030,15 +2034,27 @@
   }
 
   .captain-pot {
-    @apply rounded-2xl border border-slate-200 bg-white p-3;
+    @apply rounded-2xl border-2 border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5;
   }
 
   .captain-pot h4 {
-    @apply mb-2 text-emerald-950;
+    @apply mb-2 rounded-xl bg-emerald-950 px-3 py-2 text-center text-sm text-white;
   }
 
   .captain-player {
-    @apply mb-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-800;
+    @apply mb-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-800 transition;
+  }
+
+  .captain-player.is-pickable {
+    @apply border-2 border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-950/10 ring-2 ring-emerald-100;
+  }
+
+  .captain-player.is-pickable:hover {
+    @apply -translate-y-0.5 bg-white shadow-lg shadow-emerald-950/15;
+  }
+
+  .captain-player.is-pickable strong {
+    @apply text-emerald-950;
   }
 
   .captain-player strong,
@@ -2055,8 +2071,7 @@
   }
 
   .captain-player.not-available {
-    @apply bg-slate-100 opacity-40 grayscale;
-    filter: grayscale(1) blur(0.2px);
+    @apply bg-slate-100 opacity-45 grayscale;
   }
 
   .captain-player-unavailable {
@@ -2075,6 +2090,39 @@
     @apply mb-2 rounded-xl border border-slate-200 bg-white p-3;
   }
 
+  .captain-custom-formation {
+    @apply mt-3 grid gap-2;
+  }
+
+  .captain-custom-formation[hidden] {
+    @apply hidden;
+  }
+
+  .captain-custom-total {
+    @apply rounded-xl bg-emerald-50 px-3 py-2 text-center text-xs font-extrabold text-emerald-900;
+  }
+
+  .captain-custom-count {
+    @apply grid items-center gap-2 rounded-xl border border-emerald-100 bg-white px-2 py-2;
+    grid-template-columns: 42px 38px minmax(0, 1fr) 38px;
+  }
+
+  .captain-custom-count span {
+    @apply text-xs font-extrabold text-emerald-950;
+  }
+
+  .captain-custom-count button {
+    @apply h-9 rounded-lg border border-emerald-100 bg-emerald-950 text-base font-extrabold leading-none text-white;
+  }
+
+  .captain-custom-count input {
+    @apply h-9 min-w-0 rounded-lg border border-emerald-100 px-2 text-center text-sm font-extrabold text-emerald-950;
+  }
+
+  .captain-formation-message {
+    @apply mt-2 mb-2;
+  }
+
   .captain-formation-field {
     @apply min-h-96;
   }
@@ -2084,7 +2132,23 @@
   }
 
   .captain-formation-player {
-    @apply min-w-32 px-2 py-2;
+    @apply min-w-32 cursor-grab px-2 py-2 transition;
+  }
+
+  .captain-formation-player:active {
+    @apply cursor-grabbing;
+  }
+
+  .captain-formation-player.is-dragging {
+    @apply scale-95 opacity-50;
+  }
+
+  .captain-formation-player.is-drag-over {
+    @apply border-amber-200 bg-amber-300 text-emerald-950 ring-4 ring-amber-100;
+  }
+
+  .captain-formation-player.is-drag-over span {
+    @apply text-emerald-950;
   }
 
   .captain-position-select {
