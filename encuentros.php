@@ -53,8 +53,342 @@ function delete_match_cascade(PDO $pdo, int $matchId): void
     }
 }
 
+function normalize_import_player_name(string $value): string
+{
+    $value = trim($value);
+    $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+    $value = mb_strtolower($value, 'UTF-8');
+    $from = ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'];
+    $to = ['a', 'e', 'i', 'o', 'u', 'u', 'n'];
+    return str_replace($from, $to, $value);
+}
+
+function parse_import_player_list(string $text, int $maxPlayers = 0): array
+{
+    $items = [];
+    $errors = [];
+    $lines = preg_split('/\R/u', $text) ?: [];
+    $numbered = [];
+
+    foreach ($lines as $lineIndex => $line) {
+        $line = trim((string) $line);
+        if ($line === '') {
+            continue;
+        }
+
+        if (preg_match('/^\s*(\d+)(?:[\s\.\)\-]+)(.+?)\s*$/u', $line, $matches) !== 1) {
+            continue;
+        }
+
+        $numbered[] = [
+            'line' => $lineIndex + 1,
+            'number' => (int) $matches[1],
+            'name' => trim((string) $matches[2]),
+        ];
+    }
+
+    $byNumber = [];
+    if ($maxPlayers > 0) {
+        foreach ($numbered as $startIndex => $startRow) {
+            if ((int) $startRow['number'] !== 1) {
+                continue;
+            }
+
+            $candidate = [];
+            for ($index = $startIndex; $index < count($numbered); $index++) {
+                $row = $numbered[$index];
+                $number = (int) $row['number'];
+                if ($index > $startIndex && $number === 1) {
+                    break;
+                }
+                if ($number > $maxPlayers) {
+                    break;
+                }
+                if ($number < 1 || isset($candidate[$number])) {
+                    continue;
+                }
+                $candidate[$number] = [
+                    'number' => $number,
+                    'name' => (string) $row['name'],
+                ];
+                if (count($candidate) >= $maxPlayers) {
+                    break;
+                }
+            }
+
+            if (count($candidate) > count($byNumber)) {
+                $byNumber = $candidate;
+            }
+            if (count($byNumber) >= $maxPlayers) {
+                break;
+            }
+        }
+    } else {
+        foreach ($numbered as $row) {
+            $number = (int) $row['number'];
+            if ($number < 1 || isset($byNumber[$number])) {
+                continue;
+            }
+            $byNumber[$number] = [
+                'number' => $number,
+                'name' => (string) $row['name'],
+            ];
+        }
+    }
+
+    ksort($byNumber);
+    $items = array_values($byNumber);
+
+    if (!$items) {
+        $errors[] = $maxPlayers > 0
+            ? 'No se encontro una lista numerada que empiece en 1 y llegue hasta el cupo del partido.'
+            : 'No se encontro ningun jugador para importar.';
+    }
+
+    return ['items' => $items, 'errors' => $errors];
+}
+
+function import_player_aliases(): array
+{
+    $aliases = $_SESSION['match_import_aliases'] ?? [];
+    return is_array($aliases) ? $aliases : [];
+}
+
+function set_import_player_alias(string $importName, int $playerId): void
+{
+    $key = normalize_import_player_name($importName);
+    if ($key === '' || $playerId <= 0) {
+        return;
+    }
+    if (!isset($_SESSION['match_import_aliases']) || !is_array($_SESSION['match_import_aliases'])) {
+        $_SESSION['match_import_aliases'] = [];
+    }
+    $_SESSION['match_import_aliases'][$key] = $playerId;
+}
+
+function import_player_suggestions(string $name, array $players, int $limit = 4): array
+{
+    $needle = normalize_import_player_name($name);
+    if ($needle === '') {
+        return [];
+    }
+
+    $suggestions = [];
+    foreach ($players as $player) {
+        $candidate = normalize_import_player_name((string) $player['name']);
+        if ($candidate === '') {
+            continue;
+        }
+
+        $score = 0;
+        if ($candidate === $needle) {
+            $score = 100;
+        } elseif (str_contains($candidate, $needle) || str_contains($needle, $candidate)) {
+            $score = 82;
+        } else {
+            similar_text($needle, $candidate, $percent);
+            $score = (int) round($percent);
+        }
+
+        if ($score >= 58) {
+            $suggestions[] = ['player' => $player, 'score' => $score];
+        }
+    }
+
+    usort($suggestions, static function (array $a, array $b): int {
+        if ($a['score'] !== $b['score']) {
+            return $b['score'] <=> $a['score'];
+        }
+        return strcmp((string) $a['player']['name'], (string) $b['player']['name']);
+    });
+
+    return array_slice($suggestions, 0, $limit);
+}
+
+function resolve_imported_player_list(PDO $pdo, string $text, int $maxPlayers = 0): array
+{
+    $parsed = parse_import_player_list($text, $maxPlayers);
+    $players = repo_all_players(true);
+    $playersByName = [];
+    $playersById = [];
+    $aliases = import_player_aliases();
+
+    foreach ($players as $player) {
+        $playersById[(int) $player['id']] = $player;
+        $key = normalize_import_player_name((string) $player['name']);
+        if ($key !== '' && !isset($playersByName[$key])) {
+            $playersByName[$key] = $player;
+        }
+    }
+
+    $matched = [];
+    $missing = [];
+    $matchedIds = [];
+    foreach ($parsed['items'] as $item) {
+        $key = normalize_import_player_name((string) $item['name']);
+        $aliasedId = (int) ($aliases[$key] ?? 0);
+        if ($aliasedId > 0 && isset($playersById[$aliasedId])) {
+            $player = $playersById[$aliasedId];
+            $matched[] = [
+                'number' => (int) $item['number'],
+                'import_name' => (string) $item['name'],
+                'player' => $player,
+                'alias' => true,
+            ];
+            $matchedIds[] = (int) $player['id'];
+            continue;
+        }
+
+        if ($key !== '' && isset($playersByName[$key])) {
+            $player = $playersByName[$key];
+            $matched[] = [
+                'number' => (int) $item['number'],
+                'import_name' => (string) $item['name'],
+                'player' => $player,
+            ];
+            $matchedIds[] = (int) $player['id'];
+            continue;
+        }
+
+        $missing[] = $item;
+    }
+
+    return [
+        'source' => $text,
+        'max_players' => $maxPlayers,
+        'items' => $parsed['items'],
+        'errors' => $parsed['errors'],
+        'matched' => $matched,
+        'missing' => $missing,
+        'matched_ids' => array_values(array_unique($matchedIds)),
+    ];
+}
+
+function store_imported_player_list(PDO $pdo, string $text, int $maxPlayers = 0): array
+{
+    $result = resolve_imported_player_list($pdo, $text, $maxPlayers);
+    $_SESSION['match_import_list'] = $result;
+    return $result;
+}
+
+function save_imported_player(PDO $pdo): void
+{
+    $importName = trim((string) ($_POST['import_name'] ?? ''));
+    $name = trim((string) ($_POST['name'] ?? ''));
+    $positions = $_POST['positions'] ?? [];
+    $pace = normalize_pace((string) ($_POST['pace'] ?? 'rapido'));
+    $skill = (float) ($_POST['skill'] ?? 1);
+    $active = isset($_POST['active']) ? 1 : 0;
+    $skill = max(1.0, min(6.0, round($skill * 2) / 2));
+
+    if ($name === '' || !$positions) {
+        flash('error', 'Nombre y posiciones son obligatorios para agregar el jugador.');
+        return;
+    }
+
+    $positionsCsv = join_positions(array_map('strval', $positions));
+    if ($positionsCsv === '') {
+        flash('error', 'Debes seleccionar al menos una posicion valida.');
+        return;
+    }
+
+    $existingPlayer = null;
+    foreach (repo_all_players(false) as $player) {
+        if (normalize_import_player_name((string) $player['name']) === normalize_import_player_name($name)) {
+            $existingPlayer = $player;
+            break;
+        }
+    }
+
+    $params = [
+        'name' => $name,
+        'positions' => $positionsCsv,
+        'pace' => $pace,
+        'skill' => $skill,
+        'active' => $active,
+    ];
+
+    if ($existingPlayer) {
+        $existingId = (int) $existingPlayer['id'];
+        if ((int) ($existingPlayer['active'] ?? 0) !== 1 && $active === 1) {
+            $stmt = $pdo->prepare(
+                'UPDATE players
+                 SET name = :name, positions = :positions, pace = :pace, skill = :skill, active = :active
+                 WHERE id = :id'
+            );
+            $stmt->execute($params + ['id' => $existingId]);
+        }
+        set_import_player_alias($importName !== '' ? $importName : $name, $existingId);
+        flash('info', 'Jugador ya existente detectado. Se usara el jugador actual en la importacion.');
+        return;
+    }
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO players (name, positions, pace, skill, active)
+         VALUES (:name, :positions, :pace, :skill, :active)'
+    );
+    $stmt->execute($params);
+    flash('success', 'Jugador agregado y disponible para la importacion.');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
+
+    if ($action === 'import_players_list') {
+        $text = trim((string) ($_POST['import_players_text'] ?? ''));
+        $maxPlayers = max(1, min(72, (int) ($_POST['import_max_players'] ?? 18)));
+        if ($text === '') {
+            unset($_SESSION['match_import_list']);
+            flash('error', 'Pega una lista de jugadores para importar.');
+            redirect($matchFormPage);
+        }
+
+        unset($_SESSION['match_import_aliases']);
+        $result = store_imported_player_list($pdo, $text, $maxPlayers);
+        if ($result['errors']) {
+            flash('error', 'Hay lineas con formato invalido. Revisalas antes de crear el partido.');
+        } elseif ($result['missing']) {
+            flash('info', 'Se importaron coincidencias. Agrega los jugadores faltantes para completar la lista.');
+        } else {
+            flash('success', 'Listado importado: todos los jugadores coinciden y quedaron seleccionados.');
+        }
+        redirect($matchFormPage);
+    }
+
+    if ($action === 'clear_import_players_list') {
+        unset($_SESSION['match_import_list']);
+        unset($_SESSION['match_import_aliases']);
+        flash('info', 'Importacion descartada.');
+        redirect($matchFormPage);
+    }
+
+    if ($action === 'use_import_existing_player') {
+        $importName = trim((string) ($_POST['import_name'] ?? ''));
+        $playerId = (int) ($_POST['player_id'] ?? 0);
+        $player = $playerId > 0 ? repo_player_by_id($playerId) : null;
+        if ($importName !== '' && $player && (int) ($player['active'] ?? 0) === 1) {
+            set_import_player_alias($importName, $playerId);
+            flash('success', 'Se usara el jugador existente: ' . (string) $player['name'] . '.');
+        } else {
+            flash('error', 'No se pudo usar ese jugador existente. Verifica que este activo.');
+        }
+        $source = (string) ($_SESSION['match_import_list']['source'] ?? '');
+        $maxPlayers = (int) ($_SESSION['match_import_list']['max_players'] ?? 0);
+        if ($source !== '') {
+            store_imported_player_list($pdo, $source, $maxPlayers);
+        }
+        redirect($matchFormPage);
+    }
+
+    if ($action === 'create_import_player') {
+        save_imported_player($pdo);
+        $source = (string) ($_SESSION['match_import_list']['source'] ?? '');
+        $maxPlayers = (int) ($_SESSION['match_import_list']['max_players'] ?? 0);
+        if ($source !== '') {
+            store_imported_player_list($pdo, $source, $maxPlayers);
+        }
+        redirect($matchFormPage);
+    }
 
     if ($action === 'delete_match') {
         $id = (int) ($_POST['id'] ?? 0);
@@ -129,6 +463,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             clear_match_draw_data($pdo, $id);
             repo_save_match_participants($id, $participants);
+            unset($_SESSION['match_import_list']);
+            unset($_SESSION['match_import_aliases']);
             flash('success', 'Partido actualizado.');
         } else {
             $stmt = $pdo->prepare(
@@ -149,6 +485,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $newId = (int) $pdo->lastInsertId();
             repo_save_match_participants($newId, $participants);
+            unset($_SESSION['match_import_list']);
+            unset($_SESSION['match_import_aliases']);
             flash('success', 'Partido creado.');
             redirect($matchListPage . '?focus_match=' . $newId);
         }
@@ -157,6 +495,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $activePlayers = repo_all_players(true);
+$importList = $_SESSION['match_import_list'] ?? null;
+if (!is_array($importList)) {
+    $importList = null;
+}
 $matches = repo_matches();
 $latestMatch = null;
 foreach ($matches as $candidateMatch) {
@@ -265,6 +607,10 @@ $nextMatchId = $matches
     ? (max(array_map(static fn(array $match): int => (int) $match['id'], $matches)) + 1)
     : 1;
 $titlePlaceholder = 'Partido #' . (string) ((int) ($form['id'] ?? 0) > 0 ? (int) $form['id'] : $nextMatchId);
+$importMatched = is_array($importList['matched'] ?? null) ? $importList['matched'] : [];
+$importMissing = is_array($importList['missing'] ?? null) ? $importList['missing'] : [];
+$importErrors = is_array($importList['errors'] ?? null) ? $importList['errors'] : [];
+$importMatchedIds = array_values(array_map('intval', $importList['matched_ids'] ?? []));
 
 function admin_match_status_label(string $status): string
 {
@@ -461,6 +807,27 @@ require __DIR__ . '/includes/header.php';
   </summary>
   <section class="card encounter-drawer-body">
   <h3><?= $form['id'] ? 'Editar partido' : 'CREAR NUEVO PARTIDO' ?></h3>
+
+  <?php if (!$form['id']): ?>
+    <form id="importPlayersForm" method="post" class="hidden">
+      <input type="hidden" name="action" value="import_players_list">
+    </form>
+    <form id="clearImportPlayersForm" method="post" class="hidden">
+      <input type="hidden" name="action" value="clear_import_players_list">
+    </form>
+    <?php foreach ($importMissing as $missingIndex => $missing): ?>
+      <form id="createImportPlayerForm<?= h((string) $missingIndex) ?>" method="post" class="hidden">
+        <input type="hidden" name="action" value="create_import_player">
+        <input type="hidden" name="import_name" value="<?= h((string) $missing['name']) ?>">
+      </form>
+      <form id="useExistingImportPlayerForm<?= h((string) $missingIndex) ?>" method="post" class="hidden">
+        <input type="hidden" name="action" value="use_import_existing_player">
+        <input type="hidden" name="import_name" value="<?= h((string) $missing['name']) ?>">
+        <input type="hidden" name="player_id" value="" data-use-existing-player-input="<?= h((string) $missingIndex) ?>">
+      </form>
+    <?php endforeach; ?>
+  <?php endif; ?>
+
   <form method="post">
     <input type="hidden" name="action" value="save_match">
     <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
@@ -491,9 +858,159 @@ require __DIR__ . '/includes/header.php';
           Seleccionados: <strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong>
         </span>
       </div>
-      <p class="small-muted" data-selection-limit-message>
-        El limite se calcula con equipos x jugadores por equipo. Jugadores activos disponibles: <?= count($activePlayers) ?>.
-      </p>
+      <?php if (!$form['id']): ?>
+        <details class="import-list-panel" id="importar-listado" <?= $importList ? 'open' : '' ?>>
+          <summary class="import-list-summary-row">
+            <span>Importar listado</span>
+            <small><?= $importList ? h((string) count($importMatched)) . ' encontrados | ' . h((string) count($importMissing)) . ' faltantes' : 'Pegar lista numerada' ?></small>
+          </summary>
+
+          <div class="import-list-body">
+            <script type="application/json" data-existing-import-players><?= json_encode(array_map(static fn(array $player): array => [
+                'id' => (int) $player['id'],
+                'name' => (string) $player['name'],
+                'meta' => (string) $player['positions'] . ' | ' . pace_label((string) $player['pace']) . ' | ' . skill_label((float) $player['skill']),
+            ], $activePlayers), JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+            <div class="import-list-head">
+              <div>
+                <h4>Importar listado</h4>
+              </div>
+              <?php if ($importList): ?>
+                <button class="btn btn-muted" type="submit" form="clearImportPlayersForm">Limpiar</button>
+              <?php endif; ?>
+            </div>
+
+            <div class="import-list-form">
+              <input type="hidden" name="import_max_players" value="<?= h((string) $targetSelection) ?>" data-import-max-players form="importPlayersForm">
+              <textarea
+                name="import_players_text"
+                rows="8"
+                placeholder="1 Marcelo&#10;2 Pela&#10;3 Mauri&#10;4 Tebo"
+                form="importPlayersForm"><?= h((string) ($importList['source'] ?? '')) ?></textarea>
+              <button class="btn btn-primary" type="submit" form="importPlayersForm">Importar listado</button>
+            </div>
+
+            <?php if ($importList): ?>
+              <script type="application/json" data-imported-player-ids><?= h(json_encode($importMatchedIds, JSON_THROW_ON_ERROR)) ?></script>
+              <div class="import-list-result">
+                <div class="import-list-summary">
+                  <span><?= h((string) count($importMatched)) ?> encontrados</span>
+                  <span><?= h((string) count($importMissing)) ?> faltantes</span>
+                  <?php if ($importErrors): ?>
+                    <span><?= h((string) count($importErrors)) ?> lineas a revisar</span>
+                  <?php endif; ?>
+                </div>
+
+                <?php if ($importErrors): ?>
+                  <div class="import-list-errors">
+                    <?php foreach ($importErrors as $error): ?>
+                      <p><?= h((string) $error) ?></p>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+
+                <?php if ($importMatched): ?>
+                  <div class="import-list-matches">
+                    <?php foreach ($importMatched as $matchRow): ?>
+                      <?php $matchedPlayer = $matchRow['player']; ?>
+                      <span>
+                        <strong><?= h((string) $matchRow['number']) ?>.</strong>
+                        <?= h((string) $matchedPlayer['name']) ?>
+                      </span>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+
+                <?php if ($importMissing): ?>
+                  <div class="import-missing-list">
+                    <?php foreach ($importMissing as $missingIndex => $missing): ?>
+                      <?php
+                        $missingFormId = 'missing-player-' . $missingIndex;
+                        $createFormId = 'createImportPlayerForm' . $missingIndex;
+                        $useExistingFormId = 'useExistingImportPlayerForm' . $missingIndex;
+                        $suggestions = import_player_suggestions((string) $missing['name'], $activePlayers);
+                      ?>
+                      <details class="import-missing-player">
+                        <summary>
+                          <span><?= h((string) $missing['number']) ?>. <?= h((string) $missing['name']) ?></span>
+                          <strong>Agregar jugador</strong>
+                        </summary>
+                        <div class="import-player-form">
+                          <div class="form-grid">
+                            <div class="form-row">
+                              <label for="<?= h($missingFormId) ?>-name">Nombre</label>
+                              <input
+                                id="<?= h($missingFormId) ?>-name"
+                                type="text"
+                                name="name"
+                                required
+                                value="<?= h((string) $missing['name']) ?>"
+                                form="<?= h($createFormId) ?>"
+                                data-import-player-name-input
+                                data-missing-index="<?= h((string) $missingIndex) ?>"
+                              >
+                            </div>
+                            <div class="form-row">
+                              <label for="<?= h($missingFormId) ?>-pace">Ritmo</label>
+                              <select id="<?= h($missingFormId) ?>-pace" name="pace" form="<?= h($createFormId) ?>">
+                                <option value="rapido">Rapido</option>
+                                <option value="lento">Lento</option>
+                              </select>
+                            </div>
+                            <div class="form-row">
+                              <label for="<?= h($missingFormId) ?>-skill">Puntuacion Base (1 a 6)</label>
+                              <input id="<?= h($missingFormId) ?>-skill" type="number" name="skill" min="1" max="6" step="0.5" value="1.0" form="<?= h($createFormId) ?>">
+                            </div>
+                            <div class="form-row">
+                              <label>Estado</label>
+                              <label class="chip">
+                                <input type="checkbox" name="active" value="1" checked form="<?= h($createFormId) ?>">
+                                Jugador activo
+                              </label>
+                            </div>
+                          </div>
+
+                          <div class="form-row">
+                            <label>Posiciones</label>
+                            <div class="check-row">
+                              <?php foreach (allowed_positions() as $pos): ?>
+                                <label class="chip">
+                                  <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" form="<?= h($createFormId) ?>">
+                                  <?= h($pos) ?>
+                                </label>
+                              <?php endforeach; ?>
+                            </div>
+                          </div>
+
+                          <div class="import-existing-panel <?= $suggestions ? '' : 'hidden' ?>" data-existing-player-panel="<?= h((string) $missingIndex) ?>">
+                            <strong data-existing-player-title><?= $suggestions && (int) $suggestions[0]['score'] === 100 ? 'Jugador ya existente' : 'Posibles coincidencias' ?></strong>
+                            <div data-existing-player-options>
+                              <?php foreach ($suggestions as $suggestion): ?>
+                                <?php $suggestedPlayer = $suggestion['player']; ?>
+                                <button
+                                  class="btn btn-muted"
+                                  type="submit"
+                                  form="<?= h($useExistingFormId) ?>"
+                                  data-use-existing-player="<?= h((string) $missingIndex) ?>"
+                                  data-player-id="<?= h((string) $suggestedPlayer['id']) ?>"
+                                >
+                                  Usar <?= h((string) $suggestedPlayer['name']) ?>
+                                </button>
+                              <?php endforeach; ?>
+                            </div>
+                          </div>
+
+                          <button class="btn btn-primary" type="submit" form="<?= h($createFormId) ?>">Guardar jugador</button>
+                        </div>
+                      </details>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+        </details>
+      <?php endif; ?>
 
       <div class="participant-search">
         <input type="text" data-participant-search placeholder="Buscar jugador por nombre, posicion o ritmo">
@@ -504,9 +1021,13 @@ require __DIR__ . '/includes/header.php';
         <button class="btn btn-muted" type="button" data-random-select="participants">Seleccion al azar</button>
       </div>
 
+      <div class="participant-picker-layout">
       <section class="participant-panel participant-roster-panel">
         <div class="participant-roster-head">
-          <h4>Lista de jugadores activos</h4>
+          <div>
+            <span class="participant-panel-kicker">Disponibles</span>
+            <h4>Lista de jugadores activos</h4>
+          </div>
           <div class="participant-roster-counters">
             <span><?= h((string) count($activePlayers)) ?> activos</span>
             <span><strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong> jugadores elegidos</span>
@@ -544,10 +1065,17 @@ require __DIR__ . '/includes/header.php';
       </section>
 
       <section class="participant-panel selected-panel participant-selected-desktop">
-        <h4>Seleccionados para este partido</h4>
+        <div class="selected-panel-head">
+          <div>
+            <span class="participant-panel-kicker">Convocados</span>
+            <h4>Seleccionados para este partido</h4>
+          </div>
+          <span class="selected-panel-count"><strong data-selection-count="participants">0</strong>/<strong data-selection-max="participants"><?= $targetSelection ?></strong></span>
+        </div>
         <div class="selected-player-list" data-selected-participants></div>
         <p class="small-muted" data-selected-empty>Agrega jugadores desde la lista.</p>
       </section>
+      </div>
 
       <details class="participant-mobile-marquee" data-participant-marquee>
         <summary>

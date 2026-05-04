@@ -11,6 +11,21 @@
     return Math.max(1, teams || 1) * Math.max(1, playersPerTeam || 1);
   };
 
+  const updateImportPlayerLimit = () => {
+    document.querySelectorAll('[data-import-max-players]').forEach((input) => {
+      input.value = String(getParticipantLimit());
+    });
+  };
+
+  const importScrollKey = 'goodfellasImportScrollY';
+  const savedImportScroll = window.sessionStorage?.getItem(importScrollKey);
+  if (savedImportScroll !== null) {
+    window.sessionStorage.removeItem(importScrollKey);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: Number.parseInt(savedImportScroll, 10) || 0, left: 0 });
+    });
+  }
+
   const updateSelectionCount = (target) => {
     if (!target) return;
     const checkboxes = Array.from(document.querySelectorAll(`input[name="${target}[]"]`));
@@ -229,9 +244,109 @@
     });
   });
 
+  const importedPlayerIds = document.querySelector('[data-imported-player-ids]');
+  if (importedPlayerIds) {
+    try {
+      const ids = JSON.parse(importedPlayerIds.textContent || '[]').map((id) => String(id));
+      ids.forEach((id) => {
+        const checkbox = document.querySelector(`input[name="participants[]"][value="${cssEscape(id)}"]`);
+        const row = checkbox?.closest('[data-player-row]');
+        if (checkbox) {
+          checkbox.checked = true;
+          row?.removeAttribute('data-removed');
+        }
+      });
+    } catch (error) {
+      // Ignore malformed import state; the server remains the source of truth.
+    }
+  }
+
+  const normalizeImportName = (value) => String(value || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+
+  const existingImportPlayersSource = document.querySelector('[data-existing-import-players]');
+  let existingImportPlayers = [];
+  if (existingImportPlayersSource) {
+    try {
+      existingImportPlayers = JSON.parse(existingImportPlayersSource.textContent || '[]');
+    } catch (error) {
+      existingImportPlayers = [];
+    }
+  }
+
+  const scoreExistingPlayer = (query, player) => {
+    const name = normalizeImportName(player.name);
+    if (!query || !name) return 0;
+    if (name === query) return 100;
+    if (name.includes(query) || query.includes(name)) return 82;
+    const queryParts = query.split(' ').filter(Boolean);
+    const sharedParts = queryParts.filter((part) => name.includes(part)).length;
+    return sharedParts > 0 ? 60 + sharedParts * 5 : 0;
+  };
+
+  const updateImportExistingPanel = (input) => {
+    const index = input.getAttribute('data-missing-index');
+    const panel = document.querySelector(`[data-existing-player-panel="${cssEscape(index)}"]`);
+    const title = panel?.querySelector('[data-existing-player-title]');
+    const options = panel?.querySelector('[data-existing-player-options]');
+    if (!panel || !title || !options) return;
+
+    const query = normalizeImportName(input.value);
+    const matches = existingImportPlayers
+      .map((player) => ({ player, score: scoreExistingPlayer(query, player) }))
+      .filter((item) => item.score >= 60)
+      .sort((a, b) => b.score - a.score || String(a.player.name).localeCompare(String(b.player.name)))
+      .slice(0, 4);
+
+    panel.classList.toggle('hidden', matches.length === 0);
+    if (!matches.length) {
+      options.innerHTML = '';
+      return;
+    }
+
+    title.textContent = matches[0].score === 100 ? 'Jugador ya existente' : 'Posibles coincidencias';
+    options.innerHTML = matches.map(({ player }) => `
+      <button
+        class="btn btn-muted"
+        type="submit"
+        form="useExistingImportPlayerForm${escapeHtml(index)}"
+        data-use-existing-player="${escapeHtml(index)}"
+        data-player-id="${escapeHtml(player.id)}"
+      >
+        Usar ${escapeHtml(player.name)}
+      </button>
+    `).join('');
+  };
+
+  document.querySelectorAll('[data-import-player-name-input]').forEach((input) => {
+    input.addEventListener('input', () => updateImportExistingPanel(input));
+    updateImportExistingPanel(input);
+  });
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-use-existing-player]');
+    if (!button) return;
+    const index = button.getAttribute('data-use-existing-player');
+    const input = document.querySelector(`[data-use-existing-player-input="${cssEscape(index)}"]`);
+    if (input) {
+      input.value = button.getAttribute('data-player-id') || '';
+    }
+  });
+
+  document.querySelectorAll('#importPlayersForm, #clearImportPlayersForm, form[id^="createImportPlayerForm"], form[id^="useExistingImportPlayerForm"]').forEach((form) => {
+    form.addEventListener('submit', () => {
+      window.sessionStorage?.setItem(importScrollKey, String(window.scrollY));
+    });
+  });
+
   const participantSearch = document.querySelector('[data-participant-search]');
   if (participantSearch) {
     participantSearch.addEventListener('input', filterParticipantRows);
+    updateImportPlayerLimit();
     updateSelectionCount('participants');
   }
 
@@ -498,8 +613,14 @@
   }
 
   document.querySelectorAll('[data-num-teams], [data-players-per-team]').forEach((input) => {
-    input.addEventListener('input', () => updateSelectionCount('participants'));
-    input.addEventListener('change', () => updateSelectionCount('participants'));
+    input.addEventListener('input', () => {
+      updateImportPlayerLimit();
+      updateSelectionCount('participants');
+    });
+    input.addEventListener('change', () => {
+      updateImportPlayerLimit();
+      updateSelectionCount('participants');
+    });
   });
 
   document.querySelectorAll('[data-confirm]').forEach((el) => {
