@@ -608,6 +608,17 @@ require __DIR__ . '/includes/header.php';
         return players.reduce((total, player) => total + Number(player.skill || 0), 0);
       };
       const teamNumbers = () => (state?.match?.team_numbers || Object.keys(state?.draft?.captains || {})).map(Number).filter(Boolean);
+      const updateTeamTitle = (teamNumber) => {
+        const title = document.getElementById(`team${teamNumber}Title`);
+        if (!title || !state?.ok) return;
+        const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
+        const captainName = state.draft?.captains?.[teamNumber]?.name || `Equipo ${teamNumber}`;
+        const targetSize = state.match?.target_team_size || players.length;
+        title.textContent = `Equipo ${teamNumber} - ${captainName} (${players.length}/${targetSize}) - ${teamTotalSkill(teamNumber).toFixed(1)} pts`;
+      };
+      const updateTeamTitles = () => {
+        teamNumbers().forEach(updateTeamTitle);
+      };
       const currentCaptainName = () => state?.draft?.current_captain || (state?.draft?.current_team ? state.draft.captains[state.draft.current_team]?.name : '') || '';
       const isMyTurn = () => captainToken !== '' && teamView > 0 && state?.draft?.status === 'active' && state.draft.current_team === teamView;
       const isMyWaitingTurn = () => captainToken !== '' && teamNumbers().includes(teamView) && state?.draft?.status === 'active' && state.draft.current_team !== teamView;
@@ -1046,6 +1057,7 @@ require __DIR__ . '/includes/header.php';
       };
 
       const rerenderEditableFormations = () => {
+        updateTeamTitles();
         teamNumbers().forEach(renderTeamNumber => {
           const teamContainer = document.getElementById(`team${renderTeamNumber}List`);
           if (teamContainer && teamContainer.querySelector('.captain-formation-field')) {
@@ -1489,13 +1501,6 @@ require __DIR__ . '/includes/header.php';
         }
         ensureTeamCards();
         document.getElementById('draftTitle').textContent = `${state.match.title} - ${state.match.participants_count} convocados`;
-        teamNumbers().forEach(teamNumber => {
-          const title = document.getElementById(`team${teamNumber}Title`);
-          const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
-          if (title) {
-            title.textContent = `Equipo ${teamNumber} - ${state.draft.captains[teamNumber].name} (${players.length}/${state.match.target_team_size}) - ${teamTotalSkill(teamNumber).toFixed(1)} pts`;
-          }
-        });
         const turn = document.getElementById('draftTurn');
         const formationHint = document.getElementById('draftFormationHint');
         const canShowFormationHint = state.draft.status === 'completed'
@@ -1524,6 +1529,7 @@ require __DIR__ . '/includes/header.php';
         } else {
           turn.innerHTML = `Esperando a ${escapeHtml(currentCaptainName())}. Entra con el link de ese capitan si queres elegir.`;
         }
+        updateTeamTitles();
         teamNumbers().forEach(teamNumber => renderTeam(teamNumber, `team${teamNumber}List`));
         updateWaitingPanel();
         const formationOnly = state.draft.status === 'completed' && teamView > 0 && captainToken !== '';
