@@ -864,6 +864,10 @@
 
   document.querySelectorAll('[data-player-edit-row]').forEach((row) => {
     const fields = Array.from(row.querySelectorAll('input, select, textarea'));
+    const rememberRestoreTarget = (target) => {
+      if (!target || target.closest('[data-player-row-save], .player-trash-icon, .player-scout-row-button')) return;
+      row.playerRestoreTarget = target;
+    };
     const normalizedFieldValue = (field) => {
       if (field.matches('[type="checkbox"], [type="radio"]')) {
         return field.checked ? '1' : '0';
@@ -892,8 +896,20 @@
       updateDirtyState();
     };
     fields.forEach((field) => {
-      field.addEventListener('input', updateDirtyState);
-      field.addEventListener('change', updateDirtyState);
+      field.addEventListener('input', (event) => {
+        rememberRestoreTarget(event.target);
+        updateDirtyState();
+      });
+      field.addEventListener('change', (event) => {
+        rememberRestoreTarget(event.target);
+        updateDirtyState();
+      });
+    });
+    row.addEventListener('pointerdown', (event) => {
+      rememberRestoreTarget(event.target.closest('button, input, select, textarea'));
+    });
+    row.addEventListener('focusin', (event) => {
+      rememberRestoreTarget(event.target.closest('button, input, select, textarea'));
     });
     updateDirtyState();
   });
@@ -907,6 +923,10 @@
     if (!row || !saveButton || saveButton.disabled) return;
 
     event.preventDefault();
+    const rowTopBeforeSave = row.getBoundingClientRect().top;
+    const restoreTarget = row.playerRestoreTarget instanceof HTMLElement
+      ? row.playerRestoreTarget
+      : (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     const formData = new FormData(form);
     formData.set('ajax', '1');
     if (!formData.get('ajax_token') && window.playerAjaxToken) {
@@ -934,6 +954,13 @@
       }
 
       applyPlayerSavePayload(payload, form);
+      const rowTopAfterSave = row.getBoundingClientRect().top;
+      if (Number.isFinite(rowTopBeforeSave) && Number.isFinite(rowTopAfterSave)) {
+        window.scrollBy({ top: rowTopAfterSave - rowTopBeforeSave, left: 0, behavior: 'auto' });
+      }
+      if (restoreTarget && document.contains(restoreTarget) && typeof restoreTarget.focus === 'function') {
+        restoreTarget.focus({ preventScroll: true });
+      }
 
       row.updatePlayerDirtySnapshot?.();
       row.classList.add('is-saved');

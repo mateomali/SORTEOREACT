@@ -902,26 +902,32 @@ require __DIR__ . '/includes/header.php';
         1: [
           'Regularidad es su alarma roja: puede tener un partido buenisimo y al siguiente jugar como si hubiera llegado tarde a su propio cuerpo.',
           'El problema no es solo cuanto sabe jugar, sino que no siempre aparece la misma version; cuando se cae, se nota demasiado.',
+          'Su rendimiento viene con ruleta incluida: si engancha una mala tarde, el equipo tiene que empezar a cubrirle los baches.',
         ],
         2: [
           'Tiene momentos donde suma, pero todavia alterna bastante: si entra mal al partido, le cuesta acomodarse.',
           'Su regularidad todavia pide paciencia; puede regalar un rato bueno y despues desaparecer justo cuando el equipo lo necesita.',
+          'Tiene buenos pasajes, pero todavia no garantiza continuidad: puede arrancar fuerte y terminar jugando a media luz.',
         ],
         3: [
           'En regularidad esta en zona media: normalmente cumple, aunque todavia puede tener algun pozo que le baja la nota.',
           'No es una loteria total, pero tampoco un cheque certificado; suele rendir, con algun altibajo dando vueltas.',
+          'Su constancia es aceptable: no te desarma el equipo, pero todavia puede tener ratos donde baja un cambio de mas.',
         ],
         4: [
           'Tiene buen piso de rendimiento: capaz no siempre rompe el partido, pero casi nunca te lo tira por la ventana.',
           'Regularidad le suma bastante: suele estar cerca de lo que promete la planilla y eso ordena al equipo.',
+          'Su version habitual es bastante estable: no necesita estar iluminado para seguir siendo util.',
         ],
         5: [
           'Es confiable: no depende tanto de estar inspirado, casi siempre entrega una version fuerte y parecida.',
           'Su constancia pesa: puede no ser el mas vistoso cada fecha, pero rara vez baja de competitivo.',
+          'Tiene rendimiento de confianza: cuando el partido se pone raro, normalmente sigue dentro de su libreto.',
         ],
         6: [
           'Es una garantia de rendimiento: incluso en dia flojo sostiene el piso y no obliga al equipo a taparle agujeros.',
           'Regularidad altisima: no vive de chispazos, vive de repetir buenas decisiones hasta que el rival se cansa.',
+          'Tiene regularidad premium: puede variar el rival, la cancha o el clima, pero su aporte casi siempre aparece.',
         ],
       };
       const pool = pools[tier] || pools[3];
@@ -933,6 +939,33 @@ require __DIR__ . '/includes/header.php';
         return `${base} Cuando talento y constancia se juntan, ahi aparece el jugador que te cambia el sorteo.`;
       }
       return base;
+    };
+    const regularityContextLine = (player, best, weakest) => {
+      const regularity = numberOr(player.regularity, 3.5);
+      const overall = numberOr(player.skill, 3);
+      const bestLabel = (best?.label || 'su fuerte').toLowerCase();
+      const weakestLabel = (weakest?.label || 'su punto flojo').toLowerCase();
+      const tier = starTier(regularity);
+      const pools = [];
+
+      if (regularity >= 4.5) {
+        pools.push(`La regularidad hace que ${bestLabel} no sea solo un chispazo: suele aparecer varias veces en el mismo partido.`);
+        pools.push(`Lo interesante es el piso: aun cuando ${weakestLabel} aparece como deuda, no suele arrastrarlo todo el partido.`);
+        if (overall >= 4) {
+          pools.push(`Como tiene buen nivel y encima constancia, no depende tanto de una jugada aislada para justificar el puntaje.`);
+        }
+      } else if (regularity <= 2.5) {
+        pools.push(`La irregularidad le cambia la foto: ${bestLabel} puede brillar un rato, pero no siempre lo sostiene hasta el final.`);
+        pools.push(`Cuando baja la persiana, ${weakestLabel} se nota mas de la cuenta y el equipo tiene que compensarlo.`);
+        if (overall >= 4) {
+          pools.push(`Tiene puntaje para ser importante, pero la regularidad baja hace que su promedio mienta un poco: no todos los dias entrega ese jugador.`);
+        }
+      } else {
+        pools.push(`Con regularidad media, su informe hay que leerlo con matiz: ${bestLabel} aparece, pero todavia puede tener tramos apagados.`);
+        pools.push(`No es inestable al punto de preocupar siempre, aunque ${weakestLabel} puede crecer si el partido lo agarra mal parado.`);
+      }
+
+      return pools[stableIndex(`${player.name}|regularity-context|${tier}|${best?.field || ''}|${weakest?.field || ''}|${starTier(overall)}`, pools.length)];
     };
     const comboInsightLine = (player) => {
       const technique = numberOr(player.technique, 3);
@@ -1251,12 +1284,13 @@ require __DIR__ . '/includes/header.php';
       const shapeLine = radarShapeLine(stats, player.name, isGoalkeeper);
       const colorLine = colorCommentLine(player, role);
       const regularityLine = regularityInsightLine(player);
+      const regularityContext = regularityContextLine(player, best, weakest);
       const hasEliteStat = stats.some((stat) => stat.value > 5);
       const closingPool = hasEliteStat ? regularClosingLines.concat(eliteClosingLines) : regularClosingLines;
       const closingLine = closingPool[stableIndex(`${player.name}|${best.field}|${starTier(best.value)}|${weakest.field}|${starTier(weakest.value)}`, closingPool.length)];
       return {
         title: `${player.name}, ${role} de ${formatRating(numberOr(player.skill, 3))}/6`,
-        body: [shapeLine, colorLine, virtueLine, regularityLine, closingLine, comboLine, flawLine].filter(Boolean).join(' '),
+        body: [shapeLine, colorLine, virtueLine, regularityLine, regularityContext, closingLine, comboLine, flawLine].filter(Boolean).join(' '),
         tags: [
           role.toUpperCase(),
           `General ${formatRating(numberOr(player.skill, 3))}/6`,
