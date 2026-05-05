@@ -488,6 +488,74 @@ function match_player_award_icons(array $savedMatchAwards, array $awardDefinitio
     return $icons;
 }
 
+function public_team_players_from_lines(array $lines): array
+{
+    $players = [];
+    foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+        foreach (($lines[$line] ?? []) as $player) {
+            $players[] = $player;
+        }
+    }
+    return $players;
+}
+
+function public_team_characteristics_summary(array $players): array
+{
+    $count = count($players);
+    $average = static function (string $field) use ($players, $count): float {
+        if ($count === 0) {
+            return 0.0;
+        }
+        return array_sum(array_map(static fn(array $player): float => player_effective_stat($player, $field), $players)) / $count;
+    };
+    $goalkeeperSkill = 0.0;
+    foreach ($players as $player) {
+        if (player_has_goalkeeper_position($player)) {
+            $goalkeeperSkill = max($goalkeeperSkill, player_effective_stat($player, 'goalkeeper_skill'));
+        }
+    }
+
+    return [
+        'total' => array_sum(array_map(static fn(array $player): float => player_overall_rating($player), $players)),
+        'attack' => $average('attack'),
+        'defense_physical' => $average('defense_physical'),
+        'rhythm' => $average('rhythm'),
+        'technique' => $average('technique'),
+        'teamwork' => $average('teamwork'),
+        'goalkeeper_skill' => $goalkeeperSkill,
+        'fast' => count(array_filter($players, static fn(array $player): bool => !player_is_low_rhythm($player))),
+        'slow' => count(array_filter($players, static fn(array $player): bool => player_is_low_rhythm($player))),
+    ];
+}
+
+function render_public_team_characteristics(array $players): string
+{
+    if (!$players) {
+        return '';
+    }
+    $summary = public_team_characteristics_summary($players);
+    ob_start();
+    ?>
+    <div class="public-team-characteristics">
+      <div class="team-characteristics-main">
+        <span>General <?= h(number_format((float) $summary['total'], 1)) ?></span>
+        <span><?= h((string) $summary['fast']) ?> rapidos / <?= h((string) $summary['slow']) ?> lentos</span>
+      </div>
+      <div class="team-characteristics-stats">
+        <span>Ataque <?= h(number_format((float) $summary['attack'], 1)) ?></span>
+        <span>Solidez <?= h(number_format((float) $summary['defense_physical'], 1)) ?></span>
+        <span>Ritmo <?= h(number_format((float) $summary['rhythm'], 1)) ?></span>
+        <span>Tecnica <?= h(number_format((float) $summary['technique'], 1)) ?></span>
+        <span>Compromiso <?= h(number_format((float) $summary['teamwork'], 1)) ?></span>
+        <?php if ((float) $summary['goalkeeper_skill'] > 0): ?>
+          <span>Arquero <?= h(number_format((float) $summary['goalkeeper_skill'], 1)) ?></span>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php
+    return trim((string) ob_get_clean());
+}
+
 function render_public_match_detail_content(array $match, array $awardDefinitions, array $awardDescriptions): string
 {
     $matchId = (int) $match['id'];
@@ -568,6 +636,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     <?php else: ?>
       <div class="grid cols-2 public-teams">
         <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
+          <?php $teamPlayersForCharacteristics = public_team_players_from_lines($lines); ?>
           <article class="team-card">
             <div class="team-head">
               <h4>
@@ -627,6 +696,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                 </div>
               <?php endforeach; ?>
             </div>
+            <?= render_public_team_characteristics($teamPlayersForCharacteristics) ?>
           </article>
         <?php endforeach; ?>
       </div>
@@ -957,6 +1027,7 @@ require __DIR__ . '/includes/header.php';
       <?php else: ?>
         <div class="grid cols-2 public-teams">
           <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
+            <?php $teamPlayersForCharacteristics = public_team_players_from_lines($lines); ?>
             <article class="team-card">
               <div class="team-head">
                 <h4>
@@ -1018,6 +1089,7 @@ require __DIR__ . '/includes/header.php';
                   </div>
                 <?php endforeach; ?>
               </div>
+              <?= render_public_team_characteristics($teamPlayersForCharacteristics) ?>
             </article>
           <?php endforeach; ?>
         </div>
@@ -1177,6 +1249,37 @@ require __DIR__ . '/includes/header.php';
     };
 
     const teamTotalSkill = (players) => players.reduce((total, player) => total + Number(player.skill || 0), 0);
+    const statValue = (player, field) => {
+      const value = Number(player[field]);
+      return Number.isFinite(value) && value > 0 ? value : Number(player.skill || 0);
+    };
+    const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
+    const teamAverage = (players, field) => players.length
+      ? players.reduce((total, player) => total + statValue(player, field), 0) / players.length
+      : 0;
+    const hasGoalkeeper = (player) => String(player.positions || '').split('/').map((pos) => pos.trim().toUpperCase()).includes('ARQ');
+    const renderTeamCharacteristics = (players) => {
+      if (!players.length) return '';
+      const goalkeeperSkill = players.reduce((max, player) => (
+        hasGoalkeeper(player) ? Math.max(max, statValue(player, 'goalkeeper_skill')) : max
+      ), 0);
+      return `
+        <div class="public-team-characteristics">
+          <div class="team-characteristics-main">
+            <span>General ${teamTotalSkill(players).toFixed(1)}</span>
+            <span>${players.filter((player) => !lowRhythm(player)).length} rapidos / ${players.filter(lowRhythm).length} lentos</span>
+          </div>
+          <div class="team-characteristics-stats">
+            <span>Ataque ${teamAverage(players, 'attack').toFixed(1)}</span>
+            <span>Solidez ${teamAverage(players, 'defense_physical').toFixed(1)}</span>
+            <span>Ritmo ${teamAverage(players, 'rhythm').toFixed(1)}</span>
+            <span>Tecnica ${teamAverage(players, 'technique').toFixed(1)}</span>
+            <span>Compromiso ${teamAverage(players, 'teamwork').toFixed(1)}</span>
+            ${goalkeeperSkill > 0 ? `<span>Arquero ${goalkeeperSkill.toFixed(1)}</span>` : ''}
+          </div>
+        </div>
+      `;
+    };
 
     const renderFormation = (players) => {
       const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
@@ -1213,6 +1316,7 @@ require __DIR__ . '/includes/header.php';
             <span class="small-muted">${players.length}/${targetSize} jugadores | ${totalSkill.toFixed(1)} pts</span>
           </div>
           <div class="team-formation">${renderFormation(players)}</div>
+          ${renderTeamCharacteristics(players)}
         </article>
       `;
     };
