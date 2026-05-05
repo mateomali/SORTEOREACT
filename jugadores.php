@@ -85,6 +85,7 @@ function player_scout_data_attrs(array $player): string
         'player-scout-defense-physical' => number_format(player_effective_stat($player, 'defense_physical'), 1, '.', ''),
         'player-scout-attack' => number_format(player_effective_stat($player, 'attack'), 1, '.', ''),
         'player-scout-teamwork' => number_format(player_effective_stat($player, 'teamwork'), 1, '.', ''),
+        'player-scout-regularity' => number_format(player_effective_stat($player, 'regularity'), 1, '.', ''),
         'player-scout-goalkeeper-skill' => number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', ''),
     ];
 
@@ -181,6 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $defensePhysical = normalize_player_stat($_POST['defense_physical'] ?? null);
         $attack = normalize_player_stat($_POST['attack'] ?? null);
         $teamwork = normalize_player_stat($_POST['teamwork'] ?? null);
+        $regularity = normalize_player_stat($_POST['regularity'] ?? null, 3.5);
         $goalkeeperSkill = str_contains($positionsCsv, 'ARQ')
             ? normalize_player_stat($_POST['goalkeeper_skill'] ?? null)
             : null;
@@ -191,6 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'defense_physical' => $defensePhysical,
             'attack' => $attack,
             'teamwork' => $teamwork,
+            'regularity' => $regularity,
             'goalkeeper_skill' => $goalkeeperSkill,
         ];
         $skill = player_overall_rating($ratingPlayer);
@@ -201,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'UPDATE players
                  SET name = :name, positions = :positions, pace = :pace, skill = :skill,
                      technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
-                     attack = :attack, teamwork = :teamwork, goalkeeper_skill = :goalkeeper_skill,
+                     attack = :attack, teamwork = :teamwork, regularity = :regularity, goalkeeper_skill = :goalkeeper_skill,
                      active = :active
                  WHERE id = :id'
             );
@@ -216,6 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'defense_physical' => $defensePhysical,
                 'attack' => $attack,
                 'teamwork' => $teamwork,
+                'regularity' => $regularity,
                 'goalkeeper_skill' => $goalkeeperSkill,
                 'active' => $active,
             ]);
@@ -232,6 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'defense_physical' => $defensePhysical,
                     'attack' => $attack,
                     'teamwork' => $teamwork,
+                    'regularity' => $regularity,
                     'goalkeeper_skill' => $goalkeeperSkill,
                     'active' => $active,
                 ];
@@ -254,9 +259,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO players
-                   (name, positions, pace, skill, technique, rhythm, defense_physical, attack, teamwork, goalkeeper_skill, active)
+                   (name, positions, pace, skill, technique, rhythm, defense_physical, attack, teamwork, regularity, goalkeeper_skill, active)
                  VALUES
-                   (:name, :positions, :pace, :skill, :technique, :rhythm, :defense_physical, :attack, :teamwork, :goalkeeper_skill, :active)'
+                   (:name, :positions, :pace, :skill, :technique, :rhythm, :defense_physical, :attack, :teamwork, :regularity, :goalkeeper_skill, :active)'
             );
             $stmt->execute([
                 'name' => $name,
@@ -268,6 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'defense_physical' => $defensePhysical,
                 'attack' => $attack,
                 'teamwork' => $teamwork,
+                'regularity' => $regularity,
                 'goalkeeper_skill' => $goalkeeperSkill,
                 'active' => $active,
             ]);
@@ -298,6 +304,7 @@ $form = [
     'defense_physical' => 3.0,
     'attack' => 3.0,
     'teamwork' => 3.0,
+    'regularity' => 3.5,
     'goalkeeper_skill' => 3.0,
     'active' => 1,
 ];
@@ -308,6 +315,7 @@ $statLabels = [
     'defense_physical' => 'Solidez',
     'attack' => 'Ataque',
     'teamwork' => 'Compromiso',
+    'regularity' => 'Regularidad',
     'goalkeeper_skill' => 'Habilidad de arquero',
 ];
 $statHelp = [
@@ -316,6 +324,7 @@ $statHelp = [
     'defense_physical' => 'Marca, quite, anticipo, presion, fuerza, choque y resistencia defensiva.',
     'attack' => 'Definicion, llegada al arco, desmarque y peligro ofensivo.',
     'teamwork' => 'Juego en equipo, solidaridad, ubicacion, toma de decisiones, actitud, concentracion y responsabilidad tactica.',
+    'regularity' => 'Estabilidad para rendir cerca de su nivel habitual, sin alternar tanto entre partidazos y partidos flojos.',
     'goalkeeper_skill' => 'Atajada, reflejos, achique, posicionamiento, juego aereo y seguridad bajo los tres palos.',
 ];
 $ratingHelp = [
@@ -332,6 +341,7 @@ $fieldWeightHelp = [
     'Ritmo 20%' => 'En futbol amateur pesa mucho: correr y volver cambia partidos.',
     'Solidez 20%' => 'Evita que solo cuente atacar.',
     'Compromiso 15%' => 'Importa, pero no infla demasiado a jugadores solo ordenados.',
+    'Regularidad +/-5%' => 'Ajusta el promedio final: 6 suma 5%, 1 resta 5%, 3/4 quedan casi neutros.',
 ];
 
 function stat_rating_control(string $name, float $value, ?string $formId = null, bool $compact = false, bool $readonly = false): string
@@ -457,7 +467,7 @@ require __DIR__ . '/includes/header.php';
     <div class="player-stats-editor">
       <div class="form-grid">
         <?php foreach (player_field_stat_fields() as $field): ?>
-          <div class="form-row stat-form-row">
+          <div class="form-row stat-form-row" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
             <label><?= h($statLabels[$field]) ?></label>
             <?= stat_rating_control($field, player_effective_stat($form, $field)) ?>
           </div>
@@ -613,7 +623,7 @@ require __DIR__ . '/includes/header.php';
             <td>
               <div class="player-table-stat-grid">
                 <?php foreach (player_field_stat_fields() as $field): ?>
-                  <div class="player-table-stat">
+                  <div class="player-table-stat" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
                     <span><?= h($statLabels[$field]) ?></span>
                     <?= stat_rating_control($field, player_effective_stat($player, $field), $isAdmin ? $rowFormId : null, true, !$isAdmin) ?>
                   </div>
@@ -716,7 +726,7 @@ require __DIR__ . '/includes/header.php';
 
       <div class="form-grid">
         <?php foreach (player_field_stat_fields() as $field): ?>
-          <div class="form-row stat-form-row">
+          <div class="form-row stat-form-row" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
             <label><?= h($statLabels[$field]) ?></label>
             <?= stat_rating_control($field, player_effective_stat($player, $field), null, false, !$isAdmin) ?>
           </div>
@@ -746,7 +756,7 @@ require __DIR__ . '/includes/header.php';
 <script>
   (() => {
     window.playerAjaxToken = '<?= $isAdmin ? h(player_ajax_token()) : '' ?>';
-    const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork'];
+    const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity'];
     const fullStars = (rating) => {
       const full = Math.floor(rating);
       const half = rating % 1 !== 0;
@@ -760,6 +770,7 @@ require __DIR__ . '/includes/header.php';
       defense_physical: 'Solidez',
       attack: 'Ataque',
       teamwork: 'Compromiso',
+      regularity: 'Regularidad',
       goalkeeper_skill: 'Arquero',
     };
     const radarShortLabels = {
@@ -768,6 +779,7 @@ require __DIR__ . '/includes/header.php';
       defense_physical: 'SOL',
       attack: 'ATA',
       teamwork: 'COM',
+      regularity: 'REG',
       goalkeeper_skill: 'ARQ',
     };
     const scoutStatRules = [
@@ -804,6 +816,12 @@ require __DIR__ . '/includes/header.php';
         weakness: ['si se cuelga, el equipo queda pagando el peaje', 'cuando toca dar una mano, a veces llega tarde a la reunion', 'acompanar acompana, pero le falta mandar un poco mas', 'no desentona, pero a veces desaparece un rato del partido', 'en compromiso rara vez deja una silla vacia', 'hasta sin tocarla acomoda el quilombo'],
       },
       {
+        field: 'regularity',
+        label: 'Regularidad',
+        strength: ['todavia es una moneda al aire: puede venir iluminado o venir con la luz cortada', 'tiene ratos buenos, aunque todavia mezcla una bien con una que hace mirar al cielo', 'suele sostener un nivel aceptable sin regalar demasiados pozos', 'mantiene una linea bastante confiable y no se cae por cualquier golpe del partido', 'rinde casi siempre cerca de su mejor version: no vende humo de un solo domingo', 'es relojito: lo pones y sabes que no te va a dejar tirado cuando el partido aprieta'],
+        weakness: ['si arranca torcido, puede pasar medio partido intentando encontrarse', 'todavia tiene bajones que cambian la lectura de todo lo bueno que hizo', 'su piso no siempre acompana a su techo: por momentos parece otro jugador', 'no se cae seguido, pero cuando baja un cambio el equipo lo nota', 'rara vez baja de su nivel habitual, y eso lo vuelve muy confiable', 'su peor partido igual suele ser competitivo: no se borra ni en dia torcido'],
+      },
+      {
         field: 'goalkeeper_skill',
         label: 'Arquero',
         strength: ['en el arco necesita que la defensa no lo abandone como bondi de noche', 'saca alguna importante, pero todavia no da para estatua', 'cumple bajo los tres palos y evita papelones', 'achica bien y ya empieza a hacerse respetar', 'se agranda en el arco: tapa, grita y acomoda el boliche', 'es persiana metalica: baja y no entra nadie'],
@@ -832,6 +850,7 @@ require __DIR__ . '/includes/header.php';
       defense_physical: ['solidez', 'el roce', 'la marca', 'la batalla fisica'],
       attack: ['ataque', 'el ultimo tramo', 'la zona caliente', 'el olor a gol'],
       teamwork: ['compromiso', 'el juego colectivo', 'la entrega', 'la sociedad'],
+      regularity: ['regularidad', 'la constancia', 'el piso de rendimiento', 'la estabilidad'],
       goalkeeper_skill: ['el arco', 'los tres palos', 'la seguridad bajo palos', 'el buzo imaginario'],
     };
     const strengthTemplates = [
@@ -875,12 +894,53 @@ require __DIR__ . '/includes/header.php';
       const template = templates[stableIndex(`${seed}|template`, templates.length)];
       return template(alias, phrase, stat.label);
     };
+    const regularityInsightLine = (player) => {
+      const regularity = numberOr(player.regularity, 3.5);
+      const overall = numberOr(player.skill, 3);
+      const tier = starTier(regularity);
+      const pools = {
+        1: [
+          'Regularidad es su alarma roja: puede tener un partido buenisimo y al siguiente jugar como si hubiera llegado tarde a su propio cuerpo.',
+          'El problema no es solo cuanto sabe jugar, sino que no siempre aparece la misma version; cuando se cae, se nota demasiado.',
+        ],
+        2: [
+          'Tiene momentos donde suma, pero todavia alterna bastante: si entra mal al partido, le cuesta acomodarse.',
+          'Su regularidad todavia pide paciencia; puede regalar un rato bueno y despues desaparecer justo cuando el equipo lo necesita.',
+        ],
+        3: [
+          'En regularidad esta en zona media: normalmente cumple, aunque todavia puede tener algun pozo que le baja la nota.',
+          'No es una loteria total, pero tampoco un cheque certificado; suele rendir, con algun altibajo dando vueltas.',
+        ],
+        4: [
+          'Tiene buen piso de rendimiento: capaz no siempre rompe el partido, pero casi nunca te lo tira por la ventana.',
+          'Regularidad le suma bastante: suele estar cerca de lo que promete la planilla y eso ordena al equipo.',
+        ],
+        5: [
+          'Es confiable: no depende tanto de estar inspirado, casi siempre entrega una version fuerte y parecida.',
+          'Su constancia pesa: puede no ser el mas vistoso cada fecha, pero rara vez baja de competitivo.',
+        ],
+        6: [
+          'Es una garantia de rendimiento: incluso en dia flojo sostiene el piso y no obliga al equipo a taparle agujeros.',
+          'Regularidad altisima: no vive de chispazos, vive de repetir buenas decisiones hasta que el rival se cansa.',
+        ],
+      };
+      const pool = pools[tier] || pools[3];
+      const base = pool[stableIndex(`${player.name}|regularity-line|${tier}|${starTier(overall)}`, pool.length)];
+      if (overall >= 4.5 && regularity <= 2.5) {
+        return `${base} Tiene techo alto, pero esa irregularidad lo vuelve dificil de medir.`;
+      }
+      if (overall >= 4.5 && regularity >= 4.5) {
+        return `${base} Cuando talento y constancia se juntan, ahi aparece el jugador que te cambia el sorteo.`;
+      }
+      return base;
+    };
     const comboInsightLine = (player) => {
       const technique = numberOr(player.technique, 3);
       const rhythm = numberOr(player.rhythm, 3);
       const defense = numberOr(player.defense_physical, 3);
       const attack = numberOr(player.attack, 3);
       const teamwork = numberOr(player.teamwork, 3);
+      const regularity = numberOr(player.regularity, 3.5);
       const goalkeeper = numberOr(player.goalkeeper_skill, 3);
       const isGoalkeeper = player.positions.includes('ARQ');
       const high = (value) => value >= 4.5;
@@ -968,6 +1028,12 @@ require __DIR__ . '/includes/header.php';
       if (defense < 3 && teamwork < 3) {
         matches.push('Cuando lo aprietan en su zona floja, puede tirar un pelotazo a cualquier lado.');
       }
+      if (high(regularity) && numberOr(player.skill, 3) >= 4) {
+        matches.push('Lo bueno no es solo el techo: suele repetirlo, y eso en equipos parejos vale doble.');
+      }
+      if (low(regularity) && numberOr(player.skill, 3) >= 4) {
+        matches.push('Tiene nivel para romperla, pero no siempre aparece la misma version: te puede ganar el partido o dejarte esperando.');
+      }
       if (isGoalkeeper && high(goalkeeper) && low(defense)) {
         matches.push('Como arquero te salva las papas, pero si sale del arco a chocar queda mas expuesto que persiana rota.');
       }
@@ -982,7 +1048,7 @@ require __DIR__ . '/includes/header.php';
       }
 
       if (!matches.length) return '';
-      return matches[stableIndex(`${player.name}|combo|${starTier(technique)}|${starTier(rhythm)}|${starTier(defense)}|${starTier(attack)}|${starTier(teamwork)}|${starTier(goalkeeper)}`, matches.length)];
+      return matches[stableIndex(`${player.name}|combo|${starTier(technique)}|${starTier(rhythm)}|${starTier(defense)}|${starTier(attack)}|${starTier(teamwork)}|${starTier(regularity)}|${starTier(goalkeeper)}`, matches.length)];
     };
     const radarShapeLine = (stats, playerName, isGoalkeeper) => {
       const values = stats.map((stat) => stat.value);
@@ -1070,6 +1136,7 @@ require __DIR__ . '/includes/header.php';
       const defense = numberOr(player.defense_physical, 3);
       const attack = numberOr(player.attack, 3);
       const teamwork = numberOr(player.teamwork, 3);
+      const regularity = numberOr(player.regularity, 3.5);
       const goalkeeper = numberOr(player.goalkeeper_skill, 3);
       const overall = numberOr(player.skill, 3);
       const pool = [];
@@ -1093,6 +1160,12 @@ require __DIR__ . '/includes/header.php';
       if (teamwork >= 4.5) {
         pool.push('Tiene alma de capitan sin cinta: acomoda, habla y juega para que el equipo no sea una murga.');
         pool.push('No se casa con la pelota: si hay que tocar y moverse, toca y se mueve.');
+      }
+      if (regularity >= 4.5) {
+        pool.push('No vive de flashes: lo normal es que juegue cerca de su mejor version.');
+      }
+      if (regularity <= 2.5 && overall >= 4) {
+        pool.push('Tiene dias de figura y dias para esconder la planilla: conviene mirarlo de cerca cuando arranca irregular.');
       }
       if (attack >= 4.5) {
         pool.push('Tiene sangre de nueve vivo: capaz toca dos pelotas y una termina con todos sacando del medio.');
@@ -1130,13 +1203,13 @@ require __DIR__ . '/includes/header.php';
         pool.push('No pasa desapercibido: siempre deja una jugada para discutir en el tercer tiempo.');
       }
 
-      return pool[stableIndex(`${player.name}|color|${role}|${starTier(overall)}|${starTier(technique)}|${starTier(rhythm)}|${starTier(defense)}|${starTier(attack)}|${starTier(teamwork)}|${starTier(goalkeeper)}`, pool.length)];
+      return pool[stableIndex(`${player.name}|color|${role}|${starTier(overall)}|${starTier(technique)}|${starTier(rhythm)}|${starTier(defense)}|${starTier(attack)}|${starTier(teamwork)}|${starTier(regularity)}|${starTier(goalkeeper)}`, pool.length)];
     };
     const scoutDataFromTrigger = (trigger) => {
       const row = trigger.closest('[data-player-edit-row]');
       if (row) {
         const positions = Array.from(row.querySelectorAll('input[name="positions[]"]:checked')).map((input) => input.value);
-        const getValue = (field) => numberOr(row.querySelector(`[data-stat-rating-input][name="${field}"]`)?.value, 3);
+        const getValue = (field) => numberOr(row.querySelector(`[data-stat-rating-input][name="${field}"]`)?.value, field === 'regularity' ? 3.5 : 3);
         const player = {
           name: row.querySelector('input[name="name"]')?.value || row.querySelector('.player-readonly-name')?.textContent || 'Este jugador',
           positions,
@@ -1161,8 +1234,10 @@ require __DIR__ . '/includes/header.php';
     };
     const describeScoutPlayer = (player) => {
       const isGoalkeeper = player.positions.includes('ARQ');
-      const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper || rule.field !== 'goalkeeper_skill');
-      const stats = visibleRules.map((rule) => ({ ...rule, value: numberOr(player[rule.field], 3) }));
+      const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper
+        ? rule.field !== 'attack'
+        : rule.field !== 'goalkeeper_skill');
+      const stats = visibleRules.map((rule) => ({ ...rule, value: numberOr(player[rule.field], rule.field === 'regularity' ? 3.5 : 3) }));
       const best = stats.slice().sort((a, b) => b.value - a.value)[0];
       const weakest = stats.slice().sort((a, b) => a.value - b.value)[0];
       const role = isGoalkeeper
@@ -1175,15 +1250,17 @@ require __DIR__ . '/includes/header.php';
       const comboLine = comboInsightLine(player);
       const shapeLine = radarShapeLine(stats, player.name, isGoalkeeper);
       const colorLine = colorCommentLine(player, role);
+      const regularityLine = regularityInsightLine(player);
       const hasEliteStat = stats.some((stat) => stat.value > 5);
       const closingPool = hasEliteStat ? regularClosingLines.concat(eliteClosingLines) : regularClosingLines;
       const closingLine = closingPool[stableIndex(`${player.name}|${best.field}|${starTier(best.value)}|${weakest.field}|${starTier(weakest.value)}`, closingPool.length)];
       return {
         title: `${player.name}, ${role} de ${formatRating(numberOr(player.skill, 3))}/6`,
-        body: [shapeLine, colorLine, virtueLine, closingLine, comboLine, flawLine].filter(Boolean).join(' '),
+        body: [shapeLine, colorLine, virtueLine, regularityLine, closingLine, comboLine, flawLine].filter(Boolean).join(' '),
         tags: [
           role.toUpperCase(),
           `General ${formatRating(numberOr(player.skill, 3))}/6`,
+          `Regularidad ${formatRating(numberOr(player.regularity, 3.5))}`,
           `${best.label} ${formatRating(best.value)}`,
           `${weakest.label} ${formatRating(weakest.value)}`,
         ],
@@ -1203,11 +1280,11 @@ require __DIR__ . '/includes/header.php';
       if (panel) panel.hidden = true;
     };
 
-    const radarPoint = (center, radius, index, total) => {
+    const radarPoint = (centerX, centerY, radius, index, total) => {
       const angle = (-Math.PI / 2) + (Math.PI * 2 * index / total);
       return {
-        x: center + Math.cos(angle) * radius,
-        y: center + Math.sin(angle) * radius,
+        x: centerX + Math.cos(angle) * radius,
+        y: centerY + Math.sin(angle) * radius,
       };
     };
 
@@ -1216,29 +1293,32 @@ require __DIR__ . '/includes/header.php';
       const canvas = scope.querySelector('[data-player-radar-canvas]');
       if (!card || !canvas) return;
 
-      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || 3);
+      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
       const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
-      const fields = hasGoalkeeper ? [...statNames, 'goalkeeper_skill'] : statNames;
+      const fields = hasGoalkeeper ? statNames.map((field) => field === 'attack' ? 'goalkeeper_skill' : field) : statNames;
       const isCompact = card.classList.contains('player-radar-card-compact');
       const labels = isCompact ? radarShortLabels : radarLabels;
       const size = isCompact ? 180 : 240;
-      const center = size / 2;
+      const viewBoxHeight = isCompact ? size : 278;
+      const centerX = size / 2;
+      const centerY = isCompact ? size / 2 : 112;
       const maxRadius = isCompact ? 56 : 78;
       const labelRadius = isCompact ? 76 : 103;
+      const scaleY = isCompact ? centerY + maxRadius + 31 : viewBoxHeight - 14;
       const levels = [1, 2, 3, 4, 5, 6];
       const polygon = fields.map((field, index) => {
         const value = Math.max(1, Math.min(6, getValue(field)));
-        const point = radarPoint(center, maxRadius * (value / 6), index, fields.length);
+        const point = radarPoint(centerX, centerY, maxRadius * (value / 6), index, fields.length);
         return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
       }).join(' ');
 
       canvas.innerHTML = `
-        <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Diagrama de estrella de stats">
+        <svg viewBox="0 0 ${size} ${viewBoxHeight}" role="img" aria-label="Diagrama de estrella de stats">
           <g class="radar-grid">
             ${levels.map((level) => {
               const radius = maxRadius * (level / 6);
               const points = fields.map((_, index) => {
-                const point = radarPoint(center, radius, index, fields.length);
+                const point = radarPoint(centerX, centerY, radius, index, fields.length);
                 return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
               }).join(' ');
               return `<polygon points="${points}"></polygon>`;
@@ -1246,11 +1326,11 @@ require __DIR__ . '/includes/header.php';
           </g>
           <g class="radar-axis">
             ${fields.map((field, index) => {
-              const end = radarPoint(center, maxRadius, index, fields.length);
-              const label = radarPoint(center, labelRadius, index, fields.length);
-              const anchor = Math.abs(label.x - center) < 8 ? 'middle' : (label.x > center ? 'start' : 'end');
+              const end = radarPoint(centerX, centerY, maxRadius, index, fields.length);
+              const label = radarPoint(centerX, centerY, labelRadius, index, fields.length);
+              const anchor = Math.abs(label.x - centerX) < 8 ? 'middle' : (label.x > centerX ? 'start' : 'end');
               return `
-                <line x1="${center}" y1="${center}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}"></line>
+                <line x1="${centerX}" y1="${centerY}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}"></line>
                 <text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="${anchor}">${labels[field]}</text>
               `;
             }).join('')}
@@ -1259,11 +1339,11 @@ require __DIR__ . '/includes/header.php';
           <g class="radar-points">
             ${fields.map((field, index) => {
               const value = Math.max(1, Math.min(6, getValue(field)));
-              const point = radarPoint(center, maxRadius * (value / 6), index, fields.length);
+              const point = radarPoint(centerX, centerY, maxRadius * (value / 6), index, fields.length);
               return `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="4"><title>${radarLabels[field]} ${value}/6</title></circle>`;
             }).join('')}
           </g>
-          <text class="radar-scale" x="${center}" y="${center + maxRadius + 31}" text-anchor="middle">Escala 1 a 6 estrellas</text>
+          <text class="radar-scale" x="${centerX}" y="${scaleY}" text-anchor="middle">Escala 1 a 6 estrellas</text>
         </svg>
       `;
       card.hidden = false;
@@ -1276,7 +1356,7 @@ require __DIR__ . '/includes/header.php';
         return;
       }
 
-      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || 3);
+      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
       const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
       const raw = hasGoalkeeper
         ? (getValue('goalkeeper_skill') * 0.45)
@@ -1289,7 +1369,8 @@ require __DIR__ . '/includes/header.php';
           + (getValue('defense_physical') * 0.20)
           + (getValue('attack') * 0.25)
           + (getValue('teamwork') * 0.15);
-      const rounded = Math.max(1, Math.min(6, Math.round(raw * 10) / 10));
+      const regularityFactor = 1 + ((getValue('regularity') - 3.5) / 50);
+      const rounded = Math.max(1, Math.min(6, Math.round(raw * regularityFactor * 10) / 10));
 
       const value = general.querySelector('[data-general-rating-value]');
       const stars = general.querySelector('[data-general-rating-stars]');
@@ -1350,6 +1431,9 @@ require __DIR__ . '/includes/header.php';
         row.querySelectorAll('input, select, textarea').forEach((input) => {
           input.disabled = !hasGoalkeeper;
         });
+      });
+      scope.querySelectorAll('[data-attack-stat-row]').forEach((row) => {
+        row.hidden = hasGoalkeeper;
       });
       scope.querySelectorAll('[data-stat-help="goalkeeper_skill"]').forEach((row) => {
         row.hidden = !hasGoalkeeper;

@@ -73,12 +73,12 @@ function skill_label(float $skill): string
 
 function player_stat_fields(): array
 {
-    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'goalkeeper_skill'];
+    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity', 'goalkeeper_skill'];
 }
 
 function player_field_stat_fields(): array
 {
-    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork'];
+    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity'];
 }
 
 function player_field_stat_weights(): array
@@ -112,6 +112,7 @@ function player_draw_balance_weights(): array
         'rhythm' => 10.0,
         'technique' => 5.0,
         'teamwork' => 5.0,
+        'regularity' => 5.0,
         'goalkeeper_skill' => 25.0,
     ];
 }
@@ -129,6 +130,7 @@ function player_effective_stat(array $player, string $field): float
 {
     $fallback = match ($field) {
         'technique', 'attack', 'teamwork', 'goalkeeper_skill' => (float) ($player['skill'] ?? 3.0),
+        'regularity' => 3.5,
         'rhythm' => (($player['pace'] ?? '') === 'lento') ? 2.0 : 4.0,
         'defense_physical' => 3.0,
         default => 3.0,
@@ -148,14 +150,21 @@ function player_overall_rating(array $player): float
         foreach (player_goalkeeper_stat_weights() as $field => $weight) {
             $total += player_effective_stat($player, $field) * $weight;
         }
-        return round($total, 1);
+        return round(player_apply_regularity_adjustment($total, $player), 1);
     }
 
     $total = 0.0;
     foreach (player_field_stat_weights() as $field => $weight) {
         $total += player_effective_stat($player, $field) * $weight;
     }
-    return round($total, 1);
+    return round(player_apply_regularity_adjustment($total, $player), 1);
+}
+
+function player_apply_regularity_adjustment(float $baseRating, array $player): float
+{
+    $regularity = player_effective_stat($player, 'regularity');
+    $factor = 1.0 + (($regularity - 3.5) / 50.0);
+    return max(1.0, min(6.0, $baseRating * $factor));
 }
 
 function player_is_low_rhythm(array $player): bool

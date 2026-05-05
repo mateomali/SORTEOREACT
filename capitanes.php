@@ -609,7 +609,8 @@ require __DIR__ . '/includes/header.php';
       };
       const statValue = (player, field) => {
         const value = Number(player[field]);
-        return Number.isFinite(value) && value > 0 ? value : Number(player.skill || 0);
+        if (Number.isFinite(value) && value > 0) return value;
+        return field === 'regularity' ? 3.5 : Number(player.skill || 0);
       };
       const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
       const teamCharacteristics = (players) => {
@@ -627,6 +628,7 @@ require __DIR__ . '/includes/header.php';
           rhythm: average('rhythm'),
           technique: average('technique'),
           teamwork: average('teamwork'),
+          regularity: average('regularity'),
           goalkeeperSkill,
           slow: players.filter(lowRhythm).length,
           fast: players.filter(player => !lowRhythm(player)).length,
@@ -642,12 +644,12 @@ require __DIR__ . '/includes/header.php';
               <span>${summary.fast} rapidos / ${summary.slow} lentos</span>
             </div>
             <div class="team-characteristics-stats">
-              <span>Ataque ${summary.attack.toFixed(1)}</span>
+              ${summary.goalkeeperSkill > 0 ? `<span>Arquero ${summary.goalkeeperSkill.toFixed(1)}</span>` : `<span>Ataque ${summary.attack.toFixed(1)}</span>`}
               <span>Solidez ${summary.defensePhysical.toFixed(1)}</span>
               <span>Ritmo ${summary.rhythm.toFixed(1)}</span>
               <span>Tecnica ${summary.technique.toFixed(1)}</span>
               <span>Compromiso ${summary.teamwork.toFixed(1)}</span>
-              ${summary.goalkeeperSkill > 0 ? `<span>Arquero ${summary.goalkeeperSkill.toFixed(1)}</span>` : ''}
+              <span>Regularidad ${summary.regularity.toFixed(1)}</span>
             </div>
           </div>
         `;

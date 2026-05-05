@@ -11,7 +11,7 @@ if (!function_exists('repo_match_participants_basic')) {
     {
         $stmt = db()->prepare(
             'SELECT p.id, p.name, p.positions, p.pace, p.skill,
-                    p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.goalkeeper_skill
+                    p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.regularity, p.goalkeeper_skill
              FROM match_players mp
              INNER JOIN players p ON p.id = mp.player_id
              WHERE mp.match_id = :mid
@@ -46,6 +46,7 @@ try {
                 'solidez' => player_effective_stat($p, 'defense_physical'),
                 'ataque' => player_effective_stat($p, 'attack'),
                 'compromiso' => player_effective_stat($p, 'teamwork'),
+                'regularidad' => player_effective_stat($p, 'regularity'),
                 'habilidad_arquero' => player_effective_stat($p, 'goalkeeper_skill'),
                 'selected' => true,
             ];
@@ -95,6 +96,7 @@ $legacyDrawWeightsJson = json_encode([
     'ritmo' => $drawBalanceWeights['rhythm'],
     'tecnica' => $drawBalanceWeights['technique'],
     'compromiso' => $drawBalanceWeights['teamwork'],
+    'regularidad' => $drawBalanceWeights['regularity'],
     'arquero' => $drawBalanceWeights['goalkeeper_skill'],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $legacyNumTeams = $legacyMatch ? (int) $legacyMatch['num_teams'] : 2;
@@ -563,7 +565,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     }
 
     function statValue(jugador, campo) {
-      const fallback = Number(jugador.puntuacion || 0);
+      const fallback = campo === 'regularidad' ? 3.5 : Number(jugador.puntuacion || 0);
       const value = Number(jugador[campo]);
       return Number.isFinite(value) && value > 0 ? value : fallback;
     }
@@ -589,6 +591,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         solidez: teamAverage(equipo, 'solidez'),
         ataque: teamAverage(equipo, 'ataque'),
         compromiso: teamAverage(equipo, 'compromiso'),
+        regularidad: teamAverage(equipo, 'regularidad'),
         arquero: equipo.reduce((max, jugador) => {
           if (!getOrderedPlayerPositions(jugador).includes('ARQ')) return max;
           return Math.max(max, statValue(jugador, 'habilidad_arquero'));
@@ -1035,6 +1038,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         ritmo: equipo.reduce((sum, j) => sum + statValue(j, 'ritmo_stat'), 0),
         tecnica: equipo.reduce((sum, j) => sum + statValue(j, 'tecnica'), 0),
         compromiso: equipo.reduce((sum, j) => sum + statValue(j, 'compromiso'), 0),
+        regularidad: equipo.reduce((sum, j) => sum + statValue(j, 'regularidad'), 0),
         arquero: equipo.reduce((max, j) => {
           if (!getOrderedPlayerPositions(j).includes('ARQ')) return max;
           return Math.max(max, statValue(j, 'habilidad_arquero'));
@@ -1591,14 +1595,14 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
               <span>Ritmo: ${totalRapidos} rapidos / ${totalLentos} lentos</span>
             </div>
             <div class="totals-breakdown" aria-label="Criterios considerados por el sorteo">
-              <span>Ataque ${resumenStats.ataque.toFixed(1)}</span>
+              ${resumenStats.arquero > 0 ? `<span>Arquero ${resumenStats.arquero.toFixed(1)}</span>` : `<span>Ataque ${resumenStats.ataque.toFixed(1)}</span>`}
               <span>Solidez ${resumenStats.solidez.toFixed(1)}</span>
               <span>Ritmo ${resumenStats.ritmo.toFixed(1)}</span>
               <span>Tecnica ${resumenStats.tecnica.toFixed(1)}</span>
               <span>Compromiso ${resumenStats.compromiso.toFixed(1)}</span>
-              <span>Arquero ${resumenStats.arquero.toFixed(1)}</span>
+              <span>Regularidad ${resumenStats.regularidad.toFixed(1)}</span>
             </div>
-            <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5 y Compromiso 5. La habilidad de arquero tiene prioridad alta y tambien se controlan posiciones, arqueros y ritmo lento.</small>
+            <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5, Compromiso 5 y Regularidad 5. La habilidad de arquero tiene prioridad alta y tambien se controlan posiciones, arqueros y ritmo lento.</small>
           </div>
         `;
         container.appendChild(equipoDiv);

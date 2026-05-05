@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS players (
   defense_physical DECIMAL(3,1) NULL,
   attack DECIMAL(3,1) NULL,
   teamwork DECIMAL(3,1) NULL,
+  regularity DECIMAL(3,1) NULL,
   goalkeeper_skill DECIMAL(3,1) NULL,
   active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

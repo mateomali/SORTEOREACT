@@ -522,6 +522,7 @@ function public_team_characteristics_summary(array $players): array
         'rhythm' => $average('rhythm'),
         'technique' => $average('technique'),
         'teamwork' => $average('teamwork'),
+        'regularity' => $average('regularity'),
         'goalkeeper_skill' => $goalkeeperSkill,
         'fast' => count(array_filter($players, static fn(array $player): bool => !player_is_low_rhythm($player))),
         'slow' => count(array_filter($players, static fn(array $player): bool => player_is_low_rhythm($player))),
@@ -542,14 +543,16 @@ function render_public_team_characteristics(array $players): string
         <span><?= h((string) $summary['fast']) ?> rapidos / <?= h((string) $summary['slow']) ?> lentos</span>
       </div>
       <div class="team-characteristics-stats">
-        <span>Ataque <?= h(number_format((float) $summary['attack'], 1)) ?></span>
+        <?php if ((float) $summary['goalkeeper_skill'] > 0): ?>
+          <span>Arquero <?= h(number_format((float) $summary['goalkeeper_skill'], 1)) ?></span>
+        <?php else: ?>
+          <span>Ataque <?= h(number_format((float) $summary['attack'], 1)) ?></span>
+        <?php endif; ?>
         <span>Solidez <?= h(number_format((float) $summary['defense_physical'], 1)) ?></span>
         <span>Ritmo <?= h(number_format((float) $summary['rhythm'], 1)) ?></span>
         <span>Tecnica <?= h(number_format((float) $summary['technique'], 1)) ?></span>
         <span>Compromiso <?= h(number_format((float) $summary['teamwork'], 1)) ?></span>
-        <?php if ((float) $summary['goalkeeper_skill'] > 0): ?>
-          <span>Arquero <?= h(number_format((float) $summary['goalkeeper_skill'], 1)) ?></span>
-        <?php endif; ?>
+        <span>Regularidad <?= h(number_format((float) $summary['regularity'], 1)) ?></span>
       </div>
     </div>
     <?php
@@ -1251,7 +1254,8 @@ require __DIR__ . '/includes/header.php';
     const teamTotalSkill = (players) => players.reduce((total, player) => total + Number(player.skill || 0), 0);
     const statValue = (player, field) => {
       const value = Number(player[field]);
-      return Number.isFinite(value) && value > 0 ? value : Number(player.skill || 0);
+      if (Number.isFinite(value) && value > 0) return value;
+      return field === 'regularity' ? 3.5 : Number(player.skill || 0);
     };
     const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
     const teamAverage = (players, field) => players.length
@@ -1270,12 +1274,12 @@ require __DIR__ . '/includes/header.php';
             <span>${players.filter((player) => !lowRhythm(player)).length} rapidos / ${players.filter(lowRhythm).length} lentos</span>
           </div>
           <div class="team-characteristics-stats">
-            <span>Ataque ${teamAverage(players, 'attack').toFixed(1)}</span>
+            ${goalkeeperSkill > 0 ? `<span>Arquero ${goalkeeperSkill.toFixed(1)}</span>` : `<span>Ataque ${teamAverage(players, 'attack').toFixed(1)}</span>`}
             <span>Solidez ${teamAverage(players, 'defense_physical').toFixed(1)}</span>
             <span>Ritmo ${teamAverage(players, 'rhythm').toFixed(1)}</span>
             <span>Tecnica ${teamAverage(players, 'technique').toFixed(1)}</span>
             <span>Compromiso ${teamAverage(players, 'teamwork').toFixed(1)}</span>
-            ${goalkeeperSkill > 0 ? `<span>Arquero ${goalkeeperSkill.toFixed(1)}</span>` : ''}
+            <span>Regularidad ${teamAverage(players, 'regularity').toFixed(1)}</span>
           </div>
         </div>
       `;

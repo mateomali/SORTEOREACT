@@ -246,7 +246,8 @@ function ensure_control_schema(): array
         ['players', 'defense_physical', 'defense_physical DECIMAL(3,1) NULL AFTER rhythm'],
         ['players', 'attack', 'attack DECIMAL(3,1) NULL AFTER defense_physical'],
         ['players', 'teamwork', 'teamwork DECIMAL(3,1) NULL AFTER attack'],
-        ['players', 'goalkeeper_skill', 'goalkeeper_skill DECIMAL(3,1) NULL AFTER teamwork'],
+        ['players', 'regularity', 'regularity DECIMAL(3,1) NULL AFTER teamwork'],
+        ['players', 'goalkeeper_skill', 'goalkeeper_skill DECIMAL(3,1) NULL AFTER regularity'],
     ];
 
     foreach ($columns as [$table, $column, $definition]) {
@@ -360,27 +361,33 @@ function backfill_control_schema(PDO $pdo): void
                defense_physical = COALESCE(defense_physical, 3.0),
                attack = COALESCE(attack, skill),
                teamwork = COALESCE(teamwork, skill),
+               regularity = COALESCE(regularity, 3.5),
                goalkeeper_skill = COALESCE(goalkeeper_skill, CASE WHEN positions LIKE '%ARQ%' THEN skill ELSE NULL END)"
         );
 
         $pdo->exec(
             "UPDATE players
              SET
-               skill = ROUND(
+               skill = ROUND(LEAST(6.0, GREATEST(1.0,
                  CASE
                    WHEN positions LIKE '%ARQ%' THEN
+                    (
                      (COALESCE(goalkeeper_skill, skill) * 0.45)
                      + (defense_physical * 0.15)
                      + (rhythm * 0.10)
                      + (technique * 0.10)
                      + (teamwork * 0.20)
+                    ) * (1 + ((regularity - 3.5) / 50.0))
                    ELSE
+                    (
                      (technique * 0.20)
                      + (rhythm * 0.20)
                      + (defense_physical * 0.20)
                      + (attack * 0.25)
                      + (teamwork * 0.15)
-                 END,
+                    ) * (1 + ((regularity - 3.5) / 50.0))
+                 END
+               )),
                  1
                ),
                pace = CASE WHEN rhythm <= 3.0 THEN 'lento' ELSE 'rapido' END
@@ -388,7 +395,8 @@ function backfill_control_schema(PDO $pdo): void
                AND rhythm IS NOT NULL
                AND defense_physical IS NOT NULL
                AND attack IS NOT NULL
-               AND teamwork IS NOT NULL"
+               AND teamwork IS NOT NULL
+               AND regularity IS NOT NULL"
         );
     }
 }
