@@ -780,14 +780,14 @@ require __DIR__ . '/includes/header.php';
       {
         field: 'rhythm',
         label: 'Ritmo',
-        strength: ['va en tercera aunque el partido pida autopista', 'no es una moto, pero llega si no lo hacen cruzar todo el conurbano', 'cumple el recorrido sin hacer ruido', 'tiene nafta para ir y volver sin pedir cambio', 'mete quinta y aparece donde la jugada ya parecia perdida', 'es delivery de ida y vuelta: cae siempre y encima rapido'],
+        strength: ['va en tercera aunque el partido pida autopista', 'no es una moto, pero llega si no lo hacen cruzar todo el conurbano', 'cumple el recorrido sin hacer ruido', 'tiene nafta para ir y volver sin pedir cambio', 'mete quinta y aparece donde la jugada ya parecia perdida', 'te corre todo el partido sin descanso'],
         weakness: ['si el partido se hace largo, empieza a mirar el banco con carino', 'si lo hacen correr de lado a lado, se le prende la reserva', 'en una contra picante puede llegar con la foto movida', 'no se cae fisicamente, pero tampoco te gana una carrera al bondi', 'por piernas casi nunca queda pagando', 'en ritmo va sobrado: al rival le conviene buscar otro camino'],
       },
       {
         field: 'defense_physical',
         label: 'Solidez',
         strength: ['en el choque todavia entra pidiendo permiso', 'si viene uno pesado, lo puede hacer retroceder un par de casilleros', 'aguanta la parada, sin ponerse el traje de sheriff', 'mete cuerpo y ya no regala la zona', 'va al roce como quien va al almacen: sin drama y con decision', 'es pared medianera: choca, rebota y te cobra alquiler'],
-        weakness: ['en el mano a mano fuerte lo pueden mandar a comprar facturas', 'si el rival lo obliga al roce, puede pasarla incomodo', 'cuando se arma el barro, le cuesta sacar pecho', 'no es drama, pero si lo cargan mucho puede perder alguna dividida', 'para moverlo hay que traer orden judicial', 'fisicamente responde como patron de estancia'],
+        weakness: ['en el mano a mano fuerte lo pueden mandar a comprar facturas', 'si el rival lo obliga al roce, puede pasarla incomodo', 'cuando se arma el bardo, le cuesta sacar pecho', 'no es drama, pero si lo cargan mucho puede perder alguna dividida', 'para moverlo hay que traer orden judicial', 'fisicamente responde como patron de estancia'],
       },
       {
         field: 'attack',
@@ -838,7 +838,9 @@ require __DIR__ . '/includes/header.php';
       (alias, phrase) => `Por el lado de ${alias}, ${phrase}.`,
       (alias, phrase) => `Si la charla va por ${alias}, ${phrase}.`,
       (alias, phrase) => `En el rubro ${alias}, ${phrase}.`,
-      (alias, phrase, label) => `${label} le pone el cartel luminoso: ${phrase}.`,
+      (alias, phrase, label) => label === 'Ataque'
+        ? `Se destaca atacando: ${phrase}.`
+        : (label === 'Tecnica' ? `Es peligroso cuando ataca: ${phrase}.` : `${label} le pone el cartel luminoso: ${phrase}.`),
       (alias, phrase) => `Cuando aparece ${alias}, ${phrase}.`,
     ];
     const weaknessTemplates = [
@@ -850,7 +852,7 @@ require __DIR__ . '/includes/header.php';
     ];
     const closingLines = [
       'Si entra enchufado, te cambia el tramite; si lo apuran donde no quiere, puede empezar a resolver con el manual al reves.',
-      'Cuando juega comodo suma un monton; cuando lo aprietan en su zona floja, puede rifar alguna pelota como sorteo de club.',
+      'Cuando juega comodo suma un monton; cuando lo aprietan en su zona floja, puede tirar la pelota a cualquier lado.',
       'Si el partido lo lleva a su baldosa, crece; si lo empujan a decidir rapido, puede mostrar la costura.',
       'En su mejor version te acomoda la tarde; en su peor rato, el rival tiene que insistir justo donde mas le pica.',
       'Con viento a favor parece jugador de resumen; con viento en contra, hay que ver si saca oficio o se le llena la mochila.',
@@ -941,7 +943,7 @@ require __DIR__ . '/includes/header.php';
         matches.push('Te apaga incendios atras, pero arriba no le pidas que sea bombero y goleador en la misma tarde.');
       }
       if (high(attack) && low(teamwork)) {
-        matches.push('Arriba tiene hambre, pero a veces come solo: si levanta la cabeza, el equipo le va a agradecer.');
+        matches.push('Arriba te mete goles, pero es medio morfon: si levanta la cabeza, el equipo le va a agradecer.');
       }
       if (high(teamwork) && low(attack)) {
         matches.push('Hace jugar a todos, pero cuando queda para definir parece que le pasa la pelota caliente al de al lado.');
@@ -993,7 +995,7 @@ require __DIR__ . '/includes/header.php';
       } else if (spread >= 2.5) {
         pool = [
           'El radar sale con picos como serrucho: tiene armas claras, pero tambien una zona donde el rival puede ir con cuchillo y tenedor.',
-          'La figura queda filosa, de especialista puro: en la suya pesa una tonelada, fuera de ahi se le ve la patente.',
+          'Es de esos jugadores bien de puesto: si lo usas donde va, suma; fuera de su posicion sufre bastante.',
         ];
       } else if (hasTop('attack', 'technique') && hasBottom('defense_physical', 'teamwork')) {
         pool = [
@@ -1050,7 +1052,7 @@ require __DIR__ . '/includes/header.php';
       const pool = [];
 
       if (overall >= 4.5) {
-        pool.push('Tiene chapa de titular en cualquier picado serio: no necesita vender humo, la pelota lo presenta sola.');
+        pool.push('Tiene chapa de titular en cualquier picado serio: no necesita vender humo, agarra la pelota y ya te das cuenta la clase de jugador que es.');
         pool.push('Cuando se enchufa, los demas parecen extras de la pelicula.');
       }
       if (overall <= 3) {
@@ -1059,7 +1061,7 @@ require __DIR__ . '/includes/header.php';
       }
       if (technique >= 4 && attack >= 4) {
         pool.push('Tiene cositas de lirico de potrero: pisa, mira y si le dan un metro empieza el show.');
-        pool.push('Arriba juega con colmillo y algo de fantasia, de esos que te inventan un problema de la nada.');
+        pool.push('No te perdona una, y a veces te tira alguna magia de esas que te inventan un problema de la nada.');
       }
       if (defense >= 4 && rhythm >= 4) {
         pool.push('Perfil tractor: mete, corre y te sigue hasta la parada del colectivo.');
