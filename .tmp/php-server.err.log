@@ -263,3 +263,537 @@
 [Tue May  5 10:27:12 2026] 127.0.0.1:62121 Accepted
 [Tue May  5 10:27:13 2026] 127.0.0.1:62121 [200]: GET /jugadores.php
 [Tue May  5 10:27:13 2026] 127.0.0.1:62121 Closing
+[Tue May  5 10:30:08 2026] 127.0.0.1:53239 Accepted
+[Tue May  5 10:30:08 2026] 127.0.0.1:53239 [200]: GET /jugadores.php
+[Tue May  5 10:30:08 2026] 127.0.0.1:53239 Closing
+[Tue May  5 10:30:57 2026] 127.0.0.1:53251 Accepted
+[Tue May  5 10:30:58 2026] 127.0.0.1:53251 [200]: GET /jugadores.php
+[Tue May  5 10:30:58 2026] 127.0.0.1:53251 Closing
+[Tue May  5 10:31:43 2026] 127.0.0.1:53269 Accepted
+[Tue May  5 10:31:43 2026] 127.0.0.1:53269 [200]: GET /jugadores.php
+[Tue May  5 10:31:43 2026] 127.0.0.1:53269 Closing
+[Tue May  5 10:32:04 2026] 127.0.0.1:53273 Accepted
+[Tue May  5 10:32:04 2026] 127.0.0.1:53273 [200]: GET /jugadores.php
+[Tue May  5 10:32:04 2026] 127.0.0.1:53273 Closing
+[Tue May  5 11:03:48 2026] 127.0.0.1:53827 Accepted
+[Tue May  5 11:03:49 2026] 127.0.0.1:53827 [200]: GET /jugadores.php
+[Tue May  5 11:03:49 2026] 127.0.0.1:53827 Closing
+[Tue May  5 11:04:04 2026] 127.0.0.1:57973 Accepted
+[Tue May  5 11:04:04 2026] 127.0.0.1:57973 [200]: GET /jugadores.php
+[Tue May  5 11:04:04 2026] 127.0.0.1:57973 Closing
+[Tue May  5 11:04:04 2026] 127.0.0.1:61774 Accepted
+[Tue May  5 11:04:04 2026] 127.0.0.1:61774 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:04:04 2026] 127.0.0.1:55657 Accepted
+[Tue May  5 11:04:04 2026] 127.0.0.1:64337 Accepted
+[Tue May  5 11:04:04 2026] 127.0.0.1:55657 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:04:04 2026] 127.0.0.1:64337 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:04:04 2026] 127.0.0.1:55657 Closing
+[Tue May  5 11:04:04 2026] 127.0.0.1:64337 Closing
+[Tue May  5 11:04:04 2026] 127.0.0.1:61774 Closing
+[Tue May  5 11:07:06 2026] 127.0.0.1:65266 Accepted
+[Tue May  5 11:07:07 2026] 127.0.0.1:65266 [200]: GET /jugadores.php
+[Tue May  5 11:07:07 2026] 127.0.0.1:65266 Closing
+[Tue May  5 11:07:14 2026] 127.0.0.1:63204 Accepted
+[Tue May  5 11:07:15 2026] 127.0.0.1:63204 [200]: GET /jugadores.php
+[Tue May  5 11:07:15 2026] 127.0.0.1:63204 Closing
+[Tue May  5 11:07:15 2026] 127.0.0.1:56711 Accepted
+[Tue May  5 11:07:15 2026] 127.0.0.1:56711 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:07:15 2026] 127.0.0.1:53728 Accepted
+[Tue May  5 11:07:15 2026] 127.0.0.1:61063 Accepted
+[Tue May  5 11:07:15 2026] 127.0.0.1:53728 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:07:15 2026] 127.0.0.1:61063 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:07:15 2026] 127.0.0.1:53728 Closing
+[Tue May  5 11:07:15 2026] 127.0.0.1:61063 Closing
+[Tue May  5 11:07:15 2026] 127.0.0.1:56711 Closing
+[Tue May  5 11:08:07 2026] 127.0.0.1:61073 Accepted
+[Tue May  5 11:08:07 2026] 127.0.0.1:61073 [200]: GET /jugadores.php
+[Tue May  5 11:08:07 2026] 127.0.0.1:61073 Closing
+[Tue May  5 11:08:48 2026] 127.0.0.1:55956 Accepted
+[Tue May  5 11:08:48 2026] 127.0.0.1:55956 [200]: GET /jugadores.php
+[Tue May  5 11:08:48 2026] 127.0.0.1:55956 Closing
+[Tue May  5 11:10:28 2026] 127.0.0.1:58809 Accepted
+[Tue May  5 11:10:29 2026] 127.0.0.1:58809 [200]: GET /jugadores.php
+[Tue May  5 11:10:29 2026] 127.0.0.1:58809 Closing
+[Tue May  5 11:14:08 2026] 127.0.0.1:60217 Accepted
+[Tue May  5 11:14:08 2026] 127.0.0.1:60217 [200]: GET /jugadores.php
+[Tue May  5 11:14:08 2026] 127.0.0.1:60217 Closing
+[Tue May  5 11:14:08 2026] 127.0.0.1:55566 Accepted
+[Tue May  5 11:14:08 2026] 127.0.0.1:55566 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:14:08 2026] 127.0.0.1:56269 Accepted
+[Tue May  5 11:14:08 2026] 127.0.0.1:63607 Accepted
+[Tue May  5 11:14:08 2026] 127.0.0.1:56269 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:14:08 2026] 127.0.0.1:63607 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:14:08 2026] 127.0.0.1:56269 Closing
+[Tue May  5 11:14:08 2026] 127.0.0.1:55566 Closing
+[Tue May  5 11:14:08 2026] 127.0.0.1:63607 Closing
+[Tue May  5 11:14:13 2026] 127.0.0.1:59640 Accepted
+[Tue May  5 11:14:13 2026] 127.0.0.1:59640 [200]: GET /jugadores.php
+[Tue May  5 11:14:13 2026] 127.0.0.1:59640 Closing
+[Tue May  5 11:14:13 2026] 127.0.0.1:56732 Accepted
+[Tue May  5 11:14:13 2026] 127.0.0.1:56732 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:14:13 2026] 127.0.0.1:58110 Accepted
+[Tue May  5 11:14:13 2026] 127.0.0.1:54150 Accepted
+[Tue May  5 11:14:13 2026] 127.0.0.1:58110 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:14:13 2026] 127.0.0.1:54150 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:14:13 2026] 127.0.0.1:58110 Closing
+[Tue May  5 11:14:13 2026] 127.0.0.1:54150 Closing
+[Tue May  5 11:14:13 2026] 127.0.0.1:56732 Closing
+[Tue May  5 11:14:17 2026] 127.0.0.1:54373 Accepted
+[Tue May  5 11:14:17 2026] 127.0.0.1:54373 [302]: POST /jugadores.php
+[Tue May  5 11:14:17 2026] 127.0.0.1:54373 Closing
+[Tue May  5 11:14:17 2026] 127.0.0.1:55741 Accepted
+[Tue May  5 11:14:18 2026] 127.0.0.1:55741 [200]: GET /jugadores.php
+[Tue May  5 11:14:18 2026] 127.0.0.1:55741 Closing
+[Tue May  5 11:14:18 2026] 127.0.0.1:49313 Accepted
+[Tue May  5 11:14:18 2026] 127.0.0.1:59011 Accepted
+[Tue May  5 11:14:18 2026] 127.0.0.1:49313 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:14:18 2026] 127.0.0.1:59011 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:14:18 2026] 127.0.0.1:59011 Closing
+[Tue May  5 11:14:18 2026] 127.0.0.1:49313 Closing
+[Tue May  5 11:14:18 2026] 127.0.0.1:59838 Accepted
+[Tue May  5 11:14:18 2026] 127.0.0.1:59838 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:14:18 2026] 127.0.0.1:59838 Closing
+[Tue May  5 11:15:15 2026] 127.0.0.1:56142 Accepted
+[Tue May  5 11:15:15 2026] 127.0.0.1:56142 [302]: POST /jugadores.php
+[Tue May  5 11:15:15 2026] 127.0.0.1:56142 Closing
+[Tue May  5 11:15:15 2026] 127.0.0.1:59553 Accepted
+[Tue May  5 11:15:15 2026] 127.0.0.1:59553 [200]: GET /jugadores.php
+[Tue May  5 11:15:15 2026] 127.0.0.1:59553 Closing
+[Tue May  5 11:15:15 2026] 127.0.0.1:54126 Accepted
+[Tue May  5 11:15:15 2026] 127.0.0.1:59489 Accepted
+[Tue May  5 11:15:15 2026] 127.0.0.1:49492 Accepted
+[Tue May  5 11:15:15 2026] 127.0.0.1:54126 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:15:15 2026] 127.0.0.1:59489 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:15:15 2026] 127.0.0.1:49492 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:15:15 2026] 127.0.0.1:59489 Closing
+[Tue May  5 11:15:15 2026] 127.0.0.1:49492 Closing
+[Tue May  5 11:15:15 2026] 127.0.0.1:54126 Closing
+[Tue May  5 11:16:36 2026] 127.0.0.1:49507 Accepted
+[Tue May  5 11:16:36 2026] 127.0.0.1:49507 [200]: GET /jugadores.php
+[Tue May  5 11:16:36 2026] 127.0.0.1:49507 Closing
+[Tue May  5 11:16:57 2026] 127.0.0.1:65268 Accepted
+[Tue May  5 11:16:57 2026] 127.0.0.1:65268 [200]: GET /jugadores.php
+[Tue May  5 11:16:57 2026] 127.0.0.1:65268 Closing
+[Tue May  5 11:16:57 2026] 127.0.0.1:53299 Accepted
+[Tue May  5 11:16:57 2026] 127.0.0.1:53299 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:16:57 2026] 127.0.0.1:54112 Accepted
+[Tue May  5 11:16:57 2026] 127.0.0.1:65455 Accepted
+[Tue May  5 11:16:57 2026] 127.0.0.1:54112 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:16:57 2026] 127.0.0.1:65455 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:16:57 2026] 127.0.0.1:53299 Closing
+[Tue May  5 11:16:57 2026] 127.0.0.1:54112 Closing
+[Tue May  5 11:16:57 2026] 127.0.0.1:65455 Closing
+[Tue May  5 11:21:50 2026] 127.0.0.1:50571 Accepted
+[Tue May  5 11:21:50 2026] 127.0.0.1:50571 [200]: GET /jugadores.php
+[Tue May  5 11:21:50 2026] 127.0.0.1:50571 Closing
+[Tue May  5 11:22:03 2026] 127.0.0.1:63899 Accepted
+[Tue May  5 11:22:04 2026] 127.0.0.1:63899 [200]: GET /jugadores.php
+[Tue May  5 11:22:04 2026] 127.0.0.1:63899 Closing
+[Tue May  5 11:22:04 2026] 127.0.0.1:58408 Accepted
+[Tue May  5 11:22:04 2026] 127.0.0.1:58408 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:22:04 2026] 127.0.0.1:65285 Accepted
+[Tue May  5 11:22:04 2026] 127.0.0.1:59152 Accepted
+[Tue May  5 11:22:04 2026] 127.0.0.1:65285 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:22:04 2026] 127.0.0.1:59152 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:22:04 2026] 127.0.0.1:58408 Closing
+[Tue May  5 11:22:04 2026] 127.0.0.1:65285 Closing
+[Tue May  5 11:22:04 2026] 127.0.0.1:59152 Closing
+[Tue May  5 11:22:51 2026] 127.0.0.1:51585 Accepted
+[Tue May  5 11:22:51 2026] 127.0.0.1:51585 [302]: POST /jugadores.php
+[Tue May  5 11:22:51 2026] 127.0.0.1:51585 Closing
+[Tue May  5 11:22:51 2026] 127.0.0.1:58573 Accepted
+[Tue May  5 11:22:51 2026] 127.0.0.1:58573 [200]: GET /jugadores.php
+[Tue May  5 11:22:51 2026] 127.0.0.1:58573 Closing
+[Tue May  5 11:22:51 2026] 127.0.0.1:59331 Accepted
+[Tue May  5 11:22:51 2026] 127.0.0.1:53900 Accepted
+[Tue May  5 11:22:51 2026] 127.0.0.1:55235 Accepted
+[Tue May  5 11:22:51 2026] 127.0.0.1:59331 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:22:51 2026] 127.0.0.1:53900 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:22:51 2026] 127.0.0.1:55235 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:22:51 2026] 127.0.0.1:53900 Closing
+[Tue May  5 11:22:51 2026] 127.0.0.1:55235 Closing
+[Tue May  5 11:22:51 2026] 127.0.0.1:59331 Closing
+[Tue May  5 11:23:04 2026] 127.0.0.1:56220 Accepted
+[Tue May  5 11:23:04 2026] 127.0.0.1:56220 [302]: POST /jugadores.php
+[Tue May  5 11:23:04 2026] 127.0.0.1:56220 Closing
+[Tue May  5 11:23:04 2026] 127.0.0.1:57837 Accepted
+[Tue May  5 11:23:04 2026] 127.0.0.1:57837 [200]: GET /jugadores.php
+[Tue May  5 11:23:04 2026] 127.0.0.1:57837 Closing
+[Tue May  5 11:23:04 2026] 127.0.0.1:61879 Accepted
+[Tue May  5 11:23:04 2026] 127.0.0.1:61688 Accepted
+[Tue May  5 11:23:04 2026] 127.0.0.1:59157 Accepted
+[Tue May  5 11:23:04 2026] 127.0.0.1:61879 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:23:04 2026] 127.0.0.1:61688 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:23:04 2026] 127.0.0.1:59157 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:23:04 2026] 127.0.0.1:61688 Closing
+[Tue May  5 11:23:04 2026] 127.0.0.1:59157 Closing
+[Tue May  5 11:23:04 2026] 127.0.0.1:61879 Closing
+[Tue May  5 11:24:13 2026] 127.0.0.1:64114 Accepted
+[Tue May  5 11:24:13 2026] 127.0.0.1:58578 Accepted
+[Tue May  5 11:24:13 2026] 127.0.0.1:64114 [302]: POST /jugadores.php
+[Tue May  5 11:24:13 2026] 127.0.0.1:64114 Closing
+[Tue May  5 11:24:13 2026] 127.0.0.1:58578 [200]: GET /jugadores.php
+[Tue May  5 11:24:13 2026] 127.0.0.1:58578 Closing
+[Tue May  5 11:24:13 2026] 127.0.0.1:63912 Accepted
+[Tue May  5 11:24:13 2026] 127.0.0.1:61066 Accepted
+[Tue May  5 11:24:13 2026] 127.0.0.1:51455 Accepted
+[Tue May  5 11:24:13 2026] 127.0.0.1:63912 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:24:13 2026] 127.0.0.1:61066 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:24:13 2026] 127.0.0.1:51455 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:24:13 2026] 127.0.0.1:61066 Closing
+[Tue May  5 11:24:13 2026] 127.0.0.1:51455 Closing
+[Tue May  5 11:24:13 2026] 127.0.0.1:63912 Closing
+[Tue May  5 11:32:39 2026] 127.0.0.1:50227 Accepted
+[Tue May  5 11:32:39 2026] 127.0.0.1:50227 [200]: GET /jugadores.php
+[Tue May  5 11:32:39 2026] 127.0.0.1:50227 Closing
+[Tue May  5 11:32:39 2026] 127.0.0.1:55438 Accepted
+[Tue May  5 11:32:39 2026] 127.0.0.1:55438 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:32:39 2026] 127.0.0.1:61990 Accepted
+[Tue May  5 11:32:39 2026] 127.0.0.1:57712 Accepted
+[Tue May  5 11:32:39 2026] 127.0.0.1:61990 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:32:39 2026] 127.0.0.1:57712 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:32:39 2026] 127.0.0.1:55438 Closing
+[Tue May  5 11:32:39 2026] 127.0.0.1:61990 Closing
+[Tue May  5 11:32:39 2026] 127.0.0.1:57712 Closing
+[Tue May  5 11:38:11 2026] 127.0.0.1:57931 Accepted
+[Tue May  5 11:38:11 2026] 127.0.0.1:59433 Accepted
+[Tue May  5 11:38:12 2026] 127.0.0.1:57931 [200]: GET /jugadores.php
+[Tue May  5 11:38:12 2026] 127.0.0.1:57931 Closing
+[Tue May  5 11:38:12 2026] 127.0.0.1:59433 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:38:12 2026] 127.0.0.1:50154 Accepted
+[Tue May  5 11:38:12 2026] 127.0.0.1:55474 Accepted
+[Tue May  5 11:38:12 2026] 127.0.0.1:50154 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:38:12 2026] 127.0.0.1:55474 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:38:12 2026] 127.0.0.1:50154 Closing
+[Tue May  5 11:38:12 2026] 127.0.0.1:59433 Closing
+[Tue May  5 11:38:12 2026] 127.0.0.1:55474 Closing
+[Tue May  5 11:38:47 2026] 127.0.0.1:56790 Accepted
+[Tue May  5 11:38:47 2026] 127.0.0.1:56790 [302]: POST /jugadores.php
+[Tue May  5 11:38:47 2026] 127.0.0.1:56790 Closing
+[Tue May  5 11:38:47 2026] 127.0.0.1:56592 Accepted
+[Tue May  5 11:38:48 2026] 127.0.0.1:56592 [200]: GET /jugadores.php
+[Tue May  5 11:38:48 2026] 127.0.0.1:56592 Closing
+[Tue May  5 11:38:48 2026] 127.0.0.1:59008 Accepted
+[Tue May  5 11:38:48 2026] 127.0.0.1:56202 Accepted
+[Tue May  5 11:38:48 2026] 127.0.0.1:61203 Accepted
+[Tue May  5 11:38:48 2026] 127.0.0.1:59008 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:38:48 2026] 127.0.0.1:56202 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:38:48 2026] 127.0.0.1:61203 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:38:48 2026] 127.0.0.1:56202 Closing
+[Tue May  5 11:38:48 2026] 127.0.0.1:61203 Closing
+[Tue May  5 11:38:48 2026] 127.0.0.1:59008 Closing
+[Tue May  5 11:39:03 2026] 127.0.0.1:52185 Accepted
+[Tue May  5 11:39:03 2026] 127.0.0.1:52185 [302]: POST /jugadores.php
+[Tue May  5 11:39:03 2026] 127.0.0.1:52185 Closing
+[Tue May  5 11:39:03 2026] 127.0.0.1:50606 Accepted
+[Tue May  5 11:39:03 2026] 127.0.0.1:50606 [200]: GET /jugadores.php
+[Tue May  5 11:39:03 2026] 127.0.0.1:50606 Closing
+[Tue May  5 11:39:03 2026] 127.0.0.1:55361 Accepted
+[Tue May  5 11:39:03 2026] 127.0.0.1:58620 Accepted
+[Tue May  5 11:39:03 2026] 127.0.0.1:49681 Accepted
+[Tue May  5 11:39:03 2026] 127.0.0.1:55361 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:39:03 2026] 127.0.0.1:58620 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:39:03 2026] 127.0.0.1:49681 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:39:03 2026] 127.0.0.1:58620 Closing
+[Tue May  5 11:39:03 2026] 127.0.0.1:49681 Closing
+[Tue May  5 11:39:03 2026] 127.0.0.1:55361 Closing
+[Tue May  5 11:40:26 2026] 127.0.0.1:58200 Accepted
+[Tue May  5 11:40:27 2026] 127.0.0.1:58200 [200]: GET /jugadores.php
+[Tue May  5 11:40:27 2026] 127.0.0.1:58200 Closing
+[Tue May  5 11:40:28 2026] 127.0.0.1:62390 Accepted
+[Tue May  5 11:40:28 2026] 127.0.0.1:62390 [200]: GET /jugadores.php
+[Tue May  5 11:40:28 2026] 127.0.0.1:62390 Closing
+[Tue May  5 11:40:28 2026] 127.0.0.1:51477 Accepted
+[Tue May  5 11:40:28 2026] 127.0.0.1:51477 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:40:28 2026] 127.0.0.1:54170 Accepted
+[Tue May  5 11:40:28 2026] 127.0.0.1:50349 Accepted
+[Tue May  5 11:40:28 2026] 127.0.0.1:54170 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:40:28 2026] 127.0.0.1:50349 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:40:28 2026] 127.0.0.1:54170 Closing
+[Tue May  5 11:40:28 2026] 127.0.0.1:51477 Closing
+[Tue May  5 11:40:28 2026] 127.0.0.1:50349 Closing
+[Tue May  5 11:40:53 2026] 127.0.0.1:65231 Accepted
+[Tue May  5 11:40:53 2026] 127.0.0.1:65231 [200]: GET /jugadores.php
+[Tue May  5 11:40:53 2026] 127.0.0.1:65231 Closing
+[Tue May  5 11:40:53 2026] 127.0.0.1:51272 Accepted
+[Tue May  5 11:40:53 2026] 127.0.0.1:51272 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:40:53 2026] 127.0.0.1:52510 Accepted
+[Tue May  5 11:40:53 2026] 127.0.0.1:54712 Accepted
+[Tue May  5 11:40:53 2026] 127.0.0.1:52510 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:40:53 2026] 127.0.0.1:54712 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:40:53 2026] 127.0.0.1:52510 Closing
+[Tue May  5 11:40:53 2026] 127.0.0.1:51272 Closing
+[Tue May  5 11:40:53 2026] 127.0.0.1:54712 Closing
+[Tue May  5 11:48:13 2026] 127.0.0.1:62078 Accepted
+[Tue May  5 11:48:13 2026] 127.0.0.1:62078 [200]: GET /jugadores.php
+[Tue May  5 11:48:13 2026] 127.0.0.1:62078 Closing
+[Tue May  5 11:48:13 2026] 127.0.0.1:56685 Accepted
+[Tue May  5 11:48:13 2026] 127.0.0.1:56685 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:48:13 2026] 127.0.0.1:59303 Accepted
+[Tue May  5 11:48:13 2026] 127.0.0.1:50797 Accepted
+[Tue May  5 11:48:13 2026] 127.0.0.1:59303 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:48:13 2026] 127.0.0.1:50797 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:48:13 2026] 127.0.0.1:59303 Closing
+[Tue May  5 11:48:13 2026] 127.0.0.1:50797 Closing
+[Tue May  5 11:48:13 2026] 127.0.0.1:56685 Closing
+[Tue May  5 11:49:28 2026] 127.0.0.1:50156 Accepted
+[Tue May  5 11:49:29 2026] 127.0.0.1:50156 [200]: GET /jugadores.php
+[Tue May  5 11:49:29 2026] 127.0.0.1:50156 Closing
+[Tue May  5 11:49:52 2026] 127.0.0.1:63992 Accepted
+[Tue May  5 11:49:52 2026] 127.0.0.1:63992 [200]: GET /jugadores.php
+[Tue May  5 11:49:52 2026] 127.0.0.1:63992 Closing
+[Tue May  5 11:49:52 2026] 127.0.0.1:58336 Accepted
+[Tue May  5 11:49:52 2026] 127.0.0.1:58336 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 11:49:52 2026] 127.0.0.1:53448 Accepted
+[Tue May  5 11:49:52 2026] 127.0.0.1:64948 Accepted
+[Tue May  5 11:49:52 2026] 127.0.0.1:53448 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 11:49:52 2026] 127.0.0.1:64948 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 11:49:52 2026] 127.0.0.1:53448 Closing
+[Tue May  5 11:49:52 2026] 127.0.0.1:64948 Closing
+[Tue May  5 11:49:52 2026] 127.0.0.1:58336 Closing
+[Tue May  5 12:03:38 2026] 127.0.0.1:54757 Accepted
+[Tue May  5 12:03:39 2026] 127.0.0.1:54757 [200]: GET /jugadores.php
+[Tue May  5 12:03:39 2026] 127.0.0.1:54757 Closing
+[Tue May  5 12:05:10 2026] 127.0.0.1:60823 Accepted
+[Tue May  5 12:05:10 2026] 127.0.0.1:60823 [200]: GET /jugadores.php
+[Tue May  5 12:05:10 2026] 127.0.0.1:60823 Closing
+[Tue May  5 12:05:10 2026] 127.0.0.1:57559 Accepted
+[Tue May  5 12:05:11 2026] 127.0.0.1:57559 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:05:11 2026] 127.0.0.1:53798 Accepted
+[Tue May  5 12:05:11 2026] 127.0.0.1:49906 Accepted
+[Tue May  5 12:05:11 2026] 127.0.0.1:53798 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:05:11 2026] 127.0.0.1:49906 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:05:11 2026] 127.0.0.1:57559 Closing
+[Tue May  5 12:05:11 2026] 127.0.0.1:53798 Closing
+[Tue May  5 12:05:11 2026] 127.0.0.1:49906 Closing
+[Tue May  5 12:05:46 2026] 127.0.0.1:60425 Accepted
+[Tue May  5 12:05:46 2026] 127.0.0.1:60425 [302]: POST /jugadores.php
+[Tue May  5 12:05:46 2026] 127.0.0.1:60425 Closing
+[Tue May  5 12:05:46 2026] 127.0.0.1:65339 Accepted
+[Tue May  5 12:05:46 2026] 127.0.0.1:65339 [200]: GET /jugadores.php
+[Tue May  5 12:05:46 2026] 127.0.0.1:65339 Closing
+[Tue May  5 12:05:46 2026] 127.0.0.1:54248 Accepted
+[Tue May  5 12:05:46 2026] 127.0.0.1:54248 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:05:46 2026] 127.0.0.1:62844 Accepted
+[Tue May  5 12:05:46 2026] 127.0.0.1:62150 Accepted
+[Tue May  5 12:05:46 2026] 127.0.0.1:62844 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:05:46 2026] 127.0.0.1:62150 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:05:46 2026] 127.0.0.1:62844 Closing
+[Tue May  5 12:05:46 2026] 127.0.0.1:54248 Closing
+[Tue May  5 12:05:46 2026] 127.0.0.1:62150 Closing
+[Tue May  5 12:07:06 2026] 127.0.0.1:62165 Accepted
+[Tue May  5 12:07:06 2026] 127.0.0.1:62165 [200]: GET /jugadores.php
+[Tue May  5 12:07:06 2026] 127.0.0.1:62165 Closing
+[Tue May  5 12:07:25 2026] 127.0.0.1:55607 Accepted
+[Tue May  5 12:07:25 2026] 127.0.0.1:55607 [200]: GET /jugadores.php
+[Tue May  5 12:07:25 2026] 127.0.0.1:55607 Closing
+[Tue May  5 12:07:25 2026] 127.0.0.1:61368 Accepted
+[Tue May  5 12:07:25 2026] 127.0.0.1:61368 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:07:25 2026] 127.0.0.1:60455 Accepted
+[Tue May  5 12:07:25 2026] 127.0.0.1:50513 Accepted
+[Tue May  5 12:07:25 2026] 127.0.0.1:60455 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:07:25 2026] 127.0.0.1:50513 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:07:25 2026] 127.0.0.1:60455 Closing
+[Tue May  5 12:07:25 2026] 127.0.0.1:50513 Closing
+[Tue May  5 12:07:25 2026] 127.0.0.1:61368 Closing
+[Tue May  5 12:09:15 2026] 127.0.0.1:49410 Accepted
+[Tue May  5 12:09:16 2026] 127.0.0.1:49410 [200]: GET /jugadores.php
+[Tue May  5 12:09:16 2026] 127.0.0.1:49410 Closing
+[Tue May  5 12:09:41 2026] 127.0.0.1:51477 Accepted
+[Tue May  5 12:09:41 2026] 127.0.0.1:51477 [200]: GET /jugadores.php
+[Tue May  5 12:09:41 2026] 127.0.0.1:51477 Closing
+[Tue May  5 12:09:41 2026] 127.0.0.1:56980 Accepted
+[Tue May  5 12:09:41 2026] 127.0.0.1:56980 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:09:41 2026] 127.0.0.1:61061 Accepted
+[Tue May  5 12:09:41 2026] 127.0.0.1:51066 Accepted
+[Tue May  5 12:09:41 2026] 127.0.0.1:61061 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:09:41 2026] 127.0.0.1:51066 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:09:41 2026] 127.0.0.1:61061 Closing
+[Tue May  5 12:09:41 2026] 127.0.0.1:51066 Closing
+[Tue May  5 12:09:41 2026] 127.0.0.1:56980 Closing
+[Tue May  5 12:13:54 2026] 127.0.0.1:59868 Accepted
+[Tue May  5 12:13:55 2026] 127.0.0.1:59868 [200]: GET /jugadores.php
+[Tue May  5 12:13:55 2026] 127.0.0.1:59868 Closing
+[Tue May  5 12:14:06 2026] 127.0.0.1:59369 Accepted
+[Tue May  5 12:14:06 2026] 127.0.0.1:59369 [200]: GET /jugadores.php
+[Tue May  5 12:14:06 2026] 127.0.0.1:59369 Closing
+[Tue May  5 12:14:06 2026] 127.0.0.1:55046 Accepted
+[Tue May  5 12:14:06 2026] 127.0.0.1:55046 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:14:06 2026] 127.0.0.1:49695 Accepted
+[Tue May  5 12:14:06 2026] 127.0.0.1:63397 Accepted
+[Tue May  5 12:14:06 2026] 127.0.0.1:49695 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:14:06 2026] 127.0.0.1:63397 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:14:06 2026] 127.0.0.1:49695 Closing
+[Tue May  5 12:14:06 2026] 127.0.0.1:63397 Closing
+[Tue May  5 12:14:06 2026] 127.0.0.1:55046 Closing
+[Tue May  5 12:14:54 2026] 127.0.0.1:51244 Accepted
+[Tue May  5 12:14:54 2026] 127.0.0.1:64688 Accepted
+[Tue May  5 12:14:54 2026] 127.0.0.1:51244 [302]: POST /jugadores.php
+[Tue May  5 12:14:54 2026] 127.0.0.1:51244 Closing
+[Tue May  5 12:14:54 2026] 127.0.0.1:64688 [200]: GET /jugadores.php
+[Tue May  5 12:14:54 2026] 127.0.0.1:64688 Closing
+[Tue May  5 12:14:54 2026] 127.0.0.1:50962 Accepted
+[Tue May  5 12:14:54 2026] 127.0.0.1:65226 Accepted
+[Tue May  5 12:14:54 2026] 127.0.0.1:65415 Accepted
+[Tue May  5 12:14:54 2026] 127.0.0.1:50962 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:14:54 2026] 127.0.0.1:65226 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:14:54 2026] 127.0.0.1:65415 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:14:54 2026] 127.0.0.1:65226 Closing
+[Tue May  5 12:14:54 2026] 127.0.0.1:65415 Closing
+[Tue May  5 12:14:54 2026] 127.0.0.1:50962 Closing
+[Tue May  5 12:17:54 2026] 127.0.0.1:64412 Accepted
+[Tue May  5 12:17:54 2026] 127.0.0.1:64412 [200]: GET /jugadores.php
+[Tue May  5 12:17:54 2026] 127.0.0.1:64412 Closing
+[Tue May  5 12:19:12 2026] 127.0.0.1:49904 Accepted
+[Tue May  5 12:19:12 2026] 127.0.0.1:49904 [200]: GET /jugadores.php
+[Tue May  5 12:19:12 2026] 127.0.0.1:49904 Closing
+[Tue May  5 12:19:12 2026] 127.0.0.1:54746 Accepted
+[Tue May  5 12:19:12 2026] 127.0.0.1:54746 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:19:12 2026] 127.0.0.1:54546 Accepted
+[Tue May  5 12:19:12 2026] 127.0.0.1:65091 Accepted
+[Tue May  5 12:19:12 2026] 127.0.0.1:54546 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:19:12 2026] 127.0.0.1:65091 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:19:12 2026] 127.0.0.1:54546 Closing
+[Tue May  5 12:19:12 2026] 127.0.0.1:65091 Closing
+[Tue May  5 12:19:12 2026] 127.0.0.1:54746 Closing
+[Tue May  5 12:21:50 2026] 127.0.0.1:52137 Accepted
+[Tue May  5 12:21:50 2026] 127.0.0.1:52137 [200]: GET /jugadores.php
+[Tue May  5 12:21:50 2026] 127.0.0.1:52137 Closing
+[Tue May  5 12:21:50 2026] 127.0.0.1:51750 Accepted
+[Tue May  5 12:21:50 2026] 127.0.0.1:51752 Accepted
+[Tue May  5 12:21:50 2026] 127.0.0.1:51752 [200]: GET /jugadores.php
+[Tue May  5 12:21:50 2026] 127.0.0.1:51752 Closing
+[Tue May  5 12:21:50 2026] 127.0.0.1:58702 Accepted
+[Tue May  5 12:21:50 2026] 127.0.0.1:51750 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:21:50 2026] 127.0.0.1:58094 Accepted
+[Tue May  5 12:21:50 2026] 127.0.0.1:58702 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:21:50 2026] 127.0.0.1:58094 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:21:50 2026] 127.0.0.1:58702 Closing
+[Tue May  5 12:21:50 2026] 127.0.0.1:58094 Closing
+[Tue May  5 12:21:50 2026] 127.0.0.1:51750 Closing
+[Tue May  5 12:22:05 2026] 127.0.0.1:52384 Accepted
+[Tue May  5 12:22:05 2026] 127.0.0.1:52384 [302]: POST /jugadores.php
+[Tue May  5 12:22:05 2026] 127.0.0.1:52384 Closing
+[Tue May  5 12:22:05 2026] 127.0.0.1:65389 Accepted
+[Tue May  5 12:22:05 2026] 127.0.0.1:65389 [200]: GET /jugadores.php
+[Tue May  5 12:22:05 2026] 127.0.0.1:65389 Closing
+[Tue May  5 12:22:05 2026] 127.0.0.1:58488 Accepted
+[Tue May  5 12:22:05 2026] 127.0.0.1:53414 Accepted
+[Tue May  5 12:22:05 2026] 127.0.0.1:57521 Accepted
+[Tue May  5 12:22:05 2026] 127.0.0.1:58488 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:22:05 2026] 127.0.0.1:53414 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:22:05 2026] 127.0.0.1:57521 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:22:05 2026] 127.0.0.1:53414 Closing
+[Tue May  5 12:22:05 2026] 127.0.0.1:57521 Closing
+[Tue May  5 12:22:05 2026] 127.0.0.1:58488 Closing
+[Tue May  5 12:23:04 2026] 127.0.0.1:56420 Accepted
+[Tue May  5 12:23:05 2026] 127.0.0.1:56420 [302]: POST /jugadores.php
+[Tue May  5 12:23:05 2026] 127.0.0.1:56420 Closing
+[Tue May  5 12:23:05 2026] 127.0.0.1:63673 Accepted
+[Tue May  5 12:23:05 2026] 127.0.0.1:63673 [200]: GET /jugadores.php
+[Tue May  5 12:23:05 2026] 127.0.0.1:63673 Closing
+[Tue May  5 12:23:05 2026] 127.0.0.1:57629 Accepted
+[Tue May  5 12:23:05 2026] 127.0.0.1:55560 Accepted
+[Tue May  5 12:23:05 2026] 127.0.0.1:53512 Accepted
+[Tue May  5 12:23:05 2026] 127.0.0.1:57629 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:23:05 2026] 127.0.0.1:55560 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:23:05 2026] 127.0.0.1:53512 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:23:05 2026] 127.0.0.1:55560 Closing
+[Tue May  5 12:23:05 2026] 127.0.0.1:53512 Closing
+[Tue May  5 12:23:05 2026] 127.0.0.1:57629 Closing
+[Tue May  5 12:24:11 2026] 127.0.0.1:49814 Accepted
+[Tue May  5 12:24:12 2026] 127.0.0.1:49814 [200]: GET /jugadores.php
+[Tue May  5 12:24:12 2026] 127.0.0.1:49814 Closing
+[Tue May  5 12:24:50 2026] 127.0.0.1:57555 Accepted
+[Tue May  5 12:24:51 2026] 127.0.0.1:57555 [200]: GET /jugadores.php
+[Tue May  5 12:24:51 2026] 127.0.0.1:57555 Closing
+[Tue May  5 12:30:08 2026] 127.0.0.1:51738 Accepted
+[Tue May  5 12:30:08 2026] 127.0.0.1:51738 [200]: GET /jugadores.php
+[Tue May  5 12:30:08 2026] 127.0.0.1:51738 Closing
+[Tue May  5 12:30:23 2026] 127.0.0.1:59528 Accepted
+[Tue May  5 12:30:23 2026] 127.0.0.1:59528 [200]: GET /jugadores.php
+[Tue May  5 12:30:23 2026] 127.0.0.1:59528 Closing
+[Tue May  5 12:30:23 2026] 127.0.0.1:54726 Accepted
+[Tue May  5 12:30:23 2026] 127.0.0.1:54726 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:30:23 2026] 127.0.0.1:49178 Accepted
+[Tue May  5 12:30:23 2026] 127.0.0.1:62061 Accepted
+[Tue May  5 12:30:23 2026] 127.0.0.1:49178 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:30:23 2026] 127.0.0.1:62061 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:30:23 2026] 127.0.0.1:54726 Closing
+[Tue May  5 12:30:23 2026] 127.0.0.1:49178 Closing
+[Tue May  5 12:30:23 2026] 127.0.0.1:62061 Closing
+[Tue May  5 12:33:00 2026] 127.0.0.1:56906 Accepted
+[Tue May  5 12:33:00 2026] 127.0.0.1:56906 [302]: POST /jugadores.php
+[Tue May  5 12:33:00 2026] 127.0.0.1:56906 Closing
+[Tue May  5 12:33:00 2026] 127.0.0.1:58262 Accepted
+[Tue May  5 12:33:00 2026] 127.0.0.1:58262 [200]: GET /jugadores.php
+[Tue May  5 12:33:00 2026] 127.0.0.1:58262 Closing
+[Tue May  5 12:33:00 2026] 127.0.0.1:54485 Accepted
+[Tue May  5 12:33:00 2026] 127.0.0.1:63766 Accepted
+[Tue May  5 12:33:00 2026] 127.0.0.1:56732 Accepted
+[Tue May  5 12:33:00 2026] 127.0.0.1:54485 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:33:00 2026] 127.0.0.1:63766 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:33:00 2026] 127.0.0.1:56732 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:33:00 2026] 127.0.0.1:63766 Closing
+[Tue May  5 12:33:00 2026] 127.0.0.1:56732 Closing
+[Tue May  5 12:33:00 2026] 127.0.0.1:54485 Closing
+[Tue May  5 12:34:18 2026] 127.0.0.1:57682 Accepted
+[Tue May  5 12:34:18 2026] 127.0.0.1:57682 [200]: GET /jugadores.php
+[Tue May  5 12:34:18 2026] 127.0.0.1:57682 Closing
+[Tue May  5 12:36:58 2026] 127.0.0.1:59188 Accepted
+[Tue May  5 12:36:59 2026] 127.0.0.1:59188 [200]: GET /jugadores.php
+[Tue May  5 12:36:59 2026] 127.0.0.1:59188 Closing
+[Tue May  5 12:36:59 2026] 127.0.0.1:55938 Accepted
+[Tue May  5 12:36:59 2026] 127.0.0.1:55938 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:36:59 2026] 127.0.0.1:55912 Accepted
+[Tue May  5 12:36:59 2026] 127.0.0.1:57986 Accepted
+[Tue May  5 12:36:59 2026] 127.0.0.1:55912 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:36:59 2026] 127.0.0.1:57986 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:36:59 2026] 127.0.0.1:55938 Closing
+[Tue May  5 12:36:59 2026] 127.0.0.1:55912 Closing
+[Tue May  5 12:36:59 2026] 127.0.0.1:57986 Closing
+[Tue May  5 12:39:53 2026] 127.0.0.1:59074 Accepted
+[Tue May  5 12:39:53 2026] 127.0.0.1:56685 Accepted
+[Tue May  5 12:39:53 2026] 127.0.0.1:59074 [302]: POST /jugadores.php
+[Tue May  5 12:39:53 2026] 127.0.0.1:59074 Closing
+[Tue May  5 12:39:53 2026] 127.0.0.1:56685 [200]: GET /jugadores.php
+[Tue May  5 12:39:53 2026] 127.0.0.1:56685 Closing
+[Tue May  5 12:39:53 2026] 127.0.0.1:60474 Accepted
+[Tue May  5 12:39:53 2026] 127.0.0.1:49727 Accepted
+[Tue May  5 12:39:53 2026] 127.0.0.1:62458 Accepted
+[Tue May  5 12:39:53 2026] 127.0.0.1:60474 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:39:53 2026] 127.0.0.1:49727 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:39:53 2026] 127.0.0.1:62458 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:39:53 2026] 127.0.0.1:49727 Closing
+[Tue May  5 12:39:53 2026] 127.0.0.1:62458 Closing
+[Tue May  5 12:39:53 2026] 127.0.0.1:60474 Closing
+[Tue May  5 12:40:55 2026] 127.0.0.1:56057 Accepted
+[Tue May  5 12:40:55 2026] 127.0.0.1:56057 [200]: GET /jugadores.php
+[Tue May  5 12:40:55 2026] 127.0.0.1:56057 Closing
+[Tue May  5 12:41:29 2026] 127.0.0.1:52740 Accepted
+[Tue May  5 12:41:29 2026] 127.0.0.1:52740 [200]: GET /jugadores.php
+[Tue May  5 12:41:29 2026] 127.0.0.1:52740 Closing
+[Tue May  5 12:41:29 2026] 127.0.0.1:51480 Accepted
+[Tue May  5 12:41:29 2026] 127.0.0.1:51480 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 12:41:29 2026] 127.0.0.1:54954 Accepted
+[Tue May  5 12:41:29 2026] 127.0.0.1:62272 Accepted
+[Tue May  5 12:41:29 2026] 127.0.0.1:54954 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 12:41:29 2026] 127.0.0.1:62272 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 12:41:29 2026] 127.0.0.1:51480 Closing
+[Tue May  5 12:41:29 2026] 127.0.0.1:54954 Closing
+[Tue May  5 12:41:29 2026] 127.0.0.1:62272 Closing
+[Tue May  5 12:46:28 2026] 127.0.0.1:53996 Accepted
+[Tue May  5 12:46:29 2026] 127.0.0.1:53996 [200]: GET /jugadores.php
+[Tue May  5 12:46:29 2026] 127.0.0.1:53996 Closing
+[Tue May  5 13:02:55 2026] 127.0.0.1:57557 Accepted
+[Tue May  5 13:02:55 2026] 127.0.0.1:51529 Accepted
+[Tue May  5 13:02:55 2026] 127.0.0.1:57557 [200]: GET /jugadores.php
+[Tue May  5 13:02:55 2026] 127.0.0.1:57557 Closing
+[Tue May  5 13:02:55 2026] 127.0.0.1:51529 [200]: GET /assets/tailwind.css?v=1777985108
+[Tue May  5 13:02:55 2026] 127.0.0.1:62127 Accepted
+[Tue May  5 13:02:55 2026] 127.0.0.1:57333 Accepted
+[Tue May  5 13:02:55 2026] 127.0.0.1:62127 [404]: GET /assets/goodfellas-logo.png - No such file or directory
+[Tue May  5 13:02:55 2026] 127.0.0.1:57333 [200]: GET /assets/app.js?v=1777985094
+[Tue May  5 13:02:55 2026] 127.0.0.1:62127 Closing
+[Tue May  5 13:02:55 2026] 127.0.0.1:51529 Closing
+[Tue May  5 13:02:55 2026] 127.0.0.1:57333 Closing

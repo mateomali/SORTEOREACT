@@ -781,7 +781,7 @@ require __DIR__ . '/includes/header.php';
         field: 'rhythm',
         label: 'Ritmo',
         strength: ['va en tercera aunque el partido pida autopista', 'no es una moto, pero llega si no lo hacen cruzar todo el conurbano', 'cumple el recorrido sin hacer ruido', 'tiene nafta para ir y volver sin pedir cambio', 'mete quinta y aparece donde la jugada ya parecia perdida', 'te corre todo el partido sin descanso'],
-        weakness: ['si el partido se hace largo, empieza a mirar el banco con carino', 'si lo hacen correr de lado a lado, se le prende la reserva', 'en una contra picante puede llegar con la foto movida', 'no se cae fisicamente, pero tampoco te gana una carrera al bondi', 'por piernas casi nunca queda pagando', 'en ritmo va sobrado: al rival le conviene buscar otro camino'],
+        weakness: ['si el partido se hace largo, empieza a mirar el banco con carino', 'si lo hacen correr de lado a lado, se le prende la reserva', 'en un partido de ida y vuelta, no mantiene el ritmo de subir y bajar', 'no se cae fisicamente, pero tampoco te gana una carrera al bondi', 'por piernas casi nunca queda pagando', 'en ritmo va sobrado: al rival le conviene buscar otro camino'],
       },
       {
         field: 'defense_physical',
@@ -801,7 +801,7 @@ require __DIR__ . '/includes/header.php';
         strength: ['le cuesta entrar en el circuito colectivo', 'por momentos juega su partido aparte', 'acompaña, aunque todavia puede ofrecerse mas', 'se conecta bien y entiende cuando soltarla', 'juega para el equipo, levanta la cabeza y ordena a los de al lado', 'es el pegamento del equipo: habla, ayuda y mejora a todos'],
         weakness: ['si se desconecta, el equipo lo siente enseguida', 'puede quedar lejos de la jugada cuando toca ayudar', 'a veces acompana mas de lo que conduce', 'no preocupa, aunque puede participar mas en la sociedad', 'su compromiso rara vez deja dudas', 'hasta sin pelota juega para que el equipo respire'],
         strength: ['todavia juega medio en modo solista de karaoke', 'a veces acompana, a veces mira la obra desde la vereda', 'se suma al circuito, aunque puede pedirla un poquito mas', 'entiende la pared, la descarga y el favor al companero', 'juega con documento: ayuda, habla y no se borra', 'es delegado del equipo: ordena, cubre y encima te ceba el mate'],
-        weakness: ['si se cuelga, el equipo queda pagando el peaje', 'cuando toca dar una mano, a veces llega tarde a la reunion', 'acompanar acompana, pero le falta mandar un poco mas', 'no desentona, aunque podria meterse mas en la sociedad', 'en compromiso rara vez deja una silla vacia', 'hasta sin tocarla acomoda el quilombo'],
+        weakness: ['si se cuelga, el equipo queda pagando el peaje', 'cuando toca dar una mano, a veces llega tarde a la reunion', 'acompanar acompana, pero le falta mandar un poco mas', 'no desentona, pero a veces desaparece un rato del partido', 'en compromiso rara vez deja una silla vacia', 'hasta sin tocarla acomoda el quilombo'],
       },
       {
         field: 'goalkeeper_skill',
@@ -850,16 +850,24 @@ require __DIR__ . '/includes/header.php';
       (alias, phrase) => `El semaforo amarillo aparece en ${alias}: ${phrase}.`,
       (alias, phrase) => `El costado para apretarlo viene por ${alias}: ${phrase}.`,
     ];
-    const closingLines = [
-      'Si entra enchufado, te cambia el tramite; si lo apuran donde no quiere, puede empezar a resolver con el manual al reves.',
-      'Cuando juega comodo suma un monton; cuando lo aprietan en su zona floja, puede tirar la pelota a cualquier lado.',
+    const regularClosingLines = [
+      'Le pone toda la onda para jugar; si lo presionan muy fuerte, puede empezar a mandarse cagadas o a cobrar boludeces.',
+      'Cuando juega comodo suma un monton; cuando lo aprietan donde menos quiere, necesita resolver simple.',
       'Si el partido lo lleva a su baldosa, crece; si lo empujan a decidir rapido, puede mostrar la costura.',
       'En su mejor version te acomoda la tarde; en su peor rato, el rival tiene que insistir justo donde mas le pica.',
-      'Con viento a favor parece jugador de resumen; con viento en contra, hay que ver si saca oficio o se le llena la mochila.',
+    ];
+    const eliteClosingLines = [
+      'Si tiene ganas te puede ganar solo el partido; si lo pones nervioso, capaz lo podes sacar del partido.',
     ];
     const statPhrase = (stat, type, playerName) => {
       const tier = starTier(stat.value);
       const phrase = stat[type][tier - 1];
+      if (type === 'weakness' && stat.field === 'teamwork' && tier === 1) {
+        return 'Cuando se toca hablar de companerismo, a veces prefiere un lujo que jugar rapido.';
+      }
+      if (type === 'weakness' && stat.field === 'teamwork' && tier === 2) {
+        return 'Si hay algo negativo por decir es el trabajo en equipo: si tiene que tocar rapido, o bancarse el ida y vuelta, se cansa rapido.';
+      }
       const aliasPool = statAliases[stat.field] || [stat.label.toLowerCase()];
       const templates = type === 'strength' ? strengthTemplates : weaknessTemplates;
       const seed = `${playerName}|${stat.field}|${type}|${tier}`;
@@ -905,6 +913,9 @@ require __DIR__ . '/includes/header.php';
           ? 'No le gusta que lo marquen al hombre: si le respiran en la nuca, empieza la novela.'
           : 'Si lo marcas fuerte se le congela el pecho: con espacio juega lindo, con roce ya no canta tan afinado.');
       }
+      if (high(attack) && high(technique) && low(defense)) {
+        matches.push('No te pone la pierna fuerte ni aunque le pagues: arriba juega lindo, pero en el roce se hace el distraido.');
+      }
       if (defense >= 4.5 && technique <= 2.5) {
         matches.push('No le pidas que te tire un caño ni que salga jugando: lo suyo es morder, trabar y devolver la pelota sin perfume.');
       }
@@ -940,7 +951,7 @@ require __DIR__ . '/includes/header.php';
         matches.push('Tiene alma de equipo, habla y ordena, pero las piernas no siempre firman el contrato.');
       }
       if (high(defense) && low(attack)) {
-        matches.push('Te apaga incendios atras, pero arriba no le pidas que sea bombero y goleador en la misma tarde.');
+        matches.push('Te apaga incendios atras, pero no le hace un gol ni al arcoiris.');
       }
       if (high(attack) && low(teamwork)) {
         matches.push('Arriba te mete goles, pero es medio morfon: si levanta la cabeza, el equipo le va a agradecer.');
@@ -953,6 +964,9 @@ require __DIR__ . '/includes/header.php';
       }
       if (high(teamwork) && low(defense)) {
         matches.push('Tiene voluntad de sobra, pero en el roce a veces le falta maldad de potrero.');
+      }
+      if (defense < 3 && teamwork < 3) {
+        matches.push('Cuando lo aprietan en su zona floja, puede tirar un pelotazo a cualquier lado.');
       }
       if (isGoalkeeper && high(goalkeeper) && low(defense)) {
         matches.push('Como arquero te salva las papas, pero si sale del arco a chocar queda mas expuesto que persiana rota.');
@@ -978,8 +992,9 @@ require __DIR__ . '/includes/header.php';
       const spread = max - min;
       const top = stats.slice().sort((a, b) => b.value - a.value).slice(0, 2).map((stat) => stat.field);
       const bottom = stats.slice().sort((a, b) => a.value - b.value).slice(0, 2).map((stat) => stat.field);
-      const hasTop = (...fields) => fields.some((field) => top.includes(field));
-      const hasBottom = (...fields) => fields.some((field) => bottom.includes(field));
+      const statValue = (field) => stats.find((stat) => stat.field === field)?.value || 0;
+      const hasTop = (...fields) => fields.some((field) => top.includes(field) && statValue(field) >= 4);
+      const hasBottom = (...fields) => fields.some((field) => bottom.includes(field) && statValue(field) <= 2.5);
       let pool;
 
       if (spread <= 0.75 && average >= 4.2) {
@@ -992,22 +1007,30 @@ require __DIR__ . '/includes/header.php';
           'El radar es parejo: no te vende humo con una punta gigante, pero tampoco deja un pozo para caer de cabeza.',
           'La silueta sale de jugador cumplidor: no te prende fuego la planilla, pero tampoco te rompe el asado.',
         ];
+      } else if (
+        (statValue('attack') >= 4 && statValue('defense_physical') <= 2)
+        || (statValue('defense_physical') >= 4 && statValue('attack') <= 2)
+      ) {
+        pool = [
+          'Es de esos jugadores bien de puesto: si lo usas donde va, suma; fuera de su posicion sufre bastante.',
+          'El radar lo marca clarito: en una punta ayuda mucho, pero si lo corres al otro trabajo se le complica.',
+        ];
       } else if (spread >= 2.5) {
         pool = [
-          'El radar sale con picos como serrucho: tiene armas claras, pero tambien una zona donde el rival puede ir con cuchillo y tenedor.',
-          'Es de esos jugadores bien de puesto: si lo usas donde va, suma; fuera de su posicion sufre bastante.',
+          'Hace bien su trabajo, pero a veces se manda alguna cagada.',
+          'Tiene perfil de especialista: si lo llevas a su fuerte, suma; si lo sacas de ahi, baja bastante.',
         ];
       } else if (hasTop('attack', 'technique') && hasBottom('defense_physical', 'teamwork')) {
         pool = [
           'El dibujo se le va para adelante: pide pelota y arco, pero atras conviene ponerle un primo que lo cubra.',
           'La forma del radar grita jugador ofensivo: arriba puede salir en la foto, en la vuelta hay que prenderle el GPS.',
         ];
-      } else if (hasTop('defense_physical', 'teamwork') && hasBottom('attack', 'technique')) {
+      } else if (statValue('defense_physical') >= 4 && statValue('teamwork') >= 4) {
         pool = [
-          'El radar se planta mas con casco que con vincha: sostiene, ayuda y compite, aunque no siempre firma la jugada linda.',
+          'Es un todoterreno, corre, mete, marca, ayuda, ataca, no le interesa jugar lindo, quiere ganar.',
           'La figura tira para el sacrificio: de esos que hacen el laburo sucio para que otro salga en la foto.',
         ];
-      } else if (hasTop('defense_physical', 'teamwork') && hasBottom('attack', 'technique')) {
+      } else if (false && hasTop('defense_physical', 'teamwork') && hasBottom('attack', 'technique')) {
         pool = [
           'El radar se planta mas con casco que con moño: sostiene, ayuda y compite, aunque no siempre firma la jugada linda.',
           'La figura tira para el sacrificio: de esos que hacen el laburo sucio para que otro salga en la foto.',
@@ -1035,7 +1058,7 @@ require __DIR__ . '/includes/header.php';
       } else {
         pool = [
           'La forma del radar deja un perfil mixto: tiene por donde sumar y tambien una arista para ajustar antes de que lo madruguen.',
-          'Mirado de lejos, el radar no miente: hay una virtud clara y un detalle que el rival va a querer mandar al frente.',
+          'Mirado de lejos, el radar no miente: hay una virtud clara en su juego, pero comete algunas fallas que el rival puede aprovechar.',
         ];
       }
 
@@ -1152,10 +1175,12 @@ require __DIR__ . '/includes/header.php';
       const comboLine = comboInsightLine(player);
       const shapeLine = radarShapeLine(stats, player.name, isGoalkeeper);
       const colorLine = colorCommentLine(player, role);
-      const closingLine = closingLines[stableIndex(`${player.name}|${best.field}|${starTier(best.value)}|${weakest.field}|${starTier(weakest.value)}`, closingLines.length)];
+      const hasEliteStat = stats.some((stat) => stat.value > 5);
+      const closingPool = hasEliteStat ? regularClosingLines.concat(eliteClosingLines) : regularClosingLines;
+      const closingLine = closingPool[stableIndex(`${player.name}|${best.field}|${starTier(best.value)}|${weakest.field}|${starTier(weakest.value)}`, closingPool.length)];
       return {
         title: `${player.name}, ${role} de ${formatRating(numberOr(player.skill, 3))}/6`,
-        body: [virtueLine, flawLine, comboLine, shapeLine, colorLine, closingLine].filter(Boolean).join(' '),
+        body: [shapeLine, colorLine, virtueLine, closingLine, comboLine, flawLine].filter(Boolean).join(' '),
         tags: [
           role.toUpperCase(),
           `General ${formatRating(numberOr(player.skill, 3))}/6`,
