@@ -1439,8 +1439,8 @@ require __DIR__ . '/includes/header.php';
           <div class="captain-custom-formation" data-custom-formation-panel></div>
         </div>
         <div class="team-formation captain-formation-field" data-drop-team="${teamNumber}"></div>
-        <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
+        <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar formacion</button>
       `;
 
@@ -1608,6 +1608,26 @@ require __DIR__ . '/includes/header.php';
         window.location.replace(url.toString());
       };
 
+      const returnToPreviousPage = () => {
+        const fallbackUrl = 'index.php';
+        try {
+          if (document.referrer) {
+            const referrerUrl = new URL(document.referrer);
+            if (referrerUrl.origin === window.location.origin && referrerUrl.href !== window.location.href) {
+              window.location.href = referrerUrl.href;
+              return;
+            }
+          }
+        } catch (error) {
+          // Ignore malformed referrers and fall back to browser history.
+        }
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+        window.location.href = fallbackUrl;
+      };
+
       const loadState = async ({ forceRender = false } = {}) => {
         const response = await fetch(`capitanes_api.php?action=state&match_id=${matchId}`, { cache: 'no-store' });
         state = await response.json();
@@ -1747,6 +1767,7 @@ require __DIR__ . '/includes/header.php';
         render();
         hasRenderedState = true;
         showMessage('Formaciones guardadas.', 'success');
+        window.setTimeout(returnToPreviousPage, 900);
       };
 
       loadState({ forceRender: true });
