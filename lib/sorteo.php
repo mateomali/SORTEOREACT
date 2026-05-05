@@ -341,13 +341,18 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
 
         $teams = array_fill(0, $numTeams, []);
         $teamPoints = array_fill(0, $numTeams, 0.0);
-        $teamStats = array_fill(0, $numTeams, array_fill_keys(player_field_stat_fields(), 0.0));
+        $drawWeights = player_draw_balance_weights();
+        $drawStatFields = array_values(array_filter(array_keys($drawWeights), static fn(string $field): bool => $field !== 'general'));
+        $teamStats = array_fill(0, $numTeams, array_fill_keys($drawStatFields, 0.0));
         $lowRhythmCounts = array_fill(0, $numTeams, 0);
 
-        $addPlayerToTeam = static function (array $player, int $teamIndex) use (&$teams, &$teamPoints, &$teamStats, &$lowRhythmCounts): void {
+        $addPlayerToTeam = static function (array $player, int $teamIndex) use (&$teams, &$teamPoints, &$teamStats, &$lowRhythmCounts, $drawStatFields): void {
             $teams[$teamIndex][] = $player;
             $teamPoints[$teamIndex] += player_overall_rating($player);
-            foreach (player_field_stat_fields() as $field) {
+            foreach ($drawStatFields as $field) {
+                if ($field === 'goalkeeper_skill' && !player_has_goalkeeper_position($player)) {
+                    continue;
+                }
                 $teamStats[$teamIndex][$field] += player_effective_stat($player, $field);
             }
             if (player_is_low_rhythm($player)) {
@@ -355,7 +360,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
             }
         };
 
-        $chooseBestTeam = static function (array $player, array $available) use (&$teamPoints, &$teamStats, &$lowRhythmCounts): int {
+        $chooseBestTeam = static function (array $player, array $available) use (&$teamPoints, &$teamStats, &$lowRhythmCounts, $drawWeights, $drawStatFields): int {
             $bestTeam = $available[0];
             $bestCost = null;
             foreach ($available as $teamIndex) {
@@ -363,19 +368,26 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                 $projectedStats = $teamStats;
                 $projectedLowRhythm = $lowRhythmCounts;
                 $projectedPoints[$teamIndex] += player_overall_rating($player);
-                foreach (player_field_stat_fields() as $field) {
+                foreach ($drawStatFields as $field) {
+                    if ($field === 'goalkeeper_skill' && !player_has_goalkeeper_position($player)) {
+                        continue;
+                    }
                     $projectedStats[$teamIndex][$field] += player_effective_stat($player, $field);
                 }
                 if (player_is_low_rhythm($player)) {
                     $projectedLowRhythm[$teamIndex]++;
                 }
 
-                $cost = (max($projectedPoints) - min($projectedPoints)) * 10;
-                foreach (player_field_stat_fields() as $field) {
+                $cost = (max($projectedPoints) - min($projectedPoints)) * $drawWeights['general'];
+                foreach ($drawStatFields as $field) {
+                    $weight = $drawWeights[$field] ?? 0.0;
+                    if ($weight <= 0.0) {
+                        continue;
+                    }
                     $values = array_map(static fn(array $stats): float => (float) $stats[$field], $projectedStats);
-                    $cost += max($values) - min($values);
+                    $cost += (max($values) - min($values)) * $weight;
                 }
-                $cost += (max($projectedLowRhythm) - min($projectedLowRhythm)) * 3;
+                $cost += (max($projectedLowRhythm) - min($projectedLowRhythm)) * 5;
                 $cost += count($available) > 1 ? (mt_rand(0, 100) / 100000) : 0;
 
                 if ($bestCost === null || $cost < $bestCost) {

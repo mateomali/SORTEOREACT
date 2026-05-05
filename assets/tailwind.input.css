@@ -446,6 +446,10 @@
     @apply grid gap-3 border-t border-emerald-100 p-3 md:grid-cols-2;
   }
 
+  .player-stat-help-wide {
+    @apply md:col-span-2;
+  }
+
   .player-stat-help h4 {
     @apply mb-2 text-xs font-extrabold uppercase tracking-wide text-emerald-800;
   }
@@ -1792,7 +1796,31 @@
 
   .sorteo-page .formation-resumen,
   .sorteo-page .totals {
-    @apply mt-3 rounded-xl bg-white/70 px-3 py-2 text-center text-sm font-extrabold text-slate-800;
+    @apply mt-3 rounded-xl bg-white/70 px-3 py-2 text-sm font-extrabold text-slate-800;
+  }
+
+  .sorteo-page .totals {
+    @apply grid gap-2 text-left;
+  }
+
+  .sorteo-page .totals-main {
+    @apply flex flex-wrap items-center justify-between gap-2;
+  }
+
+  .sorteo-page .totals-main span {
+    @apply rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-900;
+  }
+
+  .sorteo-page .totals-breakdown {
+    @apply flex flex-wrap gap-1.5;
+  }
+
+  .sorteo-page .totals-breakdown span {
+    @apply rounded-full border border-emerald-100 bg-white px-2 py-1 text-xs font-extrabold text-emerald-950;
+  }
+
+  .sorteo-page .totals small {
+    @apply block text-xs font-semibold leading-snug text-slate-500;
   }
 
   .sorteo-page .team-color-config {

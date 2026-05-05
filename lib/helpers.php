@@ -81,6 +81,41 @@ function player_field_stat_fields(): array
     return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork'];
 }
 
+function player_field_stat_weights(): array
+{
+    return [
+        'technique' => 0.20,
+        'rhythm' => 0.20,
+        'defense_physical' => 0.20,
+        'attack' => 0.25,
+        'teamwork' => 0.15,
+    ];
+}
+
+function player_goalkeeper_stat_weights(): array
+{
+    return [
+        'goalkeeper_skill' => 0.45,
+        'defense_physical' => 0.15,
+        'rhythm' => 0.10,
+        'technique' => 0.10,
+        'teamwork' => 0.20,
+    ];
+}
+
+function player_draw_balance_weights(): array
+{
+    return [
+        'general' => 50.0,
+        'attack' => 15.0,
+        'defense_physical' => 15.0,
+        'rhythm' => 10.0,
+        'technique' => 5.0,
+        'teamwork' => 5.0,
+        'goalkeeper_skill' => 25.0,
+    ];
+}
+
 function normalize_player_stat(float|string|int|null $value, float $fallback = 3.0): float
 {
     if ($value === null || $value === '') {
@@ -108,27 +143,29 @@ function player_has_goalkeeper_position(array $player): bool
 
 function player_overall_rating(array $player): float
 {
-    $baseTotal = 0.0;
-    foreach (player_field_stat_fields() as $field) {
-        $baseTotal += player_effective_stat($player, $field);
-    }
-
     if (player_has_goalkeeper_position($player)) {
-        $baseTotal += player_effective_stat($player, 'goalkeeper_skill') * 2;
-        return round($baseTotal / 7, 1);
+        $total = 0.0;
+        foreach (player_goalkeeper_stat_weights() as $field => $weight) {
+            $total += player_effective_stat($player, $field) * $weight;
+        }
+        return round($total, 1);
     }
 
-    return round($baseTotal / 5, 1);
+    $total = 0.0;
+    foreach (player_field_stat_weights() as $field => $weight) {
+        $total += player_effective_stat($player, $field) * $weight;
+    }
+    return round($total, 1);
 }
 
 function player_is_low_rhythm(array $player): bool
 {
-    return player_effective_stat($player, 'rhythm') <= 2.5;
+    return player_effective_stat($player, 'rhythm') <= 3.0;
 }
 
 function player_pace_from_rhythm(float $rhythm): string
 {
-    return normalize_player_stat($rhythm) <= 2.5 ? 'lento' : 'rapido';
+    return normalize_player_stat($rhythm) <= 3.0 ? 'lento' : 'rapido';
 }
 
 function allowed_positions(): array

@@ -780,6 +780,77 @@
     filterPlayerTableRows();
   }
 
+  const playerStatFields = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'goalkeeper_skill'];
+  const formatPlayerRating = (rating) => Number.isInteger(rating) ? String(rating) : Number(rating || 0).toFixed(1);
+  const playerRatingStars = (rating) => {
+    const number = Number(rating || 0);
+    const full = Math.floor(number);
+    const half = number % 1 !== 0;
+    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)));
+  };
+  const syncPlayerStatControl = (root, value) => {
+    if (!root) return;
+    const rating = Math.max(1, Math.min(6, Number(value) || 1));
+    const input = root.querySelector('[data-stat-rating-input]');
+    const label = root.querySelector('[data-stat-rating-value]');
+    if (input) input.value = String(rating);
+    if (label) label.textContent = `${rating}/6`;
+    root.querySelectorAll('[data-stat-value]').forEach((button) => {
+      const current = Number(button.getAttribute('data-stat-value') || '0');
+      button.classList.toggle('is-active', current <= rating);
+      button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
+    });
+  };
+  const applyPlayerSavePayload = (payload, sourceForm) => {
+    const player = payload?.player || {};
+    const id = String(player.id || sourceForm?.querySelector('input[name="id"]')?.value || '');
+    if (!id) return;
+
+    const sourceData = sourceForm ? new FormData(sourceForm) : null;
+    const escapedId = window.CSS && typeof window.CSS.escape === 'function'
+      ? window.CSS.escape(id)
+      : id.replace(/"/g, '\\"');
+    const row = document.querySelector(`[data-player-edit-row][data-player-id="${escapedId}"]`);
+    const rating = Number(player.skill || 0);
+
+    if (row) {
+      if (player.search) row.setAttribute('data-search', player.search);
+      const nameInput = row.querySelector('input[name="name"]');
+      if (nameInput && sourceData?.has('name')) nameInput.value = String(sourceData.get('name') || '');
+      const activeInput = row.querySelector('input[name="active"]');
+      if (activeInput && sourceData) activeInput.checked = sourceData.has('active');
+      const positions = sourceData ? sourceData.getAll('positions[]').map(String) : [];
+      row.querySelectorAll('input[name="positions[]"]').forEach((checkbox) => {
+        checkbox.checked = positions.includes(checkbox.value);
+      });
+      playerStatFields.forEach((field) => {
+        if (!sourceData?.has(field)) return;
+        const input = row.querySelector(`[data-stat-rating-input][name="${field}"]`);
+        syncPlayerStatControl(input?.closest('[data-stat-rating]'), sourceData.get(field));
+      });
+      const general = row.querySelector('[data-general-rating]');
+      const value = general?.querySelector('[data-general-rating-value]');
+      const stars = general?.querySelector('[data-general-rating-stars]');
+      if (value) value.textContent = `${formatPlayerRating(rating)}/6`;
+      if (stars) stars.textContent = playerRatingStars(rating);
+      row.updatePlayerDirtySnapshot?.();
+    }
+
+    document.querySelectorAll(`[data-player-edit-dialog="${escapedId}"]`).forEach((dialog) => {
+      const title = dialog.querySelector('.player-edit-head .small-muted');
+      if (title && sourceData?.has('name')) title.textContent = String(sourceData.get('name') || '');
+    });
+
+    const mobileCard = document.querySelector(`[data-player-edit-open="${escapedId}"]`)?.closest('[data-player-table-row]');
+    if (mobileCard && sourceData) {
+      const strong = mobileCard.querySelector('strong');
+      const small = mobileCard.querySelector('small');
+      if (strong && sourceData.has('name')) strong.textContent = String(sourceData.get('name') || '');
+      if (small && player.positions) small.textContent = `${player.positions} | General ${player.skill_label || `${formatPlayerRating(rating)} estrellas`}`;
+      if (player.search) mobileCard.setAttribute('data-search', player.search);
+    }
+  };
+
   document.querySelectorAll('[data-player-edit-row]').forEach((row) => {
     const fields = Array.from(row.querySelectorAll('input, select, textarea'));
     const normalizedFieldValue = (field) => {
@@ -843,21 +914,7 @@
         throw new Error(payload.message || 'No se pudo guardar el jugador.');
       }
 
-      if (payload.player?.search) {
-        row.setAttribute('data-search', payload.player.search);
-      }
-      if (payload.player?.skill !== undefined) {
-        const general = row.querySelector('[data-general-rating]');
-        const value = general?.querySelector('[data-general-rating-value]');
-        const stars = general?.querySelector('[data-general-rating-stars]');
-        const rating = Number(payload.player.skill || 0);
-        if (value) value.textContent = `${Number.isInteger(rating) ? String(rating) : rating.toFixed(1)}/6`;
-        if (stars) {
-          const full = Math.floor(rating);
-          const half = rating % 1 !== 0;
-          stars.textContent = '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)));
-        }
-      }
+      applyPlayerSavePayload(payload, form);
 
       row.updatePlayerDirtySnapshot?.();
       row.classList.add('is-saved');
@@ -869,6 +926,50 @@
       row.classList.remove('is-saving');
       saveButton.disabled = false;
       saveButton.classList.remove('is-loading');
+    }
+  });
+
+  document.addEventListener('submit', async (event) => {
+    const form = event.target.closest('form.player-edit-panel');
+    if (!form) return;
+
+    const id = Number(form.querySelector('input[name="id"]')?.value || 0);
+    const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+    if (id <= 0 || submitButton?.disabled) return;
+
+    event.preventDefault();
+    const formData = new FormData(form);
+    formData.set('ajax', '1');
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.dataset.originalText = submitButton.textContent || '';
+      submitButton.textContent = 'Guardando...';
+    }
+
+    try {
+      const response = await fetch(form.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'fetch' },
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.message || 'No se pudo guardar el jugador.');
+      }
+      applyPlayerSavePayload(payload, form);
+      showToast(payload.message || 'Jugador actualizado.', 'success');
+      const dialog = form.closest('dialog');
+      if (dialog && typeof dialog.close === 'function') {
+        dialog.close();
+      }
+    } catch (error) {
+      showToast(error.message || 'No se pudo guardar el jugador.', 'error');
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = submitButton.dataset.originalText || 'Guardar cambios';
+        delete submitButton.dataset.originalText;
+      }
     }
   });
 

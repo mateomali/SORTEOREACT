@@ -10,7 +10,8 @@ if (!function_exists('repo_match_participants_basic')) {
     function repo_match_participants_basic(int $matchId): array
     {
         $stmt = db()->prepare(
-            'SELECT p.id, p.name, p.positions, p.pace, p.skill
+            'SELECT p.id, p.name, p.positions, p.pace, p.skill,
+                    p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.goalkeeper_skill
              FROM match_players mp
              INNER JOIN players p ON p.id = mp.player_id
              WHERE mp.match_id = :mid
@@ -39,7 +40,13 @@ try {
                 'nombre' => (string) $p['name'],
                 'posicion' => (string) $p['positions'],
                 'ritmo' => ((string) $p['pace'] === 'lento') ? 'lento' : 'rápido',
-                'puntuacion' => (float) $p['skill'],
+                'puntuacion' => player_overall_rating($p),
+                'tecnica' => player_effective_stat($p, 'technique'),
+                'ritmo_stat' => player_effective_stat($p, 'rhythm'),
+                'solidez' => player_effective_stat($p, 'defense_physical'),
+                'ataque' => player_effective_stat($p, 'attack'),
+                'compromiso' => player_effective_stat($p, 'teamwork'),
+                'habilidad_arquero' => player_effective_stat($p, 'goalkeeper_skill'),
                 'selected' => true,
             ];
         }
@@ -80,6 +87,16 @@ try {
 
 $legacyPlayersJson = json_encode($legacyPlayers, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $legacyPairHistoryJson = json_encode($legacyPairHistory, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$drawBalanceWeights = player_draw_balance_weights();
+$legacyDrawWeightsJson = json_encode([
+    'general' => $drawBalanceWeights['general'],
+    'ataque' => $drawBalanceWeights['attack'],
+    'solidez' => $drawBalanceWeights['defense_physical'],
+    'ritmo' => $drawBalanceWeights['rhythm'],
+    'tecnica' => $drawBalanceWeights['technique'],
+    'compromiso' => $drawBalanceWeights['teamwork'],
+    'arquero' => $drawBalanceWeights['goalkeeper_skill'],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $legacyNumTeams = $legacyMatch ? (int) $legacyMatch['num_teams'] : 2;
 $legacyMaxDiff = 0.5;
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: time());
@@ -276,6 +293,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
     const MATCH_ID = <?= (int) $legacyMatchId ?>;
     const PRELOADED_JUGADORES = <?= $legacyPlayersJson ?: '[]' ?>;
     const HISTORICAL_TEAMMATE_PAIRS = <?= $legacyPairHistoryJson ?: '{}' ?>;
+    const DRAW_BALANCE_WEIGHTS = <?= $legacyDrawWeightsJson ?: '{}' ?>;
     const LOCKED_MATCH_MODE = MATCH_ID > 0;
     const MAX_FIELD_PLAYERS_PER_LINE = 5;
     const REQUIRED_FIELD_LINES = ['DEF', 'MED', 'DEL'];
@@ -466,7 +484,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       jugadores.sort((a, b) => {
         if (criteria === 'nombre') return a.nombre.localeCompare(b.nombre) * sortDirection;
         if (criteria === 'puntuacion') return (a.puntuacion - b.puntuacion) * sortDirection;
-        if (criteria === 'ritmo') return (a.ritmo === b.ritmo ? 0 : a.ritmo === 'lento' ? 1 : -1) * sortDirection;
+        if (criteria === 'ritmo') return (isLowRhythmPlayer(a) === isLowRhythmPlayer(b) ? 0 : isLowRhythmPlayer(a) ? 1 : -1) * sortDirection;
         return 0;
       });
       actualizarListaJugadores();
@@ -542,6 +560,40 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function obtenerEmojisDePosiciones(posiciones) {
       return posiciones.split('/').map(pos => posicionEmojis[pos] || '').join('');
+    }
+
+    function statValue(jugador, campo) {
+      const fallback = Number(jugador.puntuacion || 0);
+      const value = Number(jugador[campo]);
+      return Number.isFinite(value) && value > 0 ? value : fallback;
+    }
+
+    function isLowRhythmPlayer(jugador) {
+      const rhythm = Number(jugador.ritmo_stat);
+      if (Number.isFinite(rhythm) && rhythm > 0) {
+        return rhythm <= 3;
+      }
+      return jugador.ritmo === 'lento';
+    }
+
+    function teamAverage(equipo, campo) {
+      if (!equipo.length) return 0;
+      return equipo.reduce((sum, jugador) => sum + statValue(jugador, campo), 0) / equipo.length;
+    }
+
+    function teamTotalsSummary(equipo) {
+      return {
+        general: equipo.reduce((sum, jugador) => sum + Number(jugador.puntuacion || 0), 0),
+        tecnica: teamAverage(equipo, 'tecnica'),
+        ritmo: teamAverage(equipo, 'ritmo_stat'),
+        solidez: teamAverage(equipo, 'solidez'),
+        ataque: teamAverage(equipo, 'ataque'),
+        compromiso: teamAverage(equipo, 'compromiso'),
+        arquero: equipo.reduce((max, jugador) => {
+          if (!getOrderedPlayerPositions(jugador).includes('ARQ')) return max;
+          return Math.max(max, statValue(jugador, 'habilidad_arquero'));
+        }, 0)
+      };
     }
 
     function getPlayerOrder(player) {
@@ -723,7 +775,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         div.innerHTML = `
           <input type="checkbox" id="jugador-${index}" ${jugador.selected ? 'checked' : ''} ${LOCKED_MATCH_MODE ? 'disabled' : ''} onchange="jugadores[${index}].selected = this.checked">
           <div class="player-info">
-            <span class="player-name">${jugador.nombre} ${jugador.ritmo === 'lento' ? '🐢' : ''}</span>
+            <span class="player-name">${jugador.nombre} ${isLowRhythmPlayer(jugador) ? '🐢' : ''}</span>
             <span class="player-details">
               <span class="position-emoji">${obtenerEmojisDePosiciones(jugador.posicion)}</span> - ${convertirPuntuacionAEstrellas(jugador.puntuacion)}
             </span>
@@ -974,14 +1026,27 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
 
     function teamStats(equipo) {
       const total = equipo.reduce((sum, j) => sum + j.puntuacion, 0);
-      const lentos = equipo.filter(j => j.ritmo === 'lento').length;
+      const lentos = equipo.filter(isLowRhythmPlayer).length;
       const rapidos = equipo.length - lentos;
+      const balance = {
+        general: total,
+        ataque: equipo.reduce((sum, j) => sum + statValue(j, 'ataque'), 0),
+        solidez: equipo.reduce((sum, j) => sum + statValue(j, 'solidez'), 0),
+        ritmo: equipo.reduce((sum, j) => sum + statValue(j, 'ritmo_stat'), 0),
+        tecnica: equipo.reduce((sum, j) => sum + statValue(j, 'tecnica'), 0),
+        compromiso: equipo.reduce((sum, j) => sum + statValue(j, 'compromiso'), 0),
+        arquero: equipo.reduce((max, j) => {
+          if (!getOrderedPlayerPositions(j).includes('ARQ')) return max;
+          return Math.max(max, statValue(j, 'habilidad_arquero'));
+        }, 0)
+      };
       const assignment = buildTeamPositionAssignment(equipo);
       const lineas = assignment.conteoFinal || { ARQ: 0, DEF: 0, MED: 0, DEL: 0 };
       return {
         total,
         lentos,
         rapidos,
+        balance,
         lineas,
         arqueros: assignment.arquerosAsignados || 0,
         lineaMaximaValida: !!assignment.lineaMaximaValida
@@ -1012,6 +1077,17 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       return penalty;
     }
 
+    function statSpread(values) {
+      return Math.max(...values) - Math.min(...values);
+    }
+
+    function weightedBalancePenalty(stats) {
+      return Object.entries(DRAW_BALANCE_WEIGHTS).reduce((total, [campo, peso]) => {
+        const values = stats.map(s => Number(s.balance?.[campo] || 0));
+        return total + (statSpread(values) * Number(peso || 0));
+      }, 0);
+    }
+
     function evaluarEquipos(equipos, teamSize, maxDiff) {
       const stats = equipos.map(teamStats);
       const puntos = stats.map(s => s.total);
@@ -1022,7 +1098,8 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       const diffRapidos = Math.max(...rapidos) - Math.min(...rapidos);
 
       const repeatPenalty = historicalRepeatPenalty(equipos);
-      let penalidad = diffLentos * 1600 + diffPuntos * 1000 + diffRapidos * 120 + repeatPenalty;
+      const balancePenalty = weightedBalancePenalty(stats);
+      let penalidad = balancePenalty + diffLentos * 25 + diffRapidos * 10 + repeatPenalty;
       let hardOk = true;
 
       const fieldPlayers = Math.max(0, teamSize - 1);
@@ -1047,7 +1124,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         && equipos.every(equipo => equipo.length === teamSize)
         && stats.every(stat => REQUIRED_FIELD_LINES.every(linea => (stat.lineas[linea] || 0) >= minFieldLine && (stat.lineas[linea] || 0) <= maxFieldLine));
 
-      return { penalidad, perfecto, diffPuntos, diffLentos, diffRapidos, repeatPenalty, stats };
+      return { penalidad, perfecto, diffPuntos, diffLentos, diffRapidos, repeatPenalty, balancePenalty, stats };
     }
 
     function construirCandidato(players, numEquipos, teamSize, semilla) {
@@ -1071,8 +1148,8 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       const restantes = players
         .filter(p => !titulares.has(p))
         .sort((a, b) => {
-          const ritmoA = a.ritmo === 'lento' ? 1 : 0;
-          const ritmoB = b.ritmo === 'lento' ? 1 : 0;
+          const ritmoA = isLowRhythmPlayer(a) ? 1 : 0;
+          const ritmoB = isLowRhythmPlayer(b) ? 1 : 0;
           if (semilla % 4 === 0 && ritmoA !== ritmoB) return ritmoB - ritmoA;
           if (semilla % 4 === 1 && ritmoA !== ritmoB) return ritmoA - ritmoB;
           if (b.puntuacion !== a.puntuacion) return b.puntuacion - a.puntuacion;
@@ -1247,7 +1324,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       if (diff > maxDiff) {
         return { ok: false, reason: `La diferencia de puntaje entre equipos es ${diff.toFixed(1)} y el maximo permitido es ${maxDiff.toFixed(1)}.` };
       }
-      const lentosPorEquipo = equipos.map(equipo => equipo.filter(j => j.ritmo === 'lento').length);
+      const lentosPorEquipo = equipos.map(equipo => equipo.filter(isLowRhythmPlayer).length);
       const diffLentos = Math.max(...lentosPorEquipo) - Math.min(...lentosPorEquipo);
       if (diffLentos > 1) {
         return { ok: false, reason: `Los equipos no reparten el ritmo de forma pareja: lentos por equipo ${lentosPorEquipo.join(' / ')}.` };
@@ -1436,8 +1513,9 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
         });
         
         const totalPuntos = jugadoresOrdenados.reduce((sum, j) => sum + j.puntuacion, 0);
-        const totalLentos = jugadoresOrdenados.filter(j => j.ritmo === 'lento').length;
+        const totalLentos = jugadoresOrdenados.filter(isLowRhythmPlayer).length;
         const totalRapidos = jugadoresOrdenados.length - totalLentos;
+        const resumenStats = teamTotalsSummary(jugadoresOrdenados);
         const asignacionPosiciones = buildFormationAssignment(jugadoresOrdenados, index);
         const custom = customFormations[index] || defaultFormationCounts(jugadoresOrdenados.length);
         const customVisible = (teamFormations[index] || 'auto') === 'custom';
@@ -1495,7 +1573,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
                 <div class="line-players">
                   ${jugadoresPorLinea[pos].map(j => `
                     <div class="formation-player">
-                      <span class="formation-player-name">${j.nombre} ${j.ritmo === 'lento' ? '🐢' : ''}</span>
+                      <span class="formation-player-name">${j.nombre} ${isLowRhythmPlayer(j) ? '🐢' : ''}</span>
                       <span class="formation-player-meta">${obtenerEmojisDePosiciones(j.posicion)} ${convertirPuntuacionAEstrellas(j.puntuacion)}</span>
                       <select class="formation-manual-select" onchange="onManualPositionChange(${index}, '${playerKey(j)}', this.value)">
                         ${ordenCancha.map(linea => `<option value="${linea}" ${pos === linea ? 'selected' : ''}>${linea}</option>`).join('')}
@@ -1508,9 +1586,19 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
             <div class="formation-resumen">Formación: ${resumenFormacion}</div>
           </div>
           <div class="totals">
-            Total: ${totalPuntos.toFixed(1)} pts | 
-            Lentos: ${totalLentos} | 
-            Rápidos: ${totalRapidos}
+            <div class="totals-main">
+              <strong>Total general: ${resumenStats.general.toFixed(1)} pts</strong>
+              <span>Ritmo: ${totalRapidos} rapidos / ${totalLentos} lentos</span>
+            </div>
+            <div class="totals-breakdown" aria-label="Criterios considerados por el sorteo">
+              <span>Ataque ${resumenStats.ataque.toFixed(1)}</span>
+              <span>Solidez ${resumenStats.solidez.toFixed(1)}</span>
+              <span>Ritmo ${resumenStats.ritmo.toFixed(1)}</span>
+              <span>Tecnica ${resumenStats.tecnica.toFixed(1)}</span>
+              <span>Compromiso ${resumenStats.compromiso.toFixed(1)}</span>
+              <span>Arquero ${resumenStats.arquero.toFixed(1)}</span>
+            </div>
+            <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5 y Compromiso 5. La habilidad de arquero tiene prioridad alta y tambien se controlan posiciones, arqueros y ritmo lento.</small>
           </div>
         `;
         container.appendChild(equipoDiv);
@@ -1546,10 +1634,10 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       equipos.forEach((equipo, index) => {
         texto += `${getTeamDisplayName(index)}\n`;
         equipo.forEach(j => {
-          texto += `${j.nombre} ${j.ritmo === 'lento' ? '🐢' : ''} - ${j.posicion} - ${j.puntuacion} pts\n`;
+          texto += `${j.nombre} ${isLowRhythmPlayer(j) ? '🐢' : ''} - ${j.posicion} - ${j.puntuacion} pts\n`;
         });
         const totalPuntos = equipo.reduce((sum, j) => sum + j.puntuacion, 0);
-        const totalLentos = equipo.filter(j => j.ritmo === 'lento').length;
+        const totalLentos = equipo.filter(isLowRhythmPlayer).length;
         texto += `Total: ${totalPuntos.toFixed(1)} pts | Lentos: ${totalLentos}\n\n`;
       });
       const blob = new Blob([texto], { type: 'text/plain;charset=utf-8;' });
@@ -1570,7 +1658,7 @@ $tailwindVersion = (string) (@filemtime(__DIR__ . '/assets/tailwind.css') ?: tim
       equipos.forEach((equipo, index) => {
         texto += `\n${getTeamDisplayName(index)}:\n`;
         equipo.forEach(j => {
-          texto += `${j.nombre.toUpperCase()} ${j.ritmo === 'lento' ? '🐢' : ''}\n`;
+          texto += `${j.nombre.toUpperCase()} ${isLowRhythmPlayer(j) ? '🐢' : ''}\n`;
         });
       });
       navigator.clipboard.writeText(texto)

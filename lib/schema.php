@@ -369,13 +369,21 @@ function backfill_control_schema(PDO $pdo): void
                skill = ROUND(
                  CASE
                    WHEN positions LIKE '%ARQ%' THEN
-                     (technique + rhythm + defense_physical + attack + teamwork + (COALESCE(goalkeeper_skill, skill) * 2)) / 7
+                     (COALESCE(goalkeeper_skill, skill) * 0.45)
+                     + (defense_physical * 0.15)
+                     + (rhythm * 0.10)
+                     + (technique * 0.10)
+                     + (teamwork * 0.20)
                    ELSE
-                     (technique + rhythm + defense_physical + attack + teamwork) / 5
+                     (technique * 0.20)
+                     + (rhythm * 0.20)
+                     + (defense_physical * 0.20)
+                     + (attack * 0.25)
+                     + (teamwork * 0.15)
                  END,
                  1
                ),
-               pace = CASE WHEN rhythm <= 2.5 THEN 'lento' ELSE 'rapido' END
+               pace = CASE WHEN rhythm <= 3.0 THEN 'lento' ELSE 'rapido' END
              WHERE technique IS NOT NULL
                AND rhythm IS NOT NULL
                AND defense_physical IS NOT NULL

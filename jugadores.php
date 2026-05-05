@@ -244,6 +244,13 @@ $ratingHelp = [
     '5 estrellas' => 'Muy bueno.',
     '6 estrellas' => 'Excelente.',
 ];
+$fieldWeightHelp = [
+    'Ataque 25%' => 'Premia al jugador que genera o define.',
+    'Tecnica 20%' => 'Mantiene valor para el que juega bien.',
+    'Ritmo 20%' => 'En futbol amateur pesa mucho: correr y volver cambia partidos.',
+    'Solidez 20%' => 'Evita que solo cuente atacar.',
+    'Compromiso 15%' => 'Importa, pero no infla demasiado a jugadores solo ordenados.',
+];
 
 function stat_rating_control(string $name, float $value, ?string $formId = null, bool $compact = false): string
 {
@@ -264,7 +271,7 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
     return $html;
 }
 
-function player_stats_help_panel(array $statLabels, array $statHelp, array $ratingHelp): string
+function player_stats_help_panel(array $statLabels, array $statHelp, array $ratingHelp, array $fieldWeightHelp): string
 {
     $html = '<details class="player-stat-help" data-player-stat-help>';
     $html .= '<summary>¿Como funciona?</summary>';
@@ -276,6 +283,11 @@ function player_stats_help_panel(array $statLabels, array $statHelp, array $rati
     $html .= '</section>';
     $html .= '<section><h4>Puntuacion</h4>';
     foreach ($ratingHelp as $label => $help) {
+        $html .= '<p><strong>' . h((string) $label) . ':</strong> ' . h((string) $help) . '</p>';
+    }
+    $html .= '</section>';
+    $html .= '<section class="player-stat-help-wide"><h4>Promedio general</h4>';
+    foreach ($fieldWeightHelp as $label => $help) {
         $html .= '<p><strong>' . h((string) $label) . ':</strong> ' . h((string) $help) . '</p>';
     }
     $html .= '</section>';
@@ -354,7 +366,7 @@ require __DIR__ . '/includes/header.php';
       </div>
     </div>
 
-    <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp) ?>
+    <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 
     <div class="btn-row">
       <button class="btn btn-primary" type="submit">Crear jugador</button>
@@ -368,7 +380,7 @@ require __DIR__ . '/includes/header.php';
     <input type="text" data-player-list-search placeholder="Buscar jugador por nombre, posicion o stats">
   </div>
   <div class="players-desktop-help">
-    <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp) ?>
+    <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
   </div>
   <details class="mobile-full-player-list" open>
     <summary>
@@ -430,7 +442,7 @@ require __DIR__ . '/includes/header.php';
             $rowPositions = parse_positions_csv((string) $player['positions']);
             $rowSearch = player_row_search_text($player);
           ?>
-          <tr data-player-table-row data-player-edit-row data-search="<?= h($rowSearch) ?>">
+          <tr data-player-table-row data-player-edit-row data-player-id="<?= $playerId ?>" data-search="<?= h($rowSearch) ?>">
             <td>
               <input type="hidden" name="action" value="save" form="<?= h($rowFormId) ?>">
               <input type="hidden" name="id" value="<?= $playerId ?>" form="<?= h($rowFormId) ?>">
@@ -552,7 +564,7 @@ require __DIR__ . '/includes/header.php';
         </div>
       </div>
 
-      <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp) ?>
+      <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 
       <div class="btn-row">
         <button class="btn btn-primary" type="submit">Guardar cambios</button>
@@ -578,11 +590,18 @@ require __DIR__ . '/includes/header.php';
       if (!general) return;
 
       const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || 3);
-      const baseTotal = statNames.reduce((total, name) => total + getValue(name), 0);
       const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
       const raw = hasGoalkeeper
-        ? (baseTotal + (getValue('goalkeeper_skill') * 2)) / 7
-        : baseTotal / 5;
+        ? (getValue('goalkeeper_skill') * 0.45)
+          + (getValue('defense_physical') * 0.15)
+          + (getValue('rhythm') * 0.10)
+          + (getValue('technique') * 0.10)
+          + (getValue('teamwork') * 0.20)
+        : (getValue('technique') * 0.20)
+          + (getValue('rhythm') * 0.20)
+          + (getValue('defense_physical') * 0.20)
+          + (getValue('attack') * 0.25)
+          + (getValue('teamwork') * 0.15);
       const rounded = Math.max(1, Math.min(6, Math.round(raw * 10) / 10));
 
       const value = general.querySelector('[data-general-rating-value]');
