@@ -74,6 +74,27 @@ function player_row_search_text(array $player): string
     return strtolower(trim((string) $player['name'] . ' ' . $player['positions'] . ' ' . number_format(player_overall_rating($player), 1) . ' ' . implode(' ', array_map(static fn(string $field): string => number_format(player_effective_stat($player, $field), 1), player_stat_fields())) . ' ' . ((int) $player['active'] === 1 ? 'activo si' : 'inactivo no')));
 }
 
+function player_scout_data_attrs(array $player): string
+{
+    $attrs = [
+        'player-scout-name' => (string) ($player['name'] ?? ''),
+        'player-scout-positions' => (string) ($player['positions'] ?? ''),
+        'player-scout-skill' => number_format(player_overall_rating($player), 1, '.', ''),
+        'player-scout-technique' => number_format(player_effective_stat($player, 'technique'), 1, '.', ''),
+        'player-scout-rhythm' => number_format(player_effective_stat($player, 'rhythm'), 1, '.', ''),
+        'player-scout-defense-physical' => number_format(player_effective_stat($player, 'defense_physical'), 1, '.', ''),
+        'player-scout-attack' => number_format(player_effective_stat($player, 'attack'), 1, '.', ''),
+        'player-scout-teamwork' => number_format(player_effective_stat($player, 'teamwork'), 1, '.', ''),
+        'player-scout-goalkeeper-skill' => number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', ''),
+    ];
+
+    $html = '';
+    foreach ($attrs as $name => $value) {
+        $html .= ' data-' . $name . '="' . h($value) . '"';
+    }
+    return $html;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $returnAnchor = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($_POST['return_anchor'] ?? ''));
@@ -503,6 +524,7 @@ require __DIR__ . '/includes/header.php';
                     <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
                   </button>
                 </form>
+                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Informe de <?= h((string) $player['name']) ?>" title="Informe"></button>
                 <button class="btn btn-muted player-icon-button icon-pencil" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"></button>
                 <form method="post" class="inline">
                   <input type="hidden" name="action" value="delete">
@@ -515,6 +537,7 @@ require __DIR__ . '/includes/header.php';
                 <span class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>">
                   <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
                 </span>
+                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Informe de <?= h((string) $player['name']) ?>" title="Informe"></button>
                 <button class="btn btn-muted" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">Ver</button>
               <?php endif; ?>
             </span>
@@ -565,6 +588,10 @@ require __DIR__ . '/includes/header.php';
               <?php else: ?>
                 <strong class="player-readonly-name"><?= h((string) $player['name']) ?></strong>
               <?php endif; ?>
+              <button class="btn btn-muted player-scout-row-button" type="button" data-player-scout-open aria-label="Informe de <?= h((string) $player['name']) ?>" title="Informe del relator">
+                <span class="player-scout-icon" aria-hidden="true"></span>
+                <span>Informe</span>
+              </button>
             </td>
             <td>
               <div class="inline-checks">
@@ -619,6 +646,18 @@ require __DIR__ . '/includes/header.php';
     </table>
   </div>
 </section>
+
+<div class="player-scout-floating-panel" data-player-scout-panel hidden>
+  <article class="player-scout-floating-card" role="dialog" aria-modal="true" aria-labelledby="playerScoutTitle">
+    <div class="player-scout-floating-head">
+      <span>Informe del relator</span>
+      <button class="player-scout-close" type="button" data-player-scout-close aria-label="Cerrar">x</button>
+    </div>
+    <h3 id="playerScoutTitle" data-player-scout-title>Perfil del jugador</h3>
+    <p data-player-scout-body>-</p>
+    <div class="player-scout-tags" data-player-scout-tags></div>
+  </article>
+</div>
 
 <?php foreach ($players as $player): ?>
   <?php
@@ -730,6 +769,411 @@ require __DIR__ . '/includes/header.php';
       attack: 'ATA',
       teamwork: 'COM',
       goalkeeper_skill: 'ARQ',
+    };
+    const scoutStatRules = [
+      {
+        field: 'technique',
+        label: 'Tecnica',
+        strength: ['la pelota todavia le rebota como baldosa floja', 'tiene lo basico: no tira lujos, pero tampoco se prende fuego solo', 'controla, descarga y no se mete en cuentos raros', 'ya se anima a pisarla y levantar la cabeza', 'tiene pie fino: donde otros revientan, el tipo intenta jugar', 'trae joystick incorporado: la pelota le hace caso'],
+        weakness: ['si le tiran un melon, capaz lo devuelve en sandia', 'cuando lo apuran, el primer control puede pedir auxilio', 'no es negado, pero tampoco le pidas una rabona en el area', 'a veces le falta un toque mas limpio para quedar bien perfilado', 'con la pelota casi siempre sale bien parado', 'hasta cuando se equivoca parece que quiso hacer algo distinto'],
+      },
+      {
+        field: 'rhythm',
+        label: 'Ritmo',
+        strength: ['va en tercera aunque el partido pida autopista', 'no es una moto, pero llega si no lo hacen cruzar todo el conurbano', 'cumple el recorrido sin hacer ruido', 'tiene nafta para ir y volver sin pedir cambio', 'mete quinta y aparece donde la jugada ya parecia perdida', 'es delivery de ida y vuelta: cae siempre y encima rapido'],
+        weakness: ['si el partido se hace largo, empieza a mirar el banco con carino', 'si lo hacen correr de lado a lado, se le prende la reserva', 'en una contra picante puede llegar con la foto movida', 'no se cae fisicamente, pero tampoco te gana una carrera al bondi', 'por piernas casi nunca queda pagando', 'en ritmo va sobrado: al rival le conviene buscar otro camino'],
+      },
+      {
+        field: 'defense_physical',
+        label: 'Solidez',
+        strength: ['en el choque todavia entra pidiendo permiso', 'si viene uno pesado, lo puede hacer retroceder un par de casilleros', 'aguanta la parada, sin ponerse el traje de sheriff', 'mete cuerpo y ya no regala la zona', 'va al roce como quien va al almacen: sin drama y con decision', 'es pared medianera: choca, rebota y te cobra alquiler'],
+        weakness: ['en el mano a mano fuerte lo pueden mandar a comprar facturas', 'si el rival lo obliga al roce, puede pasarla incomodo', 'cuando se arma el barro, le cuesta sacar pecho', 'no es drama, pero si lo cargan mucho puede perder alguna dividida', 'para moverlo hay que traer orden judicial', 'fisicamente responde como patron de estancia'],
+      },
+      {
+        field: 'attack',
+        label: 'Ataque',
+        strength: ['arriba todavia entra con timbre, no con llave', 'llega a zona caliente, pero a veces se le nubla el GPS', 'participa y molesta, aunque no siempre huele sangre', 'ya pisa el area y obliga a que alguno lo siga', 'tiene olfato: le das media baldosa y te arma un lio', 'en el area es inspector de billeteras: si te descuidas, te cobra'],
+        weakness: ['en los ultimos metros se le puede apagar la tele', 'puede fabricar la jugada y terminar eligiendo el boton equivocado', 'con el arco enfrente a veces se apura como si cerrara el chino', 'no siempre liquida, pero ya obliga a respetarlo', 'arriba cuesta dejarlo mudo', 'cerca del arco no perdona ni una deuda chica'],
+      },
+      {
+        field: 'teamwork',
+        label: 'Compromiso',
+        strength: ['le cuesta entrar en el circuito colectivo', 'por momentos juega su partido aparte', 'acompaña, aunque todavia puede ofrecerse mas', 'se conecta bien y entiende cuando soltarla', 'juega para el equipo, levanta la cabeza y ordena a los de al lado', 'es el pegamento del equipo: habla, ayuda y mejora a todos'],
+        weakness: ['si se desconecta, el equipo lo siente enseguida', 'puede quedar lejos de la jugada cuando toca ayudar', 'a veces acompana mas de lo que conduce', 'no preocupa, aunque puede participar mas en la sociedad', 'su compromiso rara vez deja dudas', 'hasta sin pelota juega para que el equipo respire'],
+        strength: ['todavia juega medio en modo solista de karaoke', 'a veces acompana, a veces mira la obra desde la vereda', 'se suma al circuito, aunque puede pedirla un poquito mas', 'entiende la pared, la descarga y el favor al companero', 'juega con documento: ayuda, habla y no se borra', 'es delegado del equipo: ordena, cubre y encima te ceba el mate'],
+        weakness: ['si se cuelga, el equipo queda pagando el peaje', 'cuando toca dar una mano, a veces llega tarde a la reunion', 'acompanar acompana, pero le falta mandar un poco mas', 'no desentona, aunque podria meterse mas en la sociedad', 'en compromiso rara vez deja una silla vacia', 'hasta sin tocarla acomoda el quilombo'],
+      },
+      {
+        field: 'goalkeeper_skill',
+        label: 'Arquero',
+        strength: ['en el arco necesita que la defensa no lo abandone como bondi de noche', 'saca alguna importante, pero todavia no da para estatua', 'cumple bajo los tres palos y evita papelones', 'achica bien y ya empieza a hacerse respetar', 'se agranda en el arco: tapa, grita y acomoda el boliche', 'es persiana metalica: baja y no entra nadie'],
+        weakness: ['cada centro puede venir con musica de suspenso', 'si lo bombardean, puede empezar a mirar de reojo', 'necesita que la defensa no le tire la mochila entera', 'no es flojo, pero podria mandar mas en el area', 'bajo presion responde con cara de pocos amigos', 'en el arco casi no deja ni la propina'],
+      },
+    ];
+
+    const datasetStatName = (field) => `playerScout${field.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('')}`;
+    const numberOr = (value, fallback = 3) => {
+      const number = Number.parseFloat(String(value ?? ''));
+      return Number.isFinite(number) ? number : fallback;
+    };
+    const starTier = (value) => Math.max(1, Math.min(6, Math.round(numberOr(value, 3))));
+    const stableIndex = (seed, length) => {
+      if (length <= 1) return 0;
+      let hash = 0;
+      String(seed).split('').forEach((char) => {
+        hash = ((hash << 5) - hash) + char.charCodeAt(0);
+        hash |= 0;
+      });
+      return Math.abs(hash) % length;
+    };
+    const statAliases = {
+      technique: ['tecnica', 'el pie', 'la pelota en los pies', 'el trato con la redonda'],
+      rhythm: ['ritmo', 'las piernas', 'la intensidad', 'el ida y vuelta'],
+      defense_physical: ['solidez', 'el roce', 'la marca', 'la batalla fisica'],
+      attack: ['ataque', 'el ultimo tramo', 'la zona caliente', 'el olor a gol'],
+      teamwork: ['compromiso', 'el juego colectivo', 'la entrega', 'la sociedad'],
+      goalkeeper_skill: ['el arco', 'los tres palos', 'la seguridad bajo palos', 'el buzo imaginario'],
+    };
+    const strengthTemplates = [
+      (alias, phrase) => `Por el lado de ${alias}, ${phrase}.`,
+      (alias, phrase) => `Si la charla va por ${alias}, ${phrase}.`,
+      (alias, phrase) => `En el rubro ${alias}, ${phrase}.`,
+      (alias, phrase, label) => `${label} le pone el cartel luminoso: ${phrase}.`,
+      (alias, phrase) => `Cuando aparece ${alias}, ${phrase}.`,
+    ];
+    const weaknessTemplates = [
+      (alias, phrase) => `Cuando toca mirar ${alias}, ${phrase}.`,
+      (alias, phrase) => `La lupa, mala pero necesaria, cae en ${alias}: ${phrase}.`,
+      (alias, phrase) => `Si el rival es vivo, lo va a medir en ${alias}: ${phrase}.`,
+      (alias, phrase) => `El semaforo amarillo aparece en ${alias}: ${phrase}.`,
+      (alias, phrase) => `El costado para apretarlo viene por ${alias}: ${phrase}.`,
+    ];
+    const closingLines = [
+      'Si entra enchufado, te cambia el tramite; si lo apuran donde no quiere, puede empezar a resolver con el manual al reves.',
+      'Cuando juega comodo suma un monton; cuando lo aprietan en su zona floja, puede rifar alguna pelota como sorteo de club.',
+      'Si el partido lo lleva a su baldosa, crece; si lo empujan a decidir rapido, puede mostrar la costura.',
+      'En su mejor version te acomoda la tarde; en su peor rato, el rival tiene que insistir justo donde mas le pica.',
+      'Con viento a favor parece jugador de resumen; con viento en contra, hay que ver si saca oficio o se le llena la mochila.',
+    ];
+    const statPhrase = (stat, type, playerName) => {
+      const tier = starTier(stat.value);
+      const phrase = stat[type][tier - 1];
+      const aliasPool = statAliases[stat.field] || [stat.label.toLowerCase()];
+      const templates = type === 'strength' ? strengthTemplates : weaknessTemplates;
+      const seed = `${playerName}|${stat.field}|${type}|${tier}`;
+      const alias = aliasPool[stableIndex(`${seed}|alias`, aliasPool.length)];
+      const template = templates[stableIndex(`${seed}|template`, templates.length)];
+      return template(alias, phrase, stat.label);
+    };
+    const comboInsightLine = (player) => {
+      const technique = numberOr(player.technique, 3);
+      const rhythm = numberOr(player.rhythm, 3);
+      const defense = numberOr(player.defense_physical, 3);
+      const attack = numberOr(player.attack, 3);
+      const teamwork = numberOr(player.teamwork, 3);
+      const goalkeeper = numberOr(player.goalkeeper_skill, 3);
+      const isGoalkeeper = player.positions.includes('ARQ');
+      const high = (value) => value >= 4.5;
+      const low = (value) => value <= 2.5;
+      const matches = [];
+
+      if (numberOr(player.skill, 3) < 3) {
+        matches.push('Es buen tipo y ayuda a completar la cancha; futbolisticamente viene con casco y chaleco, pero viene.');
+        matches.push('Hace lo que puede: a veces suma por presencia, a veces por fe, pero no se esconde.');
+        matches.push('Viene a jugar igual, sabiendo que a veces es mas lo que estorba en la cancha que lo que ordena.');
+        matches.push('No sera el distinto, pero es de esos que aparecen cuando falta uno y eso tambien vale en el fulbito.');
+        matches.push('Tiene mas voluntad que recursos, pero al menos no deja al grupo clavado buscando reemplazo.');
+      }
+      if (numberOr(player.skill, 3) > 5) {
+        matches.push('Destaca al lado de todos los demas muertos: juega a otra velocidad mental y encima se nota.');
+        matches.push('En este grupo hace una de las mayores diferencias: cuando aparece, el partido se inclina solo.');
+        matches.push('Hay que agradecerle que quiera jugar con tantos perros: baja al barro y aun asi deja calidad.');
+        matches.push('Esta un escalon arriba del promedio del potrero: si se enchufa, hay que repartirlo entre dos marcas.');
+        matches.push('Cuando toca la pelota se nota que no vino a pasear: el resto mira y trata de no molestar.');
+      }
+
+      if (attack >= 4.5 && defense <= 2.5) {
+        matches.push('No te marca a nadie, pero hace goles: es de esos que atras te hacen renegar y arriba te pagan la cuota.');
+      }
+      if (technique >= 4.5 && teamwork <= 2.5) {
+        matches.push('Tiene magia en los pies, pero a veces es muy morfon: ve el pase y aun asi prueba el firulete.');
+      }
+      if (technique >= 4.5 && defense <= 2.5) {
+        matches.push(defense <= 2
+          ? 'No le gusta que lo marquen al hombre: si le respiran en la nuca, empieza la novela.'
+          : 'Si lo marcas fuerte se le congela el pecho: con espacio juega lindo, con roce ya no canta tan afinado.');
+      }
+      if (defense >= 4.5 && technique <= 2.5) {
+        matches.push('No le pidas que te tire un caño ni que salga jugando: lo suyo es morder, trabar y devolver la pelota sin perfume.');
+      }
+
+      if (high(technique) && low(rhythm)) {
+        matches.push('Tiene pie de salon, pero motor de domingo despues del asado: si le das tiempo te pinta la cara, si lo haces correr se complica.');
+      }
+      if (high(rhythm) && low(technique)) {
+        matches.push('Corre como si llegara tarde al laburo, pero con la pelota a veces parece que la persigue mas de lo que la maneja.');
+      }
+      if (high(technique) && low(attack)) {
+        matches.push('Juega lindo hasta la puerta del area; despues le falta tocar el timbre y entrar a cobrar.');
+      }
+      if (high(attack) && low(technique)) {
+        matches.push('No le pidas poesia, pedile que empuje la pelota: capaz no acaricia la redonda, pero cerca del arco molesta siempre.');
+      }
+      if (high(rhythm) && low(defense)) {
+        matches.push('Tiene piernas para perseguir hasta el bondi, pero en la marca a veces corre mucho y muerde poco.');
+      }
+      if (high(defense) && low(rhythm)) {
+        matches.push('Cuando lo agarran parado es una pared, pero si lo sacan a pasear por la banda puede pedir remiseria.');
+      }
+      if (high(rhythm) && low(attack)) {
+        matches.push('Va y viene como ascensor de hospital, aunque arriba muchas veces llega con las ideas en otra cancha.');
+      }
+      if (high(attack) && low(rhythm)) {
+        matches.push('En el area tiene veneno, pero no le pidas que presione hasta la esquina porque se queda sin monedas.');
+      }
+      if (high(rhythm) && low(teamwork)) {
+        matches.push('Corre por todos lados, pero a veces parece que juega con Waze propio y se olvida de los companeros.');
+      }
+      if (high(teamwork) && low(rhythm)) {
+        matches.push('Tiene alma de equipo, habla y ordena, pero las piernas no siempre firman el contrato.');
+      }
+      if (high(defense) && low(attack)) {
+        matches.push('Te apaga incendios atras, pero arriba no le pidas que sea bombero y goleador en la misma tarde.');
+      }
+      if (high(attack) && low(teamwork)) {
+        matches.push('Arriba tiene hambre, pero a veces come solo: si levanta la cabeza, el equipo le va a agradecer.');
+      }
+      if (high(teamwork) && low(attack)) {
+        matches.push('Hace jugar a todos, pero cuando queda para definir parece que le pasa la pelota caliente al de al lado.');
+      }
+      if (high(defense) && low(teamwork)) {
+        matches.push('Va fuerte y gana duelos, pero cuidado: puede defender su quintita y olvidarse de cerrar con el resto.');
+      }
+      if (high(teamwork) && low(defense)) {
+        matches.push('Tiene voluntad de sobra, pero en el roce a veces le falta maldad de potrero.');
+      }
+      if (isGoalkeeper && high(goalkeeper) && low(defense)) {
+        matches.push('Como arquero te salva las papas, pero si sale del arco a chocar queda mas expuesto que persiana rota.');
+      }
+      if (isGoalkeeper && high(goalkeeper) && low(teamwork)) {
+        matches.push('Bajo los tres palos responde, pero si no habla con la defensa el area se le vuelve una feria.');
+      }
+      if (isGoalkeeper && high(defense) && low(goalkeeper)) {
+        matches.push('Tiene presencia y cuerpo, pero bajo los tres palos todavia no te vende seguro contra todo riesgo.');
+      }
+      if (isGoalkeeper && high(teamwork) && low(goalkeeper)) {
+        matches.push('Ordena y acompana, pero cuando le patean al arco necesita que la tribuna rece bajito.');
+      }
+
+      if (!matches.length) return '';
+      return matches[stableIndex(`${player.name}|combo|${starTier(technique)}|${starTier(rhythm)}|${starTier(defense)}|${starTier(attack)}|${starTier(teamwork)}|${starTier(goalkeeper)}`, matches.length)];
+    };
+    const radarShapeLine = (stats, playerName, isGoalkeeper) => {
+      const values = stats.map((stat) => stat.value);
+      const average = values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
+      const max = Math.max(...values);
+      const min = Math.min(...values);
+      const spread = max - min;
+      const top = stats.slice().sort((a, b) => b.value - a.value).slice(0, 2).map((stat) => stat.field);
+      const bottom = stats.slice().sort((a, b) => a.value - b.value).slice(0, 2).map((stat) => stat.field);
+      const hasTop = (...fields) => fields.some((field) => top.includes(field));
+      const hasBottom = (...fields) => fields.some((field) => bottom.includes(field));
+      let pool;
+
+      if (spread <= 0.75 && average >= 4.2) {
+        pool = [
+          'El radar sale redondito y alto: no tiene una esquina para esconderse, de esos que caen a la cancha y te acomodan el equipo.',
+          'La figura parece dibujada con compas: parejo, confiable y sin un costado regalado para que el rival haga negocio.',
+        ];
+      } else if (spread <= 0.75) {
+        pool = [
+          'El radar es parejo: no te vende humo con una punta gigante, pero tampoco deja un pozo para caer de cabeza.',
+          'La silueta sale de jugador cumplidor: no te prende fuego la planilla, pero tampoco te rompe el asado.',
+        ];
+      } else if (spread >= 2.5) {
+        pool = [
+          'El radar sale con picos como serrucho: tiene armas claras, pero tambien una zona donde el rival puede ir con cuchillo y tenedor.',
+          'La figura queda filosa, de especialista puro: en la suya pesa una tonelada, fuera de ahi se le ve la patente.',
+        ];
+      } else if (hasTop('attack', 'technique') && hasBottom('defense_physical', 'teamwork')) {
+        pool = [
+          'El dibujo se le va para adelante: pide pelota y arco, pero atras conviene ponerle un primo que lo cubra.',
+          'La forma del radar grita jugador ofensivo: arriba puede salir en la foto, en la vuelta hay que prenderle el GPS.',
+        ];
+      } else if (hasTop('defense_physical', 'teamwork') && hasBottom('attack', 'technique')) {
+        pool = [
+          'El radar se planta mas con casco que con vincha: sostiene, ayuda y compite, aunque no siempre firma la jugada linda.',
+          'La figura tira para el sacrificio: de esos que hacen el laburo sucio para que otro salga en la foto.',
+        ];
+      } else if (hasTop('defense_physical', 'teamwork') && hasBottom('attack', 'technique')) {
+        pool = [
+          'El radar se planta mas con casco que con moño: sostiene, ayuda y compite, aunque no siempre firma la jugada linda.',
+          'La figura tira para el sacrificio: de esos que hacen el laburo sucio para que otro salga en la foto.',
+        ];
+      } else if (hasTop('rhythm') && hasBottom('technique', 'attack')) {
+        pool = [
+          'El radar muestra motor antes que seda: corre, llega y molesta, pero a veces la jugada le pide bajar un cambio.',
+          'La silueta tiene piernas largas y pie de barrio: puede acelerar el partido, no siempre elegir el mejor final.',
+        ];
+      } else if (hasTop('teamwork') && spread <= 1.75) {
+        pool = [
+          'El radar tiene forma de jugador de equipo: no vive para la tapa, vive para que la rueda gire.',
+          'La lectura global dice companero util: aparece donde falta una mano y no te desordena el tablero.',
+        ];
+      } else if (hasTop('teamwork') && spread <= 1.75) {
+        pool = [
+          'El radar tiene forma de jugador de equipo: no vive para la tapa, vive para que la rueda gire.',
+          'La lectura global dice compañero util: aparece donde falta una mano y no desacomoda el tablero.',
+        ];
+      } else if (isGoalkeeper && hasTop('goalkeeper_skill')) {
+        pool = [
+          'El radar se agranda bajo los tres palos: si el partido pide arquero, ahi tiene con que ponerse la capa.',
+          'La forma lo cuenta sola: su kiosco esta en el arco, donde puede transformar peligro en alivio.',
+        ];
+      } else {
+        pool = [
+          'La forma del radar deja un perfil mixto: tiene por donde sumar y tambien una arista para ajustar antes de que lo madruguen.',
+          'Mirado de lejos, el radar no miente: hay una virtud clara y un detalle que el rival va a querer mandar al frente.',
+        ];
+      }
+
+      return pool[stableIndex(`${playerName}|shape|${top.join('-')}|${bottom.join('-')}|${Math.round(spread * 10)}`, pool.length)];
+    };
+    const colorCommentLine = (player, role) => {
+      const technique = numberOr(player.technique, 3);
+      const rhythm = numberOr(player.rhythm, 3);
+      const defense = numberOr(player.defense_physical, 3);
+      const attack = numberOr(player.attack, 3);
+      const teamwork = numberOr(player.teamwork, 3);
+      const goalkeeper = numberOr(player.goalkeeper_skill, 3);
+      const overall = numberOr(player.skill, 3);
+      const pool = [];
+
+      if (overall >= 4.5) {
+        pool.push('Tiene chapa de titular en cualquier picado serio: no necesita vender humo, la pelota lo presenta sola.');
+        pool.push('Cuando se enchufa, los demas parecen extras de la pelicula.');
+      }
+      if (overall <= 3) {
+        pool.push('Es de esos que capaz no te gana el partido, pero te salva la convocatoria del grupo.');
+        pool.push('No viene con botines magicos, viene con ganas; a veces en este futbol eso ya es medio contrato.');
+      }
+      if (technique >= 4 && attack >= 4) {
+        pool.push('Tiene cositas de lirico de potrero: pisa, mira y si le dan un metro empieza el show.');
+        pool.push('Arriba juega con colmillo y algo de fantasia, de esos que te inventan un problema de la nada.');
+      }
+      if (defense >= 4 && rhythm >= 4) {
+        pool.push('Perfil tractor: mete, corre y te sigue hasta la parada del colectivo.');
+        pool.push('No negocia una dividida y encima tiene piernas para repetir; molesto como tos en reunion.');
+      }
+      if (teamwork >= 4.5) {
+        pool.push('Tiene alma de capitan sin cinta: acomoda, habla y juega para que el equipo no sea una murga.');
+        pool.push('No se casa con la pelota: si hay que tocar y moverse, toca y se mueve.');
+      }
+      if (attack >= 4.5) {
+        pool.push('Tiene sangre de nueve vivo: capaz toca dos pelotas y una termina con todos sacando del medio.');
+        pool.push('En la zona caliente no va de visita, va a cobrar alquiler.');
+      }
+      if (defense >= 4.5) {
+        pool.push('Tiene oficio de marcador viejo: no siempre sale lindo, pero el rival termina mirando para otro lado.');
+        pool.push('Es de los que te dejan un recuerdito en la primera dividida para avisar que estan presentes.');
+      }
+      if (rhythm >= 4.5) {
+        pool.push('Tiene motor de remisero en fin de mes: no para nunca y llega a todos lados.');
+        pool.push('Le sobra recorrido; si el partido pide piernas, levanta la mano primero.');
+      }
+      if (technique <= 2.5 && defense <= 2.5) {
+        pool.push('Si la pelota viene dificil y encima hay roce, conviene prender una vela.');
+      }
+      if (attack <= 2.5 && technique <= 2.5) {
+        pool.push('En ataque no asusta ni al arquero distraido, pero por lo menos ocupa un defensor.');
+      }
+      if (role === 'defensor' && technique >= 4) {
+        pool.push('Defensor con salida limpia: raro en el barrio, casi articulo importado.');
+      }
+      if (role === 'delantero' && teamwork >= 4) {
+        pool.push('Delantero que devuelve paredes: especie protegida, hay que cuidarlo.');
+      }
+      if (role === 'mediocampista' && defense >= 4 && teamwork >= 4) {
+        pool.push('Cinco de overol: barre, ordena y no pide aplausos.');
+      }
+      if (role === 'arquero' && goalkeeper >= 4.5) {
+        pool.push('Cuando se pone los guantes imaginarios, el arco parece achicarse para todos menos para el.');
+      }
+
+      if (!pool.length) {
+        pool.push('Tiene perfil de fulbito puro: algo para aplaudir, algo para putear y bastante para comentar despues.');
+        pool.push('No pasa desapercibido: siempre deja una jugada para discutir en el tercer tiempo.');
+      }
+
+      return pool[stableIndex(`${player.name}|color|${role}|${starTier(overall)}|${starTier(technique)}|${starTier(rhythm)}|${starTier(defense)}|${starTier(attack)}|${starTier(teamwork)}|${starTier(goalkeeper)}`, pool.length)];
+    };
+    const scoutDataFromTrigger = (trigger) => {
+      const row = trigger.closest('[data-player-edit-row]');
+      if (row) {
+        const positions = Array.from(row.querySelectorAll('input[name="positions[]"]:checked')).map((input) => input.value);
+        const getValue = (field) => numberOr(row.querySelector(`[data-stat-rating-input][name="${field}"]`)?.value, 3);
+        const player = {
+          name: row.querySelector('input[name="name"]')?.value || row.querySelector('.player-readonly-name')?.textContent || 'Este jugador',
+          positions,
+          skill: numberOr(row.querySelector('[data-general-rating-value]')?.textContent, 3),
+        };
+        scoutStatRules.forEach((rule) => {
+          player[rule.field] = getValue(rule.field);
+        });
+        return player;
+      }
+
+      const positions = String(trigger.dataset.playerScoutPositions || '').split('/').map((position) => position.trim()).filter(Boolean);
+      const player = {
+        name: trigger.dataset.playerScoutName || 'Este jugador',
+        positions,
+        skill: numberOr(trigger.dataset.playerScoutSkill, 3),
+      };
+      scoutStatRules.forEach((rule) => {
+        player[rule.field] = numberOr(trigger.dataset[datasetStatName(rule.field)], 3);
+      });
+      return player;
+    };
+    const describeScoutPlayer = (player) => {
+      const isGoalkeeper = player.positions.includes('ARQ');
+      const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper || rule.field !== 'goalkeeper_skill');
+      const stats = visibleRules.map((rule) => ({ ...rule, value: numberOr(player[rule.field], 3) }));
+      const best = stats.slice().sort((a, b) => b.value - a.value)[0];
+      const weakest = stats.slice().sort((a, b) => a.value - b.value)[0];
+      const role = isGoalkeeper
+        ? 'arquero'
+        : (player.positions.includes('DEL') ? 'delantero'
+          : (player.positions.includes('DEF') ? 'defensor'
+            : (player.positions.includes('MED') ? 'mediocampista' : 'comodin')));
+      const virtueLine = statPhrase(best, 'strength', player.name);
+      const flawLine = statPhrase(weakest, 'weakness', player.name);
+      const comboLine = comboInsightLine(player);
+      const shapeLine = radarShapeLine(stats, player.name, isGoalkeeper);
+      const colorLine = colorCommentLine(player, role);
+      const closingLine = closingLines[stableIndex(`${player.name}|${best.field}|${starTier(best.value)}|${weakest.field}|${starTier(weakest.value)}`, closingLines.length)];
+      return {
+        title: `${player.name}, ${role} de ${formatRating(numberOr(player.skill, 3))}/6`,
+        body: [virtueLine, flawLine, comboLine, shapeLine, colorLine, closingLine].filter(Boolean).join(' '),
+        tags: [
+          role.toUpperCase(),
+          `General ${formatRating(numberOr(player.skill, 3))}/6`,
+          `${best.label} ${formatRating(best.value)}`,
+          `${weakest.label} ${formatRating(weakest.value)}`,
+        ],
+      };
+    };
+    const openPlayerScoutPanel = (trigger) => {
+      const panel = document.querySelector('[data-player-scout-panel]');
+      if (!panel) return;
+      const scout = describeScoutPlayer(scoutDataFromTrigger(trigger));
+      panel.querySelector('[data-player-scout-title]').textContent = scout.title;
+      panel.querySelector('[data-player-scout-body]').textContent = scout.body;
+      panel.querySelector('[data-player-scout-tags]').innerHTML = scout.tags.map((tag) => `<span>${tag}</span>`).join('');
+      panel.hidden = false;
+    };
+    const closePlayerScoutPanel = () => {
+      const panel = document.querySelector('[data-player-scout-panel]');
+      if (panel) panel.hidden = true;
     };
 
     const radarPoint = (center, radius, index, total) => {
@@ -901,6 +1345,23 @@ require __DIR__ . '/includes/header.php';
 
     document.querySelectorAll('[data-player-readonly-form]').forEach((form) => {
       form.addEventListener('submit', (event) => event.preventDefault());
+    });
+
+    document.addEventListener('click', (event) => {
+      const scoutTrigger = event.target.closest('[data-player-scout-open]');
+      if (scoutTrigger) {
+        openPlayerScoutPanel(scoutTrigger);
+        return;
+      }
+      if (event.target.closest('[data-player-scout-close]') || event.target.matches('[data-player-scout-panel]')) {
+        closePlayerScoutPanel();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closePlayerScoutPanel();
+      }
     });
   })();
 </script>
