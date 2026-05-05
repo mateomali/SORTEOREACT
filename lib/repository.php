@@ -55,7 +55,8 @@ function repo_match_participants(int $matchId): array
 function repo_match_participants_basic(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT p.id, p.name, p.positions, p.pace, p.skill
+        'SELECT p.id, p.name, p.positions, p.pace, p.skill,
+                p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.goalkeeper_skill
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid
@@ -189,7 +190,7 @@ function repo_team_totals(int $matchId): array
         'SELECT mp.team_number,
                 COUNT(mp.id) AS players,
                 SUM(p.skill) AS total_skill,
-                SUM(CASE WHEN p.pace = "lento" THEN 1 ELSE 0 END) AS slow_count
+                SUM(CASE WHEN p.rhythm <= 2.5 OR (p.rhythm IS NULL AND p.pace = "lento") THEN 1 ELSE 0 END) AS slow_count
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL

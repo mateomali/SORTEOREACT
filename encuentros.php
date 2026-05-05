@@ -305,6 +305,12 @@ function save_imported_player(PDO $pdo): void
         'positions' => $positionsCsv,
         'pace' => $pace,
         'skill' => $skill,
+        'technique' => $skill,
+        'rhythm' => $pace === 'lento' ? 2.0 : 4.0,
+        'defense_physical' => 3.0,
+        'attack' => $skill,
+        'teamwork' => $skill,
+        'goalkeeper_skill' => str_contains($positionsCsv, 'ARQ') ? $skill : null,
         'active' => $active,
     ];
 
@@ -313,7 +319,10 @@ function save_imported_player(PDO $pdo): void
         if ((int) ($existingPlayer['active'] ?? 0) !== 1 && $active === 1) {
             $stmt = $pdo->prepare(
                 'UPDATE players
-                 SET name = :name, positions = :positions, pace = :pace, skill = :skill, active = :active
+                 SET name = :name, positions = :positions, pace = :pace, skill = :skill,
+                     technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
+                     attack = :attack, teamwork = :teamwork, goalkeeper_skill = :goalkeeper_skill,
+                     active = :active
                  WHERE id = :id'
             );
             $stmt->execute($params + ['id' => $existingId]);
@@ -324,8 +333,10 @@ function save_imported_player(PDO $pdo): void
     }
 
     $stmt = $pdo->prepare(
-        'INSERT INTO players (name, positions, pace, skill, active)
-         VALUES (:name, :positions, :pace, :skill, :active)'
+        'INSERT INTO players
+           (name, positions, pace, skill, technique, rhythm, defense_physical, attack, teamwork, goalkeeper_skill, active)
+         VALUES
+           (:name, :positions, :pace, :skill, :technique, :rhythm, :defense_physical, :attack, :teamwork, :goalkeeper_skill, :active)'
     );
     $stmt->execute($params);
     flash('success', 'Jugador agregado y disponible para la importacion.');

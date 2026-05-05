@@ -12,7 +12,8 @@ if (!function_exists('repo_match_participants_basic')) {
     function repo_match_participants_basic(int $matchId): array
     {
         $stmt = db()->prepare(
-            'SELECT p.id, p.name, p.positions, p.pace, p.skill
+            'SELECT p.id, p.name, p.positions, p.pace, p.skill,
+                    p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.goalkeeper_skill
              FROM match_players mp
              INNER JOIN players p ON p.id = mp.player_id
              WHERE mp.match_id = :mid
@@ -76,8 +77,8 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
             );
             $lineCounts[$assigned] = ($lineCounts[$assigned] ?? 0) + 1;
 
-            $score += (float) ($player['skill'] ?? 0);
-            if (($player['pace'] ?? '') === 'lento') {
+            $score += player_overall_rating($player);
+            if (player_is_low_rhythm($player)) {
                 $slow++;
             }
         }
@@ -227,7 +228,7 @@ foreach ($teams as $team) {
 }
 
 $teamScores = array_map(
-    static fn(array $team): float => array_sum(array_map(static fn(array $p): float => (float) ($p['skill'] ?? 0), $team)),
+    static fn(array $team): float => array_sum(array_map(static fn(array $p): float => player_overall_rating($p), $team)),
     $teams
 );
 $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
@@ -269,7 +270,7 @@ try {
         $teamNumber = $idx + 1;
         $totalSkill = 0.0;
         foreach ($team as $p) {
-            $totalSkill += (float) ($p['skill'] ?? 0);
+            $totalSkill += player_overall_rating($p);
         }
         $saveTeam->execute([
             'mid' => $matchId,

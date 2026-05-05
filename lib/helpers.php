@@ -68,7 +68,67 @@ function skill_label(float $skill): string
 {
     $formatted = number_format($skill, 1, '.', '');
     $formatted = rtrim(rtrim($formatted, '0'), '.');
-    return $formatted . '⭐';
+    return $formatted . ' estrellas';
+}
+
+function player_stat_fields(): array
+{
+    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'goalkeeper_skill'];
+}
+
+function player_field_stat_fields(): array
+{
+    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork'];
+}
+
+function normalize_player_stat(float|string|int|null $value, float $fallback = 3.0): float
+{
+    if ($value === null || $value === '') {
+        $value = $fallback;
+    }
+    $stat = (float) $value;
+    return max(1.0, min(6.0, round($stat * 2) / 2));
+}
+
+function player_effective_stat(array $player, string $field): float
+{
+    $fallback = match ($field) {
+        'technique', 'attack', 'teamwork', 'goalkeeper_skill' => (float) ($player['skill'] ?? 3.0),
+        'rhythm' => (($player['pace'] ?? '') === 'lento') ? 2.0 : 4.0,
+        'defense_physical' => 3.0,
+        default => 3.0,
+    };
+    return normalize_player_stat($player[$field] ?? null, $fallback);
+}
+
+function player_has_goalkeeper_position(array $player): bool
+{
+    return in_array('ARQ', parse_positions_csv((string) ($player['positions'] ?? '')), true);
+}
+
+function player_overall_rating(array $player): float
+{
+    $baseTotal = 0.0;
+    foreach (player_field_stat_fields() as $field) {
+        $baseTotal += player_effective_stat($player, $field);
+    }
+
+    if (player_has_goalkeeper_position($player)) {
+        $baseTotal += player_effective_stat($player, 'goalkeeper_skill') * 2;
+        return round($baseTotal / 7, 1);
+    }
+
+    return round($baseTotal / 5, 1);
+}
+
+function player_is_low_rhythm(array $player): bool
+{
+    return player_effective_stat($player, 'rhythm') <= 2.5;
+}
+
+function player_pace_from_rhythm(float $rhythm): string
+{
+    return normalize_player_stat($rhythm) <= 2.5 ? 'lento' : 'rapido';
 }
 
 function allowed_positions(): array

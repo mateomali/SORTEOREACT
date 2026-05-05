@@ -241,6 +241,12 @@ function ensure_control_schema(): array
         ['captain_drafts', 'captain3_token', 'captain3_token VARCHAR(64) NULL AFTER captain2_token'],
         ['captain_drafts', 'captain4_token', 'captain4_token VARCHAR(64) NULL AFTER captain3_token'],
         ['match_awards', 'notes', 'notes VARCHAR(255) NULL AFTER player_id'],
+        ['players', 'technique', 'technique DECIMAL(3,1) NULL AFTER skill'],
+        ['players', 'rhythm', 'rhythm DECIMAL(3,1) NULL AFTER technique'],
+        ['players', 'defense_physical', 'defense_physical DECIMAL(3,1) NULL AFTER rhythm'],
+        ['players', 'attack', 'attack DECIMAL(3,1) NULL AFTER defense_physical'],
+        ['players', 'teamwork', 'teamwork DECIMAL(3,1) NULL AFTER attack'],
+        ['players', 'goalkeeper_skill', 'goalkeeper_skill DECIMAL(3,1) NULL AFTER teamwork'],
     ];
 
     foreach ($columns as [$table, $column, $definition]) {
@@ -344,4 +350,37 @@ function backfill_control_schema(PDO $pdo): void
          ) f ON f.match_id = mt.match_id AND f.team_number = mt.team_number
          SET mt.formation_name = COALESCE(mt.formation_name, f.formation_name)"
     );
+
+    if (schema_column_exists($pdo, 'players', 'technique')) {
+        $pdo->exec(
+            "UPDATE players
+             SET
+               technique = COALESCE(technique, skill),
+               rhythm = COALESCE(rhythm, CASE WHEN pace = 'lento' THEN 2.0 ELSE 4.0 END),
+               defense_physical = COALESCE(defense_physical, 3.0),
+               attack = COALESCE(attack, skill),
+               teamwork = COALESCE(teamwork, skill),
+               goalkeeper_skill = COALESCE(goalkeeper_skill, CASE WHEN positions LIKE '%ARQ%' THEN skill ELSE NULL END)"
+        );
+
+        $pdo->exec(
+            "UPDATE players
+             SET
+               skill = ROUND(
+                 CASE
+                   WHEN positions LIKE '%ARQ%' THEN
+                     (technique + rhythm + defense_physical + attack + teamwork + (COALESCE(goalkeeper_skill, skill) * 2)) / 7
+                   ELSE
+                     (technique + rhythm + defense_physical + attack + teamwork) / 5
+                 END,
+                 1
+               ),
+               pace = CASE WHEN rhythm <= 2.5 THEN 'lento' ELSE 'rapido' END
+             WHERE technique IS NOT NULL
+               AND rhythm IS NOT NULL
+               AND defense_physical IS NOT NULL
+               AND attack IS NOT NULL
+               AND teamwork IS NOT NULL"
+        );
+    }
 }

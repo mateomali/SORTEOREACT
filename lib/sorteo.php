@@ -38,8 +38,10 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 
     $candidates = array_values(array_filter($players, static fn(array $p): bool => !in_array('ARQ', ordered_player_positions($p), true)));
     usort($candidates, static function (array $a, array $b): int {
-        if ((float) $a['skill'] !== (float) $b['skill']) {
-            return (float) $a['skill'] <=> (float) $b['skill'];
+        $ratingA = player_overall_rating($a);
+        $ratingB = player_overall_rating($b);
+        if ($ratingA !== $ratingB) {
+            return $ratingA <=> $ratingB;
         }
         return strcmp((string) $a['name'], (string) $b['name']);
     });
@@ -72,8 +74,10 @@ function build_team_position_assignment(array $team): array
         if ($pureA !== $pureB) {
             return $pureA <=> $pureB;
         }
-        if ((float) $b['skill'] !== (float) $a['skill']) {
-            return (float) $b['skill'] <=> (float) $a['skill'];
+        $ratingA = player_overall_rating($a);
+        $ratingB = player_overall_rating($b);
+        if ($ratingB !== $ratingA) {
+            return $ratingB <=> $ratingA;
         }
         return strcmp((string) $a['name'], (string) $b['name']);
     });
@@ -82,8 +86,10 @@ function build_team_position_assignment(array $team): array
     if ($goalkeeperId === null && $team) {
         $fallback = $team;
         usort($fallback, static function (array $a, array $b): int {
-            if ((float) $a['skill'] !== (float) $b['skill']) {
-                return (float) $a['skill'] <=> (float) $b['skill'];
+            $ratingA = player_overall_rating($a);
+            $ratingB = player_overall_rating($b);
+            if ($ratingA !== $ratingB) {
+                return $ratingA <=> $ratingB;
             }
             return strcmp((string) $a['name'], (string) $b['name']);
         });
@@ -243,8 +249,8 @@ function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
         $score = 0.0;
         $slow = 0;
         foreach ($team as $player) {
-            $score += (float) $player['skill'];
-            if (($player['pace'] ?? '') === 'lento') {
+            $score += player_overall_rating($player);
+            if (player_is_low_rhythm($player)) {
                 $slow++;
             }
         }
@@ -283,14 +289,16 @@ function decorate_teams(array $teams): array
         }
         foreach (array_keys($linePlayers) as $line) {
             usort($linePlayers[$line], static function (array $a, array $b): int {
-                if ((float) $b['skill'] !== (float) $a['skill']) {
-                    return (float) $b['skill'] <=> (float) $a['skill'];
+                $ratingA = player_overall_rating($a);
+                $ratingB = player_overall_rating($b);
+                if ($ratingB !== $ratingA) {
+                    return $ratingB <=> $ratingA;
                 }
                 return strcmp((string) $a['name'], (string) $b['name']);
             });
         }
 
-        $totalSkill = array_reduce($team, static fn(float $carry, array $p): float => $carry + (float) $p['skill'], 0.0);
+        $totalSkill = array_reduce($team, static fn(float $carry, array $p): float => $carry + player_overall_rating($p), 0.0);
         $out[] = [
             'team_number' => $index + 1,
             'players' => $team,
@@ -326,38 +334,63 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
 
         $gkIds = array_map(static fn(array $p): int => (int) $p['id'], $starterGk);
         $fieldPool = array_values(array_filter($players, static fn(array $p): bool => !in_array((int) $p['id'], $gkIds, true)));
-        $slowField = array_values(array_filter($fieldPool, static fn(array $p): bool => ($p['pace'] ?? '') === 'lento'));
-        $fastField = array_values(array_filter($fieldPool, static fn(array $p): bool => ($p['pace'] ?? '') !== 'lento'));
+        $slowField = array_values(array_filter($fieldPool, static fn(array $p): bool => player_is_low_rhythm($p)));
+        $fastField = array_values(array_filter($fieldPool, static fn(array $p): bool => !player_is_low_rhythm($p)));
         shuffle($slowField);
-        usort($fastField, static fn(array $a, array $b): int => (float) $b['skill'] <=> (float) $a['skill']);
+        usort($fastField, static fn(array $a, array $b): int => player_overall_rating($b) <=> player_overall_rating($a));
 
         $teams = array_fill(0, $numTeams, []);
         $teamPoints = array_fill(0, $numTeams, 0.0);
+        $teamStats = array_fill(0, $numTeams, array_fill_keys(player_field_stat_fields(), 0.0));
+        $lowRhythmCounts = array_fill(0, $numTeams, 0);
+
+        $addPlayerToTeam = static function (array $player, int $teamIndex) use (&$teams, &$teamPoints, &$teamStats, &$lowRhythmCounts): void {
+            $teams[$teamIndex][] = $player;
+            $teamPoints[$teamIndex] += player_overall_rating($player);
+            foreach (player_field_stat_fields() as $field) {
+                $teamStats[$teamIndex][$field] += player_effective_stat($player, $field);
+            }
+            if (player_is_low_rhythm($player)) {
+                $lowRhythmCounts[$teamIndex]++;
+            }
+        };
+
+        $chooseBestTeam = static function (array $player, array $available) use (&$teamPoints, &$teamStats, &$lowRhythmCounts): int {
+            $bestTeam = $available[0];
+            $bestCost = null;
+            foreach ($available as $teamIndex) {
+                $projectedPoints = $teamPoints;
+                $projectedStats = $teamStats;
+                $projectedLowRhythm = $lowRhythmCounts;
+                $projectedPoints[$teamIndex] += player_overall_rating($player);
+                foreach (player_field_stat_fields() as $field) {
+                    $projectedStats[$teamIndex][$field] += player_effective_stat($player, $field);
+                }
+                if (player_is_low_rhythm($player)) {
+                    $projectedLowRhythm[$teamIndex]++;
+                }
+
+                $cost = (max($projectedPoints) - min($projectedPoints)) * 10;
+                foreach (player_field_stat_fields() as $field) {
+                    $values = array_map(static fn(array $stats): float => (float) $stats[$field], $projectedStats);
+                    $cost += max($values) - min($values);
+                }
+                $cost += (max($projectedLowRhythm) - min($projectedLowRhythm)) * 3;
+                $cost += count($available) > 1 ? (mt_rand(0, 100) / 100000) : 0;
+
+                if ($bestCost === null || $cost < $bestCost) {
+                    $bestCost = $cost;
+                    $bestTeam = $teamIndex;
+                }
+            }
+            return $bestTeam;
+        };
 
         for ($i = 0; $i < $numTeams; $i++) {
-            $teams[$i][] = $starterGk[$i];
-            $teamPoints[$i] += (float) $starterGk[$i]['skill'];
+            $addPlayerToTeam($starterGk[$i], $i);
         }
 
-        foreach ($slowField as $i => $player) {
-            $idx = $i % $numTeams;
-            if (count($teams[$idx]) >= $teamSize) {
-                $available = [];
-                for ($t = 0; $t < $numTeams; $t++) {
-                    if (count($teams[$t]) < $teamSize) {
-                        $available[] = $t;
-                    }
-                }
-                if (!$available) {
-                    break;
-                }
-                $idx = $available[array_rand($available)];
-            }
-            $teams[$idx][] = $player;
-            $teamPoints[$idx] += (float) $player['skill'];
-        }
-
-        foreach ($fastField as $player) {
+        foreach (array_merge($slowField, $fastField) as $player) {
             $available = [];
             for ($t = 0; $t < $numTeams; $t++) {
                 if (count($teams[$t]) < $teamSize) {
@@ -367,16 +400,8 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
             if (!$available) {
                 break;
             }
-            $target = $available[0];
-            $min = $teamPoints[$target];
-            foreach ($available as $t) {
-                if ($teamPoints[$t] < $min) {
-                    $min = $teamPoints[$t];
-                    $target = $t;
-                }
-            }
-            $teams[$target][] = $player;
-            $teamPoints[$target] += (float) $player['skill'];
+            $target = $chooseBestTeam($player, $available);
+            $addPlayerToTeam($player, $target);
         }
 
         $allFull = true;

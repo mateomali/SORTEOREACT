@@ -792,7 +792,7 @@
       }
       return field.value;
     };
-    const snapshot = fields.map((field) => ({
+    let snapshot = fields.map((field) => ({
       field,
       value: normalizedFieldValue(field),
     }));
@@ -802,11 +802,74 @@
       ));
       row.classList.toggle('is-dirty', isDirty);
     };
+    row.updatePlayerDirtySnapshot = () => {
+      snapshot = fields.map((field) => ({
+        field,
+        value: normalizedFieldValue(field),
+      }));
+      updateDirtyState();
+    };
     fields.forEach((field) => {
       field.addEventListener('input', updateDirtyState);
       field.addEventListener('change', updateDirtyState);
     });
     updateDirtyState();
+  });
+
+  document.addEventListener('submit', async (event) => {
+    const form = event.target.closest('form[id^="player-row-"]');
+    if (!form) return;
+
+    const row = document.querySelector(`[data-player-edit-row] [form="${form.id}"]`)?.closest('[data-player-edit-row]');
+    const saveButton = document.querySelector(`[data-player-row-save][form="${form.id}"]`);
+    if (!row || !saveButton || saveButton.disabled) return;
+
+    event.preventDefault();
+    const formData = new FormData(form);
+    formData.set('ajax', '1');
+    saveButton.disabled = true;
+    saveButton.classList.add('is-loading');
+    row.classList.add('is-saving');
+    row.classList.remove('is-saved');
+
+    try {
+      const response = await fetch(form.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'fetch' },
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.message || 'No se pudo guardar el jugador.');
+      }
+
+      if (payload.player?.search) {
+        row.setAttribute('data-search', payload.player.search);
+      }
+      if (payload.player?.skill !== undefined) {
+        const general = row.querySelector('[data-general-rating]');
+        const value = general?.querySelector('[data-general-rating-value]');
+        const stars = general?.querySelector('[data-general-rating-stars]');
+        const rating = Number(payload.player.skill || 0);
+        if (value) value.textContent = `${Number.isInteger(rating) ? String(rating) : rating.toFixed(1)}/6`;
+        if (stars) {
+          const full = Math.floor(rating);
+          const half = rating % 1 !== 0;
+          stars.textContent = '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)));
+        }
+      }
+
+      row.updatePlayerDirtySnapshot?.();
+      row.classList.add('is-saved');
+      showToast(payload.message || 'Jugador actualizado.', 'success');
+      window.setTimeout(() => row.classList.remove('is-saved'), 1200);
+    } catch (error) {
+      showToast(error.message || 'No se pudo guardar el jugador.', 'error');
+    } finally {
+      row.classList.remove('is-saving');
+      saveButton.disabled = false;
+      saveButton.classList.remove('is-loading');
+    }
   });
 
   document.querySelectorAll('[data-player-edit-open]').forEach((button) => {

@@ -6,6 +6,8 @@ require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
 
+ensure_control_schema();
+
 $showHistoryPage = defined('SHOW_HISTORY_PAGE') && SHOW_HISTORY_PAGE;
 $title = ($showHistoryPage ? 'Historial' : 'Inicio') . ' | ' . APP_NAME;
 $activePage = $showHistoryPage ? 'historial.php' : 'index.php';
