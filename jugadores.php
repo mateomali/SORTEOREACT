@@ -49,26 +49,25 @@ $isAjaxRequest = ($_POST['ajax'] ?? '') === '1'
 
 $hasValidAjaxToken = $isAjaxRequest && valid_player_ajax_token((string) ($_POST['ajax_token'] ?? ''));
 $hasSameOriginAjax = $isAjaxRequest && player_same_origin_ajax_request();
+$isAdmin = is_admin();
 
-if (!is_admin() && $isAjaxRequest && !$hasValidAjaxToken && !$hasSameOriginAjax) {
-    http_response_code(401);
-    header('Content-Type: application/json; charset=utf-8');
-    $next = $_SERVER['HTTP_REFERER'] ?? ($_SERVER['REQUEST_URI'] ?? 'jugadores.php');
-    echo json_encode([
-        'ok' => false,
-        'message' => 'La sesion expiro. Volve a iniciar sesion e intenta guardar nuevamente.',
-        'login_url' => 'login.php?next=' . rawurlencode((string) $next),
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if (!is_admin() && !$hasValidAjaxToken && !$hasSameOriginAjax) {
-    require_admin();
+if (!$isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($isAjaxRequest) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => false,
+            'message' => 'No tenes permisos para modificar jugadores.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    flash('error', 'Solo un administrador puede modificar jugadores.');
+    redirect('jugadores.php');
 }
 ensure_control_schema();
 
 $pdo = db();
-$showInactive = ($_GET['show_inactive'] ?? $_POST['show_inactive'] ?? '') === '1';
+$showInactive = $isAdmin && (($_GET['show_inactive'] ?? $_POST['show_inactive'] ?? '') === '1');
 
 function player_row_search_text(array $player): string
 {
@@ -314,18 +313,20 @@ $fieldWeightHelp = [
     'Compromiso 15%' => 'Importa, pero no infla demasiado a jugadores solo ordenados.',
 ];
 
-function stat_rating_control(string $name, float $value, ?string $formId = null, bool $compact = false): string
+function stat_rating_control(string $name, float $value, ?string $formId = null, bool $compact = false, bool $readonly = false): string
 {
     $rating = (int) max(1, min(6, round($value)));
     $formAttr = $formId !== null ? ' form="' . h($formId) . '"' : '';
-    $classes = 'stat-rating' . ($compact ? ' stat-rating-compact' : '');
-    $html = '<div class="' . $classes . '" data-stat-rating>';
+    $classes = 'stat-rating' . ($compact ? ' stat-rating-compact' : '') . ($readonly ? ' stat-rating-readonly' : '');
+    $readonlyAttr = $readonly ? ' data-stat-rating-readonly' : '';
+    $disabledAttr = $readonly ? ' disabled' : '';
+    $html = '<div class="' . $classes . '" data-stat-rating' . $readonlyAttr . '>';
     $html .= '<input type="hidden" name="' . h($name) . '" value="' . $rating . '"' . $formAttr . ' data-stat-rating-input>';
     $html .= '<div class="stat-rating-stars" role="radiogroup" aria-label="' . h($name) . '">';
     for ($i = 1; $i <= 6; $i++) {
         $active = $i <= $rating ? ' is-active' : '';
         $checked = $i === $rating ? 'true' : 'false';
-        $html .= '<button type="button" class="stat-star' . $active . '" data-stat-value="' . $i . '" role="radio" aria-checked="' . $checked . '" aria-label="' . $i . ' de 6">★</button>';
+        $html .= '<button type="button" class="stat-star' . $active . '" data-stat-value="' . $i . '" role="radio" aria-checked="' . $checked . '" aria-label="' . $i . ' de 6"' . $disabledAttr . '>★</button>';
     }
     $html .= '</div>';
     $html .= '<span class="stat-rating-value" data-stat-rating-value>' . $rating . '/6</span>';
@@ -379,21 +380,24 @@ require __DIR__ . '/includes/header.php';
 <section class="page-head">
   <div>
     <h1>Jugadores</h1>
-    <p class="small-muted">Alta, edicion y administracion general de la plantilla.</p>
+    <p class="small-muted"><?= $isAdmin ? 'Alta, edicion y administracion general de la plantilla.' : 'Consulta de plantilla, posiciones y stats actuales.' ?></p>
   </div>
-  <a class="btn btn-muted" href="migrar_csv.php">Migrar desde CSV</a>
+  <?php if ($isAdmin): ?>
+    <a class="btn btn-muted" href="migrar_csv.php">Migrar desde CSV</a>
+  <?php endif; ?>
 </section>
 
-<details class="card mb-3.5 player-create-drawer">
-  <summary class="player-create-summary">
-    <span>Agregar jugador</span>
-    <small>Cargar nuevo jugador</small>
-  </summary>
-  <form method="post" class="player-create-body">
-    <input type="hidden" name="action" value="save">
-    <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
-    <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>">
-    <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+<?php if ($isAdmin): ?>
+  <details class="card mb-3.5 player-create-drawer">
+    <summary class="player-create-summary">
+      <span>Agregar jugador</span>
+      <small>Cargar nuevo jugador</small>
+    </summary>
+    <form method="post" class="player-create-body">
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
+      <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>">
+      <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
 
     <div class="form-grid">
       <div class="form-row">
@@ -442,16 +446,17 @@ require __DIR__ . '/includes/header.php';
           <?= stat_rating_control('goalkeeper_skill', player_effective_stat($form, 'goalkeeper_skill')) ?>
         </div>
       </div>
-      <?= player_stats_radar_panel() ?>
-    </div>
+        <?= player_stats_radar_panel() ?>
+      </div>
 
-    <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
+      <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 
-    <div class="btn-row">
-      <button class="btn btn-primary" type="submit">Crear jugador</button>
-    </div>
-  </form>
-</details>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="submit">Crear jugador</button>
+      </div>
+    </form>
+  </details>
+<?php endif; ?>
 
 <section class="card">
   <div class="section-toolbar">
@@ -459,9 +464,11 @@ require __DIR__ . '/includes/header.php';
       <h3>Listado de jugadores</h3>
       <p class="small-muted"><?= $showInactive ? 'Mostrando activos e inactivos.' : 'Mostrando solo jugadores activos.' ?></p>
     </div>
-    <a class="btn btn-muted" href="<?= $showInactive ? 'jugadores.php' : 'jugadores.php?show_inactive=1' ?>">
-      <?= $showInactive ? 'Ver solo activos' : 'Ver inactivos' ?>
-    </a>
+    <?php if ($isAdmin): ?>
+      <a class="btn btn-muted" href="<?= $showInactive ? 'jugadores.php' : 'jugadores.php?show_inactive=1' ?>">
+        <?= $showInactive ? 'Ver solo activos' : 'Ver inactivos' ?>
+      </a>
+    <?php endif; ?>
     <input type="text" data-player-list-search placeholder="Buscar jugador por nombre, posicion o stats">
   </div>
   <div class="players-desktop-help">
@@ -486,23 +493,30 @@ require __DIR__ . '/includes/header.php';
               <small><?= h((string) $player['positions']) ?> | General <?= h(skill_label(player_overall_rating($player))) ?></small>
             </span>
             <span class="mobile-player-list-actions">
-              <form method="post" class="inline">
-                <input type="hidden" name="action" value="toggle_active">
-                <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
-                <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
-                <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
-                <button class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>" type="button" title="Cambiar estado" data-player-status-toggle>
+              <?php if ($isAdmin): ?>
+                <form method="post" class="inline">
+                  <input type="hidden" name="action" value="toggle_active">
+                  <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
+                  <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+                  <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
+                  <button class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>" type="button" title="Cambiar estado" data-player-status-toggle>
+                    <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
+                  </button>
+                </form>
+                <button class="btn btn-muted player-icon-button icon-pencil" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"></button>
+                <form method="post" class="inline">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
+                  <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+                  <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
+                  <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar">X</button>
+                </form>
+              <?php else: ?>
+                <span class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>">
                   <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
-                </button>
-              </form>
-              <button class="btn btn-muted player-icon-button icon-pencil" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"></button>
-              <form method="post" class="inline">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
-                <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
-                <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
-                <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar">X</button>
-              </form>
+                </span>
+                <button class="btn btn-muted" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">Ver</button>
+              <?php endif; ?>
             </span>
           </article>
         <?php endforeach; ?>
@@ -517,12 +531,14 @@ require __DIR__ . '/includes/header.php';
           <th>Posiciones</th>
           <th>General</th>
           <th>Stats</th>
-          <th>Acc.</th>
+          <?php if ($isAdmin): ?>
+            <th>Acc.</th>
+          <?php endif; ?>
         </tr>
       </thead>
       <tbody>
       <?php if (!$players): ?>
-        <tr><td colspan="5">No hay jugadores cargados.</td></tr>
+        <tr><td colspan="<?= $isAdmin ? '5' : '4' ?>">No hay jugadores cargados.</td></tr>
       <?php else: ?>
         <?php foreach ($players as $player): ?>
           <?php
@@ -533,22 +549,28 @@ require __DIR__ . '/includes/header.php';
           ?>
           <tr data-player-table-row data-player-edit-row data-player-id="<?= $playerId ?>" data-search="<?= h($rowSearch) ?>">
             <td>
-              <input type="hidden" name="action" value="save" form="<?= h($rowFormId) ?>">
-              <input type="hidden" name="id" value="<?= $playerId ?>" form="<?= h($rowFormId) ?>">
-              <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>" form="<?= h($rowFormId) ?>">
-              <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>" form="<?= h($rowFormId) ?>">
-              <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>" form="<?= h($rowFormId) ?>">
+              <?php if ($isAdmin): ?>
+                <input type="hidden" name="action" value="save" form="<?= h($rowFormId) ?>">
+                <input type="hidden" name="id" value="<?= $playerId ?>" form="<?= h($rowFormId) ?>">
+                <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>" form="<?= h($rowFormId) ?>">
+                <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>" form="<?= h($rowFormId) ?>">
+                <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>" form="<?= h($rowFormId) ?>">
+              <?php endif; ?>
               <label class="player-active-inline">
-                <input type="checkbox" name="active" value="1" form="<?= h($rowFormId) ?>" <?= checked_attr((int) $player['active'] === 1) ?>>
+                <input type="checkbox" name="active" value="1" <?= $isAdmin ? 'form="' . h($rowFormId) . '"' : 'disabled' ?> <?= checked_attr((int) $player['active'] === 1) ?>>
                 Activo
               </label>
-              <input class="table-input" type="text" name="name" required value="<?= h((string) $player['name']) ?>" form="<?= h($rowFormId) ?>">
+              <?php if ($isAdmin): ?>
+                <input class="table-input" type="text" name="name" required value="<?= h((string) $player['name']) ?>" form="<?= h($rowFormId) ?>">
+              <?php else: ?>
+                <strong class="player-readonly-name"><?= h((string) $player['name']) ?></strong>
+              <?php endif; ?>
             </td>
             <td>
               <div class="inline-checks">
                 <?php foreach (allowed_positions() as $pos): ?>
                   <label class="mini-chip">
-                    <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" form="<?= h($rowFormId) ?>" <?= checked_attr(in_array($pos, $rowPositions, true)) ?>>
+                    <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= $isAdmin ? 'form="' . h($rowFormId) . '"' : 'disabled' ?> <?= checked_attr(in_array($pos, $rowPositions, true)) ?>>
                     <?= h($pos) ?>
                   </label>
                 <?php endforeach; ?>
@@ -566,28 +588,30 @@ require __DIR__ . '/includes/header.php';
                 <?php foreach (player_field_stat_fields() as $field): ?>
                   <div class="player-table-stat">
                     <span><?= h($statLabels[$field]) ?></span>
-                    <?= stat_rating_control($field, player_effective_stat($player, $field), $rowFormId, true) ?>
+                    <?= stat_rating_control($field, player_effective_stat($player, $field), $isAdmin ? $rowFormId : null, true, !$isAdmin) ?>
                   </div>
                 <?php endforeach; ?>
                 <div class="player-table-stat" data-goalkeeper-stat-row>
                   <span><?= h($statLabels['goalkeeper_skill']) ?></span>
-                  <?= stat_rating_control('goalkeeper_skill', player_effective_stat($player, 'goalkeeper_skill'), $rowFormId, true) ?>
+                  <?= stat_rating_control('goalkeeper_skill', player_effective_stat($player, 'goalkeeper_skill'), $isAdmin ? $rowFormId : null, true, !$isAdmin) ?>
                 </div>
               </div>
             </td>
-            <td>
-              <div class="btn-row">
-                <form id="<?= h($rowFormId) ?>" method="post"></form>
-                <button class="btn btn-primary player-action-icon player-save-icon" type="submit" form="<?= h($rowFormId) ?>" data-player-row-save aria-label="Guardar <?= h((string) $player['name']) ?>" title="Guardar"></button>
-                <form method="post" class="inline">
-                  <input type="hidden" name="action" value="delete">
-                  <input type="hidden" name="id" value="<?= $playerId ?>">
-                  <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
-                  <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>">
-                  <button class="btn btn-danger player-action-icon player-trash-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar"></button>
-                </form>
-              </div>
-            </td>
+            <?php if ($isAdmin): ?>
+              <td>
+                <div class="btn-row">
+                  <form id="<?= h($rowFormId) ?>" method="post"></form>
+                  <button class="btn btn-primary player-action-icon player-save-icon" type="submit" form="<?= h($rowFormId) ?>" data-player-row-save aria-label="Guardar <?= h((string) $player['name']) ?>" title="Guardar"></button>
+                  <form method="post" class="inline">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" value="<?= $playerId ?>">
+                    <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+                    <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>">
+                    <button class="btn btn-danger player-action-icon player-trash-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar"></button>
+                  </form>
+                </div>
+              </td>
+            <?php endif; ?>
           </tr>
         <?php endforeach; ?>
       <?php endif; ?>
@@ -602,24 +626,26 @@ require __DIR__ . '/includes/header.php';
     $rowPositions = parse_positions_csv((string) $player['positions']);
   ?>
   <dialog class="player-edit-dialog" data-player-edit-dialog="<?= $playerId ?>">
-    <form method="post" class="player-edit-panel">
+    <form method="post" class="player-edit-panel" <?= $isAdmin ? '' : 'data-player-readonly-form' ?>>
       <div class="player-edit-head">
         <div>
-          <h3>Editar jugador</h3>
+          <h3><?= $isAdmin ? 'Editar jugador' : 'Ver jugador' ?></h3>
           <p class="small-muted"><?= h((string) $player['name']) ?></p>
         </div>
         <button class="btn btn-muted player-icon-button" type="button" data-player-edit-close aria-label="Cerrar">X</button>
       </div>
-      <input type="hidden" name="action" value="save">
-      <input type="hidden" name="id" value="<?= $playerId ?>">
-      <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>">
-      <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
-      <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>">
+      <?php if ($isAdmin): ?>
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="id" value="<?= $playerId ?>">
+        <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>">
+        <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+        <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>">
+      <?php endif; ?>
 
       <div class="form-grid">
         <div class="form-row">
           <label>Nombre</label>
-          <input type="text" name="name" required value="<?= h((string) $player['name']) ?>">
+          <input type="text" name="name" required value="<?= h((string) $player['name']) ?>" <?= $isAdmin ? '' : 'readonly' ?>>
         </div>
         <div class="form-row">
           <label>General</label>
@@ -631,7 +657,7 @@ require __DIR__ . '/includes/header.php';
         <div class="form-row">
           <label>Estado</label>
           <label class="chip">
-            <input type="checkbox" name="active" value="1" <?= checked_attr((int) $player['active'] === 1) ?>>
+            <input type="checkbox" name="active" value="1" <?= checked_attr((int) $player['active'] === 1) ?> <?= $isAdmin ? '' : 'disabled' ?>>
             Jugador activo
           </label>
         </div>
@@ -642,7 +668,7 @@ require __DIR__ . '/includes/header.php';
         <div class="check-row">
           <?php foreach (allowed_positions() as $pos): ?>
             <label class="chip">
-              <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= checked_attr(in_array($pos, $rowPositions, true)) ?>>
+              <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= checked_attr(in_array($pos, $rowPositions, true)) ?> <?= $isAdmin ? '' : 'disabled' ?>>
               <?= h($pos) ?>
             </label>
           <?php endforeach; ?>
@@ -653,12 +679,12 @@ require __DIR__ . '/includes/header.php';
         <?php foreach (player_field_stat_fields() as $field): ?>
           <div class="form-row stat-form-row">
             <label><?= h($statLabels[$field]) ?></label>
-            <?= stat_rating_control($field, player_effective_stat($player, $field)) ?>
+            <?= stat_rating_control($field, player_effective_stat($player, $field), null, false, !$isAdmin) ?>
           </div>
         <?php endforeach; ?>
         <div class="form-row stat-form-row" data-goalkeeper-stat-row>
           <label><?= h($statLabels['goalkeeper_skill']) ?></label>
-          <?= stat_rating_control('goalkeeper_skill', player_effective_stat($player, 'goalkeeper_skill')) ?>
+          <?= stat_rating_control('goalkeeper_skill', player_effective_stat($player, 'goalkeeper_skill'), null, false, !$isAdmin) ?>
         </div>
       </div>
 
@@ -667,8 +693,12 @@ require __DIR__ . '/includes/header.php';
       <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 
       <div class="btn-row">
-        <button class="btn btn-primary" type="submit">Guardar cambios</button>
-        <button class="btn btn-muted" type="button" data-player-edit-close>Cancelar</button>
+        <?php if ($isAdmin): ?>
+          <button class="btn btn-primary" type="submit">Guardar cambios</button>
+          <button class="btn btn-muted" type="button" data-player-edit-close>Cancelar</button>
+        <?php else: ?>
+          <button class="btn btn-muted" type="button" data-player-edit-close>Cerrar</button>
+        <?php endif; ?>
       </div>
     </form>
   </dialog>
@@ -676,7 +706,7 @@ require __DIR__ . '/includes/header.php';
 
 <script>
   (() => {
-    window.playerAjaxToken = '<?= h(player_ajax_token()) ?>';
+    window.playerAjaxToken = '<?= $isAdmin ? h(player_ajax_token()) : '' ?>';
     const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork'];
     const fullStars = (rating) => {
       const full = Math.floor(rating);
@@ -820,6 +850,9 @@ require __DIR__ . '/includes/header.php';
     document.querySelectorAll('[data-stat-rating]').forEach((root) => {
       const input = root.querySelector('[data-stat-rating-input]');
       setRating(root, input?.value || 3);
+      if (root.hasAttribute('data-stat-rating-readonly')) {
+        return;
+      }
       root.querySelectorAll('[data-stat-value]').forEach((button) => {
         button.addEventListener('click', () => setRating(root, button.getAttribute('data-stat-value')));
         button.addEventListener('keydown', (event) => {
@@ -864,6 +897,10 @@ require __DIR__ . '/includes/header.php';
         input.addEventListener('change', () => syncGoalkeeperStats(scope));
       });
       updateGeneralRating(scope);
+    });
+
+    document.querySelectorAll('[data-player-readonly-form]').forEach((form) => {
+      form.addEventListener('submit', (event) => event.preventDefault());
     });
   })();
 </script>

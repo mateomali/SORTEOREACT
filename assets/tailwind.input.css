@@ -457,6 +457,14 @@
     @apply shrink-0 rounded-full bg-emerald-950 px-2.5 py-1 text-xs font-extrabold text-white;
   }
 
+  .stat-rating-readonly .stat-star {
+    @apply cursor-default;
+  }
+
+  .stat-rating-readonly .stat-star:not(.is-active) {
+    @apply opacity-80;
+  }
+
   .player-general-rating {
     @apply flex min-h-11 items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2;
   }
@@ -743,6 +751,10 @@
 
   .player-active-inline input {
     @apply m-0;
+  }
+
+  .player-readonly-name {
+    @apply block text-sm font-extrabold text-emerald-950;
   }
 
   .stats-summary {

@@ -11,10 +11,10 @@ $publicMenu = [
     'index.php' => 'Inicio',
     'historial.php' => 'Historial',
     'estadisticas.php' => 'Estadisticas',
+    'jugadores.php' => 'Jugadores',
 ];
 $adminMenu = is_admin()
     ? [
-        'jugadores.php' => 'Jugadores',
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
         'backup.php' => 'Backup',
