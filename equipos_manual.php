@@ -21,6 +21,12 @@ $players = array_map(static fn(array $p): array => [
     'positions' => (string) $p['positions'],
     'pace' => (string) $p['pace'],
     'skill' => (float) $p['skill'],
+    'technique' => player_effective_stat($p, 'technique'),
+    'rhythm' => player_effective_stat($p, 'rhythm'),
+    'defense_physical' => player_effective_stat($p, 'defense_physical'),
+    'attack' => player_effective_stat($p, 'attack'),
+    'teamwork' => player_effective_stat($p, 'teamwork'),
+    'goalkeeper_skill' => player_effective_stat($p, 'goalkeeper_skill'),
 ], $participants);
 
 $title = 'Equipos manuales | ' . APP_NAME;
@@ -77,6 +83,7 @@ require __DIR__ . '/includes/header.php';
     <div class="manual-mobile-assign-panel" data-manual-mobile-panel hidden></div>
     <div class="manual-save-footer mt-3">
       <p class="small-muted" data-manual-formation-note>Completa todos los equipos para habilitar formaciones y guardar.</p>
+      <div class="manual-team-characteristics" data-manual-team-characteristics hidden></div>
       <button class="btn btn-primary" type="button" data-manual-save>Guardar equipos</button>
     </div>
   </section>

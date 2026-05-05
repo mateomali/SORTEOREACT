@@ -607,6 +607,51 @@ require __DIR__ . '/includes/header.php';
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
         return players.reduce((total, player) => total + Number(player.skill || 0), 0);
       };
+      const statValue = (player, field) => {
+        const value = Number(player[field]);
+        return Number.isFinite(value) && value > 0 ? value : Number(player.skill || 0);
+      };
+      const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
+      const teamCharacteristics = (players) => {
+        const average = (field) => players.length
+          ? players.reduce((sum, player) => sum + statValue(player, field), 0) / players.length
+          : 0;
+        const goalkeeperSkill = players.reduce((max, player) => {
+          if (!String(player.positions || '').split('/').map(pos => pos.trim().toUpperCase()).includes('ARQ')) return max;
+          return Math.max(max, statValue(player, 'goalkeeper_skill'));
+        }, 0);
+        return {
+          total: players.reduce((sum, player) => sum + Number(player.skill || 0), 0),
+          attack: average('attack'),
+          defensePhysical: average('defense_physical'),
+          rhythm: average('rhythm'),
+          technique: average('technique'),
+          teamwork: average('teamwork'),
+          goalkeeperSkill,
+          slow: players.filter(lowRhythm).length,
+          fast: players.filter(player => !lowRhythm(player)).length,
+        };
+      };
+      const teamCharacteristicsHtml = (teamNumber, players) => {
+        const summary = teamCharacteristics(players);
+        return `
+          <div class="team-characteristics-card captain-team-characteristics" data-team-characteristics="${teamNumber}">
+            <strong>Caracteristicas del equipo</strong>
+            <div class="team-characteristics-main">
+              <span>General ${summary.total.toFixed(1)}</span>
+              <span>${summary.fast} rapidos / ${summary.slow} lentos</span>
+            </div>
+            <div class="team-characteristics-stats">
+              <span>Ataque ${summary.attack.toFixed(1)}</span>
+              <span>Solidez ${summary.defensePhysical.toFixed(1)}</span>
+              <span>Ritmo ${summary.rhythm.toFixed(1)}</span>
+              <span>Tecnica ${summary.technique.toFixed(1)}</span>
+              <span>Compromiso ${summary.teamwork.toFixed(1)}</span>
+              ${summary.goalkeeperSkill > 0 ? `<span>Arquero ${summary.goalkeeperSkill.toFixed(1)}</span>` : ''}
+            </div>
+          </div>
+        `;
+      };
       const teamNumbers = () => (state?.match?.team_numbers || Object.keys(state?.draft?.captains || {})).map(Number).filter(Boolean);
       const updateTeamTitle = (teamNumber) => {
         const title = document.getElementById(`team${teamNumber}Title`);
@@ -1064,6 +1109,10 @@ require __DIR__ . '/includes/header.php';
             const players = state.teams[String(renderTeamNumber)] || state.teams[renderTeamNumber] || [];
             renderFormationLines(teamContainer, players);
             renderCustomFormationControls(teamContainer, players);
+            const summary = teamContainer.querySelector(`[data-team-characteristics="${renderTeamNumber}"]`);
+            if (summary) {
+              summary.outerHTML = teamCharacteristicsHtml(renderTeamNumber, players);
+            }
           }
         });
       };
@@ -1391,6 +1440,7 @@ require __DIR__ . '/includes/header.php';
         </div>
         <div class="team-formation captain-formation-field" data-drop-team="${teamNumber}"></div>
         <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
+        ${teamCharacteristicsHtml(teamNumber, players)}
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar formacion</button>
       `;
 

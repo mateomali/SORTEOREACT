@@ -5,10 +5,70 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
 
-require_admin();
+function player_ajax_token(): string
+{
+    return hash_hmac('sha256', 'players-save|' . date('Y-m-d'), ADMIN_PASSWORD);
+}
+
+function valid_player_ajax_token(string $token): bool
+{
+    if ($token === '') {
+        return false;
+    }
+    $today = hash_hmac('sha256', 'players-save|' . date('Y-m-d'), ADMIN_PASSWORD);
+    $yesterday = hash_hmac('sha256', 'players-save|' . date('Y-m-d', strtotime('-1 day')), ADMIN_PASSWORD);
+    return hash_equals($today, $token) || hash_equals($yesterday, $token);
+}
+
+function player_same_origin_ajax_request(): bool
+{
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === '') {
+        return false;
+    }
+
+    foreach (['HTTP_ORIGIN', 'HTTP_REFERER'] as $key) {
+        $value = (string) ($_SERVER[$key] ?? '');
+        if ($value === '') {
+            continue;
+        }
+        $parts = parse_url($value);
+        $requestHost = strtolower((string) ($parts['host'] ?? ''));
+        $requestPort = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
+        if ($requestHost !== '' && ($requestHost === $host || ($requestHost . $requestPort) === $host)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+$isAjaxRequest = ($_POST['ajax'] ?? '') === '1'
+    || strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'fetch'
+    || strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+
+$hasValidAjaxToken = $isAjaxRequest && valid_player_ajax_token((string) ($_POST['ajax_token'] ?? ''));
+$hasSameOriginAjax = $isAjaxRequest && player_same_origin_ajax_request();
+
+if (!is_admin() && $isAjaxRequest && !$hasValidAjaxToken && !$hasSameOriginAjax) {
+    http_response_code(401);
+    header('Content-Type: application/json; charset=utf-8');
+    $next = $_SERVER['HTTP_REFERER'] ?? ($_SERVER['REQUEST_URI'] ?? 'jugadores.php');
+    echo json_encode([
+        'ok' => false,
+        'message' => 'La sesion expiro. Volve a iniciar sesion e intenta guardar nuevamente.',
+        'login_url' => 'login.php?next=' . rawurlencode((string) $next),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (!is_admin() && !$hasValidAjaxToken && !$hasSameOriginAjax) {
+    require_admin();
+}
 ensure_control_schema();
 
 $pdo = db();
+$showInactive = ($_GET['show_inactive'] ?? $_POST['show_inactive'] ?? '') === '1';
 
 function player_row_search_text(array $player): string
 {
@@ -17,6 +77,8 @@ function player_row_search_text(array $player): string
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    $returnAnchor = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($_POST['return_anchor'] ?? ''));
+    $playersReturnUrl = 'jugadores.php' . ($showInactive ? '?show_inactive=1' : '') . ($returnAnchor !== '' ? '#' . $returnAnchor : '');
 
     if ($action === 'delete') {
         $id = (int) ($_POST['id'] ?? 0);
@@ -28,10 +90,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Throwable $e) {
                 $deactivate = $pdo->prepare('UPDATE players SET active = 0 WHERE id = :id');
                 $deactivate->execute(['id' => $id]);
-                flash('info', 'El jugador tiene historial. Se desactivo en lugar de eliminarse.');
+                flash('info', 'El jugador tiene historial. Se oculto del listado y se conserva para estadisticas.');
             }
         }
-        redirect('jugadores.php');
+        redirect($playersReturnUrl);
     }
 
     if ($action === 'toggle_active') {
@@ -61,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['ok' => false]);
             exit;
         }
-        redirect('jugadores.php');
+        redirect($playersReturnUrl);
     }
 
     if ($action === 'save') {
@@ -79,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             flash('error', 'Nombre y posiciones son obligatorios.');
-            redirect($id > 0 ? 'jugadores.php?edit=' . $id : 'jugadores.php');
+            redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
         }
 
         $positionsCsv = join_positions(array_map('strval', $positions));
@@ -91,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             flash('error', 'Debes seleccionar al menos una posicion valida.');
-            redirect($id > 0 ? 'jugadores.php?edit=' . $id : 'jugadores.php');
+            redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
         }
 
         $technique = normalize_player_stat($_POST['technique'] ?? null);
@@ -201,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             flash('success', 'Jugador agregado correctamente.');
         }
-        redirect('jugadores.php');
+        redirect($playersReturnUrl);
     }
 }
 
@@ -296,7 +358,19 @@ function player_stats_help_panel(array $statLabels, array $statHelp, array $rati
     return $html;
 }
 
-$players = repo_all_players();
+function player_stats_radar_panel(bool $compact = false): string
+{
+    $class = 'player-radar-card' . ($compact ? ' player-radar-card-compact' : '');
+    return '<aside class="' . $class . '" data-player-radar hidden>
+      <div class="player-radar-head">
+        <strong>Perfil del jugador</strong>
+        <span data-player-radar-subtitle>Analisis de stats</span>
+      </div>
+      <div class="player-radar-canvas" data-player-radar-canvas></div>
+    </aside>';
+}
+
+$players = repo_all_players(!$showInactive);
 $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores.php';
 require __DIR__ . '/includes/header.php';
@@ -318,6 +392,8 @@ require __DIR__ . '/includes/header.php';
   <form method="post" class="player-create-body">
     <input type="hidden" name="action" value="save">
     <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
+    <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>">
+    <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
 
     <div class="form-grid">
       <div class="form-row">
@@ -353,17 +429,20 @@ require __DIR__ . '/includes/header.php';
       </div>
     </div>
 
-    <div class="form-grid">
-      <?php foreach (player_field_stat_fields() as $field): ?>
-        <div class="form-row stat-form-row">
-          <label><?= h($statLabels[$field]) ?></label>
-          <?= stat_rating_control($field, player_effective_stat($form, $field)) ?>
+    <div class="player-stats-editor">
+      <div class="form-grid">
+        <?php foreach (player_field_stat_fields() as $field): ?>
+          <div class="form-row stat-form-row">
+            <label><?= h($statLabels[$field]) ?></label>
+            <?= stat_rating_control($field, player_effective_stat($form, $field)) ?>
+          </div>
+        <?php endforeach; ?>
+        <div class="form-row stat-form-row" data-goalkeeper-stat-row>
+          <label><?= h($statLabels['goalkeeper_skill']) ?></label>
+          <?= stat_rating_control('goalkeeper_skill', player_effective_stat($form, 'goalkeeper_skill')) ?>
         </div>
-      <?php endforeach; ?>
-      <div class="form-row stat-form-row" data-goalkeeper-stat-row>
-        <label><?= h($statLabels['goalkeeper_skill']) ?></label>
-        <?= stat_rating_control('goalkeeper_skill', player_effective_stat($form, 'goalkeeper_skill')) ?>
       </div>
+      <?= player_stats_radar_panel() ?>
     </div>
 
     <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
@@ -376,7 +455,13 @@ require __DIR__ . '/includes/header.php';
 
 <section class="card">
   <div class="section-toolbar">
-    <h3>Listado de jugadores</h3>
+    <div>
+      <h3>Listado de jugadores</h3>
+      <p class="small-muted"><?= $showInactive ? 'Mostrando activos e inactivos.' : 'Mostrando solo jugadores activos.' ?></p>
+    </div>
+    <a class="btn btn-muted" href="<?= $showInactive ? 'jugadores.php' : 'jugadores.php?show_inactive=1' ?>">
+      <?= $showInactive ? 'Ver solo activos' : 'Ver inactivos' ?>
+    </a>
     <input type="text" data-player-list-search placeholder="Buscar jugador por nombre, posicion o stats">
   </div>
   <div class="players-desktop-help">
@@ -395,7 +480,7 @@ require __DIR__ . '/includes/header.php';
           <?php
             $rowSearch = player_row_search_text($player);
           ?>
-          <article class="mobile-player-list-item" data-player-table-row data-search="<?= h($rowSearch) ?>">
+          <article id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item" data-player-table-row data-search="<?= h($rowSearch) ?>">
             <span>
               <strong><?= h((string) $player['name']) ?></strong>
               <small><?= h((string) $player['positions']) ?> | General <?= h(skill_label(player_overall_rating($player))) ?></small>
@@ -404,6 +489,8 @@ require __DIR__ . '/includes/header.php';
               <form method="post" class="inline">
                 <input type="hidden" name="action" value="toggle_active">
                 <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
+                <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+                <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
                 <button class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>" type="button" title="Cambiar estado" data-player-status-toggle>
                   <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
                 </button>
@@ -412,6 +499,8 @@ require __DIR__ . '/includes/header.php';
               <form method="post" class="inline">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
+                <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+                <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
                 <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar">X</button>
               </form>
             </span>
@@ -446,6 +535,9 @@ require __DIR__ . '/includes/header.php';
             <td>
               <input type="hidden" name="action" value="save" form="<?= h($rowFormId) ?>">
               <input type="hidden" name="id" value="<?= $playerId ?>" form="<?= h($rowFormId) ?>">
+              <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>" form="<?= h($rowFormId) ?>">
+              <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>" form="<?= h($rowFormId) ?>">
+              <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>" form="<?= h($rowFormId) ?>">
               <label class="player-active-inline">
                 <input type="checkbox" name="active" value="1" form="<?= h($rowFormId) ?>" <?= checked_attr((int) $player['active'] === 1) ?>>
                 Activo
@@ -467,6 +559,7 @@ require __DIR__ . '/includes/header.php';
                 <strong data-general-rating-value><?= h(number_format(player_overall_rating($player), 1)) ?>/6</strong>
                 <span data-general-rating-stars></span>
               </div>
+              <?= player_stats_radar_panel(true) ?>
             </td>
             <td>
               <div class="player-table-stat-grid">
@@ -489,6 +582,8 @@ require __DIR__ . '/includes/header.php';
                 <form method="post" class="inline">
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="id" value="<?= $playerId ?>">
+                  <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+                  <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>">
                   <button class="btn btn-danger player-action-icon player-trash-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar"></button>
                 </form>
               </div>
@@ -517,6 +612,9 @@ require __DIR__ . '/includes/header.php';
       </div>
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="id" value="<?= $playerId ?>">
+      <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>">
+      <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
+      <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>">
 
       <div class="form-grid">
         <div class="form-row">
@@ -564,6 +662,8 @@ require __DIR__ . '/includes/header.php';
         </div>
       </div>
 
+      <?= player_stats_radar_panel() ?>
+
       <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 
       <div class="btn-row">
@@ -576,6 +676,7 @@ require __DIR__ . '/includes/header.php';
 
 <script>
   (() => {
+    window.playerAjaxToken = '<?= h(player_ajax_token()) ?>';
     const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork'];
     const fullStars = (rating) => {
       const full = Math.floor(rating);
@@ -584,10 +685,95 @@ require __DIR__ . '/includes/header.php';
     };
 
     const formatRating = (rating) => Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
+    const radarLabels = {
+      technique: 'Tecnica',
+      rhythm: 'Ritmo',
+      defense_physical: 'Solidez',
+      attack: 'Ataque',
+      teamwork: 'Compromiso',
+      goalkeeper_skill: 'Arquero',
+    };
+    const radarShortLabels = {
+      technique: 'TEC',
+      rhythm: 'RIT',
+      defense_physical: 'SOL',
+      attack: 'ATA',
+      teamwork: 'COM',
+      goalkeeper_skill: 'ARQ',
+    };
+
+    const radarPoint = (center, radius, index, total) => {
+      const angle = (-Math.PI / 2) + (Math.PI * 2 * index / total);
+      return {
+        x: center + Math.cos(angle) * radius,
+        y: center + Math.sin(angle) * radius,
+      };
+    };
+
+    const renderPlayerRadar = (scope) => {
+      const card = scope.querySelector('[data-player-radar]');
+      const canvas = scope.querySelector('[data-player-radar-canvas]');
+      if (!card || !canvas) return;
+
+      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || 3);
+      const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
+      const fields = hasGoalkeeper ? [...statNames, 'goalkeeper_skill'] : statNames;
+      const isCompact = card.classList.contains('player-radar-card-compact');
+      const labels = isCompact ? radarShortLabels : radarLabels;
+      const size = isCompact ? 180 : 240;
+      const center = size / 2;
+      const maxRadius = isCompact ? 56 : 78;
+      const labelRadius = isCompact ? 76 : 103;
+      const levels = [1, 2, 3, 4, 5, 6];
+      const polygon = fields.map((field, index) => {
+        const value = Math.max(1, Math.min(6, getValue(field)));
+        const point = radarPoint(center, maxRadius * (value / 6), index, fields.length);
+        return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+      }).join(' ');
+
+      canvas.innerHTML = `
+        <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Diagrama de estrella de stats">
+          <g class="radar-grid">
+            ${levels.map((level) => {
+              const radius = maxRadius * (level / 6);
+              const points = fields.map((_, index) => {
+                const point = radarPoint(center, radius, index, fields.length);
+                return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+              }).join(' ');
+              return `<polygon points="${points}"></polygon>`;
+            }).join('')}
+          </g>
+          <g class="radar-axis">
+            ${fields.map((field, index) => {
+              const end = radarPoint(center, maxRadius, index, fields.length);
+              const label = radarPoint(center, labelRadius, index, fields.length);
+              const anchor = Math.abs(label.x - center) < 8 ? 'middle' : (label.x > center ? 'start' : 'end');
+              return `
+                <line x1="${center}" y1="${center}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}"></line>
+                <text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="${anchor}">${labels[field]}</text>
+              `;
+            }).join('')}
+          </g>
+          <polygon class="radar-shape" points="${polygon}"></polygon>
+          <g class="radar-points">
+            ${fields.map((field, index) => {
+              const value = Math.max(1, Math.min(6, getValue(field)));
+              const point = radarPoint(center, maxRadius * (value / 6), index, fields.length);
+              return `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="4"><title>${radarLabels[field]} ${value}/6</title></circle>`;
+            }).join('')}
+          </g>
+          <text class="radar-scale" x="${center}" y="${center + maxRadius + 31}" text-anchor="middle">Escala 1 a 6 estrellas</text>
+        </svg>
+      `;
+      card.hidden = false;
+    };
 
     const updateGeneralRating = (scope) => {
       const general = scope.querySelector('[data-general-rating]');
-      if (!general) return;
+      if (!general) {
+        renderPlayerRadar(scope);
+        return;
+      }
 
       const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || 3);
       const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
@@ -608,6 +794,7 @@ require __DIR__ . '/includes/header.php';
       const stars = general.querySelector('[data-general-rating-stars]');
       if (value) value.textContent = `${formatRating(rounded)}/6`;
       if (stars) stars.textContent = fullStars(rounded);
+      renderPlayerRadar(scope);
     };
 
     const setRating = (root, value) => {

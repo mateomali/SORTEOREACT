@@ -788,6 +788,17 @@
     const half = number % 1 !== 0;
     return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)));
   };
+  const parsePlayerJsonResponse = async (response) => {
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      if (response.redirected || /login\.php|<!doctype html|<html/i.test(text)) {
+        throw new Error('La sesion expiro. Volve a iniciar sesion e intenta guardar nuevamente.');
+      }
+      throw new Error('El servidor no devolvio una respuesta valida. Recarga la pagina e intenta nuevamente.');
+    }
+  };
   const syncPlayerStatControl = (root, value) => {
     if (!root) return;
     const rating = Math.max(1, Math.min(6, Number(value) || 1));
@@ -898,6 +909,9 @@
     event.preventDefault();
     const formData = new FormData(form);
     formData.set('ajax', '1');
+    if (!formData.get('ajax_token') && window.playerAjaxToken) {
+      formData.set('ajax_token', window.playerAjaxToken);
+    }
     saveButton.disabled = true;
     saveButton.classList.add('is-loading');
     row.classList.add('is-saving');
@@ -907,10 +921,15 @@
       const response = await fetch(form.action || window.location.href, {
         method: 'POST',
         body: formData,
+        credentials: 'same-origin',
         headers: { 'X-Requested-With': 'fetch' },
       });
-      const payload = await response.json();
+      const payload = await parsePlayerJsonResponse(response);
       if (!response.ok || !payload.ok) {
+        if (response.status === 401 && payload.login_url) {
+          window.location.href = payload.login_url;
+          return;
+        }
         throw new Error(payload.message || 'No se pudo guardar el jugador.');
       }
 
@@ -937,9 +956,16 @@
     const submitButton = event.submitter || form.querySelector('button[type="submit"]');
     if (id <= 0 || submitButton?.disabled) return;
 
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      return;
+    }
+
     event.preventDefault();
     const formData = new FormData(form);
     formData.set('ajax', '1');
+    if (!formData.get('ajax_token') && window.playerAjaxToken) {
+      formData.set('ajax_token', window.playerAjaxToken);
+    }
     if (submitButton) {
       submitButton.disabled = true;
       submitButton.dataset.originalText = submitButton.textContent || '';
@@ -950,17 +976,26 @@
       const response = await fetch(form.action || window.location.href, {
         method: 'POST',
         body: formData,
+        credentials: 'same-origin',
         headers: { 'X-Requested-With': 'fetch' },
       });
-      const payload = await response.json();
+      const payload = await parsePlayerJsonResponse(response);
       if (!response.ok || !payload.ok) {
+        if (response.status === 401 && payload.login_url) {
+          window.location.href = payload.login_url;
+          return;
+        }
         throw new Error(payload.message || 'No se pudo guardar el jugador.');
       }
       applyPlayerSavePayload(payload, form);
       showToast(payload.message || 'Jugador actualizado.', 'success');
       const dialog = form.closest('dialog');
-      if (dialog && typeof dialog.close === 'function') {
-        dialog.close();
+      if (dialog) {
+        if (typeof dialog.close === 'function') {
+          dialog.close();
+        }
+        dialog.removeAttribute('open');
+        document.activeElement?.blur?.();
       }
     } catch (error) {
       showToast(error.message || 'No se pudo guardar el jugador.', 'error');
@@ -1460,6 +1495,7 @@
     const searchInput = root.querySelector('[data-manual-player-search]');
     const mobilePanel = root.querySelector('[data-manual-mobile-panel]');
     const formationNote = root.querySelector('[data-manual-formation-note]');
+    const characteristicsPanel = root.querySelector('[data-manual-team-characteristics]');
     const saveButton = root.querySelector('[data-manual-save]');
     const players = Array.isArray(config.players) ? config.players : [];
     const numTeams = Number(config.numTeams || 2);
@@ -1520,6 +1556,73 @@
       return current.pending === 0 && !hasWrongSize && players.length === numTeams * playersPerTeam;
     };
 
+    const statValue = (player, field) => {
+      const value = Number(player[field]);
+      return Number.isFinite(value) && value > 0 ? value : Number(player.skill || 0);
+    };
+
+    const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
+
+    const teamPlayers = (teamNumber) => players.filter((player) => String(assignments.get(String(player.id))?.team || '') === String(teamNumber));
+
+    const teamCharacteristics = (team) => {
+      const total = team.reduce((sum, player) => sum + Number(player.skill || 0), 0);
+      const average = (field) => team.length
+        ? team.reduce((sum, player) => sum + statValue(player, field), 0) / team.length
+        : 0;
+      const goalkeeperSkill = team.reduce((max, player) => {
+        if (!String(player.positions || '').split('/').map((pos) => pos.trim().toUpperCase()).includes('ARQ')) return max;
+        return Math.max(max, statValue(player, 'goalkeeper_skill'));
+      }, 0);
+      return {
+        total,
+        attack: average('attack'),
+        defensePhysical: average('defense_physical'),
+        rhythm: average('rhythm'),
+        technique: average('technique'),
+        teamwork: average('teamwork'),
+        goalkeeperSkill,
+        slow: team.filter(lowRhythm).length,
+        fast: team.filter((player) => !lowRhythm(player)).length,
+      };
+    };
+
+    const renderTeamCharacteristics = () => {
+      if (!characteristicsPanel) return;
+      if (!teamsAreComplete()) {
+        characteristicsPanel.hidden = true;
+        characteristicsPanel.innerHTML = '';
+        return;
+      }
+      characteristicsPanel.hidden = false;
+      characteristicsPanel.innerHTML = `
+        <div class="team-characteristics-grid">
+          ${Array.from({ length: numTeams }, (_, index) => {
+            const teamNumber = index + 1;
+            const summary = teamCharacteristics(teamPlayers(teamNumber));
+            const color = teamColorByName(selectedTeamColors[index]);
+            return `
+              <article class="team-characteristics-card ${color.className}">
+                <strong>${teamLabel(teamNumber)} (${escapeHtml(color.name)})</strong>
+                <div class="team-characteristics-main">
+                  <span>General ${summary.total.toFixed(1)}</span>
+                  <span>${summary.fast} rapidos / ${summary.slow} lentos</span>
+                </div>
+                <div class="team-characteristics-stats">
+                  <span>Ataque ${summary.attack.toFixed(1)}</span>
+                  <span>Solidez ${summary.defensePhysical.toFixed(1)}</span>
+                  <span>Ritmo ${summary.rhythm.toFixed(1)}</span>
+                  <span>Tecnica ${summary.technique.toFixed(1)}</span>
+                  <span>Compromiso ${summary.teamwork.toFixed(1)}</span>
+                  ${summary.goalkeeperSkill > 0 ? `<span>Arquero ${summary.goalkeeperSkill.toFixed(1)}</span>` : ''}
+                </div>
+              </article>
+            `;
+          }).join('')}
+        </div>
+      `;
+    };
+
     const updateStatus = () => {
       const current = counts();
       const fullTeams = current.values.filter((count) => count === playersPerTeam).length;
@@ -1538,6 +1641,7 @@
       if (saveButton) {
         saveButton.disabled = !canSave;
       }
+      renderTeamCharacteristics();
     };
 
     const warnTeamLimitReached = () => {

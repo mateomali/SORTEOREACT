@@ -353,6 +353,82 @@
     @apply border-t border-emerald-100 p-4;
   }
 
+  .player-stats-editor {
+    @apply grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_280px];
+  }
+
+  .player-stats-editor > .form-grid {
+    @apply min-w-0;
+  }
+
+  .player-radar-card {
+    @apply rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5;
+  }
+
+  .player-radar-card-compact {
+    @apply mt-2 border-0 bg-transparent p-0 shadow-none;
+  }
+
+  .player-radar-head {
+    @apply mb-2 flex items-end justify-between gap-2;
+  }
+
+  .player-radar-head strong {
+    @apply text-sm font-extrabold text-emerald-950;
+  }
+
+  .player-radar-head span {
+    @apply text-xs font-bold text-slate-500;
+  }
+
+  .player-radar-canvas {
+    @apply mx-auto aspect-square w-full max-w-[260px];
+  }
+
+  .player-radar-card-compact .player-radar-canvas {
+    @apply max-w-[132px];
+  }
+
+  .player-radar-card-compact .player-radar-head {
+    @apply hidden;
+  }
+
+  .player-radar-card-compact .radar-axis text {
+    @apply fill-emerald-950 text-[9px] font-black;
+  }
+
+  .player-radar-card-compact .radar-scale {
+    @apply hidden;
+  }
+
+  .player-radar-canvas svg {
+    @apply h-full w-full overflow-visible;
+  }
+
+  .radar-grid polygon {
+    @apply fill-none stroke-slate-200;
+  }
+
+  .radar-axis line {
+    @apply stroke-slate-200;
+  }
+
+  .radar-axis text {
+    @apply fill-emerald-950 text-[10px] font-extrabold uppercase;
+  }
+
+  .radar-shape {
+    @apply fill-emerald-500/25 stroke-emerald-700 stroke-2;
+  }
+
+  .radar-points circle {
+    @apply fill-emerald-950 stroke-white stroke-2;
+  }
+
+  .radar-scale {
+    @apply fill-slate-500 text-[10px] font-bold;
+  }
+
   .stat-form-row {
     @apply rounded-xl border border-emerald-100 bg-white p-3 shadow-sm;
   }
@@ -492,7 +568,12 @@
   }
 
   .mobile-player-list-item {
-    @apply flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-2;
+    scroll-margin-top: 5rem;
+    @apply flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-2 transition;
+  }
+
+  .mobile-player-list-item:target {
+    @apply border border-amber-300 bg-amber-50 shadow-sm ring-4 ring-amber-100;
   }
 
   .mobile-player-list-item > span:first-child {
@@ -599,8 +680,8 @@
 
   .players-desktop-table th:nth-child(3),
   .players-desktop-table td:nth-child(3) {
-    @apply w-24;
-    min-width: 96px;
+    @apply w-36;
+    min-width: 144px;
   }
 
   .players-desktop-table th:nth-child(5),
@@ -2822,6 +2903,34 @@
     @apply mt-3 w-full;
   }
 
+  .team-characteristics-card {
+    @apply rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5;
+  }
+
+  .captain-team-characteristics {
+    @apply mt-3;
+  }
+
+  .team-characteristics-card > strong {
+    @apply block text-sm font-extrabold text-emerald-950;
+  }
+
+  .team-characteristics-main {
+    @apply mt-2 flex flex-wrap items-center gap-2;
+  }
+
+  .team-characteristics-main span {
+    @apply rounded-full bg-emerald-950 px-2.5 py-1 text-xs font-extrabold text-white;
+  }
+
+  .team-characteristics-stats {
+    @apply mt-2 flex flex-wrap gap-1.5;
+  }
+
+  .team-characteristics-stats span {
+    @apply rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[11px] font-extrabold text-emerald-950;
+  }
+
   .manual-teams-shell .section-toolbar h3 {
     @apply m-0;
   }
@@ -3032,7 +3141,7 @@
   }
 
   .manual-save-footer {
-    @apply flex flex-col items-stretch gap-2 rounded-2xl border border-emerald-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between;
+    @apply flex flex-col items-stretch gap-3 rounded-2xl border border-emerald-100 bg-white p-3;
   }
 
   .manual-save-footer .small-muted {
@@ -3040,7 +3149,39 @@
   }
 
   .manual-save-footer .btn {
-    @apply w-full sm:w-auto;
+    @apply w-full self-end sm:w-auto;
+  }
+
+  .manual-team-characteristics {
+    @apply w-full;
+  }
+
+  .team-characteristics-grid {
+    @apply grid gap-2 md:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .team-characteristics-card.manual-team-rosa {
+    @apply border-red-100 bg-red-50;
+  }
+
+  .team-characteristics-card.manual-team-azul {
+    @apply border-blue-200 bg-blue-50;
+  }
+
+  .team-characteristics-card.manual-team-naranja {
+    @apply border-amber-200 bg-amber-50;
+  }
+
+  .team-characteristics-card.manual-team-verde {
+    @apply border-emerald-200 bg-emerald-50;
+  }
+
+  .team-characteristics-card.manual-team-negro {
+    @apply border-slate-800 bg-slate-900 text-white;
+  }
+
+  .team-characteristics-card.manual-team-negro > strong {
+    @apply text-white;
   }
 
   .manual-mobile-assign-panel {
