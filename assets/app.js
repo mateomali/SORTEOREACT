@@ -123,6 +123,88 @@
     if (awardsPopoverBody) awardsPopoverBody.innerHTML = '';
   };
 
+  const initFinishPlayerSwap = (root = document) => {
+    if (root.querySelector('[data-finish-player-swap-bound]')) return;
+    const rows = Array.from(root.querySelectorAll('[data-finish-player-row]'));
+    if (!rows.length) return;
+
+    const desktopEnabled = () => window.matchMedia('(min-width: 761px)').matches;
+    const clearOver = () => {
+      root.querySelectorAll('[data-finish-player-row].is-drag-over').forEach((row) => row.classList.remove('is-drag-over'));
+    };
+
+    const swapRows = (source, target) => {
+      if (!source || !target || source === target) return;
+      const sourceTeam = source.dataset.teamNumber || '';
+      const targetTeam = target.dataset.teamNumber || '';
+      const sourcePosition = source.dataset.position || '';
+      const targetPosition = target.dataset.position || '';
+
+      source.dataset.teamNumber = targetTeam;
+      target.dataset.teamNumber = sourceTeam;
+      source.dataset.position = targetPosition;
+      target.dataset.position = sourcePosition;
+
+      const sourceTeamInput = source.querySelector('[data-finish-player-team-input]');
+      const targetTeamInput = target.querySelector('[data-finish-player-team-input]');
+      const sourcePositionInput = source.querySelector('[data-finish-player-position-input]');
+      const targetPositionInput = target.querySelector('[data-finish-player-position-input]');
+      const sourcePositionLabel = source.querySelector('[data-finish-player-position-label]');
+      const targetPositionLabel = target.querySelector('[data-finish-player-position-label]');
+
+      if (sourceTeamInput) sourceTeamInput.value = targetTeam;
+      if (targetTeamInput) targetTeamInput.value = sourceTeam;
+      if (sourcePositionInput) sourcePositionInput.value = targetPosition;
+      if (targetPositionInput) targetPositionInput.value = sourcePosition;
+      if (sourcePositionLabel) sourcePositionLabel.textContent = targetPosition;
+      if (targetPositionLabel) targetPositionLabel.textContent = sourcePosition;
+
+      const sourceMarker = document.createComment('finish-swap-source');
+      const targetMarker = document.createComment('finish-swap-target');
+      source.parentNode.insertBefore(sourceMarker, source);
+      target.parentNode.insertBefore(targetMarker, target);
+      sourceMarker.parentNode.insertBefore(target, sourceMarker);
+      targetMarker.parentNode.insertBefore(source, targetMarker);
+      sourceMarker.remove();
+      targetMarker.remove();
+      showToast('Jugadores intercambiados. Guarda valoraciones para confirmar.', 'success');
+    };
+
+    rows.forEach((row) => {
+      row.setAttribute('data-finish-player-swap-bound', '1');
+      row.addEventListener('dragstart', (event) => {
+        if (!desktopEnabled()) {
+          event.preventDefault();
+          return;
+        }
+        row.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', row.dataset.playerId || '');
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('is-dragging');
+        clearOver();
+      });
+      row.addEventListener('dragover', (event) => {
+        if (!desktopEnabled()) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        row.classList.add('is-drag-over');
+      });
+      row.addEventListener('dragleave', () => row.classList.remove('is-drag-over'));
+      row.addEventListener('drop', (event) => {
+        if (!desktopEnabled()) return;
+        event.preventDefault();
+        row.classList.remove('is-drag-over');
+        const sourceId = event.dataTransfer.getData('text/plain');
+        const source = sourceId ? root.querySelector(`[data-finish-player-row][data-player-id="${CSS.escape(sourceId)}"]`) : null;
+        swapRows(source, row);
+      });
+    });
+  };
+
+  initFinishPlayerSwap();
+
   const normalizeSearchText = (value) => String(value || '')
     .toLocaleLowerCase('es-AR')
     .normalize('NFD')

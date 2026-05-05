@@ -2510,12 +2510,25 @@
     @apply scale-95 opacity-50;
   }
 
+  .captain-formation-player.is-pointer-drag-ghost {
+    @apply pointer-events-none fixed z-[9999] scale-105 opacity-95 shadow-2xl ring-4 ring-amber-100;
+  }
+
   .captain-formation-player.is-drag-over {
     @apply border-amber-200 bg-amber-300 text-emerald-950 ring-4 ring-amber-100;
   }
 
   .captain-formation-player.is-drag-over span {
     @apply text-emerald-950;
+  }
+
+  .captain-formation-line .line-players.is-drag-over {
+    @apply rounded-xl bg-amber-300/25 ring-4 ring-amber-100;
+  }
+
+  .captain-team-list.is-team-drag-over,
+  .captain-formation-field.is-team-drag-over {
+    @apply rounded-2xl bg-amber-300/15 ring-4 ring-amber-100;
   }
 
   .captain-position-select {
@@ -3028,6 +3041,22 @@
 
   .finish-rating-team h4 .team-label-with-heart {
     @apply min-w-0 font-extrabold;
+  }
+
+  [data-finish-player-row] {
+    @apply cursor-grab;
+  }
+
+  [data-finish-player-row]:active {
+    @apply cursor-grabbing;
+  }
+
+  [data-finish-player-row].is-dragging {
+    @apply opacity-50;
+  }
+
+  [data-finish-player-row].is-drag-over td {
+    @apply bg-amber-50 ring-2 ring-inset ring-amber-300;
   }
 
   .finish-awards > .small-muted {

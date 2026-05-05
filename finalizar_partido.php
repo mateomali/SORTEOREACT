@@ -593,6 +593,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                 ]);
             }
 
+            $teamAssignments = is_array($_POST['player_team'] ?? null) ? $_POST['player_team'] : [];
+            $positionAssignments = is_array($_POST['player_position'] ?? null) ? $_POST['player_position'] : [];
+            $allowedPositions = ['ARQ', 'DEF', 'MED', 'DEL'];
+            $participantIds = array_map(static fn(array $player): int => (int) $player['id'], $participants);
+            $participantIdSet = array_flip($participantIds);
+            $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], repo_match_teams($matchId));
+            $teamNumberSet = array_flip($teamNumbers);
+
+            if ($teamAssignments || $positionAssignments) {
+                $formationRows = [];
+                foreach ($participants as $player) {
+                    $pid = (int) $player['id'];
+                    if (!isset($participantIdSet[$pid]) || $player['team_number'] === null) {
+                        continue;
+                    }
+                    $teamNumber = (int) ($teamAssignments[$pid] ?? $player['team_number']);
+                    if (!isset($teamNumberSet[$teamNumber])) {
+                        throw new RuntimeException('Hay una asignacion de equipo invalida.');
+                    }
+                    $position = strtoupper(trim((string) ($positionAssignments[$pid] ?? ($player['assigned_position'] ?: 'MED'))));
+                    if (!in_array($position, $allowedPositions, true)) {
+                        $position = 'MED';
+                    }
+                    $formationRows[] = [
+                        'id' => $pid,
+                        'team_number' => $teamNumber,
+                        'position' => $position,
+                        'skill' => (float) ($player['skill'] ?? 0),
+                    ];
+                }
+
+                $lineOrder = [];
+                $lineupOrder = [];
+                $updateAssignment = $pdo->prepare(
+                    'UPDATE match_players
+                     SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
+                         lineup_order = :lineup_order, formation_line_order = :formation_line_order
+                     WHERE match_id = :mid AND player_id = :pid'
+                );
+                foreach ($formationRows as $index => $row) {
+                    $teamNumber = (int) $row['team_number'];
+                    $position = (string) $row['position'];
+                    $lineOrder[$teamNumber] = $lineOrder[$teamNumber] ?? ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+                    $lineupOrder[$teamNumber] = ($lineupOrder[$teamNumber] ?? 0) + 1;
+                    $lineOrder[$teamNumber][$position]++;
+                    $updateAssignment->execute([
+                        'mid' => $matchId,
+                        'pid' => (int) $row['id'],
+                        'team_number' => $teamNumber,
+                        'assigned_position' => $position,
+                        'is_goalkeeper' => $position === 'ARQ' ? 1 : 0,
+                        'lineup_order' => $lineupOrder[$teamNumber],
+                        'formation_line_order' => $lineOrder[$teamNumber][$position],
+                    ]);
+                }
+
+                $updateTeamFormation = $pdo->prepare(
+                    'UPDATE match_teams
+                     SET total_skill = :total_skill, formation_name = :formation_name, formation_data = :formation_data
+                     WHERE match_id = :mid AND team_number = :team_number'
+                );
+                foreach ($teamNumbers as $teamNumber) {
+                    $teamRows = array_values(array_filter($formationRows, static fn(array $row): bool => (int) $row['team_number'] === (int) $teamNumber));
+                    $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+                    $totalSkill = 0.0;
+                    foreach ($teamRows as $row) {
+                        $counts[(string) $row['position']]++;
+                        $totalSkill += (float) $row['skill'];
+                    }
+                    $updateTeamFormation->execute([
+                        'mid' => $matchId,
+                        'team_number' => $teamNumber,
+                        'total_skill' => $totalSkill,
+                        'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]),
+                        'formation_data' => json_encode(array_map(static fn(array $row): array => [
+                            'id' => (int) $row['id'],
+                            'position' => (string) $row['position'],
+                        ], $teamRows), JSON_UNESCAPED_UNICODE),
+                    ]);
+                }
+            }
+
             $parsedAwards = [];
             foreach (award_definitions() as $code => $_definition) {
                 $rawAward = trim((string) ($awardData[$code] ?? ''));
@@ -1028,10 +1110,10 @@ require __DIR__ . '/includes/header.php';
           </summary>
           <div class="finish-valuations-body">
             <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
-              <article class="finish-rating-team">
+              <article class="finish-rating-team" data-finish-team="<?= (int) $teamNumber ?>">
                 <h4><?= finish_render_team_label($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)) ?></h4>
                 <div class="table-wrap">
-                  <table class="finish-table">
+                  <table class="finish-table" data-finish-swap-table>
                     <thead>
                       <tr>
                         <th>Jugador</th>
@@ -1051,10 +1133,12 @@ require __DIR__ . '/includes/header.php';
                               ? (string) ($postedRatingData[$playerId] ?? '5')
                               : ($p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '5');
                         ?>
-                        <tr>
+                        <tr draggable="true" data-finish-player-row data-player-id="<?= $playerId ?>" data-team-number="<?= (int) $teamNumber ?>" data-position="<?= h((string) $line) ?>">
                           <td data-label="Jugador">
                             <strong><?= h((string) $p['name']) ?></strong>
-                            <small><?= h((string) $line) ?></small>
+                            <small data-finish-player-position-label><?= h((string) $line) ?></small>
+                            <input type="hidden" name="player_team[<?= $playerId ?>]" value="<?= (int) $teamNumber ?>" data-finish-player-team-input>
+                            <input type="hidden" name="player_position[<?= $playerId ?>]" value="<?= h((string) $line) ?>" data-finish-player-position-input>
                           </td>
                           <td data-label="Goles">
                             <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>">

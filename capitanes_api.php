@@ -438,7 +438,7 @@ if ($action === 'state') {
     json_response(captain_state($matchId));
 }
 
-if (!in_array($action, ['pick', 'save_formation'], true) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (!in_array($action, ['pick', 'save_formation', 'save_all_formations'], true) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['ok' => false, 'message' => 'Accion no valida'], 400);
 }
 
@@ -451,7 +451,11 @@ $matchId = (int) ($data['match_id'] ?? 0);
 $teamNumber = (int) ($data['team_number'] ?? 0);
 $playerId = (int) ($data['player_id'] ?? 0);
 $token = trim((string) ($data['token'] ?? ''));
-if ($matchId <= 0 || !in_array($teamNumber, [1, 2, 3, 4], true) || ($action === 'pick' && $playerId <= 0)) {
+if (
+    $matchId <= 0
+    || ($action !== 'save_all_formations' && !in_array($teamNumber, [1, 2, 3, 4], true))
+    || ($action === 'pick' && $playerId <= 0)
+) {
     json_response(['ok' => false, 'message' => 'Datos incompletos'], 422);
 }
 
@@ -461,7 +465,7 @@ try {
     $stmt = $pdo->prepare('SELECT * FROM captain_drafts WHERE match_id = :mid FOR UPDATE');
     $stmt->execute(['mid' => $matchId]);
     $draft = $stmt->fetch();
-    if (!$draft && !($action === 'save_formation' && is_admin())) {
+    if (!$draft && !(in_array($action, ['save_formation', 'save_all_formations'], true) && is_admin())) {
         throw new RuntimeException('No hay draft de capitanes para esta fecha.');
     }
     if ($action === 'pick' && $draft['status'] !== 'active') {
@@ -473,9 +477,133 @@ try {
 
     $captainId = $draft ? (int) ($draft['captain' . $teamNumber . '_player_id'] ?? 0) : 0;
     $expectedToken = $draft ? (string) ($draft['captain' . $teamNumber . '_token'] ?? '') : '';
-    $isAdminFormationSave = $action === 'save_formation' && is_admin();
+    $isAdminFormationSave = in_array($action, ['save_formation', 'save_all_formations'], true) && is_admin();
     if (!$isAdminFormationSave && ($expectedToken === '' || $token === '' || !hash_equals($expectedToken, $token))) {
         throw new RuntimeException('Token de capitan invalido.');
+    }
+
+    if ($action === 'save_all_formations') {
+        if (!is_admin()) {
+            throw new RuntimeException('Solo el admin puede guardar formaciones entre equipos.');
+        }
+        $match = repo_match_by_id($matchId);
+        if (!$match) {
+            throw new RuntimeException('Fecha no encontrada.');
+        }
+        if ($draft && (string) $draft['status'] !== 'completed') {
+            throw new RuntimeException('La formacion se puede ajustar cuando el draft esta completo.');
+        }
+        if (!$draft && !in_array((string) ($match['status'] ?? ''), ['sorteado', 'finalizado'], true)) {
+            throw new RuntimeException('La formacion se puede ajustar cuando los equipos ya estan generados.');
+        }
+        if (!can_edit_captain_formation($match)) {
+            throw new RuntimeException('La formacion ya no se puede editar porque la fecha esta finalizada.');
+        }
+
+        $teamsPayload = $data['teams'] ?? [];
+        if (!is_array($teamsPayload) || !$teamsPayload) {
+            throw new RuntimeException('Datos de formacion invalidos.');
+        }
+        $allowed = ['ARQ', 'DEF', 'MED', 'DEL'];
+        $matchTeams = repo_match_teams($matchId);
+        $validTeams = array_flip(array_map(static fn(array $team): int => (int) $team['team_number'], $matchTeams));
+        $participants = repo_match_participants($matchId);
+        $validPlayers = [];
+        foreach ($participants as $player) {
+            $validPlayers[(int) $player['id']] = $player;
+        }
+
+        $rows = [];
+        $seen = [];
+        foreach ($teamsPayload as $teamPayload) {
+            if (!is_array($teamPayload)) {
+                continue;
+            }
+            $payloadTeamNumber = (int) ($teamPayload['team_number'] ?? 0);
+            if (!isset($validTeams[$payloadTeamNumber])) {
+                throw new RuntimeException('Equipo invalido en la formacion.');
+            }
+            $assignments = $teamPayload['assignments'] ?? [];
+            if (!is_array($assignments)) {
+                continue;
+            }
+            foreach ($assignments as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $pid = (int) ($row['player_id'] ?? 0);
+                $position = strtoupper(trim((string) ($row['assigned_position'] ?? '')));
+                if ($pid <= 0 || !isset($validPlayers[$pid]) || !in_array($position, $allowed, true)) {
+                    continue;
+                }
+                if (isset($seen[$pid])) {
+                    throw new RuntimeException('Un jugador aparece repetido en la formacion.');
+                }
+                $seen[$pid] = true;
+                $rows[] = [
+                    'player_id' => $pid,
+                    'team_number' => $payloadTeamNumber,
+                    'position' => $position,
+                    'skill' => (float) ($validPlayers[$pid]['skill'] ?? 0),
+                ];
+            }
+        }
+        if (count($seen) !== count($validPlayers)) {
+            throw new RuntimeException('La formacion debe incluir a todos los jugadores de la fecha.');
+        }
+
+        $update = $pdo->prepare(
+            'UPDATE match_players
+             SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
+                 lineup_order = :lineup_order, formation_line_order = :formation_line_order
+             WHERE match_id = :mid AND player_id = :pid'
+        );
+        $lineOrder = [];
+        $lineupOrder = [];
+        foreach ($rows as $row) {
+            $rowTeamNumber = (int) $row['team_number'];
+            $position = (string) $row['position'];
+            $lineOrder[$rowTeamNumber] = $lineOrder[$rowTeamNumber] ?? ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $lineupOrder[$rowTeamNumber] = ($lineupOrder[$rowTeamNumber] ?? 0) + 1;
+            $lineOrder[$rowTeamNumber][$position]++;
+            $update->execute([
+                'mid' => $matchId,
+                'pid' => (int) $row['player_id'],
+                'team_number' => $rowTeamNumber,
+                'assigned_position' => $position,
+                'is_goalkeeper' => $position === 'ARQ' ? 1 : 0,
+                'lineup_order' => $lineupOrder[$rowTeamNumber],
+                'formation_line_order' => $lineOrder[$rowTeamNumber][$position],
+            ]);
+        }
+
+        $updateTeam = $pdo->prepare(
+            'UPDATE match_teams
+             SET total_skill = :total_skill, formation_name = :formation_name, formation_data = :formation_data
+             WHERE match_id = :mid AND team_number = :team_number'
+        );
+        foreach (array_keys($validTeams) as $rowTeamNumber) {
+            $teamRows = array_values(array_filter($rows, static fn(array $row): bool => (int) $row['team_number'] === (int) $rowTeamNumber));
+            $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $totalSkill = 0.0;
+            foreach ($teamRows as $row) {
+                $counts[(string) $row['position']]++;
+                $totalSkill += (float) $row['skill'];
+            }
+            $updateTeam->execute([
+                'mid' => $matchId,
+                'team_number' => (int) $rowTeamNumber,
+                'total_skill' => $totalSkill,
+                'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]),
+                'formation_data' => json_encode(array_map(static fn(array $row): array => [
+                    'id' => (int) $row['player_id'],
+                    'position' => (string) $row['position'],
+                ], $teamRows), JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
+        $pdo->commit();
+        json_response(captain_state($matchId));
     }
 
     if ($action === 'save_formation') {

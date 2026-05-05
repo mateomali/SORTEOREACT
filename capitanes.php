@@ -585,6 +585,9 @@ require __DIR__ . '/includes/header.php';
       const formationDrafts = {};
       const formationOrders = {};
       let formationInteractionUntil = 0;
+      let formationDragState = null;
+      let formationDragTarget = null;
+      let formationDropHandled = false;
       let hasRenderedState = false;
       let pollingTimer = null;
 
@@ -643,6 +646,8 @@ require __DIR__ . '/includes/header.php';
         formationInteractionUntil = Date.now() + 5000;
       };
 
+      const isDesktopDrag = () => window.matchMedia('(min-width: 761px)').matches;
+
       const isFormationInteractionActive = () => {
         const active = document.activeElement;
         return Date.now() < formationInteractionUntil
@@ -668,6 +673,11 @@ require __DIR__ . '/includes/header.php';
         }
       };
 
+      const clearFormationDragHighlights = () => {
+        document.querySelectorAll('.is-team-drag-over, .is-drag-over')
+          .forEach(el => el.classList.remove('is-team-drag-over', 'is-drag-over'));
+      };
+
       board.addEventListener('pointerdown', (event) => {
         if (event.target.closest('button, select, input, .captain-formation-player')) {
           markFormationInteraction();
@@ -679,6 +689,23 @@ require __DIR__ . '/includes/header.php';
           markFormationInteraction();
         }
       });
+
+      board.addEventListener('dragover', (event) => {
+        if (!formationDragState) return;
+        const target = event.target.closest('[data-drag-player-id], [data-drop-team], [data-captain-team-card]');
+        if (target) {
+          formationDragTarget = target;
+        }
+      }, true);
+
+      board.addEventListener('drop', (event) => {
+        if (!formationDragState) return;
+        const changed = handleFormationDrop(event, event.target);
+        if (changed) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }, true);
 
       const updateWaitingPanel = () => {
         const panel = document.getElementById('captainWaitingPanel');
@@ -978,19 +1005,238 @@ require __DIR__ . '/includes/header.php';
         return true;
       };
 
+      const swapFormationPlayersAcrossTeams = (sourceTeam, sourceId, targetTeam, targetId) => {
+        if (!adminEditor || !sourceTeam || !targetTeam || !sourceId || !targetId || sourceId === targetId) {
+          return false;
+        }
+        if (sourceTeam === targetTeam) {
+          return swapFormationPlayers(sourceTeam, sourceId, targetId);
+        }
+
+        const sourcePlayers = state.teams[String(sourceTeam)] || state.teams[sourceTeam] || [];
+        const targetPlayers = state.teams[String(targetTeam)] || state.teams[targetTeam] || [];
+        const sourceIndex = sourcePlayers.findIndex(player => Number(player.id) === Number(sourceId));
+        const targetIndex = targetPlayers.findIndex(player => Number(player.id) === Number(targetId));
+        if (sourceIndex === -1 || targetIndex === -1) return false;
+
+        ensureFormationState(sourceTeam, sourcePlayers);
+        ensureFormationState(targetTeam, targetPlayers);
+
+        const sourcePlayer = sourcePlayers[sourceIndex];
+        const targetPlayer = targetPlayers[targetIndex];
+        const sourcePosition = formationDrafts[sourceTeam]?.[sourceId] || sourcePlayer.assigned_position || sourcePlayer.primary_position || 'MED';
+        const targetPosition = formationDrafts[targetTeam]?.[targetId] || targetPlayer.assigned_position || targetPlayer.primary_position || 'MED';
+
+        sourcePlayers[sourceIndex] = targetPlayer;
+        targetPlayers[targetIndex] = sourcePlayer;
+        state.teams[String(sourceTeam)] = sourcePlayers;
+        state.teams[String(targetTeam)] = targetPlayers;
+
+        formationDrafts[sourceTeam][targetId] = sourcePosition;
+        formationDrafts[targetTeam][sourceId] = targetPosition;
+        delete formationDrafts[sourceTeam][sourceId];
+        delete formationDrafts[targetTeam][targetId];
+
+        formationOrders[sourceTeam] = (formationOrders[sourceTeam] || [])
+          .map(id => Number(id) === Number(sourceId) ? Number(targetId) : Number(id));
+        formationOrders[targetTeam] = (formationOrders[targetTeam] || [])
+          .map(id => Number(id) === Number(targetId) ? Number(sourceId) : Number(id));
+
+        return true;
+      };
+
+      const rerenderEditableFormations = () => {
+        teamNumbers().forEach(renderTeamNumber => {
+          const teamContainer = document.getElementById(`team${renderTeamNumber}List`);
+          if (teamContainer && teamContainer.querySelector('.captain-formation-field')) {
+            const players = state.teams[String(renderTeamNumber)] || state.teams[renderTeamNumber] || [];
+            renderFormationLines(teamContainer, players);
+            renderCustomFormationControls(teamContainer, players);
+          }
+        });
+      };
+
+      const swapIntoTeam = (sourceTeam, sourceId, targetTeam, preferredPosition = '') => {
+        if (!adminEditor || !sourceTeam || !sourceId || !targetTeam || sourceTeam === targetTeam) {
+          return false;
+        }
+        const targetPlayers = preferredPosition
+          ? orderedFormationPlayers(targetTeam, state.teams[String(targetTeam)] || state.teams[targetTeam] || [], preferredPosition)
+          : [];
+        const fallbackPlayers = state.teams[String(targetTeam)] || state.teams[targetTeam] || [];
+        const targetPlayer = targetPlayers[0] || fallbackPlayers[0] || null;
+        if (!targetPlayer) {
+          showMessage('Ese equipo no tiene jugador para intercambiar.', 'error');
+          return false;
+        }
+        const changed = swapFormationPlayersAcrossTeams(sourceTeam, Number(sourceId), targetTeam, Number(targetPlayer.id));
+        if (changed) {
+          formationInteractionUntil = Date.now() + 80;
+          rerenderEditableFormations();
+        }
+        return changed;
+      };
+
+      const nearestFormationCard = (teamNumber, clientX, clientY) => {
+        if (!clientX && !clientY) return null;
+        const teamContainer = document.getElementById(`team${teamNumber}List`);
+        const cards = [...(teamContainer?.querySelectorAll('[data-drag-player-id]') || [])];
+        let nearest = null;
+        let nearestDistance = Infinity;
+        cards.forEach(card => {
+          const rect = card.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const distance = Math.hypot(centerX - clientX, centerY - clientY);
+          if (distance < nearestDistance) {
+            nearest = card;
+            nearestDistance = distance;
+          }
+        });
+        return nearest;
+      };
+
+      const handleFormationDrop = (event, targetElement) => {
+        if (!formationDragState) return false;
+        const fallback = formationDragTarget || (
+          event?.clientX && event?.clientY
+            ? document.elementFromPoint(event.clientX, event.clientY)
+            : null
+        );
+        const target = targetElement?.closest?.('[data-drag-player-id], [data-drop-team], [data-captain-team-card]')
+          || fallback?.closest?.('[data-drag-player-id], [data-drop-team], [data-captain-team-card]')
+          || fallback;
+        if (!target) return false;
+
+        const targetCard = target.closest?.('[data-drag-player-id]');
+        const targetTeam = Number(
+          targetCard?.dataset.dragTeam
+          || target.closest?.('[data-drop-team]')?.dataset.dropTeam
+          || target.closest?.('[data-captain-team-card]')?.dataset.captainTeamCard
+          || 0
+        );
+        const sourceTeam = Number(formationDragState.team || 0);
+        const sourceId = Number(formationDragState.playerId || 0);
+        if (!adminEditor || !sourceTeam || !sourceId || !targetTeam) return false;
+
+        const targetSwapCard = targetCard || nearestFormationCard(targetTeam, event?.clientX || 0, event?.clientY || 0);
+        const changed = targetSwapCard
+          ? swapFormationPlayersAcrossTeams(sourceTeam, sourceId, targetTeam, Number(targetSwapCard.dataset.dragPlayerId))
+          : swapIntoTeam(sourceTeam, sourceId, targetTeam, target.dataset?.formationLine || '');
+        if (changed) {
+          formationDropHandled = true;
+          formationInteractionUntil = Date.now() + 80;
+          rerenderEditableFormations();
+          showMessage('Intercambio realizado. Toca Guardar formacion para confirmarlo.', 'success');
+        }
+        return changed;
+      };
+
+      const startFormationPointerDrag = (event, card, teamNumber) => {
+        if (!adminEditor || !isDesktopDrag() || event.button !== 0 || event.target.closest?.('.captain-position-select')) {
+          return false;
+        }
+        event.preventDefault();
+        markFormationInteraction();
+
+        const sourceCard = card;
+        const sourceRect = sourceCard.getBoundingClientRect();
+        const offsetX = event.clientX - sourceRect.left;
+        const offsetY = event.clientY - sourceRect.top;
+        let hasMoved = false;
+        let ghost = null;
+
+        formationDragState = {
+          team: Number(card.dataset.dragTeam || teamNumber),
+          playerId: Number(card.dataset.dragPlayerId || 0),
+        };
+        formationDragTarget = null;
+        formationDropHandled = false;
+        sourceCard.classList.add('is-dragging');
+
+        const moveGhost = (moveEvent) => {
+          if (!ghost) return;
+          ghost.style.left = `${moveEvent.clientX - offsetX}px`;
+          ghost.style.top = `${moveEvent.clientY - offsetY}px`;
+        };
+
+        const targetFromPoint = (moveEvent) => {
+          if (ghost) ghost.style.display = 'none';
+          const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+          if (ghost) ghost.style.display = '';
+          return target?.closest?.('[data-drag-player-id], [data-drop-team], [data-captain-team-card]') || null;
+        };
+
+        const markTarget = (target) => {
+          clearFormationDragHighlights();
+          if (!target) return;
+          const targetCard = target.closest?.('[data-drag-player-id]');
+          const targetField = target.closest?.('.captain-formation-field');
+          const targetList = target.closest?.('.captain-team-list');
+          if (targetCard) {
+            targetCard.classList.add('is-drag-over');
+          } else if (targetField) {
+            targetField.classList.add('is-team-drag-over');
+          } else if (targetList) {
+            targetList.classList.add('is-team-drag-over');
+          }
+          formationDragTarget = target;
+        };
+
+        const onPointerMove = (moveEvent) => {
+          const distance = Math.hypot(moveEvent.clientX - event.clientX, moveEvent.clientY - event.clientY);
+          if (!hasMoved && distance < 4) return;
+          if (!hasMoved) {
+            hasMoved = true;
+            ghost = sourceCard.cloneNode(true);
+            ghost.classList.add('is-pointer-drag-ghost');
+            ghost.style.width = `${sourceRect.width}px`;
+            ghost.style.height = `${sourceRect.height}px`;
+            document.body.appendChild(ghost);
+          }
+          moveEvent.preventDefault();
+          moveGhost(moveEvent);
+          markTarget(targetFromPoint(moveEvent));
+        };
+
+        const onPointerUp = (upEvent) => {
+          window.removeEventListener('pointermove', onPointerMove, true);
+          window.removeEventListener('pointerup', onPointerUp, true);
+          window.removeEventListener('pointercancel', onPointerUp, true);
+
+          const target = hasMoved ? targetFromPoint(upEvent) || formationDragTarget : null;
+          if (target) {
+            handleFormationDrop(upEvent, target);
+          }
+
+          sourceCard.classList.remove('is-dragging');
+          ghost?.remove();
+          formationDragState = null;
+          formationDragTarget = null;
+          formationDropHandled = false;
+          clearFormationDragHighlights();
+        };
+
+        window.addEventListener('pointermove', onPointerMove, true);
+        window.addEventListener('pointerup', onPointerUp, true);
+        window.addEventListener('pointercancel', onPointerUp, true);
+        return true;
+      };
+
       const renderFormationLines = (container, players) => {
         const field = container.querySelector('.captain-formation-field');
         if (!field) return;
         const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
         ensureFormationState(teamNumber, players);
+        field.dataset.dropTeam = String(teamNumber);
         field.innerHTML = positions.map(pos => {
           const linePlayers = orderedFormationPlayers(teamNumber, players, pos);
           return `
             <div class="formation-line captain-formation-line">
               <div class="line-label">${pos}</div>
-              <div class="line-players" data-formation-line="${pos}">
+              <div class="line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
                 ${linePlayers.length ? linePlayers.map(player => `
-                  <div class="formation-player captain-formation-player" draggable="true" data-drag-player-id="${player.id}" data-drag-position="${pos}">
+                  <div class="formation-player captain-formation-player" draggable="true" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}">
                     <strong>${escapeHtml(player.name)}</strong>
                     <span>${formatSkill(player.skill)}</span>
                     <select class="captain-position-select" data-player-id="${player.id}">
@@ -1036,23 +1282,79 @@ require __DIR__ . '/includes/header.php';
             }
           }, 160);
         }, { once: true });
+        field.addEventListener('dragover', (event) => {
+          if (!adminEditor || event.target !== field) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          formationDragTarget = field;
+          field.classList.add('is-team-drag-over');
+        });
+        field.addEventListener('dragleave', (event) => {
+          if (field.contains(event.relatedTarget)) return;
+          field.classList.remove('is-team-drag-over');
+        });
+        field.addEventListener('drop', (event) => {
+          if (!adminEditor || event.target !== field) return;
+          event.preventDefault();
+          field.classList.remove('is-team-drag-over');
+          handleFormationDrop(event, field);
+        });
+        field.querySelectorAll('[data-drop-team]').forEach(line => {
+          line.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            formationDragTarget = line;
+            line.classList.add('is-drag-over');
+          });
+          line.addEventListener('dragleave', (event) => {
+            if (line.contains(event.relatedTarget)) return;
+            line.classList.remove('is-drag-over');
+          });
+          line.addEventListener('drop', (event) => {
+            event.preventDefault();
+            line.classList.remove('is-drag-over');
+            if (event.target.closest('[data-drag-player-id]')) return;
+            handleFormationDrop(event, line);
+          });
+        });
         field.querySelectorAll('[data-drag-player-id]').forEach(card => {
+          card.addEventListener('pointerdown', (event) => {
+            startFormationPointerDrag(event, card, teamNumber);
+          });
           card.addEventListener('dragstart', (event) => {
+            if (adminEditor && isDesktopDrag()) {
+              event.preventDefault();
+              return;
+            }
             if (event.target.closest?.('.captain-position-select')) {
               event.preventDefault();
               return;
             }
             markFormationInteraction();
+            formationDragState = {
+              team: Number(card.dataset.dragTeam || teamNumber),
+              playerId: Number(card.dataset.dragPlayerId || 0),
+            };
+            formationDragTarget = null;
+            formationDropHandled = false;
             event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', `${card.dataset.dragPlayerId}|${card.dataset.dragPosition}`);
+            event.dataTransfer.setData('text/plain', `${card.dataset.dragTeam}|${card.dataset.dragPlayerId}|${card.dataset.dragPosition}`);
             card.classList.add('is-dragging');
           });
-          card.addEventListener('dragend', () => {
+          card.addEventListener('dragend', (event) => {
             card.classList.remove('is-dragging');
+            if (!formationDropHandled && formationDragTarget) {
+              handleFormationDrop(event, formationDragTarget);
+            }
+            formationDragState = null;
+            formationDragTarget = null;
+            formationDropHandled = false;
+            clearFormationDragHighlights();
           });
           card.addEventListener('dragover', (event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
+            formationDragTarget = card;
             card.classList.add('is-drag-over');
           });
           card.addEventListener('dragleave', () => {
@@ -1060,13 +1362,8 @@ require __DIR__ . '/includes/header.php';
           });
           card.addEventListener('drop', (event) => {
             event.preventDefault();
-            const [sourceId] = String(event.dataTransfer.getData('text/plain') || '').split('|');
             card.classList.remove('is-drag-over');
-            const changed = swapFormationPlayers(teamNumber, Number(sourceId), Number(card.dataset.dragPlayerId));
-            if (changed) {
-              formationInteractionUntil = Date.now() + 80;
-              renderFormationLines(container, players);
-            }
+            handleFormationDrop(event, card);
           });
         });
       };
@@ -1080,7 +1377,7 @@ require __DIR__ . '/includes/header.php';
           </select>
           <div class="captain-custom-formation" data-custom-formation-panel></div>
         </div>
-        <div class="team-formation captain-formation-field"></div>
+        <div class="team-formation captain-formation-field" data-drop-team="${teamNumber}"></div>
         <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar formacion</button>
       `;
@@ -1109,6 +1406,41 @@ require __DIR__ . '/includes/header.php';
         if (canEditThisFormation) {
           renderFormationLines(container, players);
           renderCustomFormationControls(container, players);
+          container.addEventListener('dragover', (event) => {
+            if (!adminEditor || event.target.closest('[data-drag-player-id], [data-drop-team], select')) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            formationDragTarget = container;
+            container.classList.add('is-team-drag-over');
+          });
+          container.addEventListener('dragleave', (event) => {
+            if (container.contains(event.relatedTarget)) return;
+            container.classList.remove('is-team-drag-over');
+          });
+          container.addEventListener('drop', (event) => {
+            if (!adminEditor || event.target.closest('[data-drag-player-id], [data-drop-team], select')) return;
+            event.preventDefault();
+            container.classList.remove('is-team-drag-over');
+            handleFormationDrop(event, container);
+          });
+          const teamCard = container.closest('[data-captain-team-card]');
+          teamCard?.addEventListener('dragover', (event) => {
+            if (!adminEditor || event.target.closest('[data-drag-player-id], [data-drop-team], select')) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            formationDragTarget = teamCard;
+            container.classList.add('is-team-drag-over');
+          });
+          teamCard?.addEventListener('dragleave', (event) => {
+            if (teamCard.contains(event.relatedTarget)) return;
+            container.classList.remove('is-team-drag-over');
+          });
+          teamCard?.addEventListener('drop', (event) => {
+            if (!adminEditor || event.target.closest('[data-drag-player-id], [data-drop-team], select')) return;
+            event.preventDefault();
+            container.classList.remove('is-team-drag-over');
+            handleFormationDrop(event, teamCard);
+          });
           container.querySelector('[data-save-formation]').addEventListener('click', () => saveFormation(teamNumber, container));
           container.querySelector('[data-formation-preset]')?.addEventListener('change', (event) => {
             if (event.target.value !== '') {
@@ -1271,6 +1603,10 @@ require __DIR__ . '/includes/header.php';
       };
 
       const saveFormation = async (teamNumber, container) => {
+        if (adminEditor) {
+          await saveAllFormations();
+          return;
+        }
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
         const draft = formationDrafts[teamNumber] || {};
         const order = formationOrders[teamNumber] || players.map(player => Number(player.id));
@@ -1311,6 +1647,50 @@ require __DIR__ . '/includes/header.php';
             message.classList.add('hidden');
           }, 2200);
         }
+      };
+
+      const saveAllFormations = async () => {
+        const teamsPayload = teamNumbers().map(teamNumber => {
+          const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
+          const draft = formationDrafts[teamNumber] || {};
+          const order = formationOrders[teamNumber] || players.map(player => Number(player.id));
+          const orderedPlayers = [...players].sort((a, b) => {
+            const indexA = order.indexOf(Number(a.id));
+            const indexB = order.indexOf(Number(b.id));
+            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+          });
+          return {
+            team_number: teamNumber,
+            assignments: orderedPlayers.map(player => ({
+              player_id: parseInt(player.id, 10),
+              assigned_position: draft[player.id] || player.assigned_position || player.primary_position || 'MED'
+            }))
+          };
+        });
+
+        const response = await fetch('capitanes_api.php?action=save_all_formations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ match_id: matchId, teams: teamsPayload })
+        });
+        const data = await response.json();
+        if (!data.ok) {
+          showMessage(data.message || 'No se pudieron guardar las formaciones.', 'error');
+          await loadState({ forceRender: true });
+          return;
+        }
+        state = data;
+        teamNumbers().forEach(number => {
+          formationDrafts[number] = {};
+          formationOrders[number] = [];
+          (state.teams[String(number)] || state.teams[number] || []).forEach((player) => {
+            formationDrafts[number][player.id] = player.assigned_position || player.primary_position || 'MED';
+            formationOrders[number].push(Number(player.id));
+          });
+        });
+        render();
+        hasRenderedState = true;
+        showMessage('Formaciones guardadas.', 'success');
       };
 
       loadState({ forceRender: true });
