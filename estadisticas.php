@@ -281,15 +281,24 @@ require __DIR__ . '/includes/header.php';
 </details>
 
 <section class="card stats-search-card">
-  <div class="stats-player-search">
-    <label>Buscar jugador</label>
-    <input type="text" list="statsPlayerList" placeholder="Escribe o elige un jugador" data-stats-player-search>
-    <datalist id="statsPlayerList">
-      <?php foreach ($playerSearchRows as $row): ?>
-        <option value="<?= h((string) $row['name']) ?>"></option>
-      <?php endforeach; ?>
-    </datalist>
-  </div>
+  <div
+    data-react-root
+    data-react-island="stats_player_search"
+    data-players="<?= h(json_encode(array_map(static fn(array $row): array => [
+        'name' => (string) $row['name'],
+        'matches' => (string) $row['partidos'],
+        'goals' => (string) $row['goles'],
+        'rating' => $row['rating_promedio'] !== null ? number_format((float) $row['rating_promedio'], 2) : '-',
+        'pg' => (string) ((int) ($row['pg'] ?? 0)),
+        'pe' => (string) ((int) ($row['pe'] ?? 0)),
+        'pp' => (string) ((int) ($row['pp'] ?? 0)),
+    ], $playerSearchRows), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
+  ></div>
+  <datalist id="statsPlayerList">
+    <?php foreach ($playerSearchRows as $row): ?>
+      <option value="<?= h((string) $row['name']) ?>"></option>
+    <?php endforeach; ?>
+  </datalist>
 </section>
 
 <section class="stats-player-result" data-stats-player-result hidden>

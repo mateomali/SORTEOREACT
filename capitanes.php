@@ -466,19 +466,11 @@ require __DIR__ . '/includes/header.php';
     <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
     <?php if ($draft): ?>
       <p class="small-muted">Pasa estos tokens a cada capitan. Desde Inicio pueden tocar Soy capitan, pegar el token y entrar a elegir.</p>
-      <div class="grid cols-2 mb-3">
-        <?php foreach ($captainCards as $captainCard): ?>
-        <div class="stat-box">
-          <div class="label">Token <?= h((string) $captainCard['name']) ?></div>
-          <input type="text" readonly value="<?= h((string) $captainCard['token']) ?>" onclick="this.select()">
-          <div class="captain-link-actions">
-            <button class="btn btn-primary" type="button" data-share-token="<?= h((string) $captainCard['share_text']) ?>">Compartir</button>
-            <button class="btn btn-muted" type="button" data-copy-token="<?= h((string) $captainCard['token']) ?>">Copiar</button>
-            <a class="btn btn-muted" href="<?= h((string) $captainCard['open_url']) ?>">Abrir</a>
-          </div>
-        </div>
-        <?php endforeach; ?>
-      </div>
+      <div
+        data-react-root
+        data-react-island="captain_tokens"
+        data-captain-cards="<?= h(json_encode($captainCards, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
+      ></div>
     <?php else: ?>
       <p class="small-muted">Equipos generados. Como admin podes ajustar formaciones, usar presets y arrastrar jugadores en ambos equipos.</p>
     <?php endif; ?>
@@ -532,47 +524,6 @@ require __DIR__ . '/includes/header.php';
   </section>
 
   <script>
-    (() => {
-      const copyText = async (text) => {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        }
-        const input = document.createElement('textarea');
-        input.value = text;
-        input.setAttribute('readonly', '');
-        input.style.position = 'fixed';
-        input.style.left = '-9999px';
-        document.body.appendChild(input);
-        input.select();
-        const copied = document.execCommand('copy');
-        document.body.removeChild(input);
-        return copied;
-      };
-
-      document.querySelectorAll('[data-copy-token]').forEach(button => {
-        button.addEventListener('click', async () => {
-          await copyText(button.dataset.copyToken || '');
-          button.textContent = 'Copiado';
-          window.setTimeout(() => { button.textContent = 'Copiar'; }, 1600);
-        });
-      });
-
-      document.querySelectorAll('[data-share-token]').forEach(button => {
-        button.addEventListener('click', async () => {
-          const text = button.dataset.shareToken || '';
-          if (navigator.share) {
-            await navigator.share({ text });
-            button.textContent = 'Compartido';
-          } else {
-            await copyText(text);
-            button.textContent = 'Copiado';
-          }
-          window.setTimeout(() => { button.textContent = 'Compartir'; }, 1600);
-        });
-      });
-    })();
-
     (() => {
       const board = document.querySelector('.captain-board');
       const matchId = parseInt(board.dataset.matchId, 10);

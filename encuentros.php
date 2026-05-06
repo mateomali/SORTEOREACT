@@ -1037,14 +1037,11 @@ require __DIR__ . '/includes/header.php';
         </details>
       <?php endif; ?>
 
-      <div class="participant-search">
-        <input type="text" data-participant-search placeholder="Buscar jugador por nombre, posicion o ritmo">
-        <label class="chip">
-          <input type="checkbox" data-select-all="participants">
-          Seleccionar todos
-        </label>
-        <button class="btn btn-muted" type="button" data-random-select="participants">Seleccion al azar</button>
-      </div>
+      <div
+        data-react-root
+        data-react-island="participant_controls"
+        data-limit="<?= h((string) $targetSelection) ?>"
+      ></div>
 
       <div class="participant-picker-layout">
       <section class="participant-panel participant-roster-panel">
@@ -1182,11 +1179,12 @@ require __DIR__ . '/includes/header.php';
       </article>
     <?php endif; ?>
 
-    <div class="encounter-history-search" role="search">
-      <label for="encounterHistorySearch">Buscar historial</label>
-      <input id="encounterHistorySearch" type="search" placeholder="Fecha, capitan o resultado..." autocomplete="off" data-encounter-history-search>
-      <span data-encounter-history-count><?= h((string) $totalMatches) ?> fechas</span>
-    </div>
+    <div
+      data-react-root
+      data-react-island="encounter_history_controls"
+      data-total="<?= h((string) $totalMatches) ?>"
+      data-current-page="<?= h((string) $currentPage) ?>"
+    ></div>
     <p class="small-muted encounter-history-empty" data-encounter-history-empty hidden>No hay fechas que coincidan con la busqueda.</p>
     <div class="encounter-card-grid" data-encounter-current-page="<?= h((string) $currentPage) ?>">
       <?php foreach ($matches as $matchIndex => $m): ?>

@@ -903,11 +903,12 @@ require __DIR__ . '/includes/header.php';
     <article class="card match-history">
       <h3>Historial de fechas</h3>
       <?php if ($historyMatches): ?>
-        <div class="history-search" role="search">
-          <label for="homeHistorySearch">Buscar historial</label>
-          <input id="homeHistorySearch" type="search" placeholder="Fecha, capitan o resultado..." autocomplete="off" data-home-history-search>
-          <span data-home-history-count><?= h((string) count($historyMatches)) ?> fechas</span>
-        </div>
+        <div
+          data-react-root
+          data-react-island="home_history_search"
+          data-total="<?= h((string) count($historyMatches)) ?>"
+          data-input-id="homeHistorySearch"
+        ></div>
         <p class="small-muted history-search-empty" data-home-history-empty hidden>No hay fechas que coincidan con la busqueda.</p>
       <?php endif; ?>
       <div class="match-list">
@@ -1186,49 +1187,7 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 </section>
 
-<?php if ($showHistoryPage): ?>
-<script>
-  (() => {
-    const input = document.querySelector('[data-home-history-search]');
-    if (!input) return;
-
-    const cards = Array.from(document.querySelectorAll('[data-home-history-card]'));
-    const empty = document.querySelector('[data-home-history-empty]');
-    const count = document.querySelector('[data-home-history-count]');
-    const total = cards.length;
-
-    const normalize = (value) => String(value || '')
-      .toLocaleLowerCase('es-AR')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
-
-    const applyFilter = () => {
-      const query = normalize(input.value);
-      let visible = 0;
-
-      cards.forEach((card) => {
-        const haystack = normalize(card.dataset.search || '');
-        const matches = query === '' || haystack.includes(query);
-        card.hidden = !matches;
-        if (matches) visible++;
-      });
-
-      if (empty) {
-        empty.hidden = visible !== 0;
-      }
-      if (count) {
-        count.textContent = query === ''
-          ? `${total} fechas`
-          : `${visible} de ${total} fechas`;
-      }
-    };
-
-    input.addEventListener('input', applyFilter);
-    applyFilter();
-  })();
-</script>
-<?php elseif (!empty($headerHasCaptains)): ?>
+<?php if (!$showHistoryPage && !empty($headerHasCaptains)): ?>
 <script>
   (() => {
     const root = document.querySelector('[data-public-captain-live]');
@@ -1362,6 +1321,10 @@ require __DIR__ . '/includes/header.php';
 
     loadState();
     const timer = window.setInterval(loadState, 3000);
+    document.addEventListener('goodfellas:before-partial-render', () => {
+      stopped = true;
+      window.clearInterval(timer);
+    }, { once: true });
     window.addEventListener('beforeunload', () => {
       stopped = true;
       window.clearInterval(timer);

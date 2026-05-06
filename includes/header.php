@@ -7,6 +7,7 @@ $title = $title ?? APP_NAME;
 $activePage = $activePage ?? '';
 $flashMessages = consume_flash();
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/../assets/tailwind.css') ?: time());
+$reactCssPath = __DIR__ . '/../assets/react/react-app.css';
 $publicMenu = [
     'index.php' => 'Inicio',
     'historial.php' => 'Historial',
@@ -34,6 +35,9 @@ $adminMenu = is_admin()
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/tailwind.css?v=<?= h($tailwindVersion) ?>">
+  <?php if (is_file($reactCssPath)): ?>
+    <link rel="stylesheet" href="assets/react/react-app.css?v=<?= h((string) filemtime($reactCssPath)) ?>">
+  <?php endif; ?>
 </head>
 <body>
   <div class="app-shell">

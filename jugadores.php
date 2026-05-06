@@ -419,74 +419,15 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <?php if ($isAdmin): ?>
-  <details class="card mb-3.5 player-create-drawer">
-    <summary class="player-create-summary">
-      <span>Agregar jugador</span>
-      <small>Cargar nuevo jugador</small>
-    </summary>
-    <form method="post" class="player-create-body">
-      <input type="hidden" name="action" value="save">
-      <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
-      <input type="hidden" name="ajax_token" value="<?= h(player_ajax_token()) ?>">
-      <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
-
-    <div class="form-grid">
-      <div class="form-row">
-        <label>Nombre</label>
-        <input type="text" name="name" required value="<?= h((string) $form['name']) ?>">
-      </div>
-      <div class="form-row">
-        <label>General</label>
-        <div class="player-general-rating" data-general-rating>
-          <strong data-general-rating-value>3/6</strong>
-          <span data-general-rating-stars>★★★☆☆☆</span>
-        </div>
-      </div>
-      <div class="form-row">
-        <label>Estado</label>
-        <label class="chip">
-          <input type="checkbox" name="active" value="1" <?= checked_attr((int) ($form['active'] ?? 0) === 1) ?>>
-          Jugador activo
-        </label>
-      </div>
-    </div>
-
-    <?php $selectedPos = parse_positions_csv((string) $form['positions']); ?>
-    <div class="form-row">
-      <label>Posiciones</label>
-      <div class="check-row">
-        <?php foreach (allowed_positions() as $pos): ?>
-          <label class="chip">
-            <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= checked_attr(in_array($pos, $selectedPos, true)) ?>>
-            <?= h($pos) ?>
-          </label>
-        <?php endforeach; ?>
-      </div>
-    </div>
-
-    <div class="player-stats-editor">
-      <div class="form-grid">
-        <?php foreach (player_field_stat_fields() as $field): ?>
-          <div class="form-row stat-form-row" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
-            <label><?= h($statLabels[$field]) ?></label>
-            <?= stat_rating_control($field, player_effective_stat($form, $field)) ?>
-          </div>
-        <?php endforeach; ?>
-        <div class="form-row stat-form-row" data-goalkeeper-stat-row>
-          <label><?= h($statLabels['goalkeeper_skill']) ?></label>
-          <?= stat_rating_control('goalkeeper_skill', player_effective_stat($form, 'goalkeeper_skill')) ?>
-        </div>
-      </div>
-        <?= player_stats_radar_panel() ?>
-      </div>
-
-      <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
-
-      <div class="btn-row">
-        <button class="btn btn-primary" type="submit">Crear jugador</button>
-      </div>
-    </form>
-  </details>
+  <div
+    data-react-root
+    data-react-island="player_create"
+    data-show-inactive="<?= $showInactive ? '1' : '0' ?>"
+    data-labels="<?= h(json_encode($statLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
+    data-help="<?= h(json_encode($statHelp, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
+    data-rating-help="<?= h(json_encode($ratingHelp, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
+    data-weight-help="<?= h(json_encode($fieldWeightHelp, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
+  ></div>
 <?php endif; ?>
 
 <section class="card">
@@ -495,16 +436,21 @@ require __DIR__ . '/includes/header.php';
       <h3>Listado de jugadores</h3>
       <p class="small-muted"><?= $showInactive ? 'Mostrando activos e inactivos.' : 'Mostrando solo jugadores activos.' ?></p>
     </div>
-    <?php if ($isAdmin): ?>
-      <a class="btn btn-muted" href="<?= $showInactive ? 'jugadores.php' : 'jugadores.php?show_inactive=1' ?>">
-        <?= $showInactive ? 'Ver solo activos' : 'Ver inactivos' ?>
-      </a>
-    <?php endif; ?>
-    <input type="text" data-player-list-search placeholder="Buscar jugador por nombre, posicion o stats">
+    <div
+      data-react-root
+      data-react-island="player_list_controls"
+      data-total="<?= h((string) count($players)) ?>"
+      data-mode-label="<?= h($showInactive ? 'Activos e inactivos' : 'Solo activos') ?>"
+      <?php if ($isAdmin): ?>
+        data-toggle-url="<?= h($showInactive ? 'jugadores.php' : 'jugadores.php?show_inactive=1') ?>"
+        data-toggle-label="<?= h($showInactive ? 'Ver solo activos' : 'Ver inactivos') ?>"
+      <?php endif; ?>
+    ></div>
   </div>
   <div class="players-desktop-help">
     <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
   </div>
+  <p class="small-muted player-list-empty" data-player-list-empty hidden>No hay jugadores que coincidan con la busqueda.</p>
   <details class="mobile-full-player-list" open>
     <summary>
       <span>Lista completa de jugadores</span>
@@ -518,7 +464,7 @@ require __DIR__ . '/includes/header.php';
           <?php
             $rowSearch = player_row_search_text($player);
           ?>
-          <article id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item" data-player-table-row data-search="<?= h($rowSearch) ?>">
+          <article id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>">
             <span>
               <strong><?= h((string) $player['name']) ?></strong>
               <small><?= h((string) $player['positions']) ?> | General <?= h(skill_label(player_overall_rating($player))) ?></small>

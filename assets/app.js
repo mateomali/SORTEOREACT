@@ -35,6 +35,13 @@
     el.setAttribute('aria-busy', busy ? 'true' : 'false');
   };
 
+  const mountReactIslands = (root = document) => {
+    const scope = root instanceof HTMLElement || root instanceof Document ? root : document;
+    scope.querySelectorAll?.('[data-react-root]:not([data-react-mounted="1"])').forEach((island) => {
+      document.dispatchEvent(new CustomEvent('goodfellas:mount-react', { detail: { root: island } }));
+    });
+  };
+
   const collapseMobileDetails = (root = document) => {
     if (!window.matchMedia('(max-width: 760px)').matches) return;
     root.querySelectorAll('details[data-mobile-collapsed]').forEach((details) => {
@@ -48,6 +55,31 @@
     if (!nextNav || !currentNav) return;
     currentNav.innerHTML = nextNav.innerHTML;
     currentNav.classList.remove('open');
+  };
+
+  const runPageScripts = (nextDocument) => {
+    nextDocument.querySelectorAll('script').forEach((script) => {
+      const type = (script.type || '').trim().toLowerCase();
+      if (type && !['text/javascript', 'application/javascript', 'module'].includes(type)) return;
+
+      if (script.src) {
+        const src = new URL(script.src, window.location.href);
+        if (/\/assets\/(?:app|react\/react-app)\.js$/i.test(src.pathname)) return;
+        if (document.querySelector(`script[src="${src.href}"]`)) return;
+        const nextScript = document.createElement('script');
+        nextScript.src = src.href;
+        nextScript.async = false;
+        if (type === 'module') nextScript.type = 'module';
+        document.body.appendChild(nextScript);
+        return;
+      }
+
+      const nextScript = document.createElement('script');
+      if (type === 'module') nextScript.type = 'module';
+      nextScript.textContent = script.textContent || '';
+      document.body.appendChild(nextScript);
+      nextScript.remove();
+    });
   };
 
   const updateStatsPlayerSearch = (input = document.querySelector('[data-stats-player-search]')) => {
@@ -292,6 +324,7 @@
   };
 
   const hydrateDynamicContent = (root = document) => {
+    mountReactIslands(root);
     collapseMobileDetails(root);
     refreshExistingImportPlayers(root);
     bindParticipantControls(root);
@@ -299,7 +332,7 @@
     updateStatsPlayerSearch(root.querySelector?.('[data-stats-player-search]') || undefined);
   };
 
-  const partialNavigate = async (url, { replace = false, source = null } = {}) => {
+  const partialNavigate = async (url, { replace = false, source = null, scroll = true } = {}) => {
     const content = getMainContent();
     if (!content) {
       window.location.href = url;
@@ -321,15 +354,19 @@
       if (!nextContent) throw new Error('Missing partial content');
 
       document.title = nextDocument.title || document.title;
+      document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
       updateActiveNavigation(nextDocument);
       content.replaceChildren(...Array.from(nextContent.childNodes));
       hydrateDynamicContent(content);
+      runPageScripts(nextDocument);
       if (replace) {
         window.history.replaceState({ partial: true }, '', url);
       } else {
         window.history.pushState({ partial: true }, '', url);
       }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (scroll) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       showToast('Vista actualizada', 'success');
     } catch (error) {
       showToast('No se pudo actualizar sin recargar. Abriendo la pagina completa.', 'error');
@@ -346,13 +383,124 @@
     if (!content || !nextContent) throw new Error('Missing partial content');
 
     document.title = nextDocument.title || document.title;
+    document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
     updateActiveNavigation(nextDocument);
     content.replaceChildren(...Array.from(nextContent.childNodes));
     hydrateDynamicContent(content);
+    runPageScripts(nextDocument);
     return content;
   };
 
   const importFormSelector = '#importPlayersForm, #clearImportPlayersForm, form[id^="createImportPlayerForm"], form[id^="useExistingImportPlayerForm"]';
+  const escapeSelector = (value) => (
+    window.CSS && typeof window.CSS.escape === 'function'
+      ? window.CSS.escape(String(value))
+      : String(value).replace(/["\\]/g, '\\$&')
+  );
+
+  const partialFormSkipSelector = [
+    '[data-no-partial]',
+    '[data-round-robin-form]',
+    'form[id^="player-row-"]',
+    'form.player-edit-panel',
+    importFormSelector,
+  ].join(',');
+
+  const shouldSubmitFormPartially = (form) => {
+    if (!form || form.matches(partialFormSkipSelector)) return false;
+    if (form.target && form.target !== '_self') return false;
+    if (String(form.method || 'get').toLowerCase() === 'dialog') return false;
+    const enctype = String(form.enctype || '').toLowerCase();
+    if (enctype.includes('multipart/form-data')) return false;
+    if (form.querySelector('input[type="file"]')) return false;
+
+    const action = new URL(form.action || window.location.href, window.location.href);
+    if (action.origin !== window.location.origin) return false;
+    if (/\/(?:backup|logout)\.php$/i.test(action.pathname)) return false;
+    return true;
+  };
+
+  const getSubmitFormData = (form, submitter = null) => {
+    let formData;
+    try {
+      formData = submitter ? new FormData(form, submitter) : new FormData(form);
+    } catch (error) {
+      formData = new FormData(form);
+      if (submitter?.name && !formData.has(submitter.name)) {
+        formData.append(submitter.name, submitter.value || '');
+      }
+    }
+    return formData;
+  };
+
+  const submitFormPartially = async (form, submitter = null) => {
+    const method = String(form.method || 'get').toLowerCase();
+    const action = new URL(form.action || window.location.href, window.location.href);
+    const formData = getSubmitFormData(form, submitter);
+
+    if (method === 'get') {
+      action.search = '';
+      formData.forEach((value, key) => {
+        if (String(value).trim() !== '') {
+          action.searchParams.append(key, value);
+        }
+      });
+      await partialNavigate(action.toString(), { source: form, scroll: false });
+      return;
+    }
+
+    const content = getMainContent();
+    const anchorId = form.closest('[id]')?.id || form.id || '';
+    setBusy(content, true);
+    form.classList.add('is-partial-loading');
+    if (submitter) {
+      submitter.disabled = true;
+      submitter.classList.add('is-loading');
+    }
+
+    try {
+      const response = await fetch(action.toString(), {
+        method: 'POST',
+        body: formData,
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'fetch', Accept: 'text/html' },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const html = await response.text();
+      const nextDocument = new DOMParser().parseFromString(html, 'text/html');
+      const nextContent = replaceMainContentFromDocument(nextDocument);
+      const nextUrl = response.url || action.toString();
+      window.history.replaceState({ partial: true }, '', nextUrl);
+
+      const nextAnchor = anchorId ? nextContent.querySelector(`#${escapeSelector(anchorId)}`) : null;
+      if (nextAnchor) {
+        nextAnchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      showToast('Cambios guardados', 'success');
+    } catch (error) {
+      showToast('No se pudo actualizar sin recargar. Reintentando con recarga.', 'error');
+      form.submit();
+    } finally {
+      setBusy(content, false);
+      form.classList.remove('is-partial-loading');
+      if (submitter) {
+        submitter.disabled = false;
+        submitter.classList.remove('is-loading');
+      }
+    }
+  };
+
+  const shouldNavigatePartially = (link) => {
+    if (!link || link.target || link.download || link.hasAttribute('data-no-partial')) return false;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return false;
+    if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return false;
+    if (/\/(?:logout|migrar_schema)\.php$/i.test(url.pathname)) return false;
+    if (/\.(?:zip|csv|xlsx?|pdf|png|jpe?g|webp|gif|sql)$/i.test(url.pathname)) return false;
+    return true;
+  };
 
   const submitImportFormDynamically = async (form, submitter = null) => {
     const content = getMainContent();
@@ -748,6 +896,10 @@
     updateImportPlayerLimit();
     updateSelectionCount('participants');
   };
+
+  document.addEventListener('goodfellas:participants-changed', () => {
+    updateSelectionCount('participants');
+  });
 
   document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-use-existing-player]');
@@ -1481,6 +1633,13 @@
       return;
     }
 
+    const partialCandidate = event.target.closest('form');
+    if (shouldSubmitFormPartially(partialCandidate)) {
+      event.preventDefault();
+      submitFormPartially(partialCandidate, event.submitter || null);
+      return;
+    }
+
     const form = event.target.closest('form[data-partial-form]');
     if (!form || String(form.method || 'get').toLowerCase() !== 'get') return;
 
@@ -1497,11 +1656,21 @@
   });
 
   document.addEventListener('click', (event) => {
-    const link = event.target.closest('a[data-partial-link]');
+    const confirmed = event.target.closest('[data-confirm]');
+    if (confirmed) {
+      const message = confirmed.getAttribute('data-confirm') || 'Confirmar accion?';
+      if (!window.confirm(message)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+    }
+
+    const link = event.target.closest('a[href]');
     if (!link || link.target || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
+    if (!shouldNavigatePartially(link)) return;
     const url = new URL(link.href, window.location.href);
-    if (url.origin !== window.location.origin) return;
     event.preventDefault();
     partialNavigate(url.toString(), { source: link });
   });
@@ -2028,12 +2197,5 @@
 
   initManualTeams();
 
-  document.querySelectorAll('[data-confirm]').forEach((el) => {
-    el.addEventListener('click', (event) => {
-      const message = el.getAttribute('data-confirm') || 'Confirmar accion?';
-      if (!window.confirm(message)) {
-        event.preventDefault();
-      }
-    });
-  });
+  hydrateDynamicContent(document);
 })();

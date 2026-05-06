@@ -5521,6 +5521,71 @@
     transition: opacity 160ms ease;
   }
 
+  form.is-partial-loading,
+  a.is-loading,
+  button.is-loading {
+    position: relative;
+    opacity: 0.72;
+  }
+
+  form.is-partial-loading {
+    border-radius: 12px;
+    background:
+      linear-gradient(90deg, rgba(24, 119, 242, 0), rgba(24, 119, 242, 0.07), rgba(24, 119, 242, 0));
+    background-size: 220% 100%;
+    animation: draw-loading-slide 1.1s ease-in-out infinite;
+  }
+
+  .content > .flash,
+  .app-toast {
+    animation: gf-feed-enter 180ms ease-out both;
+  }
+
+  .card,
+  .team-card,
+  .encounter-card,
+  .mobile-player-list-item,
+  .match-list-item {
+    transition:
+      box-shadow 160ms ease,
+      transform 160ms ease,
+      border-color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .card:focus-within,
+  .team-card:focus-within,
+  .encounter-card:focus-within,
+  .mobile-player-list-item:focus-within {
+    border-color: rgba(24, 119, 242, 0.28);
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.10), 0 10px 26px rgba(15, 23, 42, 0.08);
+  }
+
+  .main-nav a.is-loading::after,
+  .btn.is-loading::after,
+  button.is-loading::after {
+    content: "";
+    width: 0.85em;
+    height: 0.85em;
+    margin-left: 0.45em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 999px;
+    animation: gf-spin 700ms linear infinite;
+  }
+
+  @keyframes gf-feed-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .content.is-partial-loading::before {
     content: "";
     position: fixed;

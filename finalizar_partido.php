@@ -1108,6 +1108,12 @@ require __DIR__ . '/includes/header.php';
             <span>Valoraciones</span>
             <small>Goles y puntajes</small>
           </summary>
+          <div
+            data-react-root
+            data-react-island="finish_valuation_controls"
+            data-total="<?= h((string) count(array_filter($participants, static fn(array $player): bool => $player['team_number'] !== null))) ?>"
+          ></div>
+          <p class="small-muted" data-finish-valuations-empty hidden>No hay jugadores que coincidan con la busqueda.</p>
           <div class="finish-valuations-body">
             <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
               <article class="finish-rating-team" data-finish-team="<?= (int) $teamNumber ?>">
@@ -1133,7 +1139,7 @@ require __DIR__ . '/includes/header.php';
                               ? (string) ($postedRatingData[$playerId] ?? '5')
                               : ($p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '5');
                         ?>
-                        <tr draggable="true" data-finish-player-row data-player-id="<?= $playerId ?>" data-team-number="<?= (int) $teamNumber ?>" data-position="<?= h((string) $line) ?>">
+                        <tr draggable="true" data-finish-player-row data-player-id="<?= $playerId ?>" data-team-number="<?= (int) $teamNumber ?>" data-position="<?= h((string) $line) ?>" data-search="<?= h(mb_strtolower((string) $p['name'] . ' ' . (string) $line . ' ' . ($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)), 'UTF-8')) ?>">
                           <td data-label="Jugador">
                             <strong><?= h((string) $p['name']) ?></strong>
                             <small data-finish-player-position-label><?= h((string) $line) ?></small>

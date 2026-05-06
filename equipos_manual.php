@@ -79,6 +79,7 @@ require __DIR__ . '/includes/header.php';
         <span aria-hidden="true">🔍</span>
         <input id="manualPlayerSearch" type="search" placeholder="Nombre, posicion, ritmo o puntaje..." autocomplete="off" data-manual-player-search>
       </div>
+      <div data-react-root data-react-island="manual_teams_search_assist" data-target="manualPlayerSearch"></div>
     </div>
     <div class="manual-teams-board mt-3" data-manual-board></div>
     <div class="manual-mobile-assign-panel" data-manual-mobile-panel hidden></div>
