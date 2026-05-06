@@ -39,7 +39,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       const statValue = (player, field) => {
         const value = Number(player[field]);
         if (Number.isFinite(value) && value > 0) return value;
-        return field === 'regularity' ? 3.5 : Number(player.skill || 0);
+        return field === 'regularity' ? 3.5 : (field === 'mentality' ? 3.0 : Number(player.skill || 0));
       };
       const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
       const teamCharacteristics = (players) => {
@@ -57,6 +57,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           rhythm: average('rhythm'),
           technique: average('technique'),
           teamwork: average('teamwork'),
+          mentality: average('mentality'),
           regularity: average('regularity'),
           goalkeeperSkill,
           slow: players.filter(lowRhythm).length,
@@ -77,7 +78,8 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
               <span>Solidez ${summary.defensePhysical.toFixed(1)}</span>
               <span>Ritmo ${summary.rhythm.toFixed(1)}</span>
               <span>Tecnica ${summary.technique.toFixed(1)}</span>
-              <span>Compromiso ${summary.teamwork.toFixed(1)}</span>
+              <span>Juego en equipo ${summary.teamwork.toFixed(1)}</span>
+              <span>Mentalidad ${summary.mentality.toFixed(1)}</span>
               <span>Regularidad ${summary.regularity.toFixed(1)}</span>
             </div>
           </div>

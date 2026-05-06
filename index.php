@@ -522,6 +522,7 @@ function public_team_characteristics_summary(array $players): array
         'rhythm' => $average('rhythm'),
         'technique' => $average('technique'),
         'teamwork' => $average('teamwork'),
+        'mentality' => $average('mentality'),
         'regularity' => $average('regularity'),
         'goalkeeper_skill' => $goalkeeperSkill,
         'fast' => count(array_filter($players, static fn(array $player): bool => !player_is_low_rhythm($player))),
@@ -551,7 +552,8 @@ function render_public_team_characteristics(array $players): string
         <span>Solidez <?= h(number_format((float) $summary['defense_physical'], 1)) ?></span>
         <span>Ritmo <?= h(number_format((float) $summary['rhythm'], 1)) ?></span>
         <span>Tecnica <?= h(number_format((float) $summary['technique'], 1)) ?></span>
-        <span>Compromiso <?= h(number_format((float) $summary['teamwork'], 1)) ?></span>
+        <span>Juego en equipo <?= h(number_format((float) $summary['teamwork'], 1)) ?></span>
+        <span>Mentalidad <?= h(number_format((float) $summary['mentality'], 1)) ?></span>
         <span>Regularidad <?= h(number_format((float) $summary['regularity'], 1)) ?></span>
       </div>
     </div>

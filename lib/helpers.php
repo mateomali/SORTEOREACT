@@ -73,33 +73,35 @@ function skill_label(float $skill): string
 
 function player_stat_fields(): array
 {
-    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity', 'goalkeeper_skill'];
+    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity', 'goalkeeper_skill'];
 }
 
 function player_field_stat_fields(): array
 {
-    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity'];
+    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 }
 
 function player_field_stat_weights(): array
 {
     return [
-        'technique' => 0.20,
-        'rhythm' => 0.20,
-        'defense_physical' => 0.20,
-        'attack' => 0.25,
-        'teamwork' => 0.15,
+        'technique' => 0.18,
+        'rhythm' => 0.18,
+        'defense_physical' => 0.18,
+        'attack' => 0.24,
+        'teamwork' => 0.12,
+        'mentality' => 0.10,
     ];
 }
 
 function player_goalkeeper_stat_weights(): array
 {
     return [
-        'goalkeeper_skill' => 0.45,
-        'defense_physical' => 0.15,
+        'goalkeeper_skill' => 0.42,
+        'defense_physical' => 0.14,
         'rhythm' => 0.10,
         'technique' => 0.10,
-        'teamwork' => 0.20,
+        'teamwork' => 0.14,
+        'mentality' => 0.10,
     ];
 }
 
@@ -111,7 +113,8 @@ function player_draw_balance_weights(): array
         'defense_physical' => 15.0,
         'rhythm' => 10.0,
         'technique' => 5.0,
-        'teamwork' => 5.0,
+        'teamwork' => 8.0,
+        'mentality' => 10.0,
         'regularity' => 5.0,
         'goalkeeper_skill' => 25.0,
     ];
@@ -130,6 +133,7 @@ function player_effective_stat(array $player, string $field): float
 {
     $fallback = match ($field) {
         'technique', 'attack', 'teamwork', 'goalkeeper_skill' => (float) ($player['skill'] ?? 3.0),
+        'mentality' => 3.0,
         'regularity' => 3.5,
         'rhythm' => (($player['pace'] ?? '') === 'lento') ? 2.0 : 4.0,
         'defense_physical' => 3.0,

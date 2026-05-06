@@ -26,7 +26,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
     const statValue = (player, field) => {
       const value = Number(player[field]);
       if (Number.isFinite(value) && value > 0) return value;
-      return field === 'regularity' ? 3.5 : Number(player.skill || 0);
+      return field === 'regularity' ? 3.5 : (field === 'mentality' ? 3.0 : Number(player.skill || 0));
     };
     const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
     const teamAverage = (players, field) => players.length
@@ -49,7 +49,8 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             <span>Solidez ${teamAverage(players, 'defense_physical').toFixed(1)}</span>
             <span>Ritmo ${teamAverage(players, 'rhythm').toFixed(1)}</span>
             <span>Tecnica ${teamAverage(players, 'technique').toFixed(1)}</span>
-            <span>Compromiso ${teamAverage(players, 'teamwork').toFixed(1)}</span>
+            <span>Juego en equipo ${teamAverage(players, 'teamwork').toFixed(1)}</span>
+            <span>Mentalidad ${teamAverage(players, 'mentality').toFixed(1)}</span>
             <span>Regularidad ${teamAverage(players, 'regularity').toFixed(1)}</span>
           </div>
         </div>

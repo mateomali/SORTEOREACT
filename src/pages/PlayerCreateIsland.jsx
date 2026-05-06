@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { StatRating } from '../components/StatRating.jsx';
 
 const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
-const fieldOrder = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity'];
+const fieldOrder = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 const defaults = {
   technique: 3,
   rhythm: 3,
   defense_physical: 3,
   attack: 3,
   teamwork: 3,
+  mentality: 3,
   regularity: 4,
   goalkeeper_skill: 3,
 };
@@ -26,16 +27,18 @@ function formatRating(value) {
 function overall(stats, selectedPositions) {
   const hasGoalkeeper = selectedPositions.includes('ARQ');
   const base = hasGoalkeeper
-    ? (stats.goalkeeper_skill * 0.45)
-      + (stats.defense_physical * 0.15)
+    ? (stats.goalkeeper_skill * 0.42)
+      + (stats.defense_physical * 0.14)
       + (stats.rhythm * 0.10)
       + (stats.technique * 0.10)
-      + (stats.teamwork * 0.20)
-    : (stats.technique * 0.20)
-      + (stats.rhythm * 0.20)
-      + (stats.defense_physical * 0.20)
-      + (stats.attack * 0.25)
-      + (stats.teamwork * 0.15);
+      + (stats.teamwork * 0.14)
+      + (stats.mentality * 0.10)
+    : (stats.technique * 0.18)
+      + (stats.rhythm * 0.18)
+      + (stats.defense_physical * 0.18)
+      + (stats.attack * 0.24)
+      + (stats.teamwork * 0.12)
+      + (stats.mentality * 0.10);
   const regularityFactor = 1 + ((stats.regularity - 3.5) / 50);
   return Math.max(1, Math.min(6, Math.round(base * regularityFactor * 10) / 10));
 }

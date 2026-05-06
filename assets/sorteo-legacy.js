@@ -320,7 +320,7 @@ function obtenerEmojisDePosiciones(posiciones) {
 }
 
 function statValue(jugador, campo) {
-  const fallback = campo === 'regularidad' ? 3.5 : Number(jugador.puntuacion || 0);
+  const fallback = campo === 'regularidad' ? 3.5 : (campo === 'mentalidad' ? 3.0 : Number(jugador.puntuacion || 0));
   const value = Number(jugador[campo]);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
@@ -346,6 +346,7 @@ function teamTotalsSummary(equipo) {
     solidez: teamAverage(equipo, 'solidez'),
     ataque: teamAverage(equipo, 'ataque'),
     compromiso: teamAverage(equipo, 'compromiso'),
+    mentalidad: teamAverage(equipo, 'mentalidad'),
     regularidad: teamAverage(equipo, 'regularidad'),
     arquero: equipo.reduce((max, jugador) => {
       if (!getOrderedPlayerPositions(jugador).includes('ARQ')) return max;
@@ -785,6 +786,7 @@ function teamStats(equipo) {
     ritmo: equipo.reduce((sum, j) => sum + statValue(j, 'ritmo_stat'), 0),
     tecnica: equipo.reduce((sum, j) => sum + statValue(j, 'tecnica'), 0),
     compromiso: equipo.reduce((sum, j) => sum + statValue(j, 'compromiso'), 0),
+    mentalidad: equipo.reduce((sum, j) => sum + statValue(j, 'mentalidad'), 0),
     regularidad: equipo.reduce((sum, j) => sum + statValue(j, 'regularidad'), 0),
     arquero: equipo.reduce((max, j) => {
       if (!getOrderedPlayerPositions(j).includes('ARQ')) return max;
@@ -1360,10 +1362,11 @@ function mostrarEquipos(equipos) {
           <span>Solidez ${resumenStats.solidez.toFixed(1)}</span>
           <span>Ritmo ${resumenStats.ritmo.toFixed(1)}</span>
           <span>Tecnica ${resumenStats.tecnica.toFixed(1)}</span>
-          <span>Compromiso ${resumenStats.compromiso.toFixed(1)}</span>
+          <span>Juego en equipo ${resumenStats.compromiso.toFixed(1)}</span>
+          <span>Mentalidad ${resumenStats.mentalidad.toFixed(1)}</span>
           <span>Regularidad ${resumenStats.regularidad.toFixed(1)}</span>
         </div>
-        <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5, Compromiso 5 y Regularidad 5. La habilidad de arquero tiene prioridad alta y tambien se controlan posiciones, arqueros y ritmo lento.</small>
+        <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5, Juego en equipo 8, Mentalidad 10 y Regularidad 5. La habilidad de arquero tiene prioridad alta y tambien se controlan posiciones, arqueros y ritmo lento.</small>
       </div>
     `;
     container.appendChild(equipoDiv);
