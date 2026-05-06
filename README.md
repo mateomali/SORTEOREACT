@@ -23,6 +23,15 @@ Desde PowerShell:
 ```
 
 El script levanta MySQL de XAMPP si hace falta, inicia PHP desde `C:\xampp\php\php.exe` y muestra la URL local.
+Tambien muestra `NetworkUrl`; usa esa direccion desde otros equipos conectados a la misma red local.
+
+Ejemplo:
+
+```powershell
+.\scripts\levantar-servidor-local.ps1
+```
+
+Si Windows Firewall pregunta, permiti el acceso para redes privadas. Si no aparece el aviso y otros equipos no pueden entrar, habilita el puerto mostrado por `NetworkUrl`.
 
 ## 3) Flujo recomendado
 1. Cargar jugadores en `jugadores.php` o migrar desde CSV en `migrar_csv.php`.

@@ -96,6 +96,27 @@ function player_scout_data_attrs(array $player): string
     return $html;
 }
 
+function player_sort_data_attrs(array $player): string
+{
+    $stats = array_map(
+        static fn(string $field): float => player_effective_stat($player, $field),
+        player_stat_fields()
+    );
+    $statsAverage = count($stats) > 0 ? array_sum($stats) / count($stats) : 0.0;
+    $attrs = [
+        'sort-name' => strtolower((string) ($player['name'] ?? '')),
+        'sort-active' => (string) ((int) ($player['active'] ?? 0)),
+        'sort-positions' => (string) ($player['positions'] ?? ''),
+        'sort-general' => number_format(player_overall_rating($player), 3, '.', ''),
+        'sort-stats' => number_format($statsAverage, 3, '.', ''),
+    ];
+    $html = '';
+    foreach ($attrs as $name => $value) {
+        $html .= ' data-' . $name . '="' . h($value) . '"';
+    }
+    return $html;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $returnAnchor = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($_POST['return_anchor'] ?? ''));
@@ -402,7 +423,7 @@ function player_stats_radar_panel(bool $compact = false): string
     </aside>';
 }
 
-$players = repo_all_players(!$showInactive);
+$players = repo_all_players($isAdmin ? false : true);
 $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores.php';
 require __DIR__ . '/includes/header.php';
@@ -417,6 +438,10 @@ require __DIR__ . '/includes/header.php';
     <a class="btn btn-muted" href="migrar_csv.php">Migrar desde CSV</a>
   <?php endif; ?>
 </section>
+
+<div class="players-mobile-help">
+  <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
+</div>
 
 <?php if ($isAdmin): ?>
   <div
@@ -434,17 +459,13 @@ require __DIR__ . '/includes/header.php';
   <div class="section-toolbar">
     <div>
       <h3>Listado de jugadores</h3>
-      <p class="small-muted"><?= $showInactive ? 'Mostrando activos e inactivos.' : 'Mostrando solo jugadores activos.' ?></p>
+      <p class="small-muted"><?= $isAdmin ? 'Mostrando todos los jugadores.' : 'Mostrando solo jugadores activos.' ?></p>
     </div>
     <div
       data-react-root
       data-react-island="player_list_controls"
       data-total="<?= h((string) count($players)) ?>"
-      data-mode-label="<?= h($showInactive ? 'Activos e inactivos' : 'Solo activos') ?>"
-      <?php if ($isAdmin): ?>
-        data-toggle-url="<?= h($showInactive ? 'jugadores.php' : 'jugadores.php?show_inactive=1') ?>"
-        data-toggle-label="<?= h($showInactive ? 'Ver solo activos' : 'Ver inactivos') ?>"
-      <?php endif; ?>
+      data-can-filter-active="<?= $isAdmin ? '1' : '0' ?>"
     ></div>
   </div>
   <div class="players-desktop-help">
@@ -464,7 +485,7 @@ require __DIR__ . '/includes/header.php';
           <?php
             $rowSearch = player_row_search_text($player);
           ?>
-          <article id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>">
+          <article id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
             <span>
               <strong><?= h((string) $player['name']) ?></strong>
               <small><?= h((string) $player['positions']) ?> | General <?= h(skill_label(player_overall_rating($player))) ?></small>
@@ -480,7 +501,7 @@ require __DIR__ . '/includes/header.php';
                     <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
                   </button>
                 </form>
-                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Informe de <?= h((string) $player['name']) ?>" title="Informe"></button>
+                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato"></button>
                 <button class="btn btn-muted player-icon-button icon-pencil" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"></button>
                 <form method="post" class="inline">
                   <input type="hidden" name="action" value="delete">
@@ -493,7 +514,7 @@ require __DIR__ . '/includes/header.php';
                 <span class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>">
                   <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
                 </span>
-                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Informe de <?= h((string) $player['name']) ?>" title="Informe"></button>
+                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato"></button>
                 <button class="btn btn-muted" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">Ver</button>
               <?php endif; ?>
             </span>
@@ -506,10 +527,10 @@ require __DIR__ . '/includes/header.php';
     <table class="editable-table">
       <thead>
         <tr>
-          <th>Nombre</th>
-          <th>Posiciones</th>
-          <th>General</th>
-          <th>Stats</th>
+          <th><button class="player-sort-head" type="button" data-player-sort="name" aria-label="Ordenar por nombre">Nombre <span aria-hidden="true"></span></button></th>
+          <th><button class="player-sort-head" type="button" data-player-sort="positions" aria-label="Ordenar por posiciones">Posiciones <span aria-hidden="true"></span></button></th>
+          <th><button class="player-sort-head" type="button" data-player-sort="general" aria-label="Ordenar por promedio general">General <span aria-hidden="true"></span></button></th>
+          <th><button class="player-sort-head" type="button" data-player-sort="stats" aria-label="Ordenar por promedio de stats">Stats <span aria-hidden="true"></span></button></th>
           <?php if ($isAdmin): ?>
             <th>Acc.</th>
           <?php endif; ?>
@@ -526,7 +547,7 @@ require __DIR__ . '/includes/header.php';
             $rowPositions = parse_positions_csv((string) $player['positions']);
             $rowSearch = player_row_search_text($player);
           ?>
-          <tr data-player-table-row data-player-edit-row data-player-id="<?= $playerId ?>" data-search="<?= h($rowSearch) ?>">
+          <tr data-player-table-row data-player-edit-row data-player-id="<?= $playerId ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
             <td>
               <?php if ($isAdmin): ?>
                 <input type="hidden" name="action" value="save" form="<?= h($rowFormId) ?>">
@@ -544,9 +565,9 @@ require __DIR__ . '/includes/header.php';
               <?php else: ?>
                 <strong class="player-readonly-name"><?= h((string) $player['name']) ?></strong>
               <?php endif; ?>
-              <button class="btn btn-muted player-scout-row-button" type="button" data-player-scout-open aria-label="Informe de <?= h((string) $player['name']) ?>" title="Informe del relator">
+              <button class="btn btn-muted player-scout-row-button" type="button" data-player-scout-open aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato del jugador">
                 <span class="player-scout-icon" aria-hidden="true"></span>
-                <span>Informe</span>
+                <span>Relato</span>
               </button>
             </td>
             <td>
@@ -606,7 +627,7 @@ require __DIR__ . '/includes/header.php';
 <div class="player-scout-floating-panel" data-player-scout-panel hidden>
   <article class="player-scout-floating-card" role="dialog" aria-modal="true" aria-labelledby="playerScoutTitle">
     <div class="player-scout-floating-head">
-      <span>Informe del relator</span>
+      <span>Relato del jugador</span>
       <button class="player-scout-close" type="button" data-player-scout-close aria-label="Cerrar">x</button>
     </div>
     <h3 id="playerScoutTitle" data-player-scout-title>Perfil del jugador</h3>

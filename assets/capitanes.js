@@ -9,6 +9,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       const viewMode = board.dataset.viewMode || '';
       const adminEditor = board.dataset.adminEditor === '1';
       const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
+      const FORMATION_LINE_LIMITS = { ARQ: 1, DEF: 4, MED: 4, DEL: 4 };
       let state = null;
       const formationDrafts = {};
       const formationOrders = {};
@@ -268,10 +269,11 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         const defensiveDef = Math.max(1, Math.ceil(fieldPlayers / 3));
         const defensiveDel = Math.max(1, Math.floor(fieldPlayers / 4));
         const defensiveMed = Math.max(0, fieldPlayers - defensiveDef - defensiveDel);
+        const fitCounts = (counts) => normalizeCustomCounts(counts, 'MED', counts.MED, fieldPlayers);
         return [
-          { name: `Equilibrada ${balancedDef}-${balancedMed}-${balancedDel}`, counts: { DEF: balancedDef, MED: balancedMed, DEL: balancedDel } },
-          { name: `Ofensiva ${offensiveDef}-${offensiveMed}-${offensiveDel}`, counts: { DEF: offensiveDef, MED: offensiveMed, DEL: offensiveDel } },
-          { name: `Defensiva ${defensiveDef}-${defensiveMed}-${defensiveDel}`, counts: { DEF: defensiveDef, MED: defensiveMed, DEL: defensiveDel } },
+          { name: 'Equilibrada', counts: fitCounts({ DEF: balancedDef, MED: balancedMed, DEL: balancedDel }) },
+          { name: 'Ofensiva', counts: fitCounts({ DEF: offensiveDef, MED: offensiveMed, DEL: offensiveDel }) },
+          { name: 'Defensiva', counts: fitCounts({ DEF: defensiveDef, MED: defensiveMed, DEL: defensiveDel }) },
         ];
       };
 
@@ -318,25 +320,72 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const normalizeCustomCounts = (currentCounts, changedLine, nextValue, total) => {
         const lines = ['DEF', 'MED', 'DEL'];
-        const counts = { ...currentCounts };
-        counts[changedLine] = Math.max(0, Math.min(total, Number(nextValue) || 0));
+        const maxPerLine = FORMATION_LINE_LIMITS.DEF;
+        const counts = {
+          DEF: Math.max(0, Math.min(maxPerLine, Number(currentCounts.DEF) || 0)),
+          MED: Math.max(0, Math.min(maxPerLine, Number(currentCounts.MED) || 0)),
+          DEL: Math.max(0, Math.min(maxPerLine, Number(currentCounts.DEL) || 0)),
+        };
+        counts[changedLine] = Math.max(0, Math.min(maxPerLine, Number(nextValue) || 0));
         let remaining = total - counts[changedLine];
         const others = lines.filter(line => line !== changedLine);
         const originalOtherTotal = others.reduce((sum, line) => sum + (currentCounts[line] || 0), 0);
 
         others.forEach((line, index) => {
           if (index === others.length - 1) {
-            counts[line] = remaining;
+            counts[line] = Math.max(0, Math.min(maxPerLine, remaining));
             return;
           }
           const share = originalOtherTotal > 0
-            ? Math.min(remaining, Math.round(remaining * ((currentCounts[line] || 0) / originalOtherTotal)))
+            ? Math.min(remaining, maxPerLine, Math.round(remaining * ((currentCounts[line] || 0) / originalOtherTotal)))
             : Math.floor(remaining / (others.length - index));
-          counts[line] = Math.max(0, share);
+          counts[line] = Math.max(0, Math.min(maxPerLine, share));
           remaining -= counts[line];
         });
 
+        let sum = lines.reduce((totalCount, line) => totalCount + counts[line], 0);
+        while (sum < total) {
+          const line = lines.find(candidate => counts[candidate] < maxPerLine);
+          if (!line) break;
+          counts[line]++;
+          sum++;
+        }
+        while (sum > total) {
+          const line = lines.slice().sort((a, b) => counts[b] - counts[a]).find(candidate => counts[candidate] > 0);
+          if (!line) break;
+          counts[line]--;
+          sum--;
+        }
+
         return counts;
+      };
+
+      const formationLineCounts = (teamNumber, players) => {
+        ensureFormationState(teamNumber, players);
+        return players.reduce((counts, player) => {
+          const position = formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || 'MED';
+          counts[position] = (counts[position] || 0) + 1;
+          return counts;
+        }, { ARQ: 0, DEF: 0, MED: 0, DEL: 0 });
+      };
+
+      const validateFormationMove = (teamNumber, players, playerId, nextPosition, currentPosition) => {
+        const limits = FORMATION_LINE_LIMITS;
+        const counts = formationLineCounts(teamNumber, players);
+        if (nextPosition === currentPosition) return true;
+        if (currentPosition === 'ARQ' && nextPosition !== 'ARQ') {
+          showMessage('Cada equipo debe mantener un solo arquero. Para cambiarlo, intercambialo con otro jugador.', 'error');
+          return false;
+        }
+        if (nextPosition === 'ARQ' && counts.ARQ >= limits.ARQ) {
+          showMessage('Cada equipo puede tener un solo arquero.', 'error');
+          return false;
+        }
+        if (nextPosition !== 'ARQ' && (counts[nextPosition] || 0) >= limits[nextPosition]) {
+          showMessage(`Maximo ${limits[nextPosition]} jugadores por linea.`, 'error');
+          return false;
+        }
+        return true;
       };
 
       const applyFormationCounts = (container, players, counts) => {
@@ -385,7 +434,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
             <label class="captain-custom-count">
               <span>${line}</span>
               <button type="button" data-custom-line="${line}" data-custom-delta="-1">-</button>
-              <input type="number" min="0" max="${total}" value="${counts[line]}" data-custom-line-input="${line}">
+              <input type="number" min="0" max="${Math.min(total, FORMATION_LINE_LIMITS[line])}" value="${counts[line]}" data-custom-line-input="${line}">
               <button type="button" data-custom-line="${line}" data-custom-delta="1">+</button>
             </label>
           `).join('')}
@@ -724,7 +773,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           const linePlayers = orderedFormationPlayers(teamNumber, players, pos);
           return `
             <div class="formation-line captain-formation-line">
-              <div class="line-label">${pos}</div>
+              <div class="line-label">${pos} ${linePlayers.length}/${FORMATION_LINE_LIMITS[pos]}</div>
               <div class="line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
                 ${linePlayers.length ? linePlayers.map(player => `
                   <div class="formation-player captain-formation-player" draggable="true" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}">
@@ -745,6 +794,11 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           });
           select.addEventListener('change', () => {
             const playerId = parseInt(select.dataset.playerId, 10);
+            const currentPosition = formationDrafts[teamNumber]?.[playerId] || '';
+            if (!validateFormationMove(teamNumber, players, playerId, select.value, currentPosition)) {
+              select.value = currentPosition || currentPlayerPosition(container, players.find(player => Number(player.id) === playerId) || {});
+              return;
+            }
             formationDrafts[teamNumber][playerId] = select.value;
             const order = formationOrders[teamNumber] || [];
             formationOrders[teamNumber] = order.filter(id => Number(id) !== playerId).concat(playerId);
@@ -871,7 +925,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         <div class="team-formation captain-formation-field" data-drop-team="${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
         <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
-        <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar formacion</button>
+        <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar cambios</button>
       `;
 
       const renderReadonlyTeam = (players) => players.map(p => `
@@ -1165,6 +1219,9 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
             message.classList.add('hidden');
           }, 2200);
         }
+        window.setTimeout(() => {
+          window.location.href = 'index.php';
+        }, 700);
       };
 
       const saveAllFormations = async () => {

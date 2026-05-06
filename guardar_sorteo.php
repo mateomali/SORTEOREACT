@@ -102,6 +102,28 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
     return (max($slowCounts) - min($slowCounts)) <= 1;
 }
 
+function normalize_team_color_name_legacy(string $color): string
+{
+    return strtoupper(trim($color));
+}
+
+function validate_unique_team_colors_legacy(array $teamMeta, int $numTeams): ?string
+{
+    $seen = [];
+    for ($idx = 0; $idx < $numTeams; $idx++) {
+        $color = normalize_team_color_name_legacy((string) ($teamMeta[$idx]['color_name'] ?? ''));
+        if ($color === '') {
+            return 'Todos los equipos deben tener color de camiseta.';
+        }
+        if (isset($seen[$color])) {
+            return 'No se puede guardar: hay equipos con el mismo color de camiseta.';
+        }
+        $seen[$color] = true;
+    }
+
+    return null;
+}
+
 function team_formation_summary_legacy(array $team): string
 {
     $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
@@ -205,6 +227,13 @@ if (count($teams) !== $numTeams) {
     exit;
 }
 
+$teamColorError = validate_unique_team_colors_legacy($teamMeta, $numTeams);
+if ($teamColorError !== null) {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'message' => $teamColorError]);
+    exit;
+}
+
 if (count($allIds) !== count($participantsById)) {
     http_response_code(422);
     echo json_encode(['ok' => false, 'message' => 'Deben incluirse todos los convocados en el sorteo']);
@@ -282,7 +311,7 @@ try {
                 'id' => (int) $p['id'],
                 'position' => normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p),
             ], $team), JSON_UNESCAPED_UNICODE),
-            'color_name' => (string) ($teamMeta[$idx]['color_name'] ?? ''),
+            'color_name' => normalize_team_color_name_legacy((string) ($teamMeta[$idx]['color_name'] ?? '')),
         ]);
 
         $lineOrder = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];

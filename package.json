@@ -10,7 +10,7 @@
     "build": "npm run build:css && npm run build:react",
     "build:css": "tailwindcss -i ./assets/tailwind.input.css -o ./assets/tailwind.css --minify",
     "build:react": "vite build",
-    "dev:react": "vite --host 127.0.0.1",
+    "dev:react": "vite --host 0.0.0.0",
     "test:react-smoke": "playwright test tests/react-partial-smoke.spec.js",
     "test:smoke": "npm run test:spa && npm run test:react-smoke",
     "test:spa": "playwright test tests/spa-progressive-smoke.spec.js",

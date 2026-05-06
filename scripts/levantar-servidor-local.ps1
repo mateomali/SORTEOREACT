@@ -1,4 +1,5 @@
 param(
+    [string] $BindAddress = '0.0.0.0',
     [int] $Port = 8000
 )
 
@@ -52,26 +53,38 @@ if (-not $mysqlConnection) {
 }
 
 $escapedProjectRoot = [regex]::Escape($projectRoot.Path)
+$bindAddressPattern = [regex]::Escape($BindAddress)
 $existingPhpProcess = Get-CimInstance Win32_Process -Filter "name = 'php.exe'" |
     Where-Object {
-        $_.CommandLine -match '-S\s+127\.0\.0\.1:(\d+)' -and
+        $_.CommandLine -match "-S\s+$bindAddressPattern`:(\d+)" -and
         $_.CommandLine -match "-t\s+`"?$escapedProjectRoot`"?"
     } |
     Select-Object -First 1
 
 if ($existingPhpProcess) {
-    $existingPhpProcess.CommandLine -match '-S\s+127\.0\.0\.1:(\d+)' | Out-Null
+    $existingPhpProcess.CommandLine -match "-S\s+$bindAddressPattern`:(\d+)" | Out-Null
     $selectedPort = [int] $Matches[1]
-    $url = "http://127.0.0.1:$selectedPort/"
+    $localUrl = "http://127.0.0.1:$selectedPort/"
+    $lanIp = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.IPAddress -notlike '127.*' -and
+            $_.IPAddress -notlike '169.254.*' -and
+            $_.PrefixOrigin -ne 'WellKnown'
+        } |
+        Sort-Object InterfaceMetric |
+        Select-Object -ExpandProperty IPAddress -First 1
+    $networkUrl = if ($lanIp) { "http://$lanIp`:$selectedPort/" } else { $null }
 
     try {
-        $statusCode = (Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 10).StatusCode
+        $statusCode = (Invoke-WebRequest -Uri $localUrl -UseBasicParsing -TimeoutSec 10).StatusCode
     } catch {
         $statusCode = "sin respuesta: $($_.Exception.Message)"
     }
 
     [pscustomobject]@{
-        Url = $url
+        Url = $localUrl
+        NetworkUrl = $networkUrl
+        BindAddress = $BindAddress
         PhpProcessId = $existingPhpProcess.ProcessId
         MysqlProcessId = $mysqlConnection.OwningProcess
         Status = $statusCode
@@ -95,7 +108,7 @@ $phpErr = Join-Path $runtimeDir 'php-server.err.log'
 
 $phpProcess = Start-Process `
     -FilePath $phpExe `
-    -ArgumentList @('-S', "127.0.0.1:$selectedPort", '-t', $projectRoot.Path) `
+    -ArgumentList @('-S', "$BindAddress`:$selectedPort", '-t', $projectRoot.Path) `
     -WorkingDirectory $projectRoot.Path `
     -RedirectStandardOutput $phpOut `
     -RedirectStandardError $phpErr `
@@ -104,16 +117,27 @@ $phpProcess = Start-Process `
 
 Start-Sleep -Seconds 1
 
-$url = "http://127.0.0.1:$selectedPort/"
+$localUrl = "http://127.0.0.1:$selectedPort/"
+$lanIp = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.IPAddress -notlike '127.*' -and
+        $_.IPAddress -notlike '169.254.*' -and
+        $_.PrefixOrigin -ne 'WellKnown'
+    } |
+    Sort-Object InterfaceMetric |
+    Select-Object -ExpandProperty IPAddress -First 1
+$networkUrl = if ($lanIp) { "http://$lanIp`:$selectedPort/" } else { $null }
 
 try {
-    $statusCode = (Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 10).StatusCode
+    $statusCode = (Invoke-WebRequest -Uri $localUrl -UseBasicParsing -TimeoutSec 10).StatusCode
 } catch {
     $statusCode = "sin respuesta: $($_.Exception.Message)"
 }
 
 [pscustomobject]@{
-    Url = $url
+    Url = $localUrl
+    NetworkUrl = $networkUrl
+    BindAddress = $BindAddress
     PhpProcessId = $phpProcess.Id
     MysqlProcessId = $mysqlConnection.OwningProcess
     Status = $statusCode

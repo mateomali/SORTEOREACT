@@ -173,7 +173,8 @@ if (!$isCaptainView) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start_draft') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
-    $captainCount = (int) ($_POST['captain_count'] ?? 2);
+    $matchForDraft = $matchId > 0 ? repo_match_by_id($matchId) : null;
+    $captainCount = $matchForDraft ? (int) ($matchForDraft['num_teams'] ?? 2) : 0;
     $captains = [];
     foreach ([1, 2, 3, 4] as $teamNumber) {
         $captainId = (int) ($_POST['captain' . $teamNumber] ?? 0);
@@ -189,11 +190,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
         redirect('capitanes.php');
     }
     if (!in_array($captainCount, [2, 3, 4], true)) {
-        flash('error', 'Elige si el draft sera de 2, 3 o 4 capitanes.');
+        flash('error', 'La fecha debe tener entre 2 y 4 equipos para iniciar modo capitanes.');
         redirect('capitanes.php?match_id=' . $matchId);
     }
     if (count($participants) % $captainCount !== 0) {
-        flash('error', 'La cantidad de convocados debe dividirse exacto entre ' . $captainCount . ' capitanes.');
+        flash('error', 'La cantidad de convocados debe dividirse exacto entre los ' . $captainCount . ' equipos de la fecha.');
         redirect('capitanes.php?match_id=' . $matchId);
     }
     $captainIds = array_values($captains);
@@ -312,7 +313,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
     redirect($matchId > 0 ? 'capitanes.php?match_id=' . $matchId : 'capitanes.php');
 }
 
-$matches = repo_matches("status IN ('programado','sorteado')");
 $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
 $participants = $selectedMatch ? repo_match_participants_basic((int) $selectedMatch['id']) : [];
 $draft = null;
@@ -349,6 +349,7 @@ $generatedTeams = $selectedMatch ? repo_match_teams((int) $selectedMatch['id']) 
 $hasGeneratedTeams = $selectedMatch
     && in_array((string) ($selectedMatch['status'] ?? ''), ['sorteado', 'finalizado'], true)
     && count($generatedTeams) >= 2;
+$selectedTeamCount = $selectedMatch ? max(2, min(4, (int) ($selectedMatch['num_teams'] ?? 2))) : 2;
 
 $captainCards = [];
 if ($selectedMatch && $draft) {
@@ -389,42 +390,26 @@ require __DIR__ . '/includes/header.php';
   <a class="btn btn-muted" href="<?= h($backUrl) ?>"><?= h($backLabel) ?></a>
 </section>
 
-<?php if (!$isCaptainView): ?>
+<?php if (!$selectedMatch && !$isCaptainView): ?>
 <section class="card mb-3.5">
-  <form method="get" class="form-grid">
-    <div class="form-row">
-      <label>Seleccionar fecha</label>
-      <select name="match_id" data-auto-submit>
-        <option value="">Elegir...</option>
-        <?php foreach ($matches as $m): ?>
-          <option value="<?= (int) $m['id'] ?>" <?= selected_attr($selectedMatch && (int) $selectedMatch['id'] === (int) $m['id']) ?>>
-            <?= h(date('d/m H:i', strtotime((string) $m['match_date'])) . ' - ' . ($m['title'] ?: ('Fecha #' . $m['id'])) . ' [' . $m['participants_count'] . ' jugadores]') ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-  </form>
+  <h3>Elegí una fecha desde el panel</h3>
+  <p class="small-muted">Modo capitanes se inicia desde la fecha correspondiente, para evitar elegir la misma fecha dos veces.</p>
+  <a class="btn btn-primary" href="editar_partidos.php">Volver a fechas</a>
 </section>
 <?php endif; ?>
 
 <?php if ($selectedMatch && !$draft && !$hasGeneratedTeams && !$isCaptainView): ?>
   <section class="card">
-    <h3>Iniciar draft</h3>
+    <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
+    <p class="small-muted">La fecha esta configurada para <?= h((string) $selectedTeamCount) ?> equipos, por eso se eligen <?= h((string) $selectedTeamCount) ?> capitanes.</p>
     <form method="post" class="form-grid">
       <input type="hidden" name="action" value="start_draft">
       <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
-      <div class="form-row">
-        <label>Cantidad de capitanes</label>
-        <select name="captain_count" id="captainCountSelect" data-captain-count-select required>
-          <option value="2">2 capitanes</option>
-          <option value="3">3 capitanes</option>
-          <option value="4">4 capitanes</option>
-        </select>
-      </div>
-      <?php for ($teamNumber = 1; $teamNumber <= 4; $teamNumber++): ?>
+      <input type="hidden" name="captain_count" value="<?= h((string) $selectedTeamCount) ?>">
+      <?php for ($teamNumber = 1; $teamNumber <= $selectedTeamCount; $teamNumber++): ?>
       <div class="form-row">
         <label>Capitan equipo <?= $teamNumber ?></label>
-        <select name="captain<?= $teamNumber ?>" <?= $teamNumber <= 2 ? 'required' : '' ?>>
+        <select name="captain<?= $teamNumber ?>" required>
           <option value="">Elegir...</option>
           <?php foreach ($participants as $p): ?>
             <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . skill_label((float) $p['skill'])) ?></option>

@@ -182,7 +182,7 @@ require __DIR__ . '/includes/header.php';
     <div id="success" class="success"></div>
     <div id="equipos-generados" class="teams-container"></div>
     <div class="controls mt-5 hidden" id="download-controls">
-      <div class="download-action-row">
+      <div class="download-action-row hidden" data-feature-flag="BOTONES DE CAPTURA">
         <button type="button" data-sorteo-action="copy-teams">📋 Copiar al Portapapeles</button>
         <button type="button" data-sorteo-action="download-teams-jpg">📸 Descargar como JPG</button>
         <button type="button" data-sorteo-action="download-teams-text">📝 Descargar como Texto</button>
@@ -192,10 +192,6 @@ require __DIR__ . '/includes/header.php';
           <button type="button" data-sorteo-action="save-draw">💾 GUARDAR SORTEO</button>
         </div>
       <?php endif; ?>
-    </div>
-    <div class="team-color-config">
-      <h3>Configuración de Camisetas</h3>
-      <div id="team-color-settings"></div>
     </div>
   </div>
 

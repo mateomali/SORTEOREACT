@@ -49,16 +49,16 @@ $adminMenu = is_admin()
             class="brand-logo"
             src="assets/goodfellas-logo.png"
             alt="Goodfellas"
-            width="128"
-            height="82"
+            width="900"
+            height="730"
           >
         <?php endif; ?>
-        <div>
-          <strong>GOODFELLAS</strong>
-          <span>Gestor de Futbol</span>
-        </div>
+        <strong class="brand-claim">GESTIONA TU FULBITO</strong>
       </div>
-      <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">Menu</button>
+      <div class="header-actions">
+        <a class="mobile-admin-shortcut" href="<?= is_admin() ? 'editar_partidos.php' : 'login.php' ?>">Panel admin</a>
+        <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">Menu</button>
+      </div>
     </header>
 
     <nav class="main-nav" id="mainNav" aria-label="Navegacion principal">

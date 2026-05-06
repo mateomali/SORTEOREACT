@@ -99,6 +99,20 @@ function can_edit_captain_formation(array $match): bool
     return (string) ($match['status'] ?? '') !== 'finalizado';
 }
 
+function validate_captain_formation_line_counts(array $counts): void
+{
+    $goalkeepers = (int) ($counts['ARQ'] ?? 0);
+    if ($goalkeepers !== 1) {
+        throw new RuntimeException('Cada equipo debe tener exactamente 1 arquero.');
+    }
+
+    foreach (['DEF', 'MED', 'DEL'] as $line) {
+        if ((int) ($counts[$line] ?? 0) > 4) {
+            throw new RuntimeException('Maximo 4 jugadores por linea en la formacion.');
+        }
+    }
+}
+
 function skill_allowed_ids_in_range(array $available, float $targetSkill, float $range = 1.0): array
 {
     $ids = [];
@@ -559,6 +573,19 @@ try {
             throw new RuntimeException('La formacion debe incluir a todos los jugadores de la fecha.');
         }
 
+        $teamLineCounts = [];
+        foreach (array_keys($validTeams) as $rowTeamNumber) {
+            $teamLineCounts[(int) $rowTeamNumber] = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        }
+        foreach ($rows as $row) {
+            $rowTeamNumber = (int) $row['team_number'];
+            $position = (string) $row['position'];
+            $teamLineCounts[$rowTeamNumber][$position] = ($teamLineCounts[$rowTeamNumber][$position] ?? 0) + 1;
+        }
+        foreach ($teamLineCounts as $counts) {
+            validate_captain_formation_line_counts($counts);
+        }
+
         $update = $pdo->prepare(
             'UPDATE match_players
              SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
@@ -632,13 +659,9 @@ try {
             throw new RuntimeException('Datos de formacion invalidos.');
         }
         $allowed = ['ARQ', 'DEF', 'MED', 'DEL'];
-        $update = $pdo->prepare(
-            'UPDATE match_players
-             SET assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper, lineup_order = :lineup_order, formation_line_order = :formation_line_order
-             WHERE match_id = :mid AND player_id = :pid AND team_number = :team'
-        );
         $lineOrder = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
         $formationData = [];
+        $validRows = [];
         foreach ($assignments as $index => $row) {
             if (!is_array($row)) {
                 continue;
@@ -650,14 +673,29 @@ try {
             }
             $lineOrder[$position] = ($lineOrder[$position] ?? 0) + 1;
             $formationData[] = ['id' => $pid, 'position' => $position];
-            $update->execute([
-                'mid' => $matchId,
-                'pid' => $pid,
-                'team' => $teamNumber,
-                'assigned_position' => $position,
-                'is_goalkeeper' => $position === 'ARQ' ? 1 : 0,
+            $validRows[] = [
+                'player_id' => $pid,
+                'position' => $position,
                 'lineup_order' => $index + 1,
                 'formation_line_order' => $lineOrder[$position],
+            ];
+        }
+        validate_captain_formation_line_counts($lineOrder);
+
+        $update = $pdo->prepare(
+            'UPDATE match_players
+             SET assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper, lineup_order = :lineup_order, formation_line_order = :formation_line_order
+             WHERE match_id = :mid AND player_id = :pid AND team_number = :team'
+        );
+        foreach ($validRows as $row) {
+            $update->execute([
+                'mid' => $matchId,
+                'pid' => (int) $row['player_id'],
+                'team' => $teamNumber,
+                'assigned_position' => (string) $row['position'],
+                'is_goalkeeper' => (string) $row['position'] === 'ARQ' ? 1 : 0,
+                'lineup_order' => (int) $row['lineup_order'],
+                'formation_line_order' => (int) $row['formation_line_order'],
             ]);
         }
         $pdo->prepare(

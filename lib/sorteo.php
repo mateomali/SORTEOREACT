@@ -60,7 +60,7 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 function build_team_position_assignment(array $team): array
 {
     $lines = ['ARQ', 'DEF', 'MED', 'DEL'];
-    $maxPerLine = 5;
+    $maxPerLine = 4;
 
     $candidates = array_values(array_filter($team, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
     usort($candidates, static function (array $a, array $b): int {

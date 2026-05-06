@@ -623,7 +623,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     ob_start();
     ?>
     <?php if (!$groupedTeams): ?>
-      <p>Los equipos todavia no fueron formados. Cuando esten sorteados o elegidos por capitanes, se mostrara la formacion aca.</p>
+      <p>Los equipos todavía no fueron formados. Cuando estén sorteados o elegidos por capitanes, se mostrará la formación acá.</p>
       <?php if ($participants): ?>
         <div class="selected-player-list public-player-list">
           <?php foreach ($participants as $player): ?>
@@ -796,8 +796,8 @@ require __DIR__ . '/includes/header.php';
 
 <section class="page-head">
   <div>
-    <h1><?= $showHistoryPage ? 'Historial de fechas' : 'Inicio' ?></h1>
-    <p class="small-muted"><?= $showHistoryPage ? 'Consulta fechas por dia, capitan o resultado.' : 'Proxima fecha a jugarse.' ?></p>
+    <h1><?= $showHistoryPage ? 'Historial de fechas' : 'GOODFELLAS' ?></h1>
+    <p class="small-muted"><?= $showHistoryPage ? 'Consulta fechas por dia, capitan o resultado.' : 'Gestion de fechas, equipos, jugadores y rendimiento del grupo.' ?></p>
   </div>
   <?php if (is_admin()): ?>
     <a class="btn btn-primary" href="editar_partidos.php">Panel admin</a>
@@ -875,27 +875,28 @@ require __DIR__ . '/includes/header.php';
       </a>
     <?php endif; ?>
   </section>
-  <?php if ($headerShowCaptainLive): ?>
-    <section class="card home-captain-live" data-public-captain-live data-match-id="<?= (int) $headerMatch['id'] ?>">
-      <div class="home-captain-live-head">
-        <div>
-          <span class="home-kicker">Sorteo en vivo</span>
-          <h3>Equipos por capitanes</h3>
-        </div>
-        <span class="home-captain-live-status" data-public-captain-status>Actualizando...</span>
+<?php endif; ?>
+
+<?php if (!$showHistoryPage && !empty($headerShowCaptainLive) && !empty($headerMatch)): ?>
+  <section class="card home-captain-live" data-public-captain-live data-match-id="<?= (int) $headerMatch['id'] ?>">
+    <div class="home-captain-live-head">
+      <div>
+        <span class="home-kicker">Sorteo en vivo</span>
+        <h3>Equipos por capitanes</h3>
       </div>
-      <div class="home-captain-live-teams" data-public-captain-teams>
-        <article>
-          <h4>Equipo 1</h4>
-          <p class="small-muted">Esperando datos...</p>
-        </article>
-        <article>
-          <h4>Equipo 2</h4>
-          <p class="small-muted">Esperando datos...</p>
-        </article>
-      </div>
-    </section>
-  <?php endif; ?>
+      <span class="home-captain-live-status" data-public-captain-status>Actualizando...</span>
+    </div>
+    <div class="home-captain-live-teams" data-public-captain-teams>
+      <article>
+        <h4>Equipo 1</h4>
+        <p class="small-muted">Esperando datos...</p>
+      </article>
+      <article>
+        <h4>Equipo 2</h4>
+        <p class="small-muted">Esperando datos...</p>
+      </article>
+    </div>
+  </section>
 <?php endif; ?>
 
 <section class="home-layout <?= $showHistoryPage ? '' : 'home-layout-single' ?>">
@@ -1015,7 +1016,7 @@ require __DIR__ . '/includes/header.php';
           </article>
         </div>
       <?php elseif (!$groupedTeams): ?>
-        <p>Los equipos todavia no fueron formados. Cuando esten sorteados o elegidos por capitanes, se mostrara la formacion aca.</p>
+        <p>Los equipos todavía no fueron formados. Cuando estén sorteados o elegidos por capitanes, se mostrará la formación acá.</p>
         <?php if ($participants): ?>
           <div class="selected-player-list public-player-list">
             <?php foreach ($participants as $player): ?>
@@ -1186,6 +1187,41 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
   <?php endif; ?>
 </section>
+
+<?php if (!$showHistoryPage): ?>
+  <section class="home-welcome">
+    <div class="home-section-grid" aria-label="Secciones principales">
+      <a class="home-section-card" href="jugadores.php">
+        <span class="home-section-visual">
+          <img src="assets/home/home-jugadores.png" alt="Panel visual de gestion de jugadores" loading="lazy" width="1672" height="941">
+        </span>
+        <strong>Jugadores</strong>
+        <small>Plantel, posiciones, puntajes y perfiles para equilibrar mejor cada partido.</small>
+      </a>
+      <a class="home-section-card" href="historial.php" aria-label="Ver fechas jugadas">
+        <span class="home-section-visual">
+          <img src="assets/home/home-fechas.png" alt="Panel visual de fechas jugadas y resultados" loading="lazy" width="1672" height="941">
+        </span>
+        <strong>Fechas jugadas</strong>
+        <small>Fechas jugadas, equipos, resultados, premios y detalles de cada encuentro.</small>
+      </a>
+      <a class="home-section-card" href="estadisticas.php">
+        <span class="home-section-visual">
+          <img src="assets/home/home-estadisticas.png" alt="Panel visual de estadisticas y rankings" loading="lazy" width="1672" height="941">
+        </span>
+        <strong>Estadisticas</strong>
+        <small>Ranking de jugadores, goles, promedios, capitanes y rendimiento acumulado.</small>
+      </a>
+      <a class="home-section-card" href="<?= is_admin() ? 'editar_partidos.php' : 'login.php' ?>">
+        <span class="home-section-visual">
+          <img src="assets/home/home-admin.png" alt="Panel visual de administracion de fechas y sorteos" loading="lazy" width="1672" height="941">
+        </span>
+        <strong>Admin</strong>
+        <small>Crear fechas, cargar convocados, sortear equipos y cerrar resultados.</small>
+      </a>
+    </div>
+  </section>
+<?php endif; ?>
 
 <?php if (!$showHistoryPage && !empty($headerHasCaptains)): ?>
 <script src="assets/home-captains.js"></script>

@@ -210,7 +210,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           pools.push(`Tiene puntaje para ser importante, pero la regularidad baja hace que su promedio mienta un poco: no todos los dias entrega ese jugador.`);
         }
       } else {
-        pools.push(`Con regularidad media, su informe hay que leerlo con matiz: ${bestLabel} aparece, pero todavia puede tener tramos apagados.`);
+        pools.push(`Con regularidad media, su relato hay que leerlo con matiz: ${bestLabel} aparece, pero todavia puede tener tramos apagados.`);
         pools.push(`No es inestable al punto de preocupar siempre, aunque ${weakestLabel} puede crecer si el partido lo agarra mal parado.`);
       }
 
@@ -239,7 +239,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (numberOr(player.skill, 3) > 5) {
         matches.push('Destaca al lado de todos los demas muertos: juega a otra velocidad mental y encima se nota.');
         matches.push('En este grupo hace una de las mayores diferencias: cuando aparece, el partido se inclina solo.');
-        matches.push('Hay que agradecerle que quiera jugar con tantos perros: baja al barro y aun asi deja calidad.');
+        matches.push('Hay que agradecerle que quiera jugar con tanto desorden alrededor: baja al barro y aun asi deja calidad.');
         matches.push('Esta un escalon arriba del promedio del potrero: si se enchufa, hay que repartirlo entre dos marcas.');
         matches.push('Cuando toca la pelota se nota que no vino a pasear: el resto mira y trata de no molestar.');
       }
@@ -527,25 +527,350 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         : (player.positions.includes('DEL') ? 'delantero'
           : (player.positions.includes('DEF') ? 'defensor'
             : (player.positions.includes('MED') ? 'mediocampista' : 'comodin')));
-      const virtueLine = statPhrase(best, 'strength', player.name);
-      const flawLine = statPhrase(weakest, 'weakness', player.name);
-      const comboLine = comboInsightLine(player);
-      const shapeLine = radarShapeLine(stats, player.name, isGoalkeeper);
-      const colorLine = colorCommentLine(player, role);
-      const regularityLine = regularityInsightLine(player);
-      const regularityContext = regularityContextLine(player, best, weakest);
-      const hasEliteStat = stats.some((stat) => stat.value > 5);
-      const closingPool = hasEliteStat ? regularClosingLines.concat(eliteClosingLines) : regularClosingLines;
-      const closingLine = closingPool[stableIndex(`${player.name}|${best.field}|${starTier(best.value)}|${weakest.field}|${starTier(weakest.value)}`, closingPool.length)];
+      const overall = numberOr(player.skill, 3);
+      const regularity = numberOr(player.regularity, 3.5);
+      const spread = Math.max(...stats.map((stat) => stat.value)) - Math.min(...stats.map((stat) => stat.value));
+      const pick = (key, pool) => pool[stableIndex(`${player.name}|${key}|${role}|${starTier(overall)}|${best.field}|${weakest.field}`, pool.length)];
+      const statText = {
+        technique: {
+          good: ['la pelota no le quema: la baja, la cuida y puede limpiar una jugada sucia', 'tiene pie para salir del apuro sin reventarla a la avenida', 'cuando le dan un metro, levanta la cabeza y juega con bastante criterio', 'puede darle pausa al equipo cuando todos empiezan a correr como locos'],
+          improve: ['si lo apuran, el primer control puede pedir auxilio', 'con marca encima a veces se enreda solo y termina jugando contra la pelota', 'todavia le conviene tocar simple antes de querer inventar la jugada del domingo', 'cuando la pelota viene mordida, puede devolver un problema mas grande del que recibio'],
+        },
+        rhythm: {
+          good: ['tiene piernas para aparecer dos veces en la misma jugada', 'va y vuelve sin hacer teatro, algo que en el fulbito vale oro', 'mete ritmo, persigue y obliga al rival a jugar incomodo', 'si el partido se abre, no desaparece: sigue llegando'],
+          improve: ['si lo hacen correr de lado a lado, empieza a mirar la salida', 'en partidos largos puede quedarse con la reserva prendida', 'cuando el ida y vuelta se vuelve una autopista, le cuesta sostener el viaje', 'si lo sacan a perseguir sombras, termina pagando peaje'],
+        },
+        defense_physical: {
+          good: ['mete cuerpo y no regala la zona como si fuera estacionamiento libre', 'en la dividida va con decision y deja claro que por ahi no se pasea gratis', 'sostiene bien el roce y ayuda a que atras no sea una feria', 'es de los que incomodan: no siempre lindo, pero si bastante necesario'],
+          improve: ['si le cargan el cuerpo, puede quedar mirando la patente', 'en el choque fuerte todavia le falta sacar mas pecho', 'cuando el rival lo encara con decision, a veces retrocede de mas', 'puede perder alguna dividida de esas que despues se comentan con cara fea'],
+        },
+        attack: {
+          good: ['cerca del arco huele sangre y obliga a que alguien lo siga', 'si le queda una pelota viva, puede convertir una jugada cualquiera en lio', 'pisa zona caliente sin pedir permiso', 'arriba tiene colmillo: capaz toca poco, pero cuando toca lastima'],
+          improve: ['en los ultimos metros a veces elige el boton equivocado', 'puede armar bien la jugada y cerrarla como si hubiera apagado la luz', 'con el arco enfrente se apura y deja una puteada flotando', 'necesita afinar la ultima decision para no regalar ataques buenos'],
+        },
+        teamwork: {
+          good: ['juega con los demas, no contra los demas: toca, acompaña y no rompe el circuito', 'entiende cuando soltarla y cuando dar una mano atras', 'hace mejor al equipo porque no se casa con la pelota', 'sin hacer ruido, acomoda la jugada y se muestra para recibir'],
+          improve: ['a veces se corta solo y deja a los compañeros pagando', 'cuando toca ayudar sin pelota, puede llegar tarde a la reunion', 'si se enamora de la jugada, el equipo empieza a mirarlo de reojo', 'necesita levantar mas la cabeza para que la pelota no muera siempre en sus pies'],
+        },
+        regularity: {
+          good: ['no vive de una jugada linda: suele repetir una version confiable', 'tiene piso, y eso en un partido parejo vale mas que una pisadita para la tribuna', 'rara vez se cae del todo; aunque no brille, compite', 'lo normal es que entregue algo parecido a lo que promete'],
+          improve: ['puede arrancar como figura y terminar buscando su propia sombra', 'todavia mezcla ratos buenos con baches que hacen ruido', 'necesita sostener mas tiempo lo que hace bien', 'cuando baja un cambio, el equipo lo nota y el rival tambien'],
+        },
+        goalkeeper_skill: {
+          good: ['bajo los tres palos se agranda y puede apagar incendios', 'si le llegan, no se esconde: achica, tapa y grita lo justo', 'en el arco puede transformar peligro en alivio', 'cuando se pone serio, el arco parece un poco mas chico'],
+          improve: ['si lo bombardean, puede empezar a mirar de reojo a la defensa', 'necesita mandar mas en el area para que no le entren por todos lados', 'en centros y rebotes todavia puede regalar suspenso', 'si la defensa lo abandona, el partido se le puede venir encima'],
+        },
+      };
+      const extraStatText = {
+        technique: {
+          good: ['tiene ese toque de potrero que no se explica en una planilla', 'si recibe perfilado, puede dejar a uno pagando con una pisada corta', 'no necesita hacer circo para jugar bien: controla y entrega con sentido', 'cuando la jugada viene trabada, encuentra una salida donde otros ven un paredon', 'tiene un pie que invita al pase corto y a la pared', 'si lo dejan pensar, empieza a jugar con la tranquilidad del que sabe donde esta la pelota'],
+          improve: ['si recibe de espaldas, a veces parece que la pelota le llega con instrucciones en chino', 'puede querer salir jugando y terminar armando un incendio en su propio patio', 'cuando lo presionan, el lujo se le convierte en tramite peligroso', 'le falta una marcha de calma para no rifarla en la primera incomoda', 'si el pase viene fuerte, la pelota puede salir con destino turistico', 'necesita bajar un cambio: no toda pelota pide firulete'],
+        },
+        rhythm: {
+          good: ['corre con sentido, no a cualquier lado', 'le da velocidad al equipo cuando la pelota pide cambio de marcha', 'puede presionar arriba y volver sin mandar carta documento', 'sostiene el ida y vuelta sin convertir cada pique en una novela', 'tiene motor para romper una jugada que parecia perdida', 'si hay que meter una corrida larga, no se borra'],
+          improve: ['necesita elegir mejor cuando acelerar y cuando guardar aire', 'a veces llega a la foto cuando la jugada ya salio en los diarios', 'si el rival lo mueve mucho, lo puede sacar del partido por cansancio', 'en transiciones largas puede quedar lejos, como esperando el colectivo anterior', 'le cuesta repetir esfuerzos sin perder claridad', 'si tiene que correr para atras muchas veces, empieza a negociar con el oxigeno'],
+        },
+        defense_physical: {
+          good: ['tiene oficio para molestar sin hacer falta tonta', 'va al cruce con cara de que la pelota tambien puede sufrir', 'cuando choca, el rival entiende que no vino a una clase de yoga', 'aguanta la posicion y no se mueve con cualquier empujon', 'cierra espacios como quien baja una persiana', 'puede ser ese tipo molesto que nadie quiere tener encima'],
+          improve: ['si lo atacan con potencia, puede terminar defendiendo con la mirada', 'necesita meter mas presencia para que no lo pasen por arriba', 'en pelotas divididas a veces entra tarde, como pidiendo permiso', 'cuando el partido se pone aspero, puede quedar demasiado prolijo', 'si lo agarran mal parado, le cuesta recuperar el metro perdido', 'le falta un poco de malicia para cortar antes de que la jugada se haga grande'],
+        },
+        attack: {
+          good: ['se mueve donde duele, entre el defensor distraido y el arquero nervioso', 'tiene olfato para aparecer justo cuando la pelota queda suelta', 'si recibe cerca del area, la jugada deja de ser tranquila', 'no necesita veinte chances: con media puede armar quilombo', 'cuando encara para adelante, obliga a que el rival retroceda con miedo', 'puede transformar un rebote cualquiera en tema de conversacion'],
+          improve: ['a veces llega al area y se le mezclan todas las pestanas del navegador', 'puede hacer lo dificil y despues fallar lo que habia que resolver simple', 'cuando queda para definir, a veces patea como si quisiera sacarse el problema de encima', 'le falta serenidad para que la jugada no termine en suspiro', 'si tiene que decidir rapido, puede elegir la peor puerta', 'en ataque suma hasta que la pelota pide sentencia; ahi todavia duda'],
+        },
+        teamwork: {
+          good: ['tiene lectura para hacer la facil, que muchas veces es la mas dificil', 'cuando el equipo se desordena, suele ofrecer una salida', 'no necesita tocar diez veces para sentirse importante', 'si hay que cubrir a un companero, aparece sin pedir aplausos', 'juega mirando camisetas propias, detalle que parece obvio hasta que falta', 'puede ser pegamento: no brilla siempre, pero junta piezas'],
+          improve: ['puede confundir protagonismo con quedarse la pelota un turno de mas', 'si no participa, se va del partido como quien se fue a comprar hielo', 'a veces mira la jugada desde afuera cuando tenia que meterse', 'le falta hablar mas con el equipo y menos con su propia idea', 'cuando el partido pide solidaridad, puede aparecer con delay', 'si lo rodean mal, se aisla y empieza a jugar su propio torneo'],
+        },
+        regularity: {
+          good: ['no te obliga a adivinar que jugador va a caer a la cancha', 'puede tener un mal rato, pero no suele regalar el partido entero', 'mantiene la temperatura: ni se prende fuego ni se congela facil', 'es de esos que hacen menos ruido porque casi siempre cumplen', 'si arranca bien, generalmente sostiene el libreto', 'tiene una virtud silenciosa: no desaparece justo cuando el partido aprieta'],
+          improve: ['su partido puede venir con dos temporadas en una misma tarde', 'si entra cruzado, tarda en encontrarse y deja huecos en el camino', 'a veces tiene techo de aplauso y piso de silencio incomodo', 'puede pasar de solucion a problema sin pedir permiso', 'necesita que su mejor rato dure mas que un par de jugadas', 'cuando se apaga, no baja la luz: corta la termica'],
+        },
+        goalkeeper_skill: {
+          good: ['tiene reflejos para salvar alguna que ya venia con festejo', 'sale a achicar como si el mano a mano fuera personal', 'puede sostener al equipo cuando atras se arma la mudanza', 'da esa sensacion linda de que no todo tiro termina en drama', 'si la pelota viene sucia, al menos mete dudas en el remate', 'en el arco tiene presencia, y eso al delantero le hace ruido'],
+          improve: ['a veces queda a mitad de camino: ni sale ni espera, y ahi todos rezan', 'necesita hablar mas, porque un arquero callado deja dudas gratis', 'en tiros cruzados puede quedar pagando la entrada', 'si el primer remate lo mueve, el segundo ya viene con musica de terror', 'le falta imponer respeto antes de que el delantero se agrande', 'cuando el area se llena, necesita ordenar antes de atajar'],
+        },
+      };
+      Object.entries(extraStatText).forEach(([field, phrases]) => {
+        statText[field].good.push(...phrases.good);
+        statText[field].improve.push(...phrases.improve);
+      });
+      const introPool = {
+        arquero: [
+          `A ${player.name} lo tenes que mirar cuando la pelota quema cerca del arco: ahi se ve si trae calma o si empieza la pelicula de terror.`,
+          `${player.name} es de esos que pueden cambiar el humor de una defensa: una buena atajada ordena todo, una duda abre la puerta al caos.`,
+          `Con ${player.name}, la historia arranca bajo los tres palos: si entra fino, el equipo respira; si entra torcido, todos miran para atras.`,
+        ],
+        defensor: [
+          `A ${player.name} se lo entiende en la primera dividida: ahi te avisa si vino a ordenar el fondo o a sufrir el partido.`,
+          `${player.name} no necesita salir en la foto para pesar; si esta bien parado, el rival empieza a buscar otro camino.`,
+          `Con ${player.name}, la pregunta no es si juega lindo: la pregunta es cuanto ensucia la tarde del que tiene enfrente.`,
+        ],
+        mediocampista: [
+          `A ${player.name} hay que mirarlo en el medio del quilombo: si logra jugar ahi, el equipo deja de correr atras de la pelota.`,
+          `${player.name} puede ser termometro del partido: cuando participa bien, la jugada respira; cuando se apaga, todo se vuelve mas rustico.`,
+          `Con ${player.name}, el partido pasa por una idea simple: tocar, moverse y no convertir cada pelota en una guerra civil.`,
+        ],
+        delantero: [
+          `A ${player.name} lo medis cerca del arco: ahi no hay discurso que salve, o lastima o deja a todos protestando.`,
+          `${player.name} vive de esas pelotas que parecen medio muertas y de golpe terminan en una corrida, un rebote o una puteada rival.`,
+          `Con ${player.name}, la defensa contraria no puede dormir: capaz toca poco, pero una distraccion y ya esta golpeando la puerta.`,
+        ],
+        comodin: [
+          `A ${player.name} conviene ubicarlo con cariño: en el lugar correcto suma, en el lugar equivocado empieza la novela.`,
+          `${player.name} puede tapar varios huecos, pero no es magia: si lo usas mal, el partido le muestra todas las costuras.`,
+          `Con ${player.name}, el truco esta en no pedirle cualquier cosa. Dale una funcion clara y puede dejar algo bueno.`,
+        ],
+      };
+      const extraIntroPool = {
+        arquero: [
+          `${player.name} no juega en el arco, vive ahi un rato: a veces salva, a veces asusta, pero nunca pasa desapercibido.`,
+          `Con ${player.name} bajo palos, cada ataque rival tiene olor a examen sorpresa.`,
+          `${player.name} tiene ese puesto ingrato donde un error se grita mas que diez buenas; por eso hay que mirarlo con lupa de cancha.`,
+          `A ${player.name} lo mide la pelota mas traicionera: la que pica raro, viene tapada y obliga a decidir sin pedir permiso.`,
+        ],
+        defensor: [
+          `${player.name} es de esos que pueden hacerle perder la paciencia al rival sin tocar una pelota linda.`,
+          `Si el partido se pone de pierna fuerte y pelota dividida, ahi aparece la verdadera cara de ${player.name}.`,
+          `A ${player.name} no lo vendes con highlights; lo vendes con esas jugadas donde el rival se queda sin ganas de encarar.`,
+          `${player.name} juega con una idea bastante clara: que el otro no pase comodo, y si pasa, que se acuerde.`,
+        ],
+        mediocampista: [
+          `${player.name} vive en la zona donde todos piden la pelota y nadie quiere perderla.`,
+          `Si el medio se vuelve una rotonda sin semaforo, ${player.name} puede ordenar o sumarse al embotellamiento.`,
+          `A ${player.name} lo define lo que hace cuando recibe rodeado: ahi se separa el jugador del simple voluntarioso.`,
+          `${player.name} tiene que jugar donde la pelota pesa, no donde la jugada ya viene resuelta.`,
+        ],
+        delantero: [
+          `${player.name} juega donde no hay paciencia: arriba se perdona poco y se festeja fuerte.`,
+          `A ${player.name} hay que juzgarlo en esos metros donde la pelota pide maldad y no explicaciones.`,
+          `${player.name} puede pasar un rato quieto y de golpe arruinarle la tarde a un defensor distraido.`,
+          `Con ${player.name}, el area tiene otro ruido: capaz no siempre decide bien, pero obliga a mirar.`,
+        ],
+        comodin: [
+          `${player.name} es de esos jugadores que dependen mucho del casillero donde lo pongas.`,
+          `A ${player.name} no hay que tirarle cualquier camiseta y esperar magia; necesita un pedido claro.`,
+          `${player.name} puede ser parche o solucion, segun lo fino que este el armado del equipo.`,
+          `Con ${player.name}, el secreto esta en no hacerlo pagar culpas ajenas: ordenalo y algo devuelve.`,
+        ],
+      };
+      Object.entries(extraIntroPool).forEach(([key, lines]) => {
+        introPool[key].push(...lines);
+      });
+      const fieldZones = {
+        technique: ['con la pelota', 'cuando tiene que limpiar la jugada', 'cuando recibe presionado', 'en el primer control', 'cuando el partido pide pausa'],
+        rhythm: ['cuando el partido pide piernas', 'en el ida y vuelta', 'cuando hay que repetir esfuerzos', 'en las transiciones largas', 'cuando la jugada se parte'],
+        defense_physical: ['en el roce', 'cuando toca disputar', 'en la marca cuerpo a cuerpo', 'cuando hay que cerrar atras', 'en las divididas'],
+        attack: ['cerca del arco', 'en los ultimos metros', 'cuando pisa el area', 'cuando la jugada pide veneno', 'de cara al gol'],
+        teamwork: ['cuando toca jugar con los demas', 'sin pelota', 'cuando el equipo necesita ayuda', 'en la sociedad con los companeros', 'cuando hay que soltarla'],
+        regularity: ['a lo largo del partido', 'cuando hay que sostener el nivel', 'despues de la primera mala', 'cuando el partido se pone raro', 'en la continuidad'],
+        goalkeeper_skill: ['bajo los tres palos', 'cuando le llegan limpio', 'en el mano a mano', 'cuando el area se llena', 'en las pelotas que queman'],
+      };
+      const zoneFor = (field, key) => {
+        const pool = fieldZones[field] || ['en esa parte del juego'];
+        return pool[stableIndex(`${player.name}|zone|${key}|${field}|${role}|${starTier(numberOr(player[field], 3))}`, pool.length)];
+      };
+      const bestZone = zoneFor(best.field, 'best');
+      const weakZone = zoneFor(weakest.field, 'weak');
+      const balancePool = spread <= 0.75
+        ? [
+          'Su juego sale bastante parejo: no tiene una punta que grite figura, pero tampoco un agujero para que el rival haga fiesta.',
+          'No es un jugador de una sola tecla. Tiene un perfil redondo, de esos que ayudan a que el equipo no se parta.',
+          'El radar no dibuja montaña rusa: aparece un jugador bastante estable, util para no desordenar el armado.',
+        ]
+        : spread >= 2.5
+          ? [
+            `Tiene perfil de especialista: ${bestZone} puede sacar ventaja, pero ${weakZone}, empiezan los problemas.`,
+            `El radar lo manda al frente: hay un fuerte claro y tambien una zona donde el rival, si esta despierto, va a ir a buscar sangre.`,
+            `No es para usarlo de cualquier cosa. Cerca de su virtud suma; lejos de ahi, puede quedar mas expuesto que defensor sin arquero.`,
+          ]
+          : [
+            `La lectura es simple: cuando aparece ${bestZone}, crece; ${weakZone}, hay que prender una alarma chica.`,
+            `No es un caso extremo, pero tiene una firma clara: acercarlo a lo que hace bien y no dejarlo regalado ${weakZone}.`,
+            `Tiene cosas para sumar y cosas para hacerte renegar. La gracia esta en ponerlo donde se siente comodo y cubrirlo ${weakZone}.`,
+          ];
+      if (spread <= 0.75) {
+        balancePool.push(
+          'El radar sale sin picos raros: jugador de menu completo, no de una sola especialidad.',
+          'No trae una virtud de fuegos artificiales, trae varias cosas en tono parejo; eso tambien gana partidos.',
+          'Es de esos perfiles que no te rompen el equipo: quizas no enamora, pero tampoco te deja pagando.'
+        );
+      } else if (spread >= 2.5) {
+        balancePool.push(
+          `El dibujo del radar parece cartel de advertencia: ${bestZone} suma, ${weakZone} puede hacerte transpirar.`,
+          `Tiene una virtud con luces de neon y una deuda que no conviene esconder debajo de la alfombra.`,
+          `Usarlo bien es clave: si lo llevas a su zona fuerte, rinde; si lo tiras a su lado flojo, empieza el festival de gestos.`
+        );
+      } else {
+        balancePool.push(
+          `El radar no grita crack ni desastre: marca un jugador con una virtud clara y una cuenta pendiente.`,
+          `Tiene perfil de fulbito real: una cosa para aplaudir, una para discutir y varias para acomodar.`,
+          `La foto general dice que hay material, pero tambien una zona donde el rival puede venir con cuchillo y tenedor.`,
+          `No es una ruleta completa: el mapa muestra por donde conviene darle juego y por donde hay que cubrirlo.`,
+          `El dibujo deja algo bastante humano: talento en una esquina, deuda en otra y un monton de partido en el medio.`,
+          `No viene con manual cerrado. Tiene una virtud que empuja y un costado que puede pedir auxilio si el partido se complica.`,
+          `Es un perfil con sabor a cancha chica: si lo acercas a su fuerte, suma; si lo dejas expuesto, aparecen las puteadas.`,
+          `El radar no lo condena ni lo corona: simplemente avisa donde puede hacer dano y donde puede pasarla mal.`
+        );
+      }
+      const strengthOpeners = [
+        `Su mejor carta aparece ${bestZone}`,
+        `Donde mas levanta la mano es ${bestZone}`,
+        `Lo que mas le sostiene el partido aparece ${bestZone}`,
+        `Si hay que venderlo por una virtud, la foto buena sale ${bestZone}`,
+        `El aplauso mas facil se lo gana ${bestZone}`,
+        `Cuando la cosa se inclina para su lado, suele empezar ${bestZone}`,
+        `La parte linda de su libreto aparece ${bestZone}`,
+        `Su argumento mas serio esta ${bestZone}`,
+        `Si el equipo lo busca bien, lo encuentra fuerte ${bestZone}`,
+        `Donde puede hacer diferencia es ${bestZone}`,
+      ];
+      const weaknessOpeners = [
+        `El costado para apretarlo aparece ${weakZone}`,
+        `La grieta aparece ${weakZone}`,
+        `Donde puede hacerte agarrar la cabeza es ${weakZone}`,
+        `Si el rival lo estudia, lo va a probar ${weakZone}`,
+        `La baldosa floja esta ${weakZone}`,
+        `El semaforo amarillo se prende ${weakZone}`,
+        `El lugar donde puede regalar una novela es ${weakZone}`,
+        `Cuando la jugada lo lleva ${weakZone}, se lo nota menos comodo`,
+        `La parte que todavia pide laburo aparece ${weakZone}`,
+        `Si queres hacerlo dudar, probalo ${weakZone}`,
+      ];
+      const strengthLine = `${pick(`best-open-${best.field}`, strengthOpeners)}: ${pick(`best-${best.field}`, statText[best.field].good)}.`;
+      const weaknessLine = `${pick(`weak-open-${weakest.field}`, weaknessOpeners)}: ${pick(`weak-${weakest.field}`, statText[weakest.field].improve)}.`;
+      const regularityPool = regularity >= 4.5
+        ? [
+          'Encima tiene algo que en el fulbito no sobra: constancia. No vive de un chispazo para despues desaparecer.',
+          'Su piso es bueno. Capaz no todos los dias rompe el partido, pero rara vez te deja clavado con cara de "que paso aca".',
+          'Tiene continuidad, y eso lo vuelve facil de elegir: sabes mas o menos que jugador va a entrar a la cancha.',
+        ]
+        : regularity <= 2.5
+          ? [
+            'La contra es la regularidad: puede arrancar como para pedir camiseta y terminar jugando a escondidas.',
+            'Su partido puede venir con sorpresa adentro. Si engancha una buena tarde, suma; si se apaga, hay que salir a buscarlo.',
+            'Tiene momentos buenos, pero todavia no firma contrato con la constancia. Te puede dar una alegria y al rato una cana.',
+          ]
+          : [
+            'En regularidad anda por el medio: no es ruleta rusa, pero tampoco escribas su nombre con birome permanente.',
+            'Suele cumplir, aunque tiene esos ratos donde baja un cambio y el equipo empieza a mirar alrededor.',
+            'Si el contexto lo ayuda, responde mejor. Si el partido se ensucia, puede tener algun tramo de "donde esta".',
+          ];
+      const closingPool = overall >= 4.5
+        ? [
+          'Bien rodeado, puede inclinar el partido sin tener que hacer circo. Dale una funcion clara y dejalo trabajar.',
+          'Si entra enchufado, es de los que cambian el reparto de fuerzas. Al rival le conviene no regalarle comodidad.',
+          'Es jugador para tomar en serio: no hace falta inventarle un altar, pero tampoco conviene dejarlo suelto.',
+        ]
+        : overall <= 3
+          ? [
+            'La receta es simple: pocos lujos, pase seguro y no querer salvar la patria en cada pelota.',
+            'Puede servir si juega ordenado. Si se cree protagonista de final de Champions, ahi empieza el incendio.',
+            'Dale una tarea corta y compañeros cerca. Si lo dejan solo con mucho para resolver, puede salir cualquier cosa.',
+          ]
+          : [
+            'Para armar equipos, sirve si lo pones donde puede sumar y no donde va a sufrir como lateral improvisado.',
+            'No es para pedirle milagros ni esconderlo atras de un cono: con una tarea clara, puede dejar una buena tarde.',
+            'Usado con criterio, suma. Usado a lo loco, te devuelve el favor con una jugada para discutir despues.',
+          ];
+      if (regularity >= 4.5) {
+        regularityPool.push(
+          'Lo bueno es que no suele venir con modo avion: participa, compite y mantiene una linea.',
+          'Tiene ese valor invisible de aparecer parecido todos los partidos; en un grupo desparejo, eso cotiza.',
+          'Puede tener errores, claro, pero no se le cae la persiana ante la primera mala.'
+        );
+      } else if (regularity <= 2.5) {
+        regularityPool.push(
+          'La duda es cual version llega: la que te mejora el equipo o la que te obliga a acomodar todo atras.',
+          'Cuando esta fino parece negocio; cuando se desconecta, el equipo empieza a pagar intereses.',
+          'Tiene alma de moneda al aire: puede salir cara de figura o cruz de "que hacemos ahora".'
+        );
+      } else {
+        regularityPool.push(
+          'No es un misterio total, pero tiene pasajes donde el partido le cambia la cara.',
+          'Puede cumplir bien si entra en ritmo; si queda aislado, se le nota enseguida.',
+          'Su rendimiento pide contexto: con compania crece, solo contra el mundo empieza a perder gracia.'
+        );
+      }
+      if (overall >= 4.5) {
+        closingPool.push(
+          'No lo dejes jugar comodo: si agarra confianza, empieza a repartir problemas.',
+          'Es de los que conviene poner con gente que entienda la jugada, porque ahi se potencia.',
+          'Tiene con que mandar en la cancha; el asunto es que no se crea que tiene que resolver todo solo.'
+        );
+      } else if (overall <= 3) {
+        closingPool.push(
+          'Si hace la facil, puede irse aprobado. Si inventa, se arma la feria.',
+          'No esta para heroismos: esta para cumplir, ayudar y no rifar la pelota que quema.',
+          'En un equipo ordenado puede sobrevivir bien; en un caos, se le ven todas las costuras.'
+        );
+      } else {
+        closingPool.push(
+          'Tiene ese punto medio peligroso: bien usado parece importante, mal usado parece que llego tarde.',
+          'No te gana solo el partido, pero puede ayudar bastante si no lo mandas a pelear donde peor se siente.',
+          'Su mejor version aparece cuando no lo fuerzan a ser otra cosa.'
+        );
+      }
+      const comboPool = [];
+      const high = (field) => numberOr(player[field], 3) >= 4.5;
+      const low = (field) => numberOr(player[field], 3) <= 2.5;
+      if (high('technique') && low('rhythm')) {
+        comboPool.push('Tiene pie de salon y motor de sobremesa: si le das tiempo, juega; si lo haces correr, negocia.');
+      }
+      if (high('rhythm') && low('technique')) {
+        comboPool.push('Corre como si llegara tarde, pero con la pelota todavia puede parecer que la viene persiguiendo.');
+      }
+      if (high('attack') && low('teamwork')) {
+        comboPool.push('Arriba puede lastimar, pero a veces juega como si el pase fuera un impuesto.');
+      }
+      if (high('teamwork') && low('attack')) {
+        comboPool.push('Hace jugar a los demas, aunque cuando queda para definir busca companero hasta en la tribuna.');
+      }
+      if (high('defense_physical') && low('technique')) {
+        comboPool.push('Muerde y complica, pero no le pidas salir con moño: lo suyo es ganar la pelota y sacarla viva.');
+      }
+      if (high('technique') && low('defense_physical')) {
+        comboPool.push('Con espacio parece elegante; cuando le ponen el cuerpo, la poesia puede terminar en tramite judicial.');
+      }
+      if (high('rhythm') && low('defense_physical')) {
+        comboPool.push('Tiene piernas para perseguir a cualquiera, aunque a veces corre mucho y muerde poco.');
+      }
+      if (high('defense_physical') && low('rhythm')) {
+        comboPool.push('Parado es una pared; si lo sacan a pasear, la pared empieza a pedir taxi.');
+      }
+      if (isGoalkeeper && high('goalkeeper_skill') && low('teamwork')) {
+        comboPool.push('Ataja, pero necesita hablar mas: un arquero mudo deja a la defensa jugando a las adivinanzas.');
+      }
+      if (isGoalkeeper && high('goalkeeper_skill') && low('defense_physical')) {
+        comboPool.push('Bajo palos responde, pero cuando sale al barro conviene que alguien le cubra la espalda.');
+      }
+      if (!comboPool.length && best.field !== 'regularity' && weakest.field !== 'regularity') {
+        comboPool.push(`El truco es sencillo: hacerlo jugar seguido ${bestZone} y no dejar que el partido lo encierre ${weakZone}.`);
+      }
+      const comboLine = comboPool.length ? pick('combo', comboPool) : '';
+      const titlePool = [
+        `${player.name}, a cancha abierta`,
+        `Lo de ${player.name}`,
+        `${player.name} bajo la lupa del fulbito`,
+        `${player.name}, sin cassette`,
+        `Radiografia de potrero: ${player.name}`,
+      ];
       return {
-        title: `${player.name}, ${role} de ${formatRating(numberOr(player.skill, 3))}/6`,
-        body: [shapeLine, colorLine, virtueLine, regularityLine, regularityContext, closingLine, comboLine, flawLine].filter(Boolean).join(' '),
+        title: pick('title', titlePool),
+        body: [
+          pick('intro', introPool[role] || introPool.comodin),
+          pick('balance', balancePool),
+          strengthLine,
+          weaknessLine,
+          comboLine,
+          pick('regularity', regularityPool),
+          pick('closing', closingPool),
+        ].filter(Boolean).join(' '),
         tags: [
           role.toUpperCase(),
-          `General ${formatRating(numberOr(player.skill, 3))}/6`,
-          `Regularidad ${formatRating(numberOr(player.regularity, 3.5))}`,
-          `${best.label} ${formatRating(best.value)}`,
-          `${weakest.label} ${formatRating(weakest.value)}`,
+          `Fuerte: ${bestZone}`,
+          `A cuidar: ${weakZone}`,
+          `Regularidad ${formatRating(numberOr(player.regularity, 3.5))}/6`,
         ],
       };
     };

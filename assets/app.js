@@ -324,7 +324,6 @@
   const hydrateDynamicContent = (root = document) => {
     mountReactIslands(root);
     collapseMobileDetails(root);
-    bindCaptainCountControls(root);
     refreshExistingImportPlayers(root);
     bindParticipantControls(root);
     bindEncounterHistoryControls(root);
@@ -338,29 +337,6 @@
     initFinishPlayerSwap(root);
     initManualTeams();
     updateStatsPlayerSearch(root.querySelector?.('[data-stats-player-search]') || undefined);
-  };
-
-  const bindCaptainCountControls = (root = document) => {
-    root.querySelectorAll('[data-captain-count-select]:not([data-bound="1"])').forEach((countSelect) => {
-      countSelect.dataset.bound = '1';
-      const rows = Array.from(countSelect.form?.querySelectorAll('select[name^="captain"]') || [])
-        .filter((select) => select.name !== 'captain_count')
-        .map((select) => select.closest('.form-row'))
-        .filter(Boolean);
-      const syncCaptainRows = () => {
-        const count = parseInt(countSelect.value || '2', 10);
-        rows.forEach((row, index) => {
-          const enabled = index < count;
-          row.hidden = !enabled;
-          const select = row.querySelector('select');
-          if (!select) return;
-          select.required = enabled;
-          if (!enabled) select.value = '';
-        });
-      };
-      countSelect.addEventListener('change', syncCaptainRows);
-      syncCaptainRows();
-    });
   };
 
   const partialNavigate = async (url, { replace = false, source = null, scroll = true } = {}) => {
@@ -397,7 +373,6 @@
         window.history.pushState({ partial: true }, '', nextUrl);
       }
       if (scroll) scrollToUrlTarget(nextUrl);
-      showToast('Vista actualizada', 'success');
     } catch (error) {
       showToast('No se pudo actualizar sin recargar. Abriendo la pagina completa.', 'error');
       window.location.href = url;
@@ -1805,6 +1780,24 @@
 
     const teamLabel = (teamNumber) => `Equipo ${teamNumber}`;
     const teamColorByName = (colorName) => teamColors.find((color) => color.name === colorName) || teamColors[0];
+    const teamColorIsTaken = (colorName, ownIndex) => selectedTeamColors.some((selected, index) => (
+      index !== ownIndex && String(selected).toUpperCase() === String(colorName).toUpperCase()
+    ));
+    const teamColorsAreUnique = () => selectedTeamColors.every((colorName, index) => (
+      String(colorName || '').trim() !== '' && !teamColorIsTaken(colorName, index)
+    ));
+    const setTeamColor = (teamIndex, colorName) => {
+      const fallback = teamColors[teamIndex % teamColors.length].name;
+      const normalized = String(colorName || fallback).toUpperCase();
+      if (teamColorIsTaken(normalized, teamIndex)) {
+        showToast('Cada equipo necesita un color de camiseta distinto.', 'error');
+        render();
+        return false;
+      }
+      selectedTeamColors[teamIndex] = normalized;
+      render();
+      return true;
+    };
     const playerSearchText = (player) => [
       player.name,
       player.positions,
@@ -1909,11 +1902,14 @@
     const updateStatus = () => {
       const current = counts();
       const fullTeams = current.values.filter((count) => count === playersPerTeam).length;
-      const canSave = teamsAreComplete();
+      const colorsOk = teamColorsAreUnique();
+      const canSave = teamsAreComplete() && colorsOk;
       if (status) {
         status.className = `manual-teams-status mt-3 ${canSave ? 'is-ok' : 'is-pending'}`;
         status.textContent = canSave
           ? 'Todos los equipos estan completos. Ya podes elegir formaciones y guardar.'
+          : !colorsOk
+            ? 'Cada equipo debe tener un color de camiseta distinto.'
           : `Pendientes: ${current.pending}. Equipos completos: ${fullTeams}/${numTeams}. Cada equipo debe tener ${playersPerTeam} jugadores.`;
       }
       if (formationNote) {
@@ -2006,7 +2002,7 @@
               <label class="manual-team-color-card ${selectedColor.className}">
                 <span>${teamLabel(index + 1)}</span>
                 <select data-manual-color="${index}">
-                  ${teamColors.map((color) => `<option value="${color.name}" ${selectedColor.name === color.name ? 'selected' : ''}>${color.name}</option>`).join('')}
+                  ${teamColors.map((color) => `<option value="${color.name}" ${selectedColor.name === color.name ? 'selected' : ''} ${teamColorIsTaken(color.name, index) ? 'disabled' : ''}>${color.name}</option>`).join('')}
                 </select>
               </label>
             `;
@@ -2104,8 +2100,7 @@
       if (colorSelect) {
         const teamIndex = Number(colorSelect.getAttribute('data-manual-color'));
         if (teamIndex >= 0 && teamIndex < selectedTeamColors.length) {
-          selectedTeamColors[teamIndex] = String(colorSelect.value || teamColors[teamIndex % teamColors.length].name);
-          render();
+          setTeamColor(teamIndex, colorSelect.value);
         }
         return;
       }
@@ -2132,8 +2127,7 @@
       if (event.target.matches('[data-manual-color]')) {
         const teamIndex = Number(event.target.getAttribute('data-manual-color'));
         if (teamIndex >= 0 && teamIndex < selectedTeamColors.length) {
-          selectedTeamColors[teamIndex] = String(event.target.value || teamColors[teamIndex % teamColors.length].name);
-          render();
+          setTeamColor(teamIndex, event.target.value);
         }
         return;
       }
@@ -2234,6 +2228,10 @@
     saveButton?.addEventListener('click', async () => {
       updateStatus();
       if (saveButton.disabled) return;
+      if (!teamColorsAreUnique()) {
+        showToast('Cada equipo necesita un color de camiseta distinto.', 'error');
+        return;
+      }
 
       const teams = Array.from({ length: numTeams }, (_, index) => ({
         color_name: teamColorByName(selectedTeamColors[index]).name,

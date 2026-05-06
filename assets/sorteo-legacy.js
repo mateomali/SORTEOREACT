@@ -36,19 +36,38 @@ function normalizarRitmo(rawRitmo) {
 }
 
 // Configuración inicial de colores
-var teamColorMapping = [
+var TEAM_COLOR_OPTIONS = [
   { name: "ROSA", class: "team-rosa" },
   { name: "AZUL", class: "team-azul" },
   { name: "NARANJA", class: "team-naranja" },
   { name: "NEGRO", class: "team-negro" },
   { name: "VERDE", class: "team-verde" }
 ];
+var teamColorMapping = TEAM_COLOR_OPTIONS.map(option => ({ ...option }));
 
 function setTeamColor(equipoIndex, colorName, className) {
   teamColorMapping[equipoIndex] = { name: colorName, class: className };
 }
 function getTeamColor(equipoIndex) {
   return teamColorMapping[equipoIndex];
+}
+
+function isTeamColorTaken(selectedClass, ownIndex) {
+  return teamColorMapping.some((teamColor, index) => (
+    index !== ownIndex && teamColor && teamColor.class === selectedClass
+  ));
+}
+
+function teamColorsAreUnique(teamCount) {
+  const used = new Set();
+  for (let index = 0; index < teamCount; index++) {
+    const teamColor = getTeamColor(index);
+    if (!teamColor || !teamColor.name) return false;
+    const colorName = String(teamColor.name).trim().toUpperCase();
+    if (used.has(colorName)) return false;
+    used.add(colorName);
+  }
+  return true;
 }
 
 function getTeamColorHeart(colorName) {
@@ -84,53 +103,66 @@ function selectSortOption(criteria) {
 }
 
 function actualizarTeamColorSettings() {
-  const numEquipos = parseInt(document.getElementById('teamDisplay').textContent);
-  const container = document.getElementById('team-color-settings');
-  container.innerHTML = '';
-  const opciones = [
-    { name: 'ROSA', class: 'team-rosa' },
-    { name: 'AZUL', class: 'team-azul' },
-    { name: 'NARANJA', class: 'team-naranja' },
-    { name: 'NEGRO', class: 'team-negro' },
-    { name: 'VERDE', class: 'team-verde' }
-  ];
-  
+  const numEquipos = parseInt(document.getElementById('teamDisplay').textContent, 10);
   for (let i = 0; i < numEquipos; i++) {
-    const teamColor = getTeamColor(i) || opciones[i % opciones.length];
-    const select = document.createElement('select');
-    select.setAttribute('data-team-index', i);
-    
-    opciones.forEach(opt => {
-      const optionElem = document.createElement('option');
-      optionElem.value = opt.class;
-      optionElem.text = opt.name;
-      if (teamColor.name === opt.name) {
-        optionElem.selected = true;
-      }
-      select.appendChild(optionElem);
-    });
-    
-    select.addEventListener('change', function(e) {
-      const teamIndex = parseInt(e.target.getAttribute('data-team-index'));
-      const selectedClass = e.target.value;
-      let selectedName = '';
-      
-      opciones.forEach(opt => {
-        if (opt.class === selectedClass) {
-          selectedName = opt.name;
-        }
-      });
-      
-      setTeamColor(teamIndex, selectedName, selectedClass);
-      if (lastEquipos) {
-        mostrarEquipos(lastEquipos);
-      }
-    });
-    
-    const label = document.createElement('label');
-    label.textContent = `Equipo ${i + 1}: `;
-    label.appendChild(select);
-    container.appendChild(label);
+    if (!teamColorMapping[i]) {
+      const option = TEAM_COLOR_OPTIONS[i % TEAM_COLOR_OPTIONS.length];
+      setTeamColor(i, option.name, option.class);
+    }
+  }
+}
+
+function teamColorOptionsHtml(teamIndex) {
+  const teamColor = getTeamColor(teamIndex) || TEAM_COLOR_OPTIONS[teamIndex % TEAM_COLOR_OPTIONS.length];
+  return TEAM_COLOR_OPTIONS.map(option => (
+    `<option value="${option.class}" ${teamColor.class === option.class ? 'selected' : ''} ${isTeamColorTaken(option.class, teamIndex) ? 'disabled' : ''}>${option.name}</option>`
+  )).join('');
+}
+
+function refreshTeamColorControls() {
+  document.querySelectorAll('[data-sorteo-action="team-color-change"][data-team-index]').forEach(control => {
+    const teamIndex = Number(control.dataset.teamIndex);
+    control.innerHTML = teamColorOptionsHtml(teamIndex);
+  });
+}
+
+function onTeamColorChange(teamIndex, selectedClass) {
+  const selected = TEAM_COLOR_OPTIONS.find(option => option.class === selectedClass);
+  if (!selected) return;
+  if (isTeamColorTaken(selected.class, teamIndex)) {
+    const errorDiv = document.getElementById('error');
+    if (errorDiv) {
+      errorDiv.textContent = 'Cada equipo necesita un color de camiseta distinto.';
+      errorDiv.classList.remove('hidden');
+    } else {
+      alert('Cada equipo necesita un color de camiseta distinto.');
+    }
+    const control = document.querySelector(`[data-sorteo-action="team-color-change"][data-team-index="${teamIndex}"]`);
+    const current = getTeamColor(teamIndex);
+    if (control && current) control.value = current.class;
+    refreshTeamColorControls();
+    return;
+  }
+
+  setTeamColor(teamIndex, selected.name, selected.class);
+  const errorDiv = document.getElementById('error');
+  if (errorDiv) {
+    errorDiv.textContent = '';
+    errorDiv.classList.add('hidden');
+  }
+  refreshTeamColorControls();
+
+  const teamCard = document.querySelector(`#equipos-generados .team[data-team-index="${teamIndex}"]`);
+  if (teamCard) {
+    TEAM_COLOR_OPTIONS.forEach(option => teamCard.classList.remove(option.class));
+    teamCard.classList.add(selected.class);
+    const title = teamCard.querySelector('.team-title');
+    if (title) title.textContent = getTeamDisplayName(teamIndex);
+  }
+
+  const matchupTitle = document.querySelector('#equipos-generados .sorteo-matchup-title');
+  if (matchupTitle && lastEquipos) {
+    matchupTitle.textContent = getMatchupDisplayName(lastEquipos.length);
   }
 }
 
@@ -717,7 +749,6 @@ async function generarEquipos() {
     lastEquipos = resultado.equipos;
     document.getElementById('diffDisplay').textContent = Number(resultado.usedMaxDiff || maxDiff).toFixed(1);
     mostrarEquipos(resultado.equipos);
-    moveTeamColorConfigForMobile();
     successDiv.textContent = `Equipos generados exitosamente con diferencia máxima de ${maxDiff}`;
     if (resultado.perfecto) {
       successDiv.textContent = `Equipos generados con diferencia maxima ${Number(resultado.usedMaxDiff || maxDiff).toFixed(1)}.`;
@@ -737,15 +768,6 @@ async function generarEquipos() {
   } finally {
     setGeneratingTeams(false);
   }
-}
-
-function moveTeamColorConfigForMobile() {
-  if (!window.matchMedia('(max-width: 760px)').matches) return;
-  const colorConfig = document.querySelector('.team-color-config');
-  const teamsContainer = document.getElementById('equipos-generados');
-  if (!colorConfig || !teamsContainer || colorConfig.dataset.mobileMoved === '1') return;
-  teamsContainer.parentNode.insertBefore(colorConfig, teamsContainer);
-  colorConfig.dataset.mobileMoved = '1';
 }
 
 function clonarEquipos(equipos) {
@@ -1233,6 +1255,7 @@ function mostrarEquipos(equipos) {
   equipos.forEach((equipo, index) => {
     const equipoDiv = document.createElement('div');
     equipoDiv.className = 'team';
+    equipoDiv.dataset.teamIndex = String(index);
     const teamColor = getTeamColor(index);
     let headerText = getTeamDisplayName(index);
     if (teamColor) {
@@ -1287,10 +1310,18 @@ function mostrarEquipos(equipos) {
         <div class="team-stats">${totalPuntos.toFixed(1)} ⭐</div>
       </div>
       <div class="team-formation-controls">
-        <label>Formacion</label>
-        <select data-sorteo-action="team-formation-change" data-team-index="${index}">
-          ${formationOptionsHtml(index, jugadoresOrdenados.length)}
-        </select>
+        <div class="team-control-group">
+          <label>Camiseta</label>
+          <select data-sorteo-action="team-color-change" data-team-index="${index}">
+            ${teamColorOptionsHtml(index)}
+          </select>
+        </div>
+        <div class="team-control-group">
+          <label>Formacion</label>
+          <select data-sorteo-action="team-formation-change" data-team-index="${index}">
+            ${formationOptionsHtml(index, jugadoresOrdenados.length)}
+          </select>
+        </div>
         <div class="team-custom-formation ${customVisible ? '' : 'hidden'}">
           <span>DEF</span>
           <input type="number" min="0" max="${MAX_FIELD_PLAYERS_PER_LINE}" value="${custom.DEF}" data-sorteo-action="team-custom-formation-change" data-team-index="${index}" data-line="DEF">
@@ -1414,6 +1445,16 @@ function guardarSorteoEnBD() {
     alert('Primero genera los equipos');
     return;
   }
+  if (!teamColorsAreUnique(lastEquipos.length)) {
+    const errorDiv = document.getElementById('error');
+    if (errorDiv) {
+      errorDiv.textContent = 'Cada equipo necesita un color de camiseta distinto.';
+      errorDiv.classList.remove('hidden');
+    } else {
+      alert('Cada equipo necesita un color de camiseta distinto.');
+    }
+    return;
+  }
 
   const equiposPayload = [];
   for (const equipo of lastEquipos) {
@@ -1515,6 +1556,7 @@ function bindSorteoLegacyEvents() {
       case 'import-players-csv': importarJugadoresCSV(event); break;
       case 'toggle-select-all': toggleSelectAll(control); break;
       case 'toggle-player': jugadores[Number(control.dataset.playerIndex)].selected = control.checked; break;
+      case 'team-color-change': onTeamColorChange(Number(control.dataset.teamIndex), control.value); break;
       case 'team-formation-change': onTeamFormationChange(Number(control.dataset.teamIndex), control.value); break;
       case 'team-custom-formation-change': onTeamCustomFormationChange(Number(control.dataset.teamIndex), control.dataset.line || '', control.value); break;
       case 'manual-position-change': onManualPositionChange(Number(control.dataset.teamIndex), control.dataset.playerKey || '', control.value); break;
