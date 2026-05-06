@@ -8,6 +8,7 @@ $activePage = $activePage ?? '';
 $flashMessages = consume_flash();
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/../assets/tailwind.css') ?: time());
 $reactCssPath = __DIR__ . '/../assets/react/react-app.css';
+$brandLogoPath = __DIR__ . '/../assets/goodfellas-logo.png';
 $publicMenu = [
     'index.php' => 'Inicio',
     'historial.php' => 'Historial',
@@ -43,14 +44,15 @@ $adminMenu = is_admin()
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <img
-          class="brand-logo"
-          src="assets/goodfellas-logo.png"
-          alt="Goodfellas"
-          width="128"
-          height="82"
-          onerror="this.hidden=true"
-        >
+        <?php if (is_file($brandLogoPath)): ?>
+          <img
+            class="brand-logo"
+            src="assets/goodfellas-logo.png"
+            alt="Goodfellas"
+            width="128"
+            height="82"
+          >
+        <?php endif; ?>
         <div>
           <strong>GOODFELLAS</strong>
           <span>Gestor de Futbol</span>

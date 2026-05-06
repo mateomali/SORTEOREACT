@@ -129,7 +129,7 @@ require __DIR__ . '/includes/header.php';
   <article class="card">
     <h3>Importar jugadores.csv local</h3>
     <p class="small-muted">Usa el archivo <code>jugadores.csv</code> de esta carpeta.</p>
-    <form method="post">
+    <form method="post" data-no-partial>
       <input type="hidden" name="action" value="import_default">
       <button class="btn btn-primary" type="submit">Importar archivo local</button>
     </form>
@@ -138,7 +138,7 @@ require __DIR__ . '/includes/header.php';
   <article class="card">
     <h3>Subir otro CSV</h3>
     <p class="small-muted">Columnas esperadas: Nombre, Posicion, Ritmo, Puntuacion.</p>
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" data-no-partial>
       <input type="hidden" name="action" value="import_upload">
       <div class="form-row">
         <input type="file" name="csv_file" accept=".csv,text/csv" required>

@@ -7,33 +7,13 @@
 
   const getMainContent = () => document.querySelector('main.content');
 
-  const showToast = (message, type = 'info') => {
-    if (!message) return;
-    let stack = document.querySelector('[data-toast-stack]');
-    if (!stack) {
-      stack = document.createElement('div');
-      stack.className = 'app-toast-stack';
-      stack.setAttribute('data-toast-stack', '');
-      document.body.appendChild(stack);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `app-toast app-toast-${type}`;
-    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
-    toast.textContent = message;
-    stack.appendChild(toast);
-
-    window.setTimeout(() => {
-      toast.classList.add('is-leaving');
-      window.setTimeout(() => toast.remove(), 220);
-    }, type === 'error' ? 4200 : 2600);
-  };
-
-  const setBusy = (el, busy) => {
+  const appUi = window.GoodfellasApp || {};
+  const showToast = appUi.showToast || (() => {});
+  const setBusy = appUi.setBusy || ((el, busy) => {
     if (!el) return;
     el.classList.toggle('is-partial-loading', busy);
     el.setAttribute('aria-busy', busy ? 'true' : 'false');
-  };
+  });
 
   const mountReactIslands = (root = document) => {
     const scope = root instanceof HTMLElement || root instanceof Document ? root : document;
@@ -57,6 +37,19 @@
     currentNav.classList.remove('open');
   };
 
+  const scrollToUrlTarget = (url, fallbackTop = true) => {
+    const hash = new URL(url, window.location.href).hash;
+    const id = hash ? decodeURIComponent(hash.slice(1)) : '';
+    const target = id ? document.getElementById(id) : null;
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (fallbackTop) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const runPageScripts = (nextDocument) => {
     nextDocument.querySelectorAll('script').forEach((script) => {
       const type = (script.type || '').trim().toLowerCase();
@@ -65,11 +58,16 @@
       if (script.src) {
         const src = new URL(script.src, window.location.href);
         if (/\/assets\/(?:app|react\/react-app)\.js$/i.test(src.pathname)) return;
-        if (document.querySelector(`script[src="${src.href}"]`)) return;
+        const shouldRerunScript = /\/assets\/(?:sorteo-legacy|capitanes|finalizar-partido|jugadores|home-captains)\.js$/i.test(src.pathname);
+        if (!shouldRerunScript && document.querySelector(`script[src="${src.href}"]`)) return;
         const nextScript = document.createElement('script');
         nextScript.src = src.href;
         nextScript.async = false;
         if (type === 'module') nextScript.type = 'module';
+        if (shouldRerunScript) {
+          nextScript.addEventListener('load', () => nextScript.remove(), { once: true });
+          nextScript.addEventListener('error', () => nextScript.remove(), { once: true });
+        }
         document.body.appendChild(nextScript);
         return;
       }
@@ -326,10 +324,43 @@
   const hydrateDynamicContent = (root = document) => {
     mountReactIslands(root);
     collapseMobileDetails(root);
+    bindCaptainCountControls(root);
     refreshExistingImportPlayers(root);
     bindParticipantControls(root);
     bindEncounterHistoryControls(root);
+    bindPlayerEditRows(root);
+    bindPlayerEditDialogs(root);
+    bindPlayerListSearch(root);
+    bindMatchDetailToggles(root);
+    bindDismissibleAlerts(root);
+    bindTeamCountControls(root);
+    bindRoundRobinControls(root);
+    initFinishPlayerSwap(root);
+    initManualTeams();
     updateStatsPlayerSearch(root.querySelector?.('[data-stats-player-search]') || undefined);
+  };
+
+  const bindCaptainCountControls = (root = document) => {
+    root.querySelectorAll('[data-captain-count-select]:not([data-bound="1"])').forEach((countSelect) => {
+      countSelect.dataset.bound = '1';
+      const rows = Array.from(countSelect.form?.querySelectorAll('select[name^="captain"]') || [])
+        .filter((select) => select.name !== 'captain_count')
+        .map((select) => select.closest('.form-row'))
+        .filter(Boolean);
+      const syncCaptainRows = () => {
+        const count = parseInt(countSelect.value || '2', 10);
+        rows.forEach((row, index) => {
+          const enabled = index < count;
+          row.hidden = !enabled;
+          const select = row.querySelector('select');
+          if (!select) return;
+          select.required = enabled;
+          if (!enabled) select.value = '';
+        });
+      };
+      countSelect.addEventListener('change', syncCaptainRows);
+      syncCaptainRows();
+    });
   };
 
   const partialNavigate = async (url, { replace = false, source = null, scroll = true } = {}) => {
@@ -357,16 +388,15 @@
       document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
       updateActiveNavigation(nextDocument);
       content.replaceChildren(...Array.from(nextContent.childNodes));
+      runPageScripts(content);
       hydrateDynamicContent(content);
-      runPageScripts(nextDocument);
+      const nextUrl = response.url || url;
       if (replace) {
-        window.history.replaceState({ partial: true }, '', url);
+        window.history.replaceState({ partial: true }, '', nextUrl);
       } else {
-        window.history.pushState({ partial: true }, '', url);
+        window.history.pushState({ partial: true }, '', nextUrl);
       }
-      if (scroll) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      if (scroll) scrollToUrlTarget(nextUrl);
       showToast('Vista actualizada', 'success');
     } catch (error) {
       showToast('No se pudo actualizar sin recargar. Abriendo la pagina completa.', 'error');
@@ -376,6 +406,7 @@
       if (source) source.classList.remove('is-loading');
     }
   };
+  window.goodfellasPartialNavigate = partialNavigate;
 
   const replaceMainContentFromDocument = (nextDocument) => {
     const content = getMainContent();
@@ -386,8 +417,8 @@
     document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
     updateActiveNavigation(nextDocument);
     content.replaceChildren(...Array.from(nextContent.childNodes));
+    runPageScripts(content);
     hydrateDynamicContent(content);
-    runPageScripts(nextDocument);
     return content;
   };
 
@@ -409,12 +440,12 @@
   const shouldSubmitFormPartially = (form) => {
     if (!form || form.matches(partialFormSkipSelector)) return false;
     if (form.target && form.target !== '_self') return false;
-    if (String(form.method || 'get').toLowerCase() === 'dialog') return false;
-    const enctype = String(form.enctype || '').toLowerCase();
+    if (String(form.getAttribute('method') || 'get').toLowerCase() === 'dialog') return false;
+    const enctype = String(form.getAttribute('enctype') || '').toLowerCase();
     if (enctype.includes('multipart/form-data')) return false;
     if (form.querySelector('input[type="file"]')) return false;
 
-    const action = new URL(form.action || window.location.href, window.location.href);
+    const action = new URL(form.getAttribute('action') || window.location.href, window.location.href);
     if (action.origin !== window.location.origin) return false;
     if (/\/(?:backup|logout)\.php$/i.test(action.pathname)) return false;
     return true;
@@ -434,8 +465,8 @@
   };
 
   const submitFormPartially = async (form, submitter = null) => {
-    const method = String(form.method || 'get').toLowerCase();
-    const action = new URL(form.action || window.location.href, window.location.href);
+    const method = String(form.getAttribute('method') || 'get').toLowerCase();
+    const action = new URL(form.getAttribute('action') || window.location.href, window.location.href);
     const formData = getSubmitFormData(form, submitter);
 
     if (method === 'get') {
@@ -450,7 +481,7 @@
     }
 
     const content = getMainContent();
-    const anchorId = form.closest('[id]')?.id || form.id || '';
+    const anchorId = form.closest('[id]')?.id || form.getAttribute('id') || '';
     setBusy(content, true);
     form.classList.add('is-partial-loading');
     if (submitter) {
@@ -509,7 +540,7 @@
       return;
     }
 
-    const url = new URL(form.action || window.location.href, window.location.href);
+    const url = new URL(form.getAttribute('action') || window.location.href, window.location.href);
     const formData = new FormData(form);
     setBusy(content, true);
     submitter?.classList.add('is-loading');
@@ -914,9 +945,10 @@
   bindParticipantControls(document);
   bindEncounterHistoryControls(document);
 
-  const filterPlayerTableRows = () => {
-    const search = document.querySelector('[data-player-list-search]');
-    const rows = Array.from(document.querySelectorAll('[data-player-table-row]'));
+  const filterPlayerTableRows = (root = document) => {
+    const search = root.querySelector?.('[data-player-list-search]') || document.querySelector('[data-player-list-search]');
+    const scope = search?.closest('main.content') || document;
+    const rows = Array.from(scope.querySelectorAll('[data-player-table-row]'));
     if (!search || !rows.length) return;
 
     const query = search.value.trim().toLowerCase();
@@ -926,11 +958,13 @@
     });
   };
 
-  const playerListSearch = document.querySelector('[data-player-list-search]');
-  if (playerListSearch) {
-    playerListSearch.addEventListener('input', filterPlayerTableRows);
-    filterPlayerTableRows();
-  }
+  const bindPlayerListSearch = (root = document) => {
+    const playerListSearch = root.querySelector?.('[data-player-list-search]') || document.querySelector('[data-player-list-search]');
+    if (!playerListSearch || playerListSearch.dataset.playerListSearchBound === '1') return;
+    playerListSearch.dataset.playerListSearchBound = '1';
+    playerListSearch.addEventListener('input', () => filterPlayerTableRows(root));
+    filterPlayerTableRows(root);
+  };
 
   const playerStatFields = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity', 'goalkeeper_skill'];
   const formatPlayerRating = (rating) => Number.isInteger(rating) ? String(rating) : Number(rating || 0).toFixed(1);
@@ -1014,75 +1048,76 @@
     }
   };
 
-  document.querySelectorAll('[data-player-edit-row]').forEach((row) => {
-    const fields = Array.from(row.querySelectorAll('input, select, textarea'));
-    const rememberRestoreTarget = (target) => {
-      if (!target || target.closest('[data-player-row-save], .player-trash-icon, .player-scout-row-button')) return;
-      row.playerRestoreTarget = target;
-    };
-    const normalizedFieldValue = (field) => {
-      if (field.matches('[type="checkbox"], [type="radio"]')) {
-        return field.checked ? '1' : '0';
-      }
-      if (field.matches('[type="number"]')) {
-        const numberValue = Number.parseFloat(field.value);
-        return Number.isNaN(numberValue) ? '' : String(numberValue);
-      }
-      return field.value;
-    };
-    let snapshot = fields.map((field) => ({
-      field,
-      value: normalizedFieldValue(field),
-    }));
-    const updateDirtyState = () => {
-      const isDirty = snapshot.some(({ field, value }) => (
-        normalizedFieldValue(field) !== value
-      ));
-      row.classList.toggle('is-dirty', isDirty);
-    };
-    row.updatePlayerDirtySnapshot = () => {
-      snapshot = fields.map((field) => ({
+  const bindPlayerEditRows = (root = document) => {
+    root.querySelectorAll?.('[data-player-edit-row]:not([data-player-edit-row-bound="1"])').forEach((row) => {
+      row.dataset.playerEditRowBound = '1';
+      const fields = Array.from(row.querySelectorAll('input, select, textarea'));
+      const rememberRestoreTarget = (target) => {
+        if (!target || target.closest('[data-player-row-save], .player-trash-icon, .player-scout-row-button')) return;
+        row.playerRestoreTarget = target;
+      };
+      const normalizedFieldValue = (field) => {
+        if (field.matches('[type="checkbox"], [type="radio"]')) {
+          return field.checked ? '1' : '0';
+        }
+        if (field.matches('[type="number"]')) {
+          const numberValue = Number.parseFloat(field.value);
+          return Number.isNaN(numberValue) ? '' : String(numberValue);
+        }
+        return field.value;
+      };
+      let snapshot = fields.map((field) => ({
         field,
         value: normalizedFieldValue(field),
       }));
+      const updateDirtyState = () => {
+        const isDirty = snapshot.some(({ field, value }) => (
+          normalizedFieldValue(field) !== value
+        ));
+        row.classList.toggle('is-dirty', isDirty);
+      };
+      row.updatePlayerDirtySnapshot = () => {
+        snapshot = fields.map((field) => ({
+          field,
+          value: normalizedFieldValue(field),
+        }));
+        updateDirtyState();
+      };
+      fields.forEach((field) => {
+        field.addEventListener('input', (event) => {
+          rememberRestoreTarget(event.target);
+          updateDirtyState();
+        });
+        field.addEventListener('change', (event) => {
+          rememberRestoreTarget(event.target);
+          updateDirtyState();
+        });
+      });
+      row.addEventListener('pointerdown', (event) => {
+        rememberRestoreTarget(event.target.closest('button, input, select, textarea'));
+      });
+      row.addEventListener('focusin', (event) => {
+        rememberRestoreTarget(event.target.closest('button, input, select, textarea'));
+      });
       updateDirtyState();
-    };
-    fields.forEach((field) => {
-      field.addEventListener('input', (event) => {
-        rememberRestoreTarget(event.target);
-        updateDirtyState();
-      });
-      field.addEventListener('change', (event) => {
-        rememberRestoreTarget(event.target);
-        updateDirtyState();
-      });
     });
-    row.addEventListener('pointerdown', (event) => {
-      rememberRestoreTarget(event.target.closest('button, input, select, textarea'));
-    });
-    row.addEventListener('focusin', (event) => {
-      rememberRestoreTarget(event.target.closest('button, input, select, textarea'));
-    });
-    updateDirtyState();
-  });
+  };
 
-  document.addEventListener('submit', async (event) => {
-    const form = event.target.closest('form[id^="player-row-"]');
-    if (!form) return;
-
-    const row = document.querySelector(`[data-player-edit-row] [form="${form.id}"]`)?.closest('[data-player-edit-row]');
-    const saveButton = document.querySelector(`[data-player-row-save][form="${form.id}"]`);
+  const submitPlayerRowForm = async (form, explicitSaveButton = null) => {
+    const playerRowFormId = form.getAttribute('id') || '';
+    const row = document.querySelector(`[data-player-edit-row] [form="${playerRowFormId}"]`)?.closest('[data-player-edit-row]');
+    const saveButton = explicitSaveButton || document.querySelector(`[data-player-row-save][form="${playerRowFormId}"]`);
     if (!row || !saveButton || saveButton.disabled) return;
 
-    event.preventDefault();
     const rowTopBeforeSave = row.getBoundingClientRect().top;
     const restoreTarget = row.playerRestoreTarget instanceof HTMLElement
       ? row.playerRestoreTarget
       : (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     const formData = new FormData(form);
     formData.set('ajax', '1');
-    if (!formData.get('ajax_token') && window.playerAjaxToken) {
-      formData.set('ajax_token', window.playerAjaxToken);
+    const ajaxToken = window.playerAjaxToken || document.querySelector('[data-player-ajax-token]')?.dataset.playerAjaxToken || '';
+    if (!formData.get('ajax_token') && ajaxToken) {
+      formData.set('ajax_token', ajaxToken);
     }
     saveButton.disabled = true;
     saveButton.classList.add('is-loading');
@@ -1090,7 +1125,7 @@
     row.classList.remove('is-saved');
 
     try {
-      const response = await fetch(form.action || window.location.href, {
+      const response = await fetch(form.getAttribute('action') || window.location.href, {
         method: 'POST',
         body: formData,
         credentials: 'same-origin',
@@ -1125,6 +1160,26 @@
       saveButton.disabled = false;
       saveButton.classList.remove('is-loading');
     }
+  };
+
+  document.addEventListener('click', (event) => {
+    const saveButton = event.target.closest('[data-player-row-save]');
+    if (!saveButton) return;
+
+    const formId = saveButton.getAttribute('form');
+    const form = formId ? document.getElementById(formId) : saveButton.closest('form');
+    if (!form || !form.matches('form[id^="player-row-"]')) return;
+
+    event.preventDefault();
+    submitPlayerRowForm(form, saveButton);
+  });
+
+  document.addEventListener('submit', async (event) => {
+    const form = event.target.closest('form[id^="player-row-"]');
+    if (!form) return;
+
+    event.preventDefault();
+    submitPlayerRowForm(form);
   });
 
   document.addEventListener('submit', async (event) => {
@@ -1142,8 +1197,9 @@
     event.preventDefault();
     const formData = new FormData(form);
     formData.set('ajax', '1');
-    if (!formData.get('ajax_token') && window.playerAjaxToken) {
-      formData.set('ajax_token', window.playerAjaxToken);
+    const ajaxToken = window.playerAjaxToken || document.querySelector('[data-player-ajax-token]')?.dataset.playerAjaxToken || '';
+    if (!formData.get('ajax_token') && ajaxToken) {
+      formData.set('ajax_token', ajaxToken);
     }
     if (submitButton) {
       submitButton.disabled = true;
@@ -1152,7 +1208,7 @@
     }
 
     try {
-      const response = await fetch(form.action || window.location.href, {
+      const response = await fetch(form.getAttribute('action') || window.location.href, {
         method: 'POST',
         body: formData,
         credentials: 'same-origin',
@@ -1187,42 +1243,46 @@
     }
   });
 
-  document.querySelectorAll('[data-player-edit-open]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const id = button.getAttribute('data-player-edit-open');
-      const escapedId = id && window.CSS && typeof window.CSS.escape === 'function'
-        ? window.CSS.escape(id)
-        : String(id || '').replace(/"/g, '\\"');
-      const dialog = id ? document.querySelector(`[data-player-edit-dialog="${escapedId}"]`) : null;
-      if (!dialog) return;
-      if (typeof dialog.showModal === 'function') {
-        dialog.showModal();
-      } else {
-        dialog.setAttribute('open', '');
-      }
-    });
-  });
-
-  document.querySelectorAll('[data-player-edit-dialog]').forEach((dialog) => {
-    dialog.querySelectorAll('[data-player-edit-close]').forEach((button) => {
+  const bindPlayerEditDialogs = (root = document) => {
+    root.querySelectorAll?.('[data-player-edit-open]:not([data-player-edit-open-bound="1"])').forEach((button) => {
+      button.dataset.playerEditOpenBound = '1';
       button.addEventListener('click', () => {
-        if (typeof dialog.close === 'function') {
-          dialog.close();
+        const id = button.getAttribute('data-player-edit-open');
+        const escapedId = id && window.CSS && typeof window.CSS.escape === 'function'
+          ? window.CSS.escape(id)
+          : String(id || '').replace(/"/g, '\\"');
+        const dialog = id ? document.querySelector(`[data-player-edit-dialog="${escapedId}"]`) : null;
+        if (!dialog) return;
+        if (typeof dialog.showModal === 'function') {
+          dialog.showModal();
         } else {
-          dialog.removeAttribute('open');
+          dialog.setAttribute('open', '');
         }
       });
     });
-    dialog.addEventListener('click', (event) => {
-      if (event.target === dialog) {
-        if (typeof dialog.close === 'function') {
-          dialog.close();
-        } else {
-          dialog.removeAttribute('open');
+
+    root.querySelectorAll?.('[data-player-edit-dialog]:not([data-player-edit-dialog-bound="1"])').forEach((dialog) => {
+      dialog.dataset.playerEditDialogBound = '1';
+      dialog.querySelectorAll('[data-player-edit-close]').forEach((button) => {
+        button.addEventListener('click', () => {
+          if (typeof dialog.close === 'function') {
+            dialog.close();
+          } else {
+            dialog.removeAttribute('open');
+          }
+        });
+      });
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+          if (typeof dialog.close === 'function') {
+            dialog.close();
+          } else {
+            dialog.removeAttribute('open');
+          }
         }
-      }
+      });
     });
-  });
+  };
 
   document.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-player-status-toggle]');
@@ -1256,7 +1316,7 @@
     const formData = new FormData(form);
     formData.set('ajax', '1');
     try {
-      const response = await fetch(form.action || window.location.href, {
+      const response = await fetch(form.getAttribute('action') || window.location.href, {
         method: 'POST',
         body: formData,
         headers: { 'X-Requested-With': 'fetch' },
@@ -1284,11 +1344,14 @@
   });
   updateStatsPlayerSearch();
 
-  const matchDetailPanel = document.querySelector('[data-match-detail-panel]');
-  const matchDetailToggles = Array.from(document.querySelectorAll('[data-match-detail-toggle]'));
-  if (matchDetailPanel && matchDetailToggles.length) {
+  const bindMatchDetailToggles = (root = document) => {
+    const scope = root instanceof Document ? root : (root?.closest?.('main.content') || root || document);
+    const matchDetailPanel = scope.querySelector?.('[data-match-detail-panel]');
+    const matchDetailToggles = Array.from(scope.querySelectorAll?.('[data-match-detail-toggle]') || []);
+    if (!matchDetailPanel || !matchDetailToggles.length || matchDetailPanel.dataset.matchDetailBound === '1') return;
+    matchDetailPanel.dataset.matchDetailBound = '1';
     const updateMatchDetailLabels = (collapsed) => {
-      document.querySelectorAll('[data-match-detail-label]').forEach((label) => {
+      scope.querySelectorAll('[data-match-detail-label]').forEach((label) => {
         const symbol = label.querySelector('[data-match-detail-symbol]');
         const isActiveItem = label.closest('.match-list-item.active') !== null;
         const value = !collapsed && isActiveItem ? '-' : '+';
@@ -1298,7 +1361,7 @@
         }
         label.textContent = `${value} Detalles`;
       });
-      document.querySelectorAll('[data-match-detail-toggle]').forEach((toggle) => {
+      scope.querySelectorAll('[data-match-detail-toggle]').forEach((toggle) => {
         const symbol = toggle.querySelector('[data-match-detail-symbol]');
         if (symbol) {
           symbol.textContent = collapsed ? '+' : '-';
@@ -1314,13 +1377,16 @@
       matchDetailToggles.forEach((toggle) => toggle.classList.toggle('details-collapsed', collapsed));
       updateMatchDetailLabels(collapsed);
     }));
-  }
+  };
 
-  document.querySelectorAll('[data-dismissible-alert]').forEach((alert) => {
-    alert.querySelector('[data-dismissible-alert-close]')?.addEventListener('click', () => {
-      alert.hidden = true;
+  const bindDismissibleAlerts = (root = document) => {
+    root.querySelectorAll?.('[data-dismissible-alert]:not([data-dismissible-alert-bound="1"])').forEach((alert) => {
+      alert.dataset.dismissibleAlertBound = '1';
+      alert.querySelector('[data-dismissible-alert-close]')?.addEventListener('click', () => {
+        alert.hidden = true;
+      });
     });
-  });
+  };
 
   document.addEventListener('click', (event) => {
     const awardsTrigger = event.target.closest('[data-awards-trigger]');
@@ -1343,18 +1409,20 @@
     }
   });
 
-  collapseMobileDetails();
-
-  document.querySelectorAll('[data-num-teams], [data-players-per-team]').forEach((input) => {
-    input.addEventListener('input', () => {
-      updateImportPlayerLimit();
-      updateSelectionCount('participants');
+  const bindTeamCountControls = (root = document) => {
+    root.querySelectorAll?.('[data-num-teams], [data-players-per-team]').forEach((input) => {
+      if (input.dataset.teamCountBound === '1') return;
+      input.dataset.teamCountBound = '1';
+      input.addEventListener('input', () => {
+        updateImportPlayerLimit();
+        updateSelectionCount('participants');
+      });
+      input.addEventListener('change', () => {
+        updateImportPlayerLimit();
+        updateSelectionCount('participants');
+      });
     });
-    input.addEventListener('change', () => {
-      updateImportPlayerLimit();
-      updateSelectionCount('participants');
-    });
-  });
+  };
 
   const updateRoundRobinLegRows = (form) => {
     if (!form) return;
@@ -1365,7 +1433,9 @@
     });
   };
 
-  document.querySelectorAll('[data-round-robin-form]').forEach(updateRoundRobinLegRows);
+  const bindRoundRobinControls = (root = document) => {
+    root.querySelectorAll?.('[data-round-robin-form]').forEach(updateRoundRobinLegRows);
+  };
 
   document.addEventListener('change', (event) => {
     const toggle = event.target.closest('[data-round-robin-legs-toggle]');
@@ -1539,7 +1609,7 @@
       }
     });
     if (!formData.get('match_id')) {
-      const urlMatch = new URL(form.action || window.location.href, window.location.href).searchParams.get('match_id');
+      const urlMatch = new URL(form.getAttribute('action') || window.location.href, window.location.href).searchParams.get('match_id');
       if (urlMatch) formData.set('match_id', urlMatch);
     }
 
@@ -1581,7 +1651,7 @@
         const url = new URL(window.location.href);
         url.searchParams.set('edit_details', '1');
         url.hash = 'valoraciones';
-        window.location.href = url.toString();
+        partialNavigate(url.toString(), { replace: true, source: form });
         return;
       }
       if (action !== 'calculate_round_robin_winner') {
@@ -1627,7 +1697,7 @@
     }
 
     const importForm = event.target.closest(importFormSelector);
-    if (importForm && String(importForm.method || 'get').toLowerCase() === 'post') {
+    if (importForm && String(importForm.getAttribute('method') || 'get').toLowerCase() === 'post') {
       event.preventDefault();
       submitImportFormDynamically(importForm, event.submitter || null);
       return;
@@ -1641,10 +1711,10 @@
     }
 
     const form = event.target.closest('form[data-partial-form]');
-    if (!form || String(form.method || 'get').toLowerCase() !== 'get') return;
+    if (!form || String(form.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
 
     event.preventDefault();
-    const url = new URL(form.action || window.location.href, window.location.href);
+    const url = new URL(form.getAttribute('action') || window.location.href, window.location.href);
     const formData = new FormData(form);
     url.search = '';
     formData.forEach((value, key) => {
@@ -1653,6 +1723,18 @@
       }
     });
     partialNavigate(url.toString(), { source: form });
+  });
+
+  document.addEventListener('change', (event) => {
+    const control = event.target.closest('[data-auto-submit]');
+    const form = control?.form;
+    if (!control || !form) return;
+
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit();
+    } else {
+      form.submit();
+    }
   });
 
   document.addEventListener('click', (event) => {
@@ -1681,7 +1763,10 @@
 
   const initManualTeams = () => {
     const root = document.querySelector('[data-manual-teams]');
-    const config = window.manualTeamsConfig;
+    const configScript = root?.querySelector('[data-manual-teams-config]');
+    const config = configScript
+      ? JSON.parse(configScript.textContent || '{}')
+      : window.manualTeamsConfig;
     if (!root || !config || root.dataset.ready === '1') return;
     root.dataset.ready = '1';
 
@@ -2183,7 +2268,7 @@
           throw new Error(payload.message || 'No se pudieron guardar los equipos.');
         }
         showToast(payload.message || 'Equipos guardados.', 'success');
-        window.location.href = `finalizar_partido.php?match_id=${Number(config.matchId)}`;
+        partialNavigate(`finalizar_partido.php?match_id=${Number(config.matchId)}`, { source: saveButton });
       } catch (error) {
         showToast(error.message || 'No se pudieron guardar los equipos.', 'error');
         saveButton.disabled = false;

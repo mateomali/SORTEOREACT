@@ -328,7 +328,7 @@ require __DIR__ . '/includes/header.php';
   <article class="card">
     <h3>Exportar backup</h3>
     <p class="small-muted">Descarga un ZIP con archivos CSV de jugadores, fechas, equipos, premios y capitanes.</p>
-    <form method="post" class="btn-row">
+    <form method="post" class="btn-row" data-no-partial>
       <input type="hidden" name="action" value="export_backup">
       <button class="btn btn-primary" type="submit">Descargar backup CSV</button>
     </form>
@@ -337,7 +337,7 @@ require __DIR__ . '/includes/header.php';
   <article class="card">
     <h3>Importar backup</h3>
     <p class="small-muted">Reemplaza solamente las secciones marcadas. Usa archivos generados por esta pantalla.</p>
-    <form method="post" enctype="multipart/form-data" class="form-grid">
+    <form method="post" enctype="multipart/form-data" class="form-grid" data-no-partial>
       <input type="hidden" name="action" value="import_backup">
       <div class="form-row">
         <label for="backupFile">Archivo backup .zip</label>

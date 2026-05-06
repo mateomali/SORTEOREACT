@@ -6,12 +6,14 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $tmpDir = Join-Path $projectRoot '.tmp'
+$runtimeDir = Join-Path $tmpDir 'runtime'
 $phpExe = 'C:\xampp\php\php.exe'
 $mysqlExe = 'C:\xampp\mysql\bin\mysqld.exe'
 $mysqlIni = 'C:\xampp\mysql\bin\my.ini'
 $mysqlBase = 'C:\xampp\mysql'
 
 New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
 
 if (-not (Test-Path $phpExe)) {
     throw "No encontre PHP en $phpExe. Instala XAMPP o ajusta la ruta en este script."
@@ -26,8 +28,8 @@ $mysqlConnection = Get-NetTCPConnection -LocalPort 3306 -ErrorAction SilentlyCon
     Select-Object -First 1
 
 if (-not $mysqlConnection) {
-    $mysqlOut = Join-Path $tmpDir 'mysql.out.log'
-    $mysqlErr = Join-Path $tmpDir 'mysql.err.log'
+    $mysqlOut = Join-Path $runtimeDir 'mysql.out.log'
+    $mysqlErr = Join-Path $runtimeDir 'mysql.err.log'
 
     Start-Process `
         -FilePath $mysqlExe `
@@ -46,7 +48,7 @@ $mysqlConnection = Get-NetTCPConnection -LocalPort 3306 -ErrorAction SilentlyCon
     Select-Object -First 1
 
 if (-not $mysqlConnection) {
-    throw "MySQL no quedo escuchando en el puerto 3306. Revisa $tmpDir\mysql.err.log."
+    throw "MySQL no quedo escuchando en el puerto 3306. Revisa $runtimeDir\mysql.err.log."
 }
 
 $escapedProjectRoot = [regex]::Escape($projectRoot.Path)
@@ -74,8 +76,8 @@ if ($existingPhpProcess) {
         MysqlProcessId = $mysqlConnection.OwningProcess
         Status = $statusCode
         ReusedExistingPhpServer = $true
-        PhpErrorLog = Join-Path $tmpDir 'php-server.err.log'
-        MysqlErrorLog = Join-Path $tmpDir 'mysql.err.log'
+        PhpErrorLog = Join-Path $runtimeDir 'php-server.err.log'
+        MysqlErrorLog = Join-Path $runtimeDir 'mysql.err.log'
     }
     exit 0
 }
@@ -88,8 +90,8 @@ while (
     $selectedPort++
 }
 
-$phpOut = Join-Path $tmpDir 'php-server.out.log'
-$phpErr = Join-Path $tmpDir 'php-server.err.log'
+$phpOut = Join-Path $runtimeDir 'php-server.out.log'
+$phpErr = Join-Path $runtimeDir 'php-server.err.log'
 
 $phpProcess = Start-Process `
     -FilePath $phpExe `
@@ -117,5 +119,5 @@ try {
     Status = $statusCode
     ReusedExistingPhpServer = $false
     PhpErrorLog = $phpErr
-    MysqlErrorLog = Join-Path $tmpDir 'mysql.err.log'
+    MysqlErrorLog = Join-Path $runtimeDir 'mysql.err.log'
 }

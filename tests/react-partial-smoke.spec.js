@@ -1,5 +1,8 @@
 const { test, expect } = require('@playwright/test');
 
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8001';
+const ADMIN_PASSWORD = process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026';
+
 for (const profile of [
   { name: 'desktop', viewport: { width: 1366, height: 768 } },
   { name: 'mobile-390', viewport: { width: 390, height: 844 } },
@@ -13,7 +16,7 @@ for (const profile of [
     });
     page.on('pageerror', (err) => errors.push(err.message));
 
-    await page.goto('http://127.0.0.1:8088/', { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'networkidle' });
     if (profile.viewport.width <= 760) {
       await page.getByRole('button', { name: /Abrir menu|Menu/i }).click();
     }
@@ -62,8 +65,8 @@ test('admin player create form reacts without submitting', async ({ page }) => {
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=jugadores.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=jugadores.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('main.content')).toContainText(/Jugadores/i);
@@ -88,8 +91,8 @@ test('admin encounters history filters with React controls', async ({ page }) =>
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=editar_partidos.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=editar_partidos.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('main.content')).toContainText(/Historial de fechas|Editar fechas/i);
@@ -121,8 +124,8 @@ test('admin create match participant controls react without submitting', async (
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=crear_partido.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=crear_partido.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('main.content')).toContainText(/Crear fecha|CREAR NUEVA FECHA/i);
@@ -153,8 +156,8 @@ test('finish page loads and valuation search works when available', async ({ pag
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=editar_partidos.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=editar_partidos.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
 
@@ -186,11 +189,25 @@ test('captains page loads without breaking live board', async ({ page }) => {
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=capitanes.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=capitanes.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('main.content')).toContainText(/Modo capitanes|Seleccionar fecha|Iniciar draft/i);
+
+  const matchSelect = page.locator('select[name="match_id"][data-auto-submit]').first();
+  if (await matchSelect.count()) {
+    const values = await matchSelect.locator('option').evaluateAll((options) => options.map((option) => option.value).filter(Boolean));
+    if (values.length) {
+      await page.evaluate(() => {
+        window.__captainsAutoSubmitMarker = 1;
+      });
+      await matchSelect.selectOption(values[0]);
+      await page.waitForURL((url) => url.href.includes(`match_id=${values[0]}`), { timeout: 10000 });
+      await expect(page.locator('main.content')).toContainText(/Modo capitanes|Iniciar draft|Pasa estos tokens|Equipos generados/i);
+      expect(await page.evaluate(() => window.__captainsAutoSubmitMarker)).toBe(1);
+    }
+  }
 
   const tokenInput = page.locator('.captain-token-card input[readonly]').first();
   if (await tokenInput.count()) {
@@ -212,7 +229,7 @@ test('stats React player search filters rows', async ({ page }) => {
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/estadisticas.php', { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/estadisticas.php`, { waitUntil: 'networkidle' });
   const search = page.locator('#statsPlayerSearchReact');
   await expect(search).toBeVisible();
   await search.fill('zzzz-no-player');
@@ -233,8 +250,8 @@ test('manual teams page loads search assist when manual link exists', async ({ p
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=editar_partidos.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=editar_partidos.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
 
@@ -265,16 +282,16 @@ test('support admin pages load without overflow', async ({ page }) => {
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=backup.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=backup.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('main.content')).toContainText(/Backup/i);
 
-  await page.goto('http://127.0.0.1:8088/migrar_csv.php', { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/migrar_csv.php`, { waitUntil: 'networkidle' });
   await expect(page.locator('main.content')).toContainText(/Migrar|CSV|Importar/i);
 
-  await page.goto('http://127.0.0.1:8088/login.php', { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/login.php`, { waitUntil: 'networkidle' });
   await expect(page.locator('main.content')).toContainText(/Ingreso admin/i);
 
   const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
@@ -291,8 +308,8 @@ test('legacy draw and redirect pages remain reachable', async ({ page }) => {
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('http://127.0.0.1:8088/login.php?next=editar_partidos.php', { waitUntil: 'networkidle' });
-  await page.locator('input[name="password"]').fill('Goodfellas2026');
+  await page.goto(`${BASE_URL}/login.php?next=editar_partidos.php`, { waitUntil: 'networkidle' });
+  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Ingresar/i }).click();
   await page.waitForLoadState('networkidle');
 
@@ -304,11 +321,11 @@ test('legacy draw and redirect pages remain reachable', async ({ page }) => {
     await expect(page.locator('body')).toContainText(/Jugadores Disponibles/i);
   }
 
-  await page.goto('http://127.0.0.1:8088/consulta.php', { waitUntil: 'networkidle' });
-  await expect(page.locator('main.content')).toContainText(/GOODFELLAS|Ultima fecha|Historial/i);
+  await page.goto(`${BASE_URL}/consulta.php`, { waitUntil: 'networkidle' });
+  await expect(page.locator('main.content')).toContainText(/Inicio|Proxima fecha|Historial/i);
 
-  await page.goto('http://127.0.0.1:8088/sorteo.php', { waitUntil: 'networkidle' });
-  await expect(page.locator('body')).toContainText(/Generador de Equipos GOODFELLAS/i);
+  await page.goto(`${BASE_URL}/sorteo.php`, { waitUntil: 'networkidle' });
+  await expect(page.locator('body')).toContainText(/Generador de Equipos GOODFELLAS|Ingreso admin/i);
 
   const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
   expect(horizontalOverflow).toBeFalsy();

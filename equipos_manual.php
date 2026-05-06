@@ -54,6 +54,12 @@ require __DIR__ . '/includes/header.php';
   </section>
 <?php else: ?>
   <section class="card manual-teams-shell" data-manual-teams>
+    <script type="application/json" data-manual-teams-config><?= json_encode([
+      'matchId' => (int) $selectedMatch['id'],
+      'numTeams' => (int) $numTeams,
+      'playersPerTeam' => (int) $playersPerTeam,
+      'players' => $players,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
     <div class="section-toolbar">
       <div>
         <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
@@ -89,15 +95,6 @@ require __DIR__ . '/includes/header.php';
       <button class="btn btn-primary" type="button" data-manual-save>Guardar equipos</button>
     </div>
   </section>
-
-  <script>
-    window.manualTeamsConfig = {
-      matchId: <?= (int) $selectedMatch['id'] ?>,
-      numTeams: <?= (int) $numTeams ?>,
-      playersPerTeam: <?= (int) $playersPerTeam ?>,
-      players: <?= json_encode($players, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
-    };
-  </script>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
