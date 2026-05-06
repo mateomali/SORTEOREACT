@@ -1052,7 +1052,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         });
       });
       scope.querySelectorAll('[data-attack-stat-row]').forEach((row) => {
-        row.hidden = hasGoalkeeper;
+        row.hidden = false;
       });
       scope.querySelectorAll('[data-stat-help="goalkeeper_skill"]').forEach((row) => {
         row.hidden = !hasGoalkeeper;

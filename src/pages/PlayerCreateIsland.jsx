@@ -209,7 +209,6 @@ export function PlayerCreateIsland({ root }) {
         <div className="player-stats-editor">
           <div className="form-grid">
             {fieldOrder.map((field) => {
-              if (field === 'attack' && hasGoalkeeper) return null;
               return (
                 <div className="form-row stat-form-row" data-attack-stat-row={field === 'attack' ? '' : undefined} key={field}>
                   <label>{labels[field] || field}</label>

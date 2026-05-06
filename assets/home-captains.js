@@ -57,13 +57,13 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       `;
     };
 
-    const renderFormation = (players) => {
+    const renderFormation = (players, teamNumber) => {
       const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
       return positions.map((position) => {
         const linePlayers = players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === position);
         const playerHtml = linePlayers.length
           ? linePlayers.map((player) => `
-              <div class="formation-player">
+              <div class="formation-player" draggable="true" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${position}" data-player-skill="${Number(player.skill || 0)}">
                 <strong>${escapeHtml(player.name)}</strong>
                 <span>${escapeHtml(player.positions)} | ${escapeHtml(player.pace_label)} | ${formatSkill(player.skill)} pts</span>
               </div>
@@ -91,7 +91,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             <h4>${escapeHtml(captainName)}</h4>
             <span class="small-muted">${players.length}/${targetSize} jugadores | ${totalSkill.toFixed(1)} pts</span>
           </div>
-          <div class="team-formation">${renderFormation(players)}</div>
+          <div class="team-formation" data-static-team-formation data-team-number="${teamNumber}">${renderFormation(players, teamNumber)}</div>
           ${renderTeamCharacteristics(players)}
         </article>
       `;

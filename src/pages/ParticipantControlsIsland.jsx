@@ -121,24 +121,31 @@ export function ParticipantControlsIsland({ root }) {
 
   return (
     <div className="participant-search react-participant-controls">
-      <input
-        type="search"
-        placeholder="Buscar jugador por nombre, posicion o ritmo"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      <label className="chip">
+      <div className="participant-search-shell">
+        <label htmlFor="participantSearchReact">Buscar jugador</label>
         <input
-          type="checkbox"
-          checked={visible > 0 && selected >= Math.min(limit || visible, visible)}
-          onChange={(event) => selectAll(event.target.checked)}
+          id="participantSearchReact"
+          type="search"
+          placeholder="Nombre, posicion o ritmo"
+          autoComplete="off"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
         />
-        Seleccionar visibles
-      </label>
-      <button className="btn btn-muted" type="button" onClick={randomSelect}>Seleccion al azar</button>
-      <span className="participant-react-helper" aria-live="polite">
-        {selected}/{limit || selected} convocados · {visible} visibles · {helper}
-      </span>
+      </div>
+      <div className="participant-search-actions">
+        <label className="participant-select-visible">
+          <input
+            type="checkbox"
+            checked={visible > 0 && selected >= Math.min(limit || visible, visible)}
+            onChange={(event) => selectAll(event.target.checked)}
+          />
+          <small>Seleccionar visibles</small>
+        </label>
+        <button className="btn btn-muted" type="button" onClick={randomSelect}>Seleccion al azar</button>
+        <span className="participant-react-helper" aria-live="polite">
+          {selected}/{limit || selected} convocados - {visible} visibles - {helper}
+        </span>
+      </div>
     </div>
   );
 }

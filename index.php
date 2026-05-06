@@ -657,7 +657,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                 <?php endif; ?>
               </span>
             </div>
-            <div class="team-formation">
+            <div class="team-formation" data-static-team-formation data-team-number="<?= h((string) $teamNumber) ?>">
               <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
                 <div class="formation-line">
                   <div class="line-label"><?= h($line) ?></div>
@@ -671,7 +671,14 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $formationRating = $player['rating'] !== null ? number_format((float) $player['rating'], 1) : '-';
                           $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
                         ?>
-                        <div class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?>">
+                        <div
+                          class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?>"
+                          draggable="true"
+                          data-static-formation-player
+                          data-static-player-key="<?= h((string) $player['id']) ?>"
+                          data-assigned-position="<?= h($line) ?>"
+                          data-player-skill="<?= h((string) (float) $player['skill']) ?>"
+                        >
                           <strong><?= h((string) $player['name']) ?><?php if ((string) $match['status'] === 'finalizado'): ?> (<?= h($formationRating) ?>)<?php endif; ?></strong>
                           <?php if ((string) $match['status'] === 'finalizado'): ?>
                             <?php if ($formationGoals > 0 || $formationAwards): ?>
@@ -1007,14 +1014,14 @@ require __DIR__ . '/includes/header.php';
               <h4>Equipo 1</h4>
               <span class="small-muted">Esperando datos...</span>
             </div>
-            <div class="team-formation"></div>
+            <div class="team-formation" data-static-team-formation data-team-number="1"></div>
           </article>
           <article class="team-card">
             <div class="team-head">
               <h4>Equipo 2</h4>
               <span class="small-muted">Esperando datos...</span>
             </div>
-            <div class="team-formation"></div>
+            <div class="team-formation" data-static-team-formation data-team-number="2"></div>
           </article>
         </div>
       <?php elseif (!$groupedTeams): ?>
@@ -1050,7 +1057,7 @@ require __DIR__ . '/includes/header.php';
                   <?php endif; ?>
                 </span>
               </div>
-              <div class="team-formation">
+              <div class="team-formation" data-static-team-formation data-team-number="<?= h((string) $teamNumber) ?>">
                 <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
                   <div class="formation-line">
                     <div class="line-label"><?= h($line) ?></div>
@@ -1064,7 +1071,14 @@ require __DIR__ . '/includes/header.php';
                             $formationRating = $player['rating'] !== null ? number_format((float) $player['rating'], 1) : '-';
                             $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
                           ?>
-                          <div class="formation-player <?= (int) ($player['goals'] ?? 0) > 0 ? 'scored-player' : '' ?>">
+                          <div
+                            class="formation-player <?= (int) ($player['goals'] ?? 0) > 0 ? 'scored-player' : '' ?>"
+                            draggable="true"
+                            data-static-formation-player
+                            data-static-player-key="<?= h((string) $player['id']) ?>"
+                            data-assigned-position="<?= h($line) ?>"
+                            data-player-skill="<?= h((string) (float) $player['skill']) ?>"
+                          >
                             <strong><?= h((string) $player['name']) ?><?php if ((string) $selectedMatch['status'] === 'finalizado'): ?> (<?= h($formationRating) ?>)<?php endif; ?></strong>
                             <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
                               <?php if ($formationGoals > 0 || $formationAwards): ?>

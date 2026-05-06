@@ -88,10 +88,86 @@ function next_captain_team(array $draft, int $currentTeam): int
     return $numbers[($index + 1) % count($numbers)];
 }
 
+function captain_position_order(): array
+{
+    return ['ARQ', 'DEF', 'MED', 'DEL'];
+}
+
 function primary_position(array $player): string
 {
     $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
     return $positions[0] ?? 'MED';
+}
+
+function captain_active_pot(array $available): ?string
+{
+    foreach (captain_position_order() as $position) {
+        foreach ($available as $player) {
+            if (primary_position($player) === $position) {
+                return $position;
+            }
+        }
+    }
+    return null;
+}
+
+function captain_next_team_by_lowest_average(int $matchId, array $draft): int
+{
+    $teamNumbers = captain_numbers($draft);
+    $captainCount = count($teamNumbers);
+    $totalStmt = db()->prepare('SELECT COUNT(*) FROM match_players WHERE match_id = :mid');
+    $totalStmt->execute(['mid' => $matchId]);
+    $targetSize = $captainCount > 0 ? (int) ((int) $totalStmt->fetchColumn() / $captainCount) : 0;
+
+    $stmt = db()->prepare(
+        'SELECT mp.team_number, COUNT(*) AS picked_count, COALESCE(AVG(p.skill), 0) AS avg_skill, COALESCE(SUM(p.skill), 0) AS total_skill
+         FROM match_players mp
+         INNER JOIN players p ON p.id = mp.player_id
+         WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
+         GROUP BY mp.team_number'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $stats = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $stats[(int) $row['team_number']] = [
+            'picked_count' => (int) $row['picked_count'],
+            'avg_skill' => (float) $row['avg_skill'],
+            'total_skill' => (float) $row['total_skill'],
+        ];
+    }
+
+    usort($teamNumbers, static function (int $a, int $b) use ($stats, $targetSize): int {
+        $countA = $stats[$a]['picked_count'] ?? 0;
+        $countB = $stats[$b]['picked_count'] ?? 0;
+        $fullA = $targetSize > 0 && $countA >= $targetSize ? 1 : 0;
+        $fullB = $targetSize > 0 && $countB >= $targetSize ? 1 : 0;
+        if ($fullA !== $fullB) {
+            return $fullA <=> $fullB;
+        }
+        $avgA = $stats[$a]['avg_skill'] ?? 0.0;
+        $avgB = $stats[$b]['avg_skill'] ?? 0.0;
+        if (abs($avgA - $avgB) > 0.0001) {
+            return $avgA <=> $avgB;
+        }
+        if ($countA !== $countB) {
+            return $countA <=> $countB;
+        }
+        $totalA = $stats[$a]['total_skill'] ?? 0.0;
+        $totalB = $stats[$b]['total_skill'] ?? 0.0;
+        if (abs($totalA - $totalB) > 0.0001) {
+            return $totalA <=> $totalB;
+        }
+        return $a <=> $b;
+    });
+
+    foreach ($teamNumbers as $teamNumber) {
+        $count = $stats[$teamNumber]['picked_count'] ?? 0;
+        if ($targetSize <= 0 || $count < $targetSize) {
+            return $teamNumber;
+        }
+    }
+
+    return $teamNumbers[0] ?? 1;
 }
 
 function can_edit_captain_formation(array $match): bool
@@ -141,53 +217,48 @@ function skill_allowed_ids_in_range(array $available, float $targetSkill, float 
 
 function captain_pick_rule(int $matchId, array $available, array $draft): array
 {
+    $activePot = captain_active_pot($available);
+    if ($activePot === null) {
+        return [
+            'active' => false,
+            'enforced' => false,
+            'mode' => 'complete',
+            'active_pot' => null,
+            'allowed_ids' => [],
+            'message' => 'No quedan jugadores disponibles.',
+        ];
+    }
+    $potAvailable = array_values(array_filter($available, static fn(array $player): bool => primary_position($player) === $activePot));
     $stmt = db()->prepare(
-        'SELECT p.skill
+        'SELECT p.skill, p.positions
          FROM captain_picks cp
          INNER JOIN players p ON p.id = cp.player_id
          WHERE cp.match_id = :mid AND cp.pick_order > :captain_count
          ORDER BY cp.pick_order DESC
-         LIMIT 1'
+         LIMIT 40'
     );
     $captainNumbers = captain_turn_order($draft);
     $stmt->execute(['mid' => $matchId, 'captain_count' => count($captainNumbers)]);
-    $lastSkill = $stmt->fetchColumn();
-    if ($lastSkill === false) {
-        $currentTeam = $draft['current_team'] !== null ? (int) $draft['current_team'] : null;
-        if (in_array($currentTeam, $captainNumbers, true) && $available) {
-            $previousTeam = $captainNumbers[(array_search($currentTeam, $captainNumbers, true) - 1 + count($captainNumbers)) % count($captainNumbers)];
-            $referenceSkill = draft_captain_skill($draft, $previousTeam);
-            $allowedIds = skill_allowed_ids_in_range($available, $referenceSkill, 1.0);
-            $allowedSkills = [];
-            foreach ($available as $player) {
-                if (in_array((int) $player['id'], $allowedIds, true)) {
-                    $allowedSkills[] = number_format((float) $player['skill'], 1);
-                }
-            }
-            $allowedSkills = array_values(array_unique($allowedSkills));
-            sort($allowedSkills);
-            return [
-                'active' => true,
-                'enforced' => true,
-                'mode' => 'initial',
-                'reference_skill' => $referenceSkill,
-                'last_skill' => null,
-                'min_skill' => null,
-                'max_skill' => null,
-                'allowed_ids' => $allowedIds,
-                'message' => 'Primera eleccion: jugadores entre ' . number_format($referenceSkill - 1.0, 1) . ' y ' . number_format($referenceSkill + 1.0, 1) . ' puntos. Habilitado: ' . implode(', ', $allowedSkills) . '.',
-            ];
+    $lastSkill = false;
+    foreach ($stmt->fetchAll() as $row) {
+        if (primary_position($row) === $activePot) {
+            $lastSkill = (float) $row['skill'];
+            break;
         }
+    }
+
+    if ($lastSkill === false) {
         return [
-            'active' => false,
-            'enforced' => false,
-            'mode' => 'free',
+            'active' => true,
+            'enforced' => true,
+            'mode' => 'position_pot',
+            'active_pot' => $activePot,
             'reference_skill' => null,
             'last_skill' => null,
             'min_skill' => null,
             'max_skill' => null,
-            'allowed_ids' => [],
-            'message' => 'Primera eleccion libre.',
+            'allowed_ids' => array_map(static fn(array $player): int => (int) $player['id'], $potAvailable),
+            'message' => 'Pote activo: ' . $activePot . '. Elige dentro de esta posicion. Turno para el equipo con menor promedio acumulado.',
         ];
     }
 
@@ -195,7 +266,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     $range = 1.0;
     $allowedIds = [];
     while ($range <= 10.0 && !$allowedIds) {
-        foreach ($available as $player) {
+        foreach ($potAvailable as $player) {
             $skill = (float) ($player['skill'] ?? 0);
             if (abs($skill - $lastSkill) <= $range) {
                 $allowedIds[] = (int) $player['id'];
@@ -209,17 +280,19 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     $maxSkill = $lastSkill + $range;
 
     if (!$allowedIds) {
+        $fallbackIds = array_map(static fn(array $player): int => (int) $player['id'], $potAvailable);
         return [
             'active' => true,
-            'enforced' => false,
+            'enforced' => true,
             'mode' => 'chain',
-            'reference_skill' => null,
+            'active_pot' => $activePot,
+        'reference_skill' => null,
             'last_skill' => $lastSkill,
             'min_skill' => $minSkill,
             'max_skill' => $maxSkill,
             'range' => $range,
-            'allowed_ids' => [],
-            'message' => 'No quedan jugadores dentro de la banda de puntaje. Eleccion libre.',
+            'allowed_ids' => $fallbackIds,
+            'message' => 'Pote activo: ' . $activePot . '. No quedan jugadores dentro de la banda de puntaje; se fuerza elegir de menor puntaje dentro del pote.',
         ];
     }
 
@@ -227,13 +300,14 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
         'active' => true,
         'enforced' => true,
         'mode' => 'chain',
+        'active_pot' => $activePot,
         'reference_skill' => null,
         'last_skill' => $lastSkill,
         'min_skill' => $minSkill,
         'max_skill' => $maxSkill,
         'range' => $range,
         'allowed_ids' => $allowedIds,
-        'message' => 'Elegir jugadores entre ' . number_format($minSkill, 1) . ' y ' . number_format($maxSkill, 1) . ' puntos.',
+        'message' => 'Pote activo: ' . $activePot . '. Elegir jugadores entre ' . number_format($minSkill, 1) . ' y ' . number_format($maxSkill, 1) . ' puntos.',
     ];
 }
 
@@ -742,7 +816,7 @@ try {
         throw new RuntimeException('No hay draft de capitanes para esta fecha.');
     }
     $availableStmt = $pdo->prepare(
-        'SELECT p.id, p.skill
+        'SELECT p.id, p.skill, p.positions
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid AND mp.team_number IS NULL'
@@ -750,6 +824,10 @@ try {
     $availableStmt->execute(['mid' => $matchId]);
     $pickRule = captain_pick_rule($matchId, $availableStmt->fetchAll(), $draftDetails);
     if ($pickRule['enforced'] && !in_array($playerId, array_map('intval', $pickRule['allowed_ids'] ?? []), true)) {
+        $activePot = (string) ($pickRule['active_pot'] ?? '');
+        if ($activePot !== '') {
+            throw new RuntimeException('Pote activo: ' . $activePot . '. Debes elegir un jugador habilitado de esa posicion.');
+        }
         if (($pickRule['mode'] ?? '') === 'initial') {
             throw new RuntimeException('Primera eleccion restringida: debes elegir un jugador con el puntaje habilitado por el capitan rival.');
         }
@@ -780,7 +858,7 @@ try {
     if ($remaining === 0) {
         finish_captain_draft($matchId);
     } else {
-        $nextTeam = next_captain_team($draft, $teamNumber);
+        $nextTeam = captain_next_team_by_lowest_average($matchId, $draft);
         $pdo->prepare('UPDATE captain_drafts SET current_team = :team WHERE match_id = :mid')
             ->execute(['team' => $nextTeam, 'mid' => $matchId]);
     }

@@ -57,10 +57,38 @@ function normalize_assigned_position_legacy(?string $assigned, array $player): s
     return get_primary_position_legacy($player);
 }
 
+function position_base_rating_legacy(array $player, string $assigned): float
+{
+    if ($assigned === 'ARQ' && !in_array('ARQ', parse_positions_legacy((string) ($player['positions'] ?? '')), true)) {
+        return 2.0;
+    }
+
+    return match ($assigned) {
+        'ARQ' => player_effective_stat($player, 'goalkeeper_skill'),
+        'DEF' => player_effective_stat($player, 'defense_physical'),
+        'DEL' => player_effective_stat($player, 'attack'),
+        'MED' => (
+            player_effective_stat($player, 'defense_physical')
+            + player_effective_stat($player, 'attack')
+        ) / 2,
+        default => player_overall_rating($player),
+    };
+}
+
+function adjusted_position_rating_legacy(array $player, string $assigned): float
+{
+    $base = position_base_rating_legacy($player, $assigned);
+    $natural = parse_positions_legacy((string) ($player['positions'] ?? ''));
+    $penaltyRate = 0.15;
+    $adjusted = in_array($assigned, $natural, true) ? $base : $base * (1 - $penaltyRate);
+    return max(1.0, min(6.0, $adjusted));
+}
+
 function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): bool
 {
     $scores = [];
     $slowCounts = [];
+    $maxPerFieldLine = max(0, intdiv($teamSize, 2));
     foreach ($teams as $team) {
         if (count($team) !== $teamSize) {
             return false;
@@ -77,7 +105,7 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
             );
             $lineCounts[$assigned] = ($lineCounts[$assigned] ?? 0) + 1;
 
-            $score += player_overall_rating($player);
+            $score += adjusted_position_rating_legacy($player, $assigned);
             if (player_is_low_rhythm($player)) {
                 $slow++;
             }
@@ -87,7 +115,7 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
             return false;
         }
         foreach (['DEF', 'MED', 'DEL'] as $line) {
-            if (($lineCounts[$line] ?? 0) < 1 || ($lineCounts[$line] ?? 0) > 5) {
+            if (($lineCounts[$line] ?? 0) < 1 || ($lineCounts[$line] ?? 0) > $maxPerFieldLine) {
                 return false;
             }
         }
@@ -257,7 +285,13 @@ foreach ($teams as $team) {
 }
 
 $teamScores = array_map(
-    static fn(array $team): float => array_sum(array_map(static fn(array $p): float => player_overall_rating($p), $team)),
+    static fn(array $team): float => array_sum(array_map(static function (array $p): float {
+        $assigned = normalize_assigned_position_legacy(
+            isset($p['assigned_position']) ? (string) $p['assigned_position'] : '',
+            $p
+        );
+        return adjusted_position_rating_legacy($p, $assigned);
+    }, $team)),
     $teams
 );
 $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
@@ -299,7 +333,11 @@ try {
         $teamNumber = $idx + 1;
         $totalSkill = 0.0;
         foreach ($team as $p) {
-            $totalSkill += player_overall_rating($p);
+            $assigned = normalize_assigned_position_legacy(
+                isset($p['assigned_position']) ? (string) $p['assigned_position'] : '',
+                $p
+            );
+            $totalSkill += adjusted_position_rating_legacy($p, $assigned);
         }
         $saveTeam->execute([
             'mid' => $matchId,
