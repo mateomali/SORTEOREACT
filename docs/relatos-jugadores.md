@@ -117,45 +117,45 @@ ZONA-ARQ-005 | en las pelotas que queman
 ### Radar parejo
 
 BAL-PAREJO-001 | juega bastante parejo: no tiene una cualidad que destaque como figura, pero tampoco es un muerto, para que el rival se haga una fiesta.
-BAL-PAREJO-002 | No es un jugador de una sola habilidad. Tiene un perfil redondo, de esos que ayudan a que el equipo este equilibrado.
-BAL-PAREJO-003 | El radar no dibuja montaña rusa: aparece un jugador bastante estable, util para no desordenar el armado.
-BAL-PAREJO-004 | El radar sale sin picos raros: jugador de menu completo, no de una sola especialidad.
-BAL-PAREJO-005 | No trae una virtud de fuegos artificiales, trae varias cosas en tono parejo; eso tambien gana partidos.
+BAL-PAREJO-002 | No es un jugador de una sola habilidad. Tiene un perfil equilibrado, de esos que ayudan a que el equipo este balanceado.
+BAL-PAREJO-003 | Es un jugador equilibrado en todass sus caracteristicas, util para casi jugar en cualquier posicion.
+BAL-PAREJO-004 | Es un jugador completo, no de una sola especialidad.
+BAL-PAREJO-005 | No trae una virtud que destaca más que las otras, trae varias cosas en tono parejo; eso tambien gana partidos.
 BAL-PAREJO-006 | Es de esos perfiles que no te rompen el equipo: quizas no enamora, pero tampoco te deja pagando.
 
 ### Radar especialista
 
-BAL-ESP-001 | Tiene perfil de especialista: {zona_fuerte} puede sacar ventaja, pero {zona_debil}, empiezan los problemas.
-BAL-ESP-002 | El radar lo manda al frente: hay un fuerte claro y tambien una zona donde el rival, si esta despierto, va a ir a buscar sangre.
-BAL-ESP-003 | No es para usarlo de cualquier cosa. Cerca de su virtud suma; lejos de ahi, puede quedar mas expuesto que defensor sin arquero.
-BAL-ESP-004 | El dibujo del radar parece cartel de advertencia: {zona_fuerte} suma, {zona_debil} puede hacerte transpirar.
-BAL-ESP-005 | Tiene una virtud con luces de neon y una deuda que no conviene esconder debajo de la alfombra.
-BAL-ESP-006 | Usarlo bien es clave: si lo llevas a su zona fuerte, rinde; si lo tiras a su lado flojo, empieza el festival de gestos.
+BAL-ESP-001 | Tiene perfil muy diferente: {zona_fuerte} puede sacar ventaja, pero {zona_debil}, empiezan los problemas.
+BAL-ESP-002 | Es un Jugador de habilidad: tiene un fuerte claro y tambien una zona debil donde el rival, si esta despierto, va a atacar para molestarlo.
+BAL-ESP-003 | No es para usarlo en cualquier lado. Si sabes donde ubicarlo suma un montón; lejos de su posición, es un jugador desperdiciado totalmente.
+BAL-ESP-004 | Su analisis parece cartel de advertencias: {zona_fuerte} suma un montón, {zona_debil} preparata para putearlo.
+BAL-ESP-005 | Tiene una cualidad impresionante respecto a las demás, en las demás es uno del montón.
+BAL-ESP-006 | Usarlo bien es clave: si lo llevas a su zona fuerte, rinde siempre; si lo pones en cualquier lado, empieza a perderse del partido.
 
 ### Radar mixto
 
-BAL-MIX-001 | La lectura es simple: cuando aparece {zona_fuerte}, crece; {zona_debil}, hay que prender una alarma chica.
-BAL-MIX-002 | No es un caso extremo, pero tiene una firma clara: acercarlo a lo que hace bien y no dejarlo regalado {zona_debil}.
-BAL-MIX-003 | Tiene cosas para sumar y cosas para hacerte renegar. La gracia esta en ponerlo donde se siente comodo y cubrirlo {zona_debil}.
-BAL-MIX-004 | El radar no grita crack ni desastre: marca un jugador con una virtud clara y una cuenta pendiente.
-BAL-MIX-005 | Tiene perfil de fulbito real: una cosa para aplaudir, una para discutir y varias para acomodar.
-BAL-MIX-006 | La foto general dice que hay material, pero tambien una zona donde el rival puede venir con cuchillo y tenedor.
+BAL-MIX-001 | La lectura es simple: cuando aparece {zona_fuerte}, crece un montón; {zona_debil}, hay que ir pensando el cambio.
+BAL-MIX-002 | No es un caso extremo, pero tiene una forma clara de jugar: tenes que acercarlo a lo que hace bien y no dejarlo regalado {zona_debil}.
+BAL-MIX-003 | Tiene cosas para sumar y cosas para hacerte putearlo. La gracia esta en ponerlo donde se siente comodo y cubrirlo {zona_debil}.
+BAL-MIX-004 | No es un crack ni tampoco un desastre: marca siempre con garra, pero con la pelota tiene una cuenta pendiente.
+BAL-MIX-005 | Tiene perfil de fulbito de barrio: una cosa para aplaudir, una para reprochar y varias para tenerlo a las puteadas.
+BAL-MIX-006 | hay material de buen jugador, pero tambien una zona donde el rival puede venir con cuchillo y tenedor.
 BAL-MIX-007 | No es una ruleta completa: el mapa muestra por donde conviene darle juego y por donde hay que cubrirlo.
 BAL-MIX-008 | El dibujo deja algo bastante humano: talento en una esquina, deuda en otra y un monton de partido en el medio.
 BAL-MIX-009 | No viene con manual cerrado. Tiene una virtud que empuja y un costado que puede pedir auxilio si el partido se complica.
-BAL-MIX-010 | Es un perfil con sabor a cancha chica: si lo acercas a su fuerte, suma; si lo dejas expuesto, aparecen las puteadas.
+BAL-MIX-010 | Es un perfil con sabor a cancha chica: si lo acercas a su fuerte, suma; si lo dejas expuesto, te dan ganas de insultarlo.
 BAL-MIX-011 | El radar no lo condena ni lo corona: simplemente avisa donde puede hacer daño y donde puede pasarla mal.
 
 ## Aperturas de fortaleza
 
 BEST-OPEN-001 | Su mejor carta aparece {zona_fuerte}
 BEST-OPEN-002 | Donde mas levanta la mano es {zona_fuerte}
-BEST-OPEN-003 | Lo que mas le sostiene el partido aparece {zona_fuerte}
-BEST-OPEN-004 | Si hay que venderlo por una virtud, la foto buena sale {zona_fuerte}
-BEST-OPEN-005 | El aplauso mas facil se lo gana {zona_fuerte}
+BEST-OPEN-003 | Lo que mas le sostiene en el partido aparece {zona_fuerte}
+BEST-OPEN-004 | Si hay que venderlo por una virtud, esa sin duda es {zona_fuerte}
+BEST-OPEN-005 | El aplauso más facil se lo gana {zona_fuerte}
 BEST-OPEN-006 | Cuando la cosa se inclina para su lado, suele empezar {zona_fuerte}
 BEST-OPEN-007 | La parte linda de su libreto aparece {zona_fuerte}
-BEST-OPEN-008 | Su argumento mas serio esta {zona_fuerte}
+BEST-OPEN-008 | Su argumento mas serio está {zona_fuerte}
 BEST-OPEN-009 | Si el equipo lo busca bien, lo encuentra fuerte {zona_fuerte}
 BEST-OPEN-010 | Donde puede hacer diferencia es {zona_fuerte}
 
@@ -166,10 +166,10 @@ WEAK-OPEN-002 | La grieta aparece {zona_debil}
 WEAK-OPEN-003 | Donde puede hacerte agarrar la cabeza es {zona_debil}
 WEAK-OPEN-004 | Si el rival lo estudia, lo va a probar {zona_debil}
 WEAK-OPEN-005 | La baldosa floja esta {zona_debil}
-WEAK-OPEN-006 | El semaforo amarillo se prende {zona_debil}
-WEAK-OPEN-007 | El lugar donde puede regalar una novela es {zona_debil}
-WEAK-OPEN-008 | Cuando la jugada lo lleva {zona_debil}, se lo nota menos comodo
-WEAK-OPEN-009 | La parte que todavia pide laburo aparece {zona_debil}
+WEAK-OPEN-006 | Las alarmas de prenden cuando {zona_debil}
+WEAK-OPEN-007 | El lugar donde puede ayudar a ganar al rival es {zona_debil}
+WEAK-OPEN-008 | Cuando la jugada lo lleva {zona_debil}, se lo nota incomodo
+WEAK-OPEN-009 | La parte que todavia pide que de esfuerce más  {zona_debil}
 WEAK-OPEN-010 | Si queres hacerlo dudar, probalo {zona_debil}
 
 ## Frases por atributo
@@ -177,21 +177,21 @@ WEAK-OPEN-010 | Si queres hacerlo dudar, probalo {zona_debil}
 ### Con la pelota - positivo
 
 TEC-GOOD-001 | la pelota no le quema: la baja, la cuida y puede limpiar una jugada sucia
-TEC-GOOD-002 | tiene pie para salir del apuro sin reventarla a la avenida
+TEC-GOOD-002 | tiene pie para salir del apuro sin reventarla a la tribuna
 TEC-GOOD-003 | cuando le dan un metro, levanta la cabeza y juega con bastante criterio
 TEC-GOOD-004 | puede darle pausa al equipo cuando todos empiezan a correr como locos
 TEC-GOOD-005 | tiene ese toque de potrero que no se explica en una planilla
 TEC-GOOD-006 | si recibe perfilado, puede dejar a uno pagando con una pisada corta
 TEC-GOOD-007 | no necesita hacer circo para jugar bien: controla y entrega con sentido
-TEC-GOOD-008 | cuando la jugada viene trabada, encuentra una salida donde otros ven un paredon
+TEC-GOOD-008 | cuando la jugada viene trabada, encuentra una salida donde otros ven un pelotazo
 TEC-GOOD-009 | tiene un pie que invita al pase corto y a la pared
-TEC-GOOD-010 | si lo dejan pensar, empieza a jugar con la tranquilidad del que sabe donde esta la pelota
+TEC-GOOD-010 | si lo dejan pensar, empieza a jugar con la tranquilidad del que sabe donde está la pelota
 
 ### Con la pelota - a mejorar
 
 TEC-WEAK-001 | si lo apuran, el primer control puede pedir auxilio
-TEC-WEAK-002 | con marca encima a veces se enreda solo y termina jugando contra la pelota
-TEC-WEAK-003 | todavia le conviene tocar simple antes de querer inventar la jugada del domingo
+TEC-WEAK-002 | con marca encima a veces se enreda solo y termina haciendo cagadas
+TEC-WEAK-003 | todavia le conviene tocar simple antes de querer inventar la jugada del partido
 TEC-WEAK-004 | cuando la pelota viene mordida, puede devolver un problema mas grande del que recibio
 TEC-WEAK-005 | si recibe de espaldas, a veces parece que la pelota le llega con instrucciones en chino
 TEC-WEAK-006 | puede querer salir jugando y terminar armando un incendio en su propio patio
@@ -211,12 +211,12 @@ RIT-GOOD-006 | le da velocidad al equipo cuando la pelota pide cambio de marcha
 RIT-GOOD-007 | puede presionar arriba y volver sin mandar carta documento
 RIT-GOOD-008 | sostiene el ida y vuelta sin convertir cada pique en una novela
 RIT-GOOD-009 | tiene motor para romper una jugada que parecia perdida
-RIT-GOOD-010 | si hay que meter una corrida larga, no se borra
+RIT-GOOD-010 | si hay que meter una corrida larga, conta con él
 
 ### Ritmo - a mejorar
 
-RIT-WEAK-001 | si lo hacen correr de lado a lado, empieza a mirar la salida
-RIT-WEAK-002 | en partidos largos puede quedarse con la reserva prendida
+RIT-WEAK-001 | si lo hacen correr de lado a lado, empieza a mirar el banco de suplentes
+RIT-WEAK-002 | en partidos largos puede quedarse sin aire
 RIT-WEAK-003 | cuando el ida y vuelta se vuelve una autopista, le cuesta sostener el viaje
 RIT-WEAK-004 | si lo sacan a perseguir sombras, termina pagando peaje
 RIT-WEAK-005 | necesita elegir mejor cuando acelerar y cuando guardar aire
@@ -228,7 +228,7 @@ RIT-WEAK-010 | si tiene que correr para atras muchas veces, empieza a negociar c
 
 ### Roce y marca - positivo
 
-DEF-GOOD-001 | mete cuerpo y no regala la zona como si fuera estacionamiento libre
+DEF-GOOD-001 | mete bien el cuerpo y no regala la zona, donde está jugando no es un estacionamiento libre
 DEF-GOOD-002 | en la dividida va con decision y deja claro que por ahi no se pasea gratis
 DEF-GOOD-003 | sostiene bien el roce y ayuda a que atras no sea una feria
 DEF-GOOD-004 | es de los que incomodan: no siempre lindo, pero si bastante necesario
@@ -243,33 +243,33 @@ DEF-GOOD-010 | puede ser ese tipo molesto que nadie quiere tener encima
 
 DEF-WEAK-001 | si le cargan el cuerpo, puede quedar mirando la patente
 DEF-WEAK-002 | en el choque fuerte todavia le falta sacar mas pecho
-DEF-WEAK-003 | cuando el rival lo encara con decision, a veces retrocede de mas
+DEF-WEAK-003 | cuando el rival lo encara con decision, a veces afloja la patita
 DEF-WEAK-004 | puede perder alguna dividida de esas que despues se comentan con cara fea
 DEF-WEAK-005 | si lo atacan con potencia, puede terminar defendiendo con la mirada
 DEF-WEAK-006 | necesita meter mas presencia para que no lo pasen por arriba
 DEF-WEAK-007 | en pelotas divididas a veces entra tarde, como pidiendo permiso
 DEF-WEAK-008 | cuando el partido se pone aspero, puede quedar demasiado prolijo
 DEF-WEAK-009 | si lo agarran mal parado, le cuesta recuperar el metro perdido
-DEF-WEAK-010 | le falta un poco de malicia para cortar antes de que la jugada se haga grande
+DEF-WEAK-010 | le falta un poco de malicia para cortar antes de que la jugada se haga más grande
 
 ### Ataque - positivo
 
 ATA-GOOD-001 | cerca del arco huele sangre y obliga a que alguien lo siga
-ATA-GOOD-002 | si le queda una pelota viva, puede convertir una jugada cualquiera en lio
-ATA-GOOD-003 | pisa zona caliente sin pedir permiso
-ATA-GOOD-004 | arriba tiene colmillo: capaz toca poco, pero cuando toca lastima
+ATA-GOOD-002 | si le queda una pelota viva, puede convertir una jugada cualquiera en una jugada de gol
+ATA-GOOD-003 | pisa la zona caliente sin pedir permiso
+ATA-GOOD-004 | arriba tiene colmillo: capaz toca poco, pero cuando toca te lastima seguro
 ATA-GOOD-005 | se mueve donde duele, entre el defensor distraido y el arquero nervioso
 ATA-GOOD-006 | tiene olfato para aparecer justo cuando la pelota queda suelta
-ATA-GOOD-007 | si recibe cerca del area, la jugada deja de ser tranquila
-ATA-GOOD-008 | no necesita veinte chances: con media puede armar quilombo
+ATA-GOOD-007 | si recibe cerca del area, hay peligro de gol
+ATA-GOOD-008 | no necesita veinte chances: con media te puede armar quilombo
 ATA-GOOD-009 | cuando encara para adelante, obliga a que el rival retroceda con miedo
-ATA-GOOD-010 | puede transformar un rebote cualquiera en tema de conversacion
+ATA-GOOD-010 | puede transformar un rebote cualquiera en un golazo
 
 ### Ataque - a mejorar
 
 ATA-WEAK-001 | en los ultimos metros a veces elige el boton equivocado
-ATA-WEAK-002 | puede armar bien la jugada y cerrarla como si hubiera apagado la luz
-ATA-WEAK-003 | con el arco enfrente se apura y deja una puteada flotando
+ATA-WEAK-002 | puede armar bien la jugada y terminarla como si estuviera borracho
+ATA-WEAK-003 | con el arco enfrente aveces se apura y deja una puteada flotando
 ATA-WEAK-004 | necesita afinar la ultima decision para no regalar ataques buenos
 ATA-WEAK-005 | a veces llega al area y se le mezclan todas las pestanas del navegador
 ATA-WEAK-006 | puede hacer lo dificil y despues fallar lo que habia que resolver simple
