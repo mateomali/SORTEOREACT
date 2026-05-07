@@ -5251,6 +5251,22 @@ textarea,
     @apply mx-2 mb-2;
   }
 
+  .mobile-player-profile-panel .player-radar-card {
+    @apply mt-3 !border-lime-200/25 !bg-emerald-900/35;
+  }
+
+  .mobile-player-profile-panel .player-radar-head {
+    @apply mb-1;
+  }
+
+  .mobile-player-profile-panel .player-radar-canvas svg {
+    @apply max-w-[210px];
+  }
+
+  .mobile-player-scout-button svg {
+    @apply h-4 w-4;
+  }
+
   .mobile-player-stat-row {
     @apply min-w-0;
   }

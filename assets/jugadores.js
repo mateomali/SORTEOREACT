@@ -1083,7 +1083,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       updateGeneralRating(scope);
     };
 
-    const scopes = document.querySelectorAll('form.player-create-body, form.player-edit-panel, tr[data-player-edit-row]');
+    const scopes = document.querySelectorAll('form.player-create-body, form.player-edit-panel, tr[data-player-edit-row], .mobile-player-profile-panel');
     scopes.forEach((scope) => {
       syncGoalkeeperStats(scope);
       scope.querySelectorAll('[data-stat-rating-input]').forEach((input) => {

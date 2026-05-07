@@ -482,6 +482,19 @@ function player_mobile_rating_summary(array $player): string
         '</span>' .
         '</span>';
 }
+function player_mobile_stat_color(float $value): string
+{
+    if ($value >= 5.95) {
+        return '#67e8f9';
+    }
+    if ($value >= 4.0) {
+        return '#bef264';
+    }
+    if ($value >= 3.0) {
+        return '#fcd34d';
+    }
+    return '#f87171';
+}
 function player_mobile_profile_panel(array $player, array $statLabels): string
 {
     $fields = player_field_stat_fields();
@@ -491,6 +504,12 @@ function player_mobile_profile_panel(array $player, array $statLabels): string
     }
 
     $html = '<div class="mobile-player-profile-panel mt-2 rounded-xl border border-lime-200/30 bg-emerald-950/75 p-3 shadow-inner shadow-emerald-950/20">';
+    foreach ($positions as $position) {
+        $html .= '<input type="checkbox" name="positions[]" value="' . h($position) . '" checked hidden aria-hidden="true">';
+    }
+    foreach (array_merge(player_field_stat_fields(), ['goalkeeper_skill']) as $field) {
+        $html .= '<input type="hidden" name="' . h($field) . '" value="' . h(number_format(player_effective_stat($player, $field), 1, '.', '')) . '" data-stat-rating-input>';
+    }
     $html .= '<div class="mobile-player-profile-head mb-3 grid gap-2">';
     $html .= '<div class="flex flex-wrap items-center gap-1.5">';
     foreach ($positions as $position) {
@@ -506,16 +525,23 @@ function player_mobile_profile_panel(array $player, array $statLabels): string
     foreach ($fields as $field) {
         $value = player_effective_stat($player, $field);
         $percent = max(0, min(100, (int) round(($value / 6) * 100)));
+        $barColor = player_mobile_stat_color($value);
         $html .= '<div class="mobile-player-stat-row rounded-xl border border-lime-200/25 bg-emerald-900/35 p-2.5">';
         $html .= '<div class="mb-1.5 flex items-center justify-between gap-2">';
         $html .= '<span class="min-w-0 truncate text-xs font-extrabold text-lime-100">' . h((string) ($statLabels[$field] ?? $field)) . '</span>';
         $html .= '<strong class="shrink-0 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-extrabold text-emerald-950">' . h(number_format($value, 1)) . '/6</strong>';
         $html .= '</div>';
         $html .= '<div class="h-2 overflow-hidden rounded-full bg-emerald-950/80">';
-        $html .= '<span class="block h-full rounded-full bg-lime-200" style="width: ' . $percent . '%"></span>';
+        $html .= '<span class="block h-full rounded-full" style="width: ' . $percent . '%; background-color: ' . h($barColor) . '"></span>';
         $html .= '</div>';
         $html .= '</div>';
     }
+    $html .= '</div>';
+    $html .= player_stats_radar_panel(true);
+    $html .= '<div class="mobile-player-profile-actions mt-3 border-t border-lime-200/25 pt-3">';
+    $html .= '<button class="btn mobile-player-scout-button w-full justify-center gap-2 rounded-xl border border-lime-200/35 bg-lime-100 px-3 py-2 text-sm font-extrabold text-emerald-950 hover:bg-lime-200" type="button" data-player-scout-open' . player_scout_data_attrs($player) . ' aria-label="Relato de ' . h((string) $player['name']) . '" title="Relato del jugador">';
+    $html .= player_action_icon('story') . '<span>Relato del jugador</span>';
+    $html .= '</button>';
     $html .= '</div>';
     $html .= '</div>';
     return $html;
