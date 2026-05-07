@@ -865,6 +865,9 @@ require __DIR__ . '/includes/header.php';
             }
         }
     }
+    $headerHasDetailPanel = !$showHistoryPage
+        && $selectedMatch
+        && !($headerShowCaptainLive && (int) $selectedMatchId === (int) $headerMatch['id']);
   ?>
   <section class="card home-next-card <?= (string) $headerMatch['status'] === 'finalizado' ? 'home-next-card-with-result' : ($headerHasCaptains ? 'home-next-card-with-captain' : '') ?>">
     <div class="home-next-main">
@@ -896,6 +899,11 @@ require __DIR__ . '/includes/header.php';
         <span class="match-detail-toggle-symbol" data-match-detail-symbol>+</span>
         <span>Detalles</span>
       </a>
+    <?php elseif ($headerHasDetailPanel): ?>
+      <button class="btn btn-primary match-detail-toggle-btn" type="button" data-match-detail-toggle aria-expanded="false" aria-controls="homeMatchDetail">
+        <span class="match-detail-toggle-symbol" data-match-detail-symbol>+</span>
+        <span>Detalles</span>
+      </button>
     <?php endif; ?>
   </section>
 <?php endif; ?>
@@ -1011,7 +1019,7 @@ require __DIR__ . '/includes/header.php';
         && (int) $selectedMatchId === (int) $headerMatch['id'];
   ?>
   <?php if (!$hideDuplicateLiveCaptainDetail): ?>
-  <article class="card match-detail">
+  <article class="card match-detail" id="homeMatchDetail" data-match-detail-panel hidden>
     <?php if (!$selectedMatch): ?>
       <h3>Detalle</h3>
       <p>No hay fechas para mostrar.</p>

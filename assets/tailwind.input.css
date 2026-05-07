@@ -5223,6 +5223,38 @@ textarea,
     @apply !border-lime-200/45 !bg-emerald-900/70;
   }
 
+  .mobile-player-view-card {
+    @apply overflow-hidden;
+  }
+
+  .mobile-player-view-card[open] {
+    @apply !border-lime-200/55 !bg-emerald-900/70 !shadow-md !shadow-emerald-950/20;
+  }
+
+  .mobile-player-view-summary::-webkit-details-marker {
+    @apply hidden;
+  }
+
+  .mobile-player-view-summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-player-view-action {
+    @apply transition;
+  }
+
+  .mobile-player-view-card[open] .mobile-player-view-action {
+    @apply border-lime-100 bg-emerald-950 text-lime-100;
+  }
+
+  .mobile-player-profile-panel {
+    @apply mx-2 mb-2;
+  }
+
+  .mobile-player-stat-row {
+    @apply min-w-0;
+  }
+
   .players-desktop-table thead th {
     @apply !border-lime-200/25 !bg-emerald-950/90 !text-lime-100;
   }

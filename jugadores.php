@@ -482,6 +482,44 @@ function player_mobile_rating_summary(array $player): string
         '</span>' .
         '</span>';
 }
+function player_mobile_profile_panel(array $player, array $statLabels): string
+{
+    $fields = player_field_stat_fields();
+    $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
+    if (in_array('ARQ', $positions, true)) {
+        $fields[] = 'goalkeeper_skill';
+    }
+
+    $html = '<div class="mobile-player-profile-panel mt-2 rounded-xl border border-lime-200/30 bg-emerald-950/75 p-3 shadow-inner shadow-emerald-950/20">';
+    $html .= '<div class="mobile-player-profile-head mb-3 grid gap-2">';
+    $html .= '<div class="flex flex-wrap items-center gap-1.5">';
+    foreach ($positions as $position) {
+        $html .= '<span class="rounded-full border border-lime-200/35 bg-lime-100 px-2.5 py-1 text-[11px] font-extrabold text-emerald-950">' . h($position) . '</span>';
+    }
+    $html .= '</div>';
+    $html .= '<div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-xl border border-lime-200/25 bg-emerald-900/45 px-3 py-2">';
+    $html .= '<span class="text-[10px] font-black uppercase text-lime-100/80">General</span>';
+    $html .= '<strong class="justify-self-end text-lg font-extrabold text-lime-50">' . h(number_format(player_overall_rating($player), 1)) . '/6</strong>';
+    $html .= '</div>';
+    $html .= '</div>';
+    $html .= '<div class="mobile-player-stat-list grid gap-2">';
+    foreach ($fields as $field) {
+        $value = player_effective_stat($player, $field);
+        $percent = max(0, min(100, (int) round(($value / 6) * 100)));
+        $html .= '<div class="mobile-player-stat-row rounded-xl border border-lime-200/25 bg-emerald-900/35 p-2.5">';
+        $html .= '<div class="mb-1.5 flex items-center justify-between gap-2">';
+        $html .= '<span class="min-w-0 truncate text-xs font-extrabold text-lime-100">' . h((string) ($statLabels[$field] ?? $field)) . '</span>';
+        $html .= '<strong class="shrink-0 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-extrabold text-emerald-950">' . h(number_format($value, 1)) . '/6</strong>';
+        $html .= '</div>';
+        $html .= '<div class="h-2 overflow-hidden rounded-full bg-emerald-950/80">';
+        $html .= '<span class="block h-full rounded-full bg-lime-200" style="width: ' . $percent . '%"></span>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+    $html .= '</div>';
+    return $html;
+}
 function player_position_selects(array $selectedPositions, ?string $formId = null, bool $disabled = false): string
 {
     $labels = ['Primaria', 'Secundaria'];
@@ -575,13 +613,13 @@ require __DIR__ . '/includes/header.php';
           <?php
             $rowSearch = player_row_search_text($player);
           ?>
-          <article id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item flex scroll-mt-20 items-center justify-between gap-2 rounded-lg border border-lime-200/25 bg-emerald-950/70 px-2.5 py-2 text-lime-50 transition target:border-amber-200 target:bg-amber-950/70 target:shadow-sm target:ring-4 target:ring-amber-100/40 max-[760px]:items-start" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
-            <span class="min-w-0">
-              <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?></strong>
-              <small class="block text-xs text-emerald-100/75"><?= player_mobile_rating_summary($player) ?></small>
-            </span>
-            <span class="mobile-player-list-actions flex shrink-0 items-center gap-1.5">
-              <?php if ($isAdmin): ?>
+          <?php if ($isAdmin): ?>
+            <article id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item flex scroll-mt-20 items-center justify-between gap-2 rounded-lg border border-lime-200/25 bg-emerald-950/70 px-2.5 py-2 text-lime-50 transition target:border-amber-200 target:bg-amber-950/70 target:shadow-sm target:ring-4 target:ring-amber-100/40 max-[760px]:items-start" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
+              <span class="min-w-0">
+                <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?></strong>
+                <small class="block text-xs text-emerald-100/75"><?= player_mobile_rating_summary($player) ?></small>
+              </span>
+              <span class="mobile-player-list-actions flex shrink-0 items-center gap-1.5">
                 <form method="post" class="inline">
                   <input type="hidden" name="action" value="toggle_active">
                   <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
@@ -600,15 +638,20 @@ require __DIR__ . '/includes/header.php';
                   <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
                   <button class="btn btn-danger player-icon-button player-delete-icon inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl px-0 text-base font-extrabold leading-none" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar"><?= player_action_icon('delete') ?></button>
                 </form>
-              <?php else: ?>
-                <span class="player-status-pill shrink-0 rounded-full border border-lime-200/35 px-2 py-1 text-[11px] font-extrabold not-italic <?= (int) $player['active'] === 1 ? 'is-active bg-lime-100 text-emerald-950' : 'is-inactive bg-emerald-900 text-emerald-100/70' ?>">
-                  <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
+              </span>
+            </article>
+          <?php else: ?>
+            <details id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item mobile-player-view-card scroll-mt-20 rounded-lg border border-lime-200/25 bg-emerald-950/70 text-lime-50 transition target:border-amber-200 target:bg-amber-950/70 target:shadow-sm target:ring-4 target:ring-amber-100/40" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
+              <summary class="mobile-player-view-summary flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2">
+                <span class="min-w-0">
+                  <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?></strong>
+                  <small class="block text-xs text-emerald-100/75"><?= player_mobile_rating_summary($player) ?></small>
                 </span>
-                <button class="btn player-icon-button inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-900 px-0 text-sm font-extrabold leading-none text-lime-50 hover:bg-emerald-800" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato"><?= player_action_icon('story') ?></button>
-                <button class="btn player-icon-button inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-lime-200/35 bg-lime-100 px-0 text-sm font-extrabold leading-none text-emerald-950 hover:bg-lime-200" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats"><?= player_action_icon('edit') ?></button>
-              <?php endif; ?>
-            </span>
-          </article>
+                <span class="mobile-player-view-action shrink-0 rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-[11px] font-extrabold text-emerald-950">VER</span>
+              </summary>
+              <?= player_mobile_profile_panel($player, $statLabels) ?>
+            </details>
+          <?php endif; ?>
         <?php endforeach; ?>
       <?php endif; ?>
     </div>
@@ -646,10 +689,12 @@ require __DIR__ . '/includes/header.php';
                 <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>" form="<?= h($rowFormId) ?>">
                 <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>" form="<?= h($rowFormId) ?>">
               <?php endif; ?>
-              <label class="player-active-inline mb-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-lime-200/35 bg-emerald-900 px-2 py-1 text-xs font-extrabold text-lime-50">
-                <input type="checkbox" name="active" value="1" <?= $isAdmin ? 'form="' . h($rowFormId) . '"' : 'disabled' ?> <?= checked_attr((int) $player['active'] === 1) ?>>
-                Activo
-              </label>
+              <?php if ($isAdmin): ?>
+                <label class="player-active-inline mb-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-lime-200/35 bg-emerald-900 px-2 py-1 text-xs font-extrabold text-lime-50">
+                  <input type="checkbox" name="active" value="1" form="<?= h($rowFormId) ?>" <?= checked_attr((int) $player['active'] === 1) ?>>
+                  Activo
+                </label>
+              <?php endif; ?>
               <?php if ($isAdmin): ?>
                 <input class="table-input w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-2 text-lime-50 focus:border-lime-200 focus:ring-lime-200/30" type="text" name="name" required value="<?= h((string) $player['name']) ?>" form="<?= h($rowFormId) ?>">
               <?php else: ?>
@@ -753,13 +798,15 @@ require __DIR__ . '/includes/header.php';
             <span class="col-start-3 min-w-0 justify-self-end text-right text-lg leading-none text-amber-300" data-general-rating-stars></span>
           </div>
         </div>
-        <div class="form-row">
-          <label class="text-lime-100">Estado</label>
-          <label class="chip inline-flex items-center gap-2 rounded-xl border border-lime-200/35 bg-emerald-900 px-3 py-2 text-sm font-extrabold text-lime-50">
-            <input type="checkbox" name="active" value="1" <?= checked_attr((int) $player['active'] === 1) ?> <?= $isAdmin ? '' : 'disabled' ?>>
-            Jugador activo
-          </label>
-        </div>
+        <?php if ($isAdmin): ?>
+          <div class="form-row">
+            <label class="text-lime-100">Estado</label>
+            <label class="chip inline-flex items-center gap-2 rounded-xl border border-lime-200/35 bg-emerald-900 px-3 py-2 text-sm font-extrabold text-lime-50">
+              <input type="checkbox" name="active" value="1" <?= checked_attr((int) $player['active'] === 1) ?>>
+              Jugador activo
+            </label>
+          </div>
+        <?php endif; ?>
       </div>
 
       <div class="form-row">

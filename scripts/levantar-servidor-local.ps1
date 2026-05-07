@@ -1,6 +1,7 @@
 param(
     [string] $BindAddress = '0.0.0.0',
-    [int] $Port = 8000
+    [int] $Port = 8000,
+    [switch] $EnsureFirewall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,6 +13,46 @@ $phpExe = 'C:\xampp\php\php.exe'
 $mysqlExe = 'C:\xampp\mysql\bin\mysqld.exe'
 $mysqlIni = 'C:\xampp\mysql\bin\my.ini'
 $mysqlBase = 'C:\xampp\mysql'
+
+function Test-IsAdministrator {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Ensure-FirewallRule {
+    param(
+        [int] $LocalPort
+    )
+
+    if (-not $EnsureFirewall) {
+        return 'no solicitado'
+    }
+
+    if (-not (Test-IsAdministrator)) {
+        return 'omitido: ejecuta como administrador para abrir Windows Firewall automaticamente'
+    }
+
+    $ruleName = "Goodfellas Futbol servidor local TCP $LocalPort"
+    $existingRule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+
+    if ($existingRule) {
+        return "ya existia: $ruleName"
+    }
+
+    New-NetFirewallRule `
+        -DisplayName $ruleName `
+        -Direction Inbound `
+        -Action Allow `
+        -Protocol TCP `
+        -LocalPort $LocalPort `
+        -Profile Domain,Private `
+        -Description 'Permite acceder al servidor local de Goodfellas Futbol desde la red local.' |
+        Out-Null
+
+    return "creada: $ruleName"
+}
 
 New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
 New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
@@ -64,6 +105,7 @@ $existingPhpProcess = Get-CimInstance Win32_Process -Filter "name = 'php.exe'" |
 if ($existingPhpProcess) {
     $existingPhpProcess.CommandLine -match "-S\s+$bindAddressPattern`:(\d+)" | Out-Null
     $selectedPort = [int] $Matches[1]
+    $firewallStatus = Ensure-FirewallRule -LocalPort $selectedPort
     $localUrl = "http://127.0.0.1:$selectedPort/"
     $lanIp = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
         Where-Object {
@@ -89,6 +131,7 @@ if ($existingPhpProcess) {
         MysqlProcessId = $mysqlConnection.OwningProcess
         Status = $statusCode
         ReusedExistingPhpServer = $true
+        FirewallStatus = $firewallStatus
         PhpErrorLog = Join-Path $runtimeDir 'php-server.err.log'
         MysqlErrorLog = Join-Path $runtimeDir 'mysql.err.log'
     }
@@ -103,6 +146,7 @@ while (
     $selectedPort++
 }
 
+$firewallStatus = Ensure-FirewallRule -LocalPort $selectedPort
 $phpOut = Join-Path $runtimeDir 'php-server.out.log'
 $phpErr = Join-Path $runtimeDir 'php-server.err.log'
 
@@ -142,6 +186,7 @@ try {
     MysqlProcessId = $mysqlConnection.OwningProcess
     Status = $statusCode
     ReusedExistingPhpServer = $false
+    FirewallStatus = $firewallStatus
     PhpErrorLog = $phpErr
     MysqlErrorLog = Join-Path $runtimeDir 'mysql.err.log'
 }

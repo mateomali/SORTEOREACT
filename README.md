@@ -16,6 +16,14 @@ Configura las credenciales desde variables de entorno antes de publicar:
 Si tu hosting usa otro host de MySQL, cambia `DB_HOST`.
 
 ## Levantar servidor local
+Con doble click en Windows:
+
+```text
+dist\levantar-servidor-red-local.bat
+```
+
+El lanzador pide permisos de administrador para abrir Windows Firewall, arranca MySQL/PHP y abre la URL de red local en el navegador.
+
 Desde PowerShell:
 
 ```powershell
