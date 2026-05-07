@@ -61,6 +61,17 @@ function PlayerRadar({ stats, labels, hasGoalkeeper }) {
   const fields = (hasGoalkeeper
     ? fieldOrder.map((field) => (field === 'attack' ? 'goalkeeper_skill' : field))
     : fieldOrder);
+  const shortLabels = {
+    technique: 'TEC',
+    rhythm: 'RIT',
+    defense_physical: 'SOL',
+    attack: 'ATA',
+    teamwork: 'EQU',
+    mentality: 'MEN',
+    regularity: 'REG',
+    goalkeeper_skill: 'ARQ',
+  };
+  const useShortLabels = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
   const size = 240;
   const viewBoxHeight = 278;
   const centerX = size / 2;
@@ -75,13 +86,13 @@ function PlayerRadar({ stats, labels, hasGoalkeeper }) {
   }).join(' ');
 
   return (
-    <aside className="player-radar-card" data-player-radar>
-      <div className="player-radar-head">
-        <strong>Perfil del jugador</strong>
-        <span>Analisis de stats</span>
+    <aside className="player-radar-card rounded-2xl border border-lime-200/45 bg-emerald-950/80 p-3 text-lime-50 shadow-sm shadow-emerald-950/20" data-player-radar>
+      <div className="player-radar-head mb-2 flex items-end justify-between gap-2">
+        <strong className="text-sm font-extrabold text-lime-100">Perfil del jugador</strong>
+        <span className="text-xs font-bold text-emerald-100/70">Analisis de stats</span>
       </div>
-      <div className="player-radar-canvas" data-player-radar-canvas>
-        <svg viewBox={`0 0 ${size} ${viewBoxHeight}`} role="img" aria-label="Diagrama de estrella de stats">
+      <div className="player-radar-canvas mx-auto w-full max-w-[260px]" data-player-radar-canvas>
+        <svg className="player-radar-svg h-auto w-full overflow-visible" viewBox={`0 0 ${size} ${viewBoxHeight}`} role="img" aria-label="Diagrama de estrella de stats">
           <g className="radar-grid">
             {levels.map((level) => {
               const radius = maxRadius * (level / 6);
@@ -100,7 +111,7 @@ function PlayerRadar({ stats, labels, hasGoalkeeper }) {
               return (
                 <g key={field}>
                   <line x1={centerX} y1={centerY} x2={end.x.toFixed(1)} y2={end.y.toFixed(1)} />
-                  <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor={anchor}>{labels[field] || field}</text>
+                  <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor={anchor}>{useShortLabels ? shortLabels[field] : (labels[field] || field)}</text>
                 </g>
               );
             })}
@@ -151,20 +162,21 @@ export function PlayerCreateIsland({ root }) {
   };
 
   return (
-    <details className="card mb-3.5 player-create-drawer">
-      <summary className="player-create-summary">
-        <span>Agregar jugador</span>
-        <small>Cargar nuevo jugador</small>
+    <details className="card mb-3.5 player-create-drawer border-lime-200/55 bg-emerald-950 p-0 text-lime-50 shadow-xl shadow-emerald-950/20">
+      <summary className="player-create-summary flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <span className="text-lg font-extrabold text-lime-50">Agregar jugador</span>
+        <small className="rounded-full bg-lime-100 px-2 py-1 text-xs font-extrabold text-emerald-950">Cargar nuevo jugador</small>
       </summary>
-      <form method="post" className="player-create-body react-player-create-form">
+      <form method="post" className="player-create-body react-player-create-form border-t border-lime-200/30 p-4">
         <input type="hidden" name="action" value="save" />
         <input type="hidden" name="id" value="0" />
         <input type="hidden" name="show_inactive" value={showInactive} />
 
         <div className="form-grid">
           <div className="form-row">
-            <label htmlFor="reactPlayerName">Nombre</label>
+            <label className="text-lime-100" htmlFor="reactPlayerName">Nombre</label>
             <input
+              className="rounded-xl border-lime-200/40 bg-emerald-950 text-lime-50 placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-lime-200/30"
               id="reactPlayerName"
               type="text"
               name="name"
@@ -174,15 +186,15 @@ export function PlayerCreateIsland({ root }) {
             />
           </div>
           <div className="form-row">
-            <label>General</label>
-            <div className="player-general-rating" data-general-rating>
-              <strong data-general-rating-value>{formatRating(general)}/6</strong>
-              <span data-general-rating-stars>{stars(general)}</span>
+            <label className="text-lime-100">General</label>
+            <div className="player-general-rating grid min-h-11 items-center gap-3 rounded-xl border border-lime-200/45 bg-emerald-950/80 px-3 py-2 [grid-template-columns:minmax(0,1fr)_auto_minmax(0,1fr)]" data-general-rating>
+              <strong className="col-start-2 justify-self-center rounded-lg bg-lime-100 px-2 py-1 text-sm font-extrabold text-emerald-950" data-general-rating-value>{formatRating(general)}/6</strong>
+              <span className="col-start-3 min-w-0 justify-self-end text-right text-lg leading-none text-amber-300" data-general-rating-stars>{stars(general)}</span>
             </div>
           </div>
           <div className="form-row">
-            <label>Estado</label>
-            <label className="chip">
+            <label className="text-lime-100">Estado</label>
+            <label className="chip inline-flex items-center gap-2 rounded-xl border border-lime-200/35 bg-emerald-900 px-3 py-2 text-sm font-extrabold text-lime-50">
               <input
                 type="checkbox"
                 name="active"
@@ -196,12 +208,13 @@ export function PlayerCreateIsland({ root }) {
         </div>
 
         <div className="form-row">
-          <label>Posiciones</label>
-          <div className="player-position-selects" data-player-position-selects>
+          <label className="text-lime-100">Posiciones</label>
+          <div className="player-position-selects grid grid-cols-1 gap-1.5" data-player-position-selects>
             {['Primaria', 'Secundaria'].map((label, index) => (
-              <label className="player-position-select" key={label}>
-                <span>{label}</span>
+              <label className="player-position-select grid min-w-0 gap-1 rounded-xl border border-lime-200/20 bg-emerald-950/45 p-1.5" key={label}>
+                <span className="truncate text-[10px] font-black uppercase tracking-wide text-lime-100/85">{label}</span>
                 <select
+                  className="min-h-9 w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-1.5 text-xs font-extrabold text-lime-50 focus:border-lime-200 focus:ring-lime-200/30"
                   name="positions[]"
                   required={index === 0}
                   value={selectedPositions[index] || ''}
@@ -223,12 +236,12 @@ export function PlayerCreateIsland({ root }) {
           </div>
         </div>
 
-        <div className="player-stats-editor">
+        <div className="player-stats-editor grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div className="form-grid">
             {fieldOrder.map((field) => {
               return (
-                <div className="form-row stat-form-row" data-attack-stat-row={field === 'attack' ? '' : undefined} key={field}>
-                  <label>{labels[field] || field}</label>
+                <div className="form-row stat-form-row rounded-xl border border-lime-200/35 bg-emerald-950/75 p-3 shadow-sm" data-attack-stat-row={field === 'attack' ? '' : undefined} key={field}>
+                  <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100">{labels[field] || field}</label>
                   <StatRating
                     name={field}
                     label={labels[field] || field}
@@ -239,8 +252,8 @@ export function PlayerCreateIsland({ root }) {
               );
             })}
             {hasGoalkeeper ? (
-              <div className="form-row stat-form-row" data-goalkeeper-stat-row>
-                <label>{labels.goalkeeper_skill || 'Habilidad de arquero'}</label>
+              <div className="form-row stat-form-row rounded-xl border border-lime-200/35 bg-emerald-950/75 p-3 shadow-sm" data-goalkeeper-stat-row>
+                <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100">{labels.goalkeeper_skill || 'Habilidad de arquero'}</label>
                 <StatRating
                   name="goalkeeper_skill"
                   label={labels.goalkeeper_skill || 'Habilidad de arquero'}
@@ -253,34 +266,34 @@ export function PlayerCreateIsland({ root }) {
           <PlayerRadar stats={stats} labels={labels} hasGoalkeeper={hasGoalkeeper} />
         </div>
 
-        <details className="player-stat-help" data-player-stat-help>
-          <summary>¿Como funciona?</summary>
-          <div className="player-stat-help-body">
+        <details className="player-stat-help mt-2 rounded-xl border border-lime-200/55 bg-emerald-950 text-lime-50 shadow-md shadow-emerald-950/15" data-player-stat-help>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-extrabold text-lime-50">Como funciona?<span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-emerald-950 shadow-sm">?</span></summary>
+          <div className="player-stat-help-body grid gap-3 border-t border-lime-200/30 bg-emerald-950/70 p-3 md:grid-cols-2">
             <section>
-              <h4>Stats</h4>
+              <h4 className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-200">Stats</h4>
               {Object.entries(help).map(([field, text]) => (
-                <p key={field} data-stat-help={field}>
-                  <strong>{labels[field] || field}:</strong> {text}
+                <p className="m-0 text-xs leading-snug text-emerald-50/80" key={field} data-stat-help={field}>
+                  <strong className="text-lime-100">{labels[field] || field}:</strong> {text}
                 </p>
               ))}
             </section>
             <section>
-              <h4>Puntuacion</h4>
+              <h4 className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-200">Puntuacion</h4>
               {Object.entries(ratingHelp).map(([label, text]) => (
-                <p key={label}><strong>{label}:</strong> {text}</p>
+                <p className="m-0 text-xs leading-snug text-emerald-50/80" key={label}><strong className="text-lime-100">{label}:</strong> {text}</p>
               ))}
             </section>
-            <section className="player-stat-help-wide">
-              <h4>Promedio general</h4>
+            <section className="player-stat-help-wide md:col-span-2">
+              <h4 className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-200">Promedio general</h4>
               {Object.entries(weightHelp).map(([label, text]) => (
-                <p key={label}><strong>{label}:</strong> {text}</p>
+                <p className="m-0 text-xs leading-snug text-emerald-50/80" key={label}><strong className="text-lime-100">{label}:</strong> {text}</p>
               ))}
             </section>
           </div>
         </details>
 
         <div className="btn-row">
-          <button className="btn btn-primary" type="submit">Crear jugador</button>
+          <button className="btn border border-lime-200/55 bg-lime-100 text-emerald-950 hover:bg-lime-200" type="submit">Crear jugador</button>
         </div>
       </form>
     </details>

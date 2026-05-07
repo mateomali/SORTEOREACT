@@ -889,7 +889,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const scout = describeScoutPlayer(scoutDataFromTrigger(trigger));
       panel.querySelector('[data-player-scout-title]').textContent = scout.title;
       panel.querySelector('[data-player-scout-body]').textContent = scout.body;
-      panel.querySelector('[data-player-scout-tags]').innerHTML = scout.tags.map((tag) => `<span>${tag}</span>`).join('');
+      panel.querySelector('[data-player-scout-tags]').innerHTML = scout.tags.map((tag) => `<span class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-emerald-950">${tag}</span>`).join('');
       panel.hidden = false;
     };
     const closePlayerScoutPanel = () => {
@@ -932,14 +932,15 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       const fields = hasGoalkeeper ? statNames.map((field) => field === 'attack' ? 'goalkeeper_skill' : field) : statNames;
       const isCompact = card.classList.contains('player-radar-card-compact');
-      const labels = isCompact ? radarShortLabels : radarLabels;
-      const size = isCompact ? 180 : 240;
-      const viewBoxHeight = isCompact ? size : 278;
+      const useShortLabels = isCompact || window.matchMedia('(max-width: 760px)').matches;
+      const labels = useShortLabels ? radarShortLabels : radarLabels;
+      const size = isCompact ? 200 : 240;
+      const viewBoxHeight = isCompact ? 212 : 278;
       const centerX = size / 2;
-      const centerY = isCompact ? size / 2 : 112;
+      const centerY = isCompact ? 96 : 112;
       const maxRadius = isCompact ? 56 : 78;
-      const labelRadius = isCompact ? 76 : 103;
-      const scaleY = isCompact ? centerY + maxRadius + 31 : viewBoxHeight - 14;
+      const labelRadius = isCompact ? 78 : 103;
+      const scaleY = isCompact ? viewBoxHeight - 10 : viewBoxHeight - 14;
       const levels = [1, 2, 3, 4, 5, 6];
       const polygon = fields.map((field, index) => {
         const value = Math.max(1, Math.min(6, getValue(field)));
@@ -948,7 +949,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       }).join(' ');
 
       canvas.innerHTML = `
-        <svg viewBox="0 0 ${size} ${viewBoxHeight}" role="img" aria-label="Diagrama de estrella de stats">
+        <svg class="player-radar-svg" viewBox="0 0 ${size} ${viewBoxHeight}" role="img" aria-label="Diagrama de estrella de stats">
           <g class="radar-grid">
             ${levels.map((level) => {
               const radius = maxRadius * (level / 6);
@@ -1031,7 +1032,10 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (label) label.textContent = `${rating}/6`;
       root.querySelectorAll('[data-stat-value]').forEach((button) => {
         const current = Number(button.getAttribute('data-stat-value') || '0');
-        button.classList.toggle('is-active', current <= rating);
+        const active = current <= rating;
+        button.classList.toggle('is-active', active);
+        button.classList.toggle('text-amber-300', active);
+        button.classList.toggle('text-emerald-200/35', !active);
         button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
       });
     };

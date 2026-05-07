@@ -12,13 +12,7 @@ module.exports = defineConfig({
       output: {
         entryFileNames: 'react-app.js',
         chunkFileNames: 'react-[name].js',
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'react-app.css';
-          }
-
-          return 'react-[name][extname]';
-        },
+        assetFileNames: 'react-[name][extname]',
       },
     },
   },

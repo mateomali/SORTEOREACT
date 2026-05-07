@@ -58,7 +58,21 @@
     };
     const updateFormationTotal = (formation) => {
       if (!formation) return;
+      const externalTitle = formation.previousElementSibling?.matches?.('.formation-total-title')
+        ? formation.previousElementSibling
+        : null;
       let badge = formation.querySelector(':scope > [data-formation-total]');
+      if (externalTitle) {
+        if (badge) badge.remove();
+        badge = null;
+      }
+      const total = Array.from(formation.querySelectorAll('[data-static-formation-player]'))
+        .reduce((sum, card) => sum + Number(card.dataset.playerSkill || card.dataset.skill || 0), 0);
+      if (externalTitle) {
+        const value = externalTitle.querySelector('strong');
+        if (value) value.textContent = `${total.toFixed(1)} pts`;
+        return;
+      }
       if (!badge) {
         badge = document.createElement('div');
         badge.className = 'formation-total-badge';
@@ -66,8 +80,6 @@
         badge.setAttribute('aria-live', 'polite');
         formation.prepend(badge);
       }
-      const total = Array.from(formation.querySelectorAll('[data-static-formation-player]'))
-        .reduce((sum, card) => sum + Number(card.dataset.playerSkill || card.dataset.skill || 0), 0);
       badge.textContent = `TOTAL: ${total.toFixed(1)} pts`;
     };
     const ensureAllUndoButtons = (root = document) => {
@@ -1162,11 +1174,14 @@
     const label = root.querySelector('[data-stat-rating-value]');
     if (input) input.value = String(rating);
     if (label) label.textContent = `${rating}/6`;
-    root.querySelectorAll('[data-stat-value]').forEach((button) => {
-      const current = Number(button.getAttribute('data-stat-value') || '0');
-      button.classList.toggle('is-active', current <= rating);
-      button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
-    });
+      root.querySelectorAll('[data-stat-value]').forEach((button) => {
+        const current = Number(button.getAttribute('data-stat-value') || '0');
+        const active = current <= rating;
+        button.classList.toggle('is-active', active);
+        button.classList.toggle('text-amber-300', active);
+        button.classList.toggle('text-emerald-200/35', !active);
+        button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
+      });
   };
   const applyPlayerSavePayload = (payload, sourceForm) => {
     const player = payload?.player || {};
@@ -1245,6 +1260,9 @@
           normalizedFieldValue(field) !== value
         ));
         row.classList.toggle('is-dirty', isDirty);
+        row.classList.toggle('bg-amber-950/60', isDirty);
+        row.classList.toggle('shadow-inner', isDirty);
+        row.classList.toggle('shadow-amber-200/30', isDirty);
       };
       row.updatePlayerDirtySnapshot = () => {
         snapshot = fields.map((field) => ({
@@ -1292,7 +1310,9 @@
     saveButton.disabled = true;
     saveButton.classList.add('is-loading');
     row.classList.add('is-saving');
+    row.classList.add('bg-lime-100/10');
     row.classList.remove('is-saved');
+    row.classList.remove('bg-lime-100/20');
 
     try {
       const response = await fetch(form.getAttribute('action') || window.location.href, {
@@ -1321,12 +1341,17 @@
 
       row.updatePlayerDirtySnapshot?.();
       row.classList.add('is-saved');
+      row.classList.add('bg-lime-100/20');
       showToast(payload.message || 'Jugador actualizado.', 'success');
-      window.setTimeout(() => row.classList.remove('is-saved'), 1200);
+      window.setTimeout(() => {
+        row.classList.remove('is-saved');
+        row.classList.remove('bg-lime-100/20');
+      }, 1200);
     } catch (error) {
       showToast(error.message || 'No se pudo guardar el jugador.', 'error');
     } finally {
       row.classList.remove('is-saving');
+      row.classList.remove('bg-lime-100/10');
       saveButton.disabled = false;
       saveButton.classList.remove('is-loading');
     }
@@ -1469,6 +1494,10 @@
       button.textContent = active ? 'Activo' : 'Inactivo';
       button.classList.toggle('is-active', active);
       button.classList.toggle('is-inactive', !active);
+      button.classList.toggle('bg-lime-100', active);
+      button.classList.toggle('text-emerald-950', active);
+      button.classList.toggle('bg-emerald-900', !active);
+      button.classList.toggle('text-emerald-100/70', !active);
       if (card) {
         const withoutState = originalSearch
           .replace(/\bactivo si\b/g, '')

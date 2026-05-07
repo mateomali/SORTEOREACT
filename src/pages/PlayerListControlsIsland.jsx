@@ -33,8 +33,12 @@ function syncSortHeaders(sort) {
   document.querySelectorAll('[data-player-sort]').forEach((button) => {
     const active = button.dataset.playerSort === sort.key;
     button.classList.toggle('is-active', active);
+    button.classList.toggle('bg-lime-100/15', active);
+    button.classList.toggle('text-lime-50', active);
     button.dataset.sortDirection = active ? sort.direction : '';
     button.setAttribute('aria-sort', active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+    const icon = button.querySelector('span[aria-hidden="true"]');
+    if (icon) icon.textContent = active ? (sort.direction === 'asc' ? '↑' : '↓') : '↕';
   });
 }
 
@@ -119,10 +123,11 @@ export function PlayerListControlsIsland({ root }) {
   }, []);
 
   return (
-    <div className="player-list-react-controls">
-      <div className="player-list-search-shell">
-        <label htmlFor="playerListSearchReact">Buscar jugador</label>
+    <div className="player-list-react-controls grid gap-2 rounded-xl border border-lime-200/45 bg-emerald-950/85 p-3 shadow-md shadow-emerald-950/10 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="player-list-search-shell grid gap-1">
+        <label className="mb-0 text-xs font-extrabold uppercase tracking-wide text-lime-100" htmlFor="playerListSearchReact">Buscar jugador</label>
         <input
+          className="w-full rounded-xl border border-lime-200/40 bg-emerald-950 px-3 py-2.5 text-sm text-lime-50 shadow-sm placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/20"
           id="playerListSearchReact"
           type="search"
           placeholder="Nombre, posicion o stats"
@@ -131,22 +136,22 @@ export function PlayerListControlsIsland({ root }) {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-      <div className="player-list-react-side">
-        <span className="player-count-filter" aria-live="polite">
+      <div className="player-list-react-side flex items-end">
+        <span className="player-count-filter inline-flex flex-wrap items-center gap-2 rounded-xl border border-lime-200/45 bg-lime-100 px-3 py-2 text-xs font-extrabold text-emerald-950" aria-live="polite">
           <strong>{helperText}</strong>
           {canFilterActive ? (
-            <label>
+            <label className="mb-0 inline-flex items-center gap-1.5 text-emerald-950">
               <input
                 type="checkbox"
                 checked={activeOnly}
                 onChange={(event) => setActiveOnly(event.target.checked)}
               />
-              <small>Solo activos</small>
+              <small className="text-xs font-extrabold text-emerald-950">Solo activos</small>
             </label>
           ) : null}
         </span>
       </div>
-      <div className="player-mobile-sort-strip" aria-label="Ordenar jugadores">
+      <div className="player-mobile-sort-strip col-span-full hidden gap-1 max-[900px]:grid max-[900px]:grid-cols-3" aria-label="Ordenar jugadores">
         {[
           ['name', 'Nombre'],
           ['general', 'Puntaje'],
@@ -155,7 +160,7 @@ export function PlayerListControlsIsland({ root }) {
           <button
             key={key}
             type="button"
-            className={sort.key === key ? 'is-active' : ''}
+            className={`min-h-9 rounded-xl border px-2 py-1 text-xs font-extrabold ${sort.key === key ? 'is-active border-lime-200 bg-lime-100 text-emerald-950' : 'border-lime-200/35 bg-emerald-950 text-lime-50'}`}
             data-direction={sort.key === key ? sort.direction : ''}
             onClick={() => {
               setSort((current) => ({

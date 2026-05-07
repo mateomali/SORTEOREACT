@@ -341,7 +341,7 @@ function render_team_label(string $label, ?int $goals = null): string
     $heartColor = team_heart_color($color);
     return '<span class="team-label-with-heart" title="' . h($label) . '">' .
         '<span>' . h($name) . '</span>' .
-        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="--team-heart-fill: ' . h($heartColor) . '">' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '">' .
         '<path d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
         '</svg>' .
         '<span class="team-label-score">' . h($score) . '</span>' .
@@ -561,6 +561,18 @@ function render_public_team_characteristics(array $players): string
     return trim((string) ob_get_clean());
 }
 
+function render_formation_total_title(float $total, string $label = 'Base'): string
+{
+    ob_start();
+    ?>
+    <div class="formation-total-title">
+      <span><?= h($label) ?></span>
+      <strong><?= h(number_format($total, 1)) ?> pts</strong>
+    </div>
+    <?php
+    return trim((string) ob_get_clean());
+}
+
 function render_public_match_detail_content(array $match, array $awardDefinitions, array $awardDescriptions): string
 {
     $matchId = (int) $match['id'];
@@ -651,12 +663,14 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                 ) ?>
               </h4>
               <span class="small-muted">
-                <?= h(number_format((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), 1)) ?> pts
                 <?php if ((string) $match['status'] === 'finalizado'): ?>
-                  | <?= h((string) ($teamGoals[$teamNumber] ?? 0)) ?> goles
+                  <?= h((string) ($teamGoals[$teamNumber] ?? 0)) ?> goles
+                <?php else: ?>
+                  Formacion base
                 <?php endif; ?>
               </span>
             </div>
+            <?= render_formation_total_title((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0)) ?>
             <div class="team-formation" data-static-team-formation data-team-number="<?= h((string) $teamNumber) ?>">
               <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
                 <div class="formation-line">
@@ -699,7 +713,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                               </span>
                             <?php endif; ?>
                           <?php else: ?>
-                            <span><?= h(skill_label((float) $player['skill'])) ?></span>
+                            <span class="formation-player-meta"><?= h(rtrim(rtrim(number_format((float) $player['skill'], 1, '.', ''), '0'), '.')) ?> ⭐</span>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>
@@ -1051,12 +1065,14 @@ require __DIR__ . '/includes/header.php';
                   ) ?>
                 </h4>
                 <span class="small-muted">
-                  <?= h(number_format((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), 1)) ?> pts
                   <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
-                    | <?= h((string) ($teamGoals[$teamNumber] ?? 0)) ?> goles
+                    <?= h((string) ($teamGoals[$teamNumber] ?? 0)) ?> goles
+                  <?php else: ?>
+                    Formacion base
                   <?php endif; ?>
                 </span>
               </div>
+              <?= render_formation_total_title((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0)) ?>
               <div class="team-formation" data-static-team-formation data-team-number="<?= h((string) $teamNumber) ?>">
                 <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
                   <div class="formation-line">
@@ -1099,9 +1115,7 @@ require __DIR__ . '/includes/header.php';
                                 </span>
                               <?php endif; ?>
                             <?php else: ?>
-                              <span>
-                                <?= h(skill_label((float) $player['skill'])) ?>
-                              </span>
+                              <span class="formation-player-meta"><?= h(rtrim(rtrim(number_format((float) $player['skill'], 1, '.', ''), '0'), '.')) ?> ⭐</span>
                             <?php endif; ?>
                           </div>
                         <?php endforeach; ?>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactIslandRegistry } from './pages/ReactIslandRegistry.jsx';
-import './styles/app.css';
 
 const mountReactIsland = (element) => {
   if (!element || element.dataset.reactMounted === '1') return;

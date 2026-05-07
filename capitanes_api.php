@@ -100,6 +100,51 @@ function has_secondary_position(array $player, string $position): bool
     return in_array($position, array_slice($positions, 1), true);
 }
 
+function captain_position_base_rating(array $player, string $position): float
+{
+    $position = strtoupper($position);
+    $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
+    $rating = (float) ($player['skill'] ?? 0);
+    if ($position === 'ARQ') {
+        $goalkeeperSkill = in_array('ARQ', $positions, true) ? player_effective_stat($player, 'goalkeeper_skill') : 2.0;
+        $rating = ($goalkeeperSkill * 0.42)
+            + (player_effective_stat($player, 'defense_physical') * 0.14)
+            + (player_effective_stat($player, 'rhythm') * 0.10)
+            + (player_effective_stat($player, 'technique') * 0.10)
+            + (player_effective_stat($player, 'teamwork') * 0.14)
+            + (player_effective_stat($player, 'mentality') * 0.10);
+    } elseif ($position === 'DEF') {
+        $rating = (player_effective_stat($player, 'defense_physical') * 0.38)
+            + (player_effective_stat($player, 'rhythm') * 0.16)
+            + (player_effective_stat($player, 'technique') * 0.12)
+            + (player_effective_stat($player, 'teamwork') * 0.14)
+            + (player_effective_stat($player, 'mentality') * 0.12)
+            + (player_effective_stat($player, 'attack') * 0.08);
+    } elseif ($position === 'MED') {
+        $rating = (player_effective_stat($player, 'technique') * 0.22)
+            + (player_effective_stat($player, 'teamwork') * 0.20)
+            + (player_effective_stat($player, 'rhythm') * 0.18)
+            + (player_effective_stat($player, 'mentality') * 0.14)
+            + (player_effective_stat($player, 'defense_physical') * 0.13)
+            + (player_effective_stat($player, 'attack') * 0.13);
+    } elseif ($position === 'DEL') {
+        $rating = (player_effective_stat($player, 'attack') * 0.40)
+            + (player_effective_stat($player, 'technique') * 0.18)
+            + (player_effective_stat($player, 'rhythm') * 0.16)
+            + (player_effective_stat($player, 'mentality') * 0.12)
+            + (player_effective_stat($player, 'teamwork') * 0.08)
+            + (player_effective_stat($player, 'defense_physical') * 0.06);
+    }
+    return player_apply_regularity_adjustment($rating, $player);
+}
+
+function captain_adjusted_position_rating(array $player, string $position): float
+{
+    $position = strtoupper($position);
+    $base = captain_position_base_rating($player, $position);
+    return max(1.0, min(6.0, $base));
+}
+
 function captain_recent_non_captain_pick_streak(int $matchId, int $captainCount): array
 {
     $stmt = db()->prepare(
@@ -587,7 +632,8 @@ function finish_captain_draft(int $matchId): void
         $assignmentData = build_team_position_assignment($team);
         $totalSkill = 0.0;
         foreach ($team as $p) {
-            $totalSkill += (float) $p['skill'];
+            $line = $assignmentData['assignment'][(int) $p['id']] ?? primary_position($p);
+            $totalSkill += captain_adjusted_position_rating($p, $line);
         }
         $lineCounts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
         foreach ($team as $p) {
@@ -742,7 +788,7 @@ try {
                     'player_id' => $pid,
                     'team_number' => $payloadTeamNumber,
                     'position' => $position,
-                    'skill' => (float) ($validPlayers[$pid]['skill'] ?? 0),
+                    'player' => $validPlayers[$pid],
                 ];
             }
         }
@@ -799,7 +845,7 @@ try {
             $totalSkill = 0.0;
             foreach ($teamRows as $row) {
                 $counts[(string) $row['position']]++;
-                $totalSkill += (float) $row['skill'];
+                $totalSkill += captain_adjusted_position_rating((array) $row['player'], (string) $row['position']);
             }
             $updateTeam->execute([
                 'mid' => $matchId,
@@ -859,6 +905,23 @@ try {
         }
         validate_captain_formation_line_counts($lineOrder);
 
+        $teamPlayers = array_values(array_filter(
+            repo_match_participants($matchId),
+            static fn(array $player): bool => (int) ($player['team_number'] ?? 0) === $teamNumber
+        ));
+        $teamPlayerLookup = [];
+        foreach ($teamPlayers as $player) {
+            $teamPlayerLookup[(int) $player['id']] = $player;
+        }
+        if (count($validRows) !== count($teamPlayerLookup)) {
+            throw new RuntimeException('La formacion debe incluir a todos los jugadores del equipo.');
+        }
+        foreach ($validRows as $row) {
+            if (!isset($teamPlayerLookup[(int) $row['player_id']])) {
+                throw new RuntimeException('La formacion incluye un jugador de otro equipo.');
+            }
+        }
+
         $update = $pdo->prepare(
             'UPDATE match_players
              SET assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper, lineup_order = :lineup_order, formation_line_order = :formation_line_order
@@ -877,11 +940,14 @@ try {
         }
         $pdo->prepare(
             'UPDATE match_teams
-             SET formation_name = :formation_name, formation_data = :formation_data
+             SET total_skill = :total_skill, formation_name = :formation_name, formation_data = :formation_data
              WHERE match_id = :mid AND team_number = :team'
         )->execute([
             'mid' => $matchId,
             'team' => $teamNumber,
+            'total_skill' => array_reduce($validRows, static function (float $sum, array $row) use ($teamPlayerLookup): float {
+                return $sum + captain_adjusted_position_rating($teamPlayerLookup[(int) $row['player_id']], (string) $row['position']);
+            }, 0.0),
             'formation_name' => implode('-', [$lineOrder['ARQ'], $lineOrder['DEF'], $lineOrder['MED'], $lineOrder['DEL']]),
             'formation_data' => json_encode($formationData, JSON_UNESCAPED_UNICODE),
         ]);

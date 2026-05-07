@@ -21,6 +21,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       const number = Number(value || 0);
       return Number.isInteger(number) ? String(number) : number.toFixed(1);
     };
+    const ratingWithStar = (value) => `${formatSkill(value)} ⭐`;
 
     const teamTotalSkill = (players) => players.reduce((total, player) => total + Number(player.skill || 0), 0);
     const statValue = (player, field) => {
@@ -65,7 +66,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
           ? linePlayers.map((player) => `
               <div class="formation-player" draggable="true" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${position}" data-player-skill="${Number(player.skill || 0)}">
                 <strong>${escapeHtml(player.name)}</strong>
-                <span>${escapeHtml(player.positions)} | ${escapeHtml(player.pace_label)} | ${formatSkill(player.skill)} pts</span>
+                <span class="formation-player-meta">${ratingWithStar(player.skill)}</span>
               </div>
             `).join('')
           : '<span class="formation-player empty-slot">-</span>';
@@ -89,8 +90,9 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
         <article class="team-card">
           <div class="team-head">
             <h4>${escapeHtml(captainName)}</h4>
-            <span class="small-muted">${players.length}/${targetSize} jugadores | ${totalSkill.toFixed(1)} pts</span>
-          </div>
+              <span class="small-muted">${players.length}/${targetSize} jugadores</span>
+            </div>
+          <div class="formation-total-title"><span>Base</span><strong>${totalSkill.toFixed(1)} pts</strong></div>
           <div class="team-formation" data-static-team-formation data-team-number="${teamNumber}">${renderFormation(players, teamNumber)}</div>
           ${renderTeamCharacteristics(players)}
         </article>

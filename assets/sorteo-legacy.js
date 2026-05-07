@@ -316,6 +316,15 @@ function importarJugadoresCSV(event) {
 
 var posicionEmojis = { ARQ: '🥅', DEF: '🛡️', MED: '🎯', DEL: '⚽' };
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function convertirPuntuacionAEstrellas(puntuacion) {
   const estrellasLlenas = Math.floor(puntuacion);
   const tieneMedia = (puntuacion % 1) >= 0.5;
@@ -392,7 +401,18 @@ function adjustedPositionRating(jugador, assignedPosition) {
 }
 
 function formatRating(value) {
-  return Number(value || 0).toFixed(1);
+  const number = Number(value || 0);
+  return Number.isInteger(number) ? String(number) : number.toFixed(1);
+}
+
+function playerPositionPillsHtml(jugador) {
+  return `
+    <span class="captain-player-position-icons" aria-label="Posiciones naturales">
+      ${getOrderedPlayerPositions(jugador).map((position, index) => `
+        <span class="captain-position-pill ${index === 0 ? 'is-primary' : 'is-secondary'}" title="${position} ${index === 0 ? 'primaria' : 'secundaria'}" aria-label="${position} ${index === 0 ? 'primaria' : 'secundaria'}">${position}</span>
+      `).join('')}
+    </span>
+  `;
 }
 
 function getPlayerOrder(player) {
@@ -1431,6 +1451,14 @@ function onTeamCustomFormationChange(teamIndex, line, value) {
   if (lastEquipos) mostrarEquipos(lastEquipos);
 }
 
+function onTeamLineDelta(teamIndex, line, delta) {
+  const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
+  if (!team.length || line === 'ARQ') return;
+  const current = selectedFormationCounts(teamIndex, team.length) || defaultFormationCounts(team.length);
+  const nextValue = Number(current[line] || 0) + Number(delta || 0);
+  onTeamCustomFormationChange(teamIndex, line, nextValue);
+}
+
 function onManualPositionChange(teamIndex, playerId, position) {
   const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
   const player = team.find(jugador => playerKey(jugador) === String(playerId));
@@ -1488,6 +1516,23 @@ function onFormationPlayerDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex
   manualAssignments[playerKey(sourcePlayer)] = targetPosition;
   manualAssignments[playerKey(targetPlayer)] = sourcePosition;
   mostrarEquipos(lastEquipos);
+}
+
+function onFormationLineDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex, targetPosition) {
+  if (!lastEquipos || sourceTeamIndex !== targetTeamIndex) return;
+  const position = String(targetPosition || '').toUpperCase();
+  if (!['ARQ', 'DEF', 'MED', 'DEL'].includes(position)) return;
+
+  const team = lastEquipos[targetTeamIndex];
+  if (!team) return;
+  const player = team.find(jugador => playerKey(jugador) === sourcePlayerKey);
+  if (!player) return;
+
+  const assignment = buildFormationAssignment(team, targetTeamIndex);
+  const currentPosition = getPrimaryPosition(player, assignment);
+  if (currentPosition === position) return;
+
+  onManualPositionChange(targetTeamIndex, sourcePlayerKey, position);
 }
 
 function buildFormationAssignment(equipo, teamIndex = 0) {
@@ -1587,9 +1632,7 @@ function mostrarEquipos(equipos) {
       const assignedPosition = getPrimaryPosition(jugador, asignacionPosiciones);
       return sum + adjustedPositionRating(jugador, assignedPosition);
     }, 0);
-    const custom = selectedFormationCounts(index, jugadoresOrdenados.length) || defaultFormationCounts(jugadoresOrdenados.length);
     const maxCustomLine = maxFieldPlayersPerLine(jugadoresOrdenados.length);
-    const customVisible = (teamFormations[index] || 'auto') === 'custom';
 
     const ordenCancha = ['ARQ', 'DEF', 'MED', 'DEL'];
     const etiquetasPosicion = {
@@ -1616,14 +1659,12 @@ function mostrarEquipos(equipos) {
       });
     });
 
-    const resumenFormacion = ordenCancha.map(pos => jugadoresPorLinea[pos].length).join('-');
-    
     equipoDiv.innerHTML = `
       <div class="team-header">
         <div class="team-title">${headerText}</div>
         <div class="team-stats">${totalPuntos.toFixed(1)} ⭐</div>
       </div>
-      <div class="team-formation-controls">
+      <div class="team-formation-controls captain-formation-tools">
         <div class="team-control-group">
           <label>Camiseta</label>
           <select data-sorteo-action="team-color-change" data-team-index="${index}">
@@ -1636,38 +1677,36 @@ function mostrarEquipos(equipos) {
             ${formationOptionsHtml(index, jugadoresOrdenados.length)}
           </select>
         </div>
-        <div class="team-custom-formation ${customVisible ? '' : 'hidden'}">
-          <span>DEF</span>
-          <input type="number" min="0" max="${maxCustomLine}" value="${custom.DEF}" data-sorteo-action="team-custom-formation-change" data-team-index="${index}" data-line="DEF">
-          <span>MED</span>
-          <input type="number" min="0" max="${maxCustomLine}" value="${custom.MED}" data-sorteo-action="team-custom-formation-change" data-team-index="${index}" data-line="MED">
-          <span>DEL</span>
-          <input type="number" min="0" max="${maxCustomLine}" value="${custom.DEL}" data-sorteo-action="team-custom-formation-change" data-team-index="${index}" data-line="DEL">
-        </div>
       </div>
-      <div class="team-formation">
+      <div class="formation-total-title"><span>Ajustada</span><strong>${totalPuntos.toFixed(1)} pts</strong></div>
+      <div class="team-formation captain-formation-field" data-sorteo-drop-team="${index}">
         <button class="formation-undo-button" type="button" title="Deshacer ultimo cambio" aria-label="Deshacer ultimo cambio" data-sorteo-action="formation-undo" data-team-index="${index}" ${(teamFormationUndoStack[String(index)] || []).length ? '' : 'disabled'}>↶</button>
-        <div class="formation-total-badge" aria-live="polite">TOTAL: ${totalPuntos.toFixed(1)} pts</div>
         ${ordenCancha.map(pos => `
-          <div class="formation-line">
-            <div class="line-label">${etiquetasPosicion[pos]}</div>
-            <div class="line-players">
+          <div class="formation-line captain-formation-line">
+            ${pos === 'ARQ' ? `
+              <div class="line-label captain-line-label"><span><strong>${etiquetasPosicion[pos]}</strong><small>${jugadoresPorLinea[pos].length}/1</small></span></div>
+            ` : `
+              <div class="line-label captain-line-label has-line-controls">
+                <span><strong>${etiquetasPosicion[pos]}</strong><small>${jugadoresPorLinea[pos].length}/${maxCustomLine}</small></span>
+                <button class="captain-line-control is-minus" type="button" data-sorteo-action="team-line-delta" data-team-index="${index}" data-line="${pos}" data-delta="-1" aria-label="Quitar jugador de ${pos}">-</button>
+              </div>
+              <button class="captain-line-control is-plus" type="button" data-sorteo-action="team-line-delta" data-team-index="${index}" data-line="${pos}" data-delta="1" aria-label="Agregar jugador a ${pos}">+</button>
+            `}
+            <div class="line-players" data-sorteo-drop-line="${pos}" data-team-index="${index}">
               ${jugadoresPorLinea[pos].map(j => {
                 const adjustedRating = adjustedPositionRating(j, pos);
                 const outOfPosition = !getOrderedPlayerPositions(j).includes(pos);
+                const penaltyPercent = outOfPosition ? Math.round(OUT_OF_POSITION_PENALTY_RATE * 100) : 0;
                 return `
-                <div class="formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${pos}">
-                  <span class="formation-player-name">${j.nombre} ${isLowRhythmPlayer(j) ? '🐢' : ''}</span>
-                  <span class="formation-player-meta">${obtenerEmojisDePosiciones(j.posicion)} ${convertirPuntuacionAEstrellas(adjustedRating)}${outOfPosition ? ` <em>-${Math.round(OUT_OF_POSITION_PENALTY_RATE * 100)}%</em>` : ''}</span>
-                  <select class="formation-manual-select" data-sorteo-action="manual-position-change" data-team-index="${index}" data-player-key="${playerKey(j)}">
-                    ${ordenCancha.map(linea => `<option value="${linea}" ${pos === linea ? 'selected' : ''}>${linea}</option>`).join('')}
-                  </select>
+                <div class="formation-player captain-formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${pos}">
+                  <strong>${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
+                  ${playerPositionPillsHtml(j)}
+                  <span class="formation-player-meta">${formatRating(adjustedRating)} &#11088;${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
                 </div>
               `}).join('')}
             </div>
           </div>
         `).join('')}
-        <div class="formation-resumen">Formación: ${resumenFormacion}</div>
       </div>
       <div class="totals">
         <div class="totals-breakdown" aria-label="Criterios considerados por el sorteo">
@@ -1861,6 +1900,7 @@ function bindSorteoLegacyEvents() {
       case 'edit-player': editarJugador(Number(control.dataset.playerIndex)); break;
       case 'delete-player': eliminarJugador(Number(control.dataset.playerIndex)); break;
       case 'formation-undo': undoTeamFormationChange(Number(control.dataset.teamIndex)); break;
+      case 'team-line-delta': onTeamLineDelta(Number(control.dataset.teamIndex), control.dataset.line || '', Number(control.dataset.delta || 0)); break;
       default: break;
     }
   });
@@ -1875,7 +1915,6 @@ function bindSorteoLegacyEvents() {
       case 'toggle-player': jugadores[Number(control.dataset.playerIndex)].selected = control.checked; break;
       case 'team-color-change': onTeamColorChange(Number(control.dataset.teamIndex), control.value); break;
       case 'team-formation-change': onTeamFormationChange(Number(control.dataset.teamIndex), control.value); break;
-      case 'team-custom-formation-change': onTeamCustomFormationChange(Number(control.dataset.teamIndex), control.dataset.line || '', control.value); break;
       case 'manual-position-change': onManualPositionChange(Number(control.dataset.teamIndex), control.dataset.playerKey || '', control.value); break;
       default: break;
     }
@@ -1900,26 +1939,36 @@ function bindSorteoLegacyEvents() {
     const playerCard = event.target.closest('[data-sorteo-drag-player]');
     if (playerCard) playerCard.classList.remove('is-dragging');
     root.querySelectorAll('.formation-player.is-drag-over').forEach(card => card.classList.remove('is-drag-over'));
+    root.querySelectorAll('.line-players.is-drag-over').forEach(line => line.classList.remove('is-drag-over'));
   });
 
   root.addEventListener('dragover', (event) => {
     const targetCard = event.target.closest('[data-sorteo-drag-player]');
-    if (!targetCard || !root.contains(targetCard)) return;
+    const targetLine = event.target.closest('[data-sorteo-drop-line]');
+    if (!targetCard && (!targetLine || !root.contains(targetLine))) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    targetCard.classList.add('is-drag-over');
+    if (targetCard && root.contains(targetCard)) {
+      targetCard.classList.add('is-drag-over');
+    } else if (targetLine) {
+      targetLine.classList.add('is-drag-over');
+    }
   });
 
   root.addEventListener('dragleave', (event) => {
     const targetCard = event.target.closest('[data-sorteo-drag-player]');
     if (targetCard) targetCard.classList.remove('is-drag-over');
+    const targetLine = event.target.closest('[data-sorteo-drop-line]');
+    if (targetLine) targetLine.classList.remove('is-drag-over');
   });
 
   root.addEventListener('drop', (event) => {
     const targetCard = event.target.closest('[data-sorteo-drag-player]');
-    if (!targetCard || !root.contains(targetCard)) return;
+    const targetLine = event.target.closest('[data-sorteo-drop-line]');
+    if (!targetCard && (!targetLine || !root.contains(targetLine))) return;
     event.preventDefault();
-    targetCard.classList.remove('is-drag-over');
+    if (targetCard) targetCard.classList.remove('is-drag-over');
+    if (targetLine) targetLine.classList.remove('is-drag-over');
     let source = null;
     try {
       source = JSON.parse(event.dataTransfer.getData('application/json') || 'null');
@@ -1927,11 +1976,20 @@ function bindSorteoLegacyEvents() {
       source = null;
     }
     if (!source) return;
-    onFormationPlayerDrop(
+    if (targetCard && root.contains(targetCard)) {
+      onFormationPlayerDrop(
+        Number(source.teamIndex),
+        String(source.playerKey || ''),
+        Number(targetCard.dataset.teamIndex),
+        String(targetCard.dataset.playerKey || '')
+      );
+      return;
+    }
+    onFormationLineDrop(
       Number(source.teamIndex),
       String(source.playerKey || ''),
-      Number(targetCard.dataset.teamIndex),
-      String(targetCard.dataset.playerKey || '')
+      Number(targetLine.dataset.teamIndex),
+      String(targetLine.dataset.sorteoDropLine || '')
     );
   });
 }
