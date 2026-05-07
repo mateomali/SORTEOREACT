@@ -6,9 +6,7 @@ require_once __DIR__ . '/helpers.php';
 function player_order(array $player): int
 {
     $order = ['ARQ' => 1, 'DEF' => 2, 'MED' => 3, 'DEL' => 4];
-    $positions = parse_positions_csv($player['positions'] ?? '');
-    $values = array_map(static fn(string $p): int => $order[$p] ?? 99, $positions);
-    return $values ? min($values) : 99;
+    return $order[player_primary_position($player)] ?? 99;
 }
 
 function ordered_player_positions(array $player): array
@@ -30,13 +28,13 @@ function is_emergency_goalkeeper(array $player): bool
 
 function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 {
-    $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
+    $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => player_primary_position($p) === 'ARQ'));
     $missing = max(0, $numTeams - count($goalkeepers));
     if ($missing === 0) {
         return $players;
     }
 
-    $candidates = array_values(array_filter($players, static fn(array $p): bool => !in_array('ARQ', ordered_player_positions($p), true)));
+    $candidates = array_values(array_filter($players, static fn(array $p): bool => player_primary_position($p) !== 'ARQ'));
     usort($candidates, static function (array $a, array $b): int {
         $ratingA = player_overall_rating($a);
         $ratingB = player_overall_rating($b);
@@ -52,6 +50,7 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
             return $player;
         }
         $player['positions'] = 'ARQ/' . (string) ($player['positions'] ?? '');
+        $player['goalkeeper_skill'] = 2.0;
         $player['emergency_goalkeeper'] = true;
         return $player;
     }, $players);
@@ -59,10 +58,10 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 
 function build_team_position_assignment(array $team): array
 {
-    $lines = ['ARQ', 'DEF', 'MED', 'DEL'];
-    $maxPerLine = 4;
+    $fieldLines = ['DEF', 'MED', 'DEL'];
+    $maxPerFieldLine = max(0, intdiv(count($team), 2));
 
-    $candidates = array_values(array_filter($team, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
+    $candidates = array_values(array_filter($team, static fn(array $p): bool => player_primary_position($p) === 'ARQ' || is_emergency_goalkeeper($p)));
     usort($candidates, static function (array $a, array $b): int {
         $emergencyA = is_emergency_goalkeeper($a) ? 1 : 0;
         $emergencyB = is_emergency_goalkeeper($b) ? 1 : 0;
@@ -132,7 +131,7 @@ function build_team_position_assignment(array $team): array
     while ($changed) {
         $changed = false;
         $lineCount = $countLines($assignment);
-        $overloaded = array_values(array_filter($lines, static fn(string $line): bool => $lineCount[$line] > $maxPerLine));
+        $overloaded = array_values(array_filter($fieldLines, static fn(string $line): bool => $lineCount[$line] > $maxPerFieldLine));
         usort($overloaded, static fn(string $a, string $b): int => $lineCount[$b] <=> $lineCount[$a]);
 
         if (!$overloaded) {
@@ -177,7 +176,7 @@ function build_team_position_assignment(array $team): array
                     if ($line === $fromLine) {
                         continue;
                     }
-                    if (($currentCount[$line] ?? 0) < $maxPerLine) {
+                    if ($line !== 'ARQ' && ($currentCount[$line] ?? 0) < $maxPerFieldLine) {
                         $destinations[] = $line;
                     }
                 }
@@ -207,8 +206,8 @@ function build_team_position_assignment(array $team): array
     $finalCount = $countLines($assignment);
     $goalkeepers = $finalCount['ARQ'];
     $lineValid = true;
-    foreach ($lines as $line) {
-        if (($finalCount[$line] ?? 0) > $maxPerLine) {
+    foreach ($fieldLines as $line) {
+        if (($finalCount[$line] ?? 0) > $maxPerFieldLine) {
             $lineValid = false;
             break;
         }

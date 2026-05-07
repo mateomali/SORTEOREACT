@@ -11,7 +11,7 @@ if (!function_exists('repo_match_participants_basic')) {
     {
         $stmt = db()->prepare(
             'SELECT p.id, p.name, p.positions, p.pace, p.skill,
-                    p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.regularity, p.goalkeeper_skill
+                    p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
              FROM match_players mp
              INNER JOIN players p ON p.id = mp.player_id
              WHERE mp.match_id = :mid
@@ -46,6 +46,7 @@ try {
                 'solidez' => player_effective_stat($p, 'defense_physical'),
                 'ataque' => player_effective_stat($p, 'attack'),
                 'compromiso' => player_effective_stat($p, 'teamwork'),
+                'mentalidad' => player_effective_stat($p, 'mentality'),
                 'regularidad' => player_effective_stat($p, 'regularity'),
                 'habilidad_arquero' => player_effective_stat($p, 'goalkeeper_skill'),
                 'selected' => true,
@@ -96,6 +97,7 @@ $legacyDrawWeightsJson = json_encode([
     'ritmo' => $drawBalanceWeights['rhythm'],
     'tecnica' => $drawBalanceWeights['technique'],
     'compromiso' => $drawBalanceWeights['teamwork'],
+    'mentalidad' => $drawBalanceWeights['mentality'],
     'regularidad' => $drawBalanceWeights['regularity'],
     'arquero' => $drawBalanceWeights['goalkeeper_skill'],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

@@ -26,6 +26,7 @@ $players = array_map(static fn(array $p): array => [
     'defense_physical' => player_effective_stat($p, 'defense_physical'),
     'attack' => player_effective_stat($p, 'attack'),
     'teamwork' => player_effective_stat($p, 'teamwork'),
+    'mentality' => player_effective_stat($p, 'mentality'),
     'regularity' => player_effective_stat($p, 'regularity'),
     'goalkeeper_skill' => player_effective_stat($p, 'goalkeeper_skill'),
 ], $participants);

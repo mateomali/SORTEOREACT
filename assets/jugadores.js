@@ -5,7 +5,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     const playerPageAbortController = new AbortController();
     window.goodfellasPlayersCleanup = () => playerPageAbortController.abort();
     document.addEventListener('goodfellas:before-partial-render', window.goodfellasPlayersCleanup, { once: true });
-    const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity'];
+    const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
     const fullStars = (rating) => {
       const full = Math.floor(rating);
       const half = rating % 1 !== 0;
@@ -18,7 +18,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       rhythm: 'Ritmo',
       defense_physical: 'Solidez',
       attack: 'Ataque',
-      teamwork: 'Compromiso',
+      teamwork: 'Juego en equipo',
+      mentality: 'Mentalidad',
       regularity: 'Regularidad',
       goalkeeper_skill: 'Arquero',
     };
@@ -27,7 +28,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       rhythm: 'RIT',
       defense_physical: 'SOL',
       attack: 'ATA',
-      teamwork: 'COM',
+      teamwork: 'EQU',
+      mentality: 'MEN',
       regularity: 'REG',
       goalkeeper_skill: 'ARQ',
     };
@@ -58,11 +60,17 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       },
       {
         field: 'teamwork',
-        label: 'Compromiso',
+        label: 'Juego en equipo',
         strength: ['le cuesta entrar en el circuito colectivo', 'por momentos juega su partido aparte', 'acompaña, aunque todavia puede ofrecerse mas', 'se conecta bien y entiende cuando soltarla', 'juega para el equipo, levanta la cabeza y ordena a los de al lado', 'es el pegamento del equipo: habla, ayuda y mejora a todos'],
-        weakness: ['si se desconecta, el equipo lo siente enseguida', 'puede quedar lejos de la jugada cuando toca ayudar', 'a veces acompana mas de lo que conduce', 'no preocupa, aunque puede participar mas en la sociedad', 'su compromiso rara vez deja dudas', 'hasta sin pelota juega para que el equipo respire'],
+        weakness: ['si se corta solo, el equipo lo siente enseguida', 'puede quedar lejos de la jugada cuando toca ayudar', 'a veces acompana mas de lo que conduce', 'no preocupa, aunque puede participar mas en la sociedad', 'su juego colectivo rara vez deja dudas', 'hasta sin pelota juega para que el equipo respire'],
         strength: ['todavia juega medio en modo solista de karaoke', 'a veces acompana, a veces mira la obra desde la vereda', 'se suma al circuito, aunque puede pedirla un poquito mas', 'entiende la pared, la descarga y el favor al companero', 'juega con documento: ayuda, habla y no se borra', 'es delegado del equipo: ordena, cubre y encima te ceba el mate'],
-        weakness: ['si se cuelga, el equipo queda pagando el peaje', 'cuando toca dar una mano, a veces llega tarde a la reunion', 'acompanar acompana, pero le falta mandar un poco mas', 'no desentona, pero a veces desaparece un rato del partido', 'en compromiso rara vez deja una silla vacia', 'hasta sin tocarla acomoda el quilombo'],
+        weakness: ['si se corta solo, el equipo queda pagando el peaje', 'cuando toca dar una mano, a veces llega tarde a la reunion', 'acompanar acompana, pero le falta mandar un poco mas', 'no desentona, pero puede asociarse un poco mas', 'en juego de equipo rara vez deja una silla vacia', 'hasta sin tocarla acomoda el quilombo'],
+      },
+      {
+        field: 'mentality',
+        label: 'Mentalidad',
+        strength: ['se va del partido cuando el ruido sube', 'todavia necesita ordenar la cabeza cuando algo sale mal', 'sostiene el foco aceptablemente, aunque puede tener baches', 'compite con buena cabeza y no se cae facil', 'tiene caracter para bancar partidos trabados', 'mentalmente es de los que ordenan al equipo cuando quema'],
+        weakness: ['si lo sacan del eje, tarda en volver', 'puede hablar de mas y perder el foco de la jugada', 'cuando el partido se ensucia, necesita mas temple', 'no preocupa, pero puede sostener mejor la concentracion', 'casi siempre mantiene la cabeza en partido', 'en mentalidad es muy confiable incluso cuando viene torcida'],
       },
       {
         field: 'regularity',
@@ -98,7 +106,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       rhythm: ['ritmo', 'las piernas', 'la intensidad', 'el ida y vuelta'],
       defense_physical: ['solidez', 'el roce', 'la marca', 'la batalla fisica'],
       attack: ['ataque', 'el ultimo tramo', 'la zona caliente', 'el olor a gol'],
-      teamwork: ['compromiso', 'el juego colectivo', 'la entrega', 'la sociedad'],
+      teamwork: ['juego en equipo', 'el juego colectivo', 'la solidaridad', 'la sociedad'],
+      mentality: ['mentalidad', 'la cabeza', 'el caracter', 'el foco'],
       regularity: ['regularidad', 'la constancia', 'el piso de rendimiento', 'la estabilidad'],
       goalkeeper_skill: ['el arco', 'los tres palos', 'la seguridad bajo palos', 'el buzo imaginario'],
     };
@@ -224,7 +233,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const teamwork = numberOr(player.teamwork, 3);
       const regularity = numberOr(player.regularity, 3.5);
       const goalkeeper = numberOr(player.goalkeeper_skill, 3);
-      const isGoalkeeper = player.positions.includes('ARQ');
+      const isGoalkeeper = player.positions[0] === 'ARQ';
       const high = (value) => value >= 4.5;
       const low = (value) => value <= 2.5;
       const matches = [];
@@ -490,7 +499,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     const scoutDataFromTrigger = (trigger) => {
       const row = trigger.closest('[data-player-edit-row]');
       if (row) {
-        const positions = Array.from(row.querySelectorAll('input[name="positions[]"]:checked')).map((input) => input.value);
+        const positions = selectedPositionsInOrder(row);
         const getValue = (field) => numberOr(row.querySelector(`[data-stat-rating-input][name="${field}"]`)?.value, field === 'regularity' ? 3.5 : 3);
         const player = {
           name: row.querySelector('input[name="name"]')?.value || row.querySelector('.player-readonly-name')?.textContent || 'Este jugador',
@@ -515,7 +524,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       return player;
     };
     const describeScoutPlayer = (player) => {
-      const isGoalkeeper = player.positions.includes('ARQ');
+      const isGoalkeeper = player.positions[0] === 'ARQ';
       const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper
         ? rule.field !== 'attack'
         : rule.field !== 'goalkeeper_skill');
@@ -895,6 +904,24 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         y: centerY + Math.sin(angle) * radius,
       };
     };
+    const selectedPositionsInOrder = (scope) => {
+      const selects = Array.from(scope.querySelectorAll('select[name="positions[]"]'));
+      const raw = selects.length
+        ? selects.map((select) => select.value)
+        : Array.from(scope.querySelectorAll('input[name="positions[]"]:checked')).map((input) => input.value);
+      return raw.filter((position, index, list) => position && list.indexOf(position) === index).slice(0, 3);
+    };
+    const hasPrimaryGoalkeeper = (scope) => selectedPositionsInOrder(scope)[0] === 'ARQ';
+    const syncPositionSelectOptions = (scope) => {
+      const selects = Array.from(scope.querySelectorAll('select[name="positions[]"]'));
+      if (!selects.length) return;
+      const selected = selects.map((select) => select.value).filter(Boolean);
+      selects.forEach((select) => {
+        Array.from(select.options).forEach((option) => {
+          option.disabled = option.value !== '' && option.value !== select.value && selected.includes(option.value);
+        });
+      });
+    };
 
     const renderPlayerRadar = (scope) => {
       const card = scope.querySelector('[data-player-radar]');
@@ -902,7 +929,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (!card || !canvas) return;
 
       const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
-      const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
+      const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       const fields = hasGoalkeeper ? statNames.map((field) => field === 'attack' ? 'goalkeeper_skill' : field) : statNames;
       const isCompact = card.classList.contains('player-radar-card-compact');
       const labels = isCompact ? radarShortLabels : radarLabels;
@@ -965,18 +992,20 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       }
 
       const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
-      const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
+      const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       const raw = hasGoalkeeper
-        ? (getValue('goalkeeper_skill') * 0.45)
-          + (getValue('defense_physical') * 0.15)
+        ? (getValue('goalkeeper_skill') * 0.42)
+          + (getValue('defense_physical') * 0.14)
           + (getValue('rhythm') * 0.10)
           + (getValue('technique') * 0.10)
-          + (getValue('teamwork') * 0.20)
-        : (getValue('technique') * 0.20)
-          + (getValue('rhythm') * 0.20)
-          + (getValue('defense_physical') * 0.20)
-          + (getValue('attack') * 0.25)
-          + (getValue('teamwork') * 0.15);
+          + (getValue('teamwork') * 0.14)
+          + (getValue('mentality') * 0.10)
+        : (getValue('technique') * 0.18)
+          + (getValue('rhythm') * 0.18)
+          + (getValue('defense_physical') * 0.18)
+          + (getValue('attack') * 0.24)
+          + (getValue('teamwork') * 0.12)
+          + (getValue('mentality') * 0.10);
       const regularityFactor = 1 + ((getValue('regularity') - 3.5) / 50);
       const rounded = Math.max(1, Math.min(6, Math.round(raw * regularityFactor * 10) / 10));
 
@@ -1033,7 +1062,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     });
 
     const syncGoalkeeperStats = (scope) => {
-      const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
+      syncPositionSelectOptions(scope);
+      const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       scope.querySelectorAll('[data-goalkeeper-stat-row]').forEach((row) => {
         row.hidden = !hasGoalkeeper;
         row.querySelectorAll('input, select, textarea').forEach((input) => {
@@ -1041,7 +1071,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         });
       });
       scope.querySelectorAll('[data-attack-stat-row]').forEach((row) => {
-        row.hidden = hasGoalkeeper;
+        row.hidden = false;
       });
       scope.querySelectorAll('[data-stat-help="goalkeeper_skill"]').forEach((row) => {
         row.hidden = !hasGoalkeeper;
@@ -1056,7 +1086,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         input.addEventListener('input', () => updateGeneralRating(scope));
         input.addEventListener('change', () => updateGeneralRating(scope));
       });
-      scope.querySelectorAll('input[name="positions[]"]').forEach((input) => {
+      scope.querySelectorAll('input[name="positions[]"], select[name="positions[]"]').forEach((input) => {
         input.addEventListener('change', () => syncGoalkeeperStats(scope));
       });
       updateGeneralRating(scope);

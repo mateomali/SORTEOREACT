@@ -98,7 +98,7 @@
 
   .brand {
     @apply flex min-w-0 items-center gap-3;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
   }
 
   .brand strong {
@@ -109,13 +109,12 @@
     @apply block text-xs font-medium text-emerald-100 sm:text-sm;
   }
 
-  .brand-logo {
-    @apply h-20 w-auto max-w-[220px] shrink-0 object-contain sm:h-24 sm:max-w-[270px];
+  .brand-logo-link {
+    @apply inline-flex shrink-0 items-center no-underline;
   }
 
-  .brand-claim {
-    @apply hidden text-sm font-extrabold uppercase tracking-wide text-white sm:block md:text-base;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.32);
+  .brand-logo {
+    @apply h-20 w-auto max-w-[220px] shrink-0 object-contain sm:h-24 sm:max-w-[270px];
   }
 
   .ball {
@@ -138,7 +137,7 @@
   }
 
   .main-nav {
-    @apply flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-white px-3 py-2 max-[760px]:hidden max-[760px]:flex-col max-[760px]:items-stretch;
+    @apply flex flex-1 flex-wrap items-center justify-end gap-2 bg-transparent px-0 py-0 max-[760px]:hidden max-[760px]:w-full max-[760px]:flex-col max-[760px]:items-stretch max-[760px]:border-t max-[760px]:border-white/10 max-[760px]:pt-2;
     min-width: 0;
   }
 
@@ -152,23 +151,23 @@
   }
 
   .nav-group-admin {
-    @apply border-l border-emerald-100 pl-2 max-[760px]:border-l-0 max-[760px]:border-t max-[760px]:pt-2 max-[760px]:pl-0;
+    @apply border-l border-white/15 pl-2 max-[760px]:border-l-0 max-[760px]:border-t max-[760px]:pt-2 max-[760px]:pl-0;
   }
 
   .nav-group-label {
-    @apply mr-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-700 max-[760px]:mr-0 max-[760px]:w-fit;
+    @apply mr-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-50 max-[760px]:mr-0 max-[760px]:w-fit;
   }
 
   .main-nav a {
-    @apply rounded-xl px-3 py-2 text-sm font-bold text-emerald-900 no-underline transition hover:bg-emerald-50;
+    @apply rounded-xl border border-transparent px-3 py-2 text-sm font-bold text-emerald-50 no-underline transition hover:border-white/20 hover:bg-white/10 hover:text-white;
   }
 
   .main-nav .nav-logout {
-    @apply text-red-700 hover:bg-red-50;
+    @apply text-red-100 hover:bg-red-500/15;
   }
 
   .main-nav a.active {
-    @apply bg-emerald-700 text-white hover:bg-emerald-700;
+    @apply border-lime-200/50 bg-lime-200 text-emerald-950 hover:bg-lime-200 hover:text-emerald-950;
   }
 
   .content {
@@ -503,6 +502,22 @@
 
   .player-general-rating-compact span {
     @apply text-sm;
+  }
+
+  .player-position-selects {
+    @apply grid grid-cols-1 gap-2 sm:grid-cols-3;
+  }
+
+  .player-position-select {
+    @apply grid min-w-0 gap-1;
+  }
+
+  .player-position-select span {
+    @apply text-xs font-bold text-slate-500;
+  }
+
+  .player-position-select select {
+    @apply w-full min-w-0;
   }
 
   .stat-rating-compact {
@@ -1495,7 +1510,7 @@
   }
 
   .team-formation {
-    @apply rounded-2xl bg-emerald-800 p-3;
+    @apply relative rounded-2xl bg-emerald-800 p-3 pt-10;
     background:
       linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 2px, transparent 2px 100%),
       linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
@@ -1517,6 +1532,30 @@
 
   .formation-player {
     @apply min-w-28 max-w-full rounded-xl border border-white/40 bg-emerald-950/60 px-2 py-1.5 text-center text-white;
+  }
+
+  .formation-undo-button {
+    @apply absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/35 bg-emerald-950/55 p-0 text-lg font-extrabold leading-none text-white shadow-sm transition hover:bg-emerald-950/80 focus:outline-none focus:ring-2 focus:ring-lime-200 disabled:cursor-not-allowed disabled:opacity-35;
+  }
+
+  .formation-total-badge {
+    @apply absolute left-1/2 top-2 inline-flex min-h-8 -translate-x-1/2 items-center justify-center rounded-lg border border-white/35 bg-emerald-950/65 px-3 py-1 text-xs font-extrabold leading-none text-white shadow-sm;
+  }
+
+  .formation-player[data-static-formation-player] {
+    @apply cursor-grab transition;
+  }
+
+  .formation-player[data-static-formation-player]:active {
+    @apply cursor-grabbing;
+  }
+
+  .formation-player[data-static-formation-player].is-dragging {
+    @apply opacity-60 ring-2 ring-white/70;
+  }
+
+  .formation-player[data-static-formation-player].is-drag-over {
+    @apply scale-[1.03] border-lime-200 bg-emerald-900 ring-2 ring-lime-200;
   }
 
   .formation-player strong {
@@ -1968,7 +2007,7 @@
   }
 
   .sorteo-page .team-formation {
-    @apply rounded-xl border border-emerald-200 bg-emerald-800 p-3 text-white;
+    @apply relative rounded-xl border border-emerald-200 bg-emerald-800 p-3 pt-10 text-white;
     background-image:
       linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
@@ -1988,7 +2027,23 @@
   }
 
   .sorteo-page .formation-player {
-    @apply min-w-24 max-w-36 flex-1 rounded-xl border border-white/30 bg-emerald-950/65 px-2 py-2 text-center shadow-sm;
+    @apply min-w-24 max-w-36 flex-1 cursor-grab rounded-xl border border-white/30 bg-emerald-950/65 px-2 py-2 text-center shadow-sm transition;
+  }
+
+  .sorteo-page .formation-player:active {
+    @apply cursor-grabbing;
+  }
+
+  .sorteo-page .formation-player.is-dragging {
+    @apply opacity-60 ring-2 ring-white/70;
+  }
+
+  .sorteo-page .formation-player.is-drag-over {
+    @apply scale-[1.03] border-lime-200 bg-emerald-900 ring-2 ring-lime-200;
+  }
+
+  .sorteo-page .formation-player.is-out-of-position {
+    @apply border-amber-200 bg-amber-950/70;
   }
 
   .sorteo-page .formation-player-name {
@@ -1997,6 +2052,10 @@
 
   .sorteo-page .formation-player-meta {
     @apply block text-[11px] font-bold text-white/90;
+  }
+
+  .sorteo-page .formation-player-meta em {
+    @apply not-italic text-amber-100;
   }
 
   .sorteo-page .formation-manual-select {
@@ -2296,19 +2355,31 @@
   }
 
   .participant-search {
-    @apply mb-3 flex items-center gap-3 rounded-2xl border border-emerald-900 bg-emerald-950 p-3 shadow-lg shadow-emerald-950/15 max-[760px]:flex-col max-[760px]:items-stretch;
+    @apply mb-3 grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto];
   }
 
-  .participant-search input[type="text"] {
-    @apply flex-1 border-white/20 bg-white text-emerald-950 placeholder:text-slate-500;
+  .participant-search-shell {
+    @apply min-w-0;
   }
 
-  .participant-search .chip {
-    @apply border-white/15 bg-white/10 text-emerald-50;
+  .participant-search-actions {
+    @apply flex flex-wrap items-center justify-end gap-2 max-[760px]:items-stretch;
   }
 
-  .participant-search .btn {
-    @apply bg-white text-emerald-950 hover:bg-emerald-50;
+  .participant-select-visible {
+    @apply mb-0 inline-flex min-h-10 items-center gap-2 rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm font-bold text-emerald-950 shadow-sm;
+  }
+
+  .participant-select-visible input {
+    @apply h-4 w-4 accent-emerald-700;
+  }
+
+  .participant-select-visible small {
+    @apply text-xs font-bold;
+  }
+
+  .participant-react-helper {
+    @apply inline-flex min-h-10 items-center rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-extrabold text-emerald-950;
   }
 
   .participant-picker-layout {
@@ -2904,8 +2975,16 @@
     @apply rounded-2xl border-2 border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5;
   }
 
+  .captain-pot.is-active-pot {
+    @apply border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-950/10;
+  }
+
   .captain-pot h4 {
     @apply mb-2 rounded-xl bg-emerald-950 px-3 py-2 text-center text-sm text-white;
+  }
+
+  .captain-pot.is-active-pot h4 {
+    @apply bg-emerald-700;
   }
 
   .captain-player {
@@ -3655,7 +3734,7 @@
     }
 
     .nav-group-admin {
-      @apply border-l-0 border-t border-emerald-100 pt-2 pl-0;
+      @apply border-l-0 border-t border-white/15 pt-2 pl-0;
     }
 
     .main-nav a {
@@ -3682,10 +3761,6 @@
 
     .brand-logo {
       @apply h-12 max-w-[112px];
-    }
-
-    .brand-claim {
-      display: none;
     }
 
     .ball {
@@ -4235,7 +4310,7 @@
     }
 
     .team-formation {
-      @apply p-2;
+      @apply p-2 pt-10;
     }
 
     .formation-line {
@@ -4851,7 +4926,7 @@
 
     .team-formation,
     .sorteo-page .team-formation {
-      @apply rounded-lg p-1.5;
+      @apply rounded-lg p-1.5 pt-10;
     }
 
     .formation-line,
@@ -5192,10 +5267,6 @@
     color: rgba(222, 255, 235, 0.82);
   }
 
-  .brand-claim {
-    color: #eaffcf;
-  }
-
   .menu-toggle {
     position: relative;
     z-index: 1;
@@ -5204,33 +5275,33 @@
   }
 
   .main-nav {
-    border-bottom: 1px solid var(--gf-line);
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(12px);
+    border-bottom: 0;
+    background: transparent;
+    backdrop-filter: none;
   }
 
   .nav-group-admin {
-    border-left-color: rgba(0, 163, 108, 0.22);
+    border-left-color: rgba(255, 255, 255, 0.18);
   }
 
   .main-nav a {
     border: 1px solid transparent;
-    color: #133b2d;
+    color: #effff7;
     min-height: 38px;
     gap: 0.35rem;
     box-shadow: none;
   }
 
   .main-nav a:hover {
-    border-color: var(--gf-line-strong);
-    background: #f1f8f5;
-    color: #082017;
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
   }
 
   .main-nav a.active {
-    border-color: #063d2b;
-    background: #062d21;
-    color: #ffffff;
+    border-color: rgba(219, 255, 105, 0.56);
+    background: #dfff69;
+    color: #07130f;
     box-shadow: 0 8px 20px rgba(6, 45, 33, 0.2);
   }
 
@@ -5523,6 +5594,26 @@
   }
 
   .stats-player-search input[type="search"]:focus {
+    border-color: var(--gf-green);
+    box-shadow: 0 0 0 4px rgba(0, 163, 108, 0.12), 0 6px 16px rgba(7, 19, 15, 0.07);
+  }
+
+  .participant-search {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .participant-search input[type="search"] {
+    width: 100%;
+    max-width: none;
+    border-color: #c9ddd4;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(7, 19, 15, 0.045);
+  }
+
+  .participant-search input[type="search"]:focus {
     border-color: var(--gf-green);
     box-shadow: 0 0 0 4px rgba(0, 163, 108, 0.12), 0 6px 16px rgba(7, 19, 15, 0.07);
   }
@@ -6056,6 +6147,7 @@
       top: 0;
       z-index: 60;
       backdrop-filter: blur(12px);
+      flex-wrap: wrap;
     }
 
     .menu-toggle {
@@ -6065,10 +6157,9 @@
     }
 
     .main-nav.open {
-      position: sticky;
-      top: 58px;
+      position: static;
       z-index: 55;
-      box-shadow: 0 12px 28px rgba(7, 19, 15, 0.12);
+      box-shadow: none;
     }
 
     .content {
@@ -6094,10 +6185,6 @@
       justify-content: flex-start;
     }
 
-    .brand-claim {
-      display: none;
-    }
-
     .brand-logo {
       height: 64px;
       max-width: 160px;
@@ -6114,6 +6201,10 @@
     .main-nav {
       gap: 7px;
       padding: 8px 10px;
+      grid-column: 1 / -1;
+      border-top-color: rgba(255, 255, 255, 0.14);
+      background: #ffffff;
+      border-radius: 14px;
     }
 
     .nav-group {
@@ -6124,6 +6215,28 @@
       min-height: 36px;
       padding: 8px 10px;
       font-size: 0.78rem;
+      color: #133b2d;
+    }
+
+    .main-nav a:hover {
+      border-color: var(--gf-line-strong);
+      background: #f1f8f5;
+      color: #082017;
+    }
+
+    .main-nav a.active {
+      border-color: #063d2b;
+      background: #062d21;
+      color: #ffffff;
+    }
+
+    .nav-group-admin {
+      border-top-color: rgba(0, 163, 108, 0.22);
+    }
+
+    .nav-group-label {
+      background: #ecfdf5;
+      color: #047857;
     }
 
     .page-head h1 {

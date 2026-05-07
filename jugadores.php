@@ -85,6 +85,7 @@ function player_scout_data_attrs(array $player): string
         'player-scout-defense-physical' => number_format(player_effective_stat($player, 'defense_physical'), 1, '.', ''),
         'player-scout-attack' => number_format(player_effective_stat($player, 'attack'), 1, '.', ''),
         'player-scout-teamwork' => number_format(player_effective_stat($player, 'teamwork'), 1, '.', ''),
+        'player-scout-mentality' => number_format(player_effective_stat($player, 'mentality'), 1, '.', ''),
         'player-scout-regularity' => number_format(player_effective_stat($player, 'regularity'), 1, '.', ''),
         'player-scout-goalkeeper-skill' => number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', ''),
     ];
@@ -197,12 +198,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Debes seleccionar al menos una posicion valida.');
             redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
         }
+        $positionCount = count(parse_positions_csv($positionsCsv));
+        if ($positionCount < 1 || $positionCount > 3) {
+            if ($ajax) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'message' => 'Elige una posicion primaria y hasta 2 secundarias.']);
+                exit;
+            }
+            flash('error', 'Elige una posicion primaria y hasta 2 secundarias.');
+            redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
+        }
 
         $technique = normalize_player_stat($_POST['technique'] ?? null);
         $rhythm = normalize_player_stat($_POST['rhythm'] ?? null);
         $defensePhysical = normalize_player_stat($_POST['defense_physical'] ?? null);
         $attack = normalize_player_stat($_POST['attack'] ?? null);
         $teamwork = normalize_player_stat($_POST['teamwork'] ?? null);
+        $mentality = normalize_player_stat($_POST['mentality'] ?? null);
         $regularity = normalize_player_stat($_POST['regularity'] ?? null, 3.5);
         $goalkeeperSkill = str_contains($positionsCsv, 'ARQ')
             ? normalize_player_stat($_POST['goalkeeper_skill'] ?? null)
@@ -214,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'defense_physical' => $defensePhysical,
             'attack' => $attack,
             'teamwork' => $teamwork,
+            'mentality' => $mentality,
             'regularity' => $regularity,
             'goalkeeper_skill' => $goalkeeperSkill,
         ];
@@ -225,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'UPDATE players
                  SET name = :name, positions = :positions, pace = :pace, skill = :skill,
                      technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
-                     attack = :attack, teamwork = :teamwork, regularity = :regularity, goalkeeper_skill = :goalkeeper_skill,
+                     attack = :attack, teamwork = :teamwork, mentality = :mentality, regularity = :regularity, goalkeeper_skill = :goalkeeper_skill,
                      active = :active
                  WHERE id = :id'
             );
@@ -240,6 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'defense_physical' => $defensePhysical,
                 'attack' => $attack,
                 'teamwork' => $teamwork,
+                'mentality' => $mentality,
                 'regularity' => $regularity,
                 'goalkeeper_skill' => $goalkeeperSkill,
                 'active' => $active,
@@ -257,6 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'defense_physical' => $defensePhysical,
                     'attack' => $attack,
                     'teamwork' => $teamwork,
+                    'mentality' => $mentality,
                     'regularity' => $regularity,
                     'goalkeeper_skill' => $goalkeeperSkill,
                     'active' => $active,
@@ -280,9 +296,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO players
-                   (name, positions, pace, skill, technique, rhythm, defense_physical, attack, teamwork, regularity, goalkeeper_skill, active)
+                   (name, positions, pace, skill, technique, rhythm, defense_physical, attack, teamwork, mentality, regularity, goalkeeper_skill, active)
                  VALUES
-                   (:name, :positions, :pace, :skill, :technique, :rhythm, :defense_physical, :attack, :teamwork, :regularity, :goalkeeper_skill, :active)'
+                   (:name, :positions, :pace, :skill, :technique, :rhythm, :defense_physical, :attack, :teamwork, :mentality, :regularity, :goalkeeper_skill, :active)'
             );
             $stmt->execute([
                 'name' => $name,
@@ -294,6 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'defense_physical' => $defensePhysical,
                 'attack' => $attack,
                 'teamwork' => $teamwork,
+                'mentality' => $mentality,
                 'regularity' => $regularity,
                 'goalkeeper_skill' => $goalkeeperSkill,
                 'active' => $active,
@@ -325,6 +342,7 @@ $form = [
     'defense_physical' => 3.0,
     'attack' => 3.0,
     'teamwork' => 3.0,
+    'mentality' => 3.0,
     'regularity' => 3.5,
     'goalkeeper_skill' => 3.0,
     'active' => 1,
@@ -335,7 +353,8 @@ $statLabels = [
     'rhythm' => 'Ritmo',
     'defense_physical' => 'Solidez',
     'attack' => 'Ataque',
-    'teamwork' => 'Compromiso',
+    'teamwork' => 'Juego en equipo',
+    'mentality' => 'Mentalidad',
     'regularity' => 'Regularidad',
     'goalkeeper_skill' => 'Habilidad de arquero',
 ];
@@ -344,7 +363,8 @@ $statHelp = [
     'rhythm' => 'Velocidad, aceleracion, intensidad y capacidad de ir y volver.',
     'defense_physical' => 'Marca, quite, anticipo, presion, fuerza, choque y resistencia defensiva.',
     'attack' => 'Definicion, llegada al arco, desmarque y peligro ofensivo.',
-    'teamwork' => 'Juego en equipo, solidaridad, ubicacion, toma de decisiones, actitud, concentracion y responsabilidad tactica.',
+    'teamwork' => 'Juego en equipo, solidaridad con los pases, ubicacion colectiva, toma de decisiones compartida y generosidad para no jugar solo para uno.',
+    'mentality' => 'Concentracion, caracter, temple competitivo, estabilidad emocional y capacidad de no irse del partido.',
     'regularity' => 'Estabilidad para rendir cerca de su nivel habitual, sin alternar tanto entre partidazos y partidos flojos.',
     'goalkeeper_skill' => 'Atajada, reflejos, achique, posicionamiento, juego aereo y seguridad bajo los tres palos.',
 ];
@@ -357,11 +377,12 @@ $ratingHelp = [
     '6 estrellas' => 'Excelente.',
 ];
 $fieldWeightHelp = [
-    'Ataque 25%' => 'Premia al jugador que genera o define.',
-    'Tecnica 20%' => 'Mantiene valor para el que juega bien.',
-    'Ritmo 20%' => 'En futbol amateur pesa mucho: correr y volver cambia partidos.',
-    'Solidez 20%' => 'Evita que solo cuente atacar.',
-    'Compromiso 15%' => 'Importa, pero no infla demasiado a jugadores solo ordenados.',
+    'Ataque 24%' => 'Premia al jugador que genera o define.',
+    'Tecnica 18%' => 'Mantiene valor para el que juega bien.',
+    'Ritmo 18%' => 'En futbol amateur pesa mucho: correr y volver cambia partidos.',
+    'Solidez 18%' => 'Evita que solo cuente atacar.',
+    'Juego en equipo 12%' => 'Mide generosidad y decisiones colectivas sin mezclarlo con caracter.',
+    'Mentalidad 10%' => 'Suma foco, temple y capacidad de sostenerse en partido.',
     'Regularidad +/-5%' => 'Ajusta el promedio final: 6 suma 5%, 1 resta 5%, 3/4 quedan casi neutros.',
 ];
 
@@ -421,6 +442,31 @@ function player_stats_radar_panel(bool $compact = false): string
       </div>
       <div class="player-radar-canvas" data-player-radar-canvas></div>
     </aside>';
+}
+
+function player_position_selects(array $selectedPositions, ?string $formId = null, bool $disabled = false): string
+{
+    $labels = ['Primaria', 'Secundaria', 'Tercera'];
+    $formAttr = $formId !== null ? ' form="' . h($formId) . '"' : '';
+    $disabledAttr = $disabled ? ' disabled' : '';
+    $html = '<div class="player-position-selects" data-player-position-selects>';
+    foreach ($labels as $index => $label) {
+        $required = $index === 0 ? ' required' : '';
+        $value = (string) ($selectedPositions[$index] ?? '');
+        $html .= '<label class="player-position-select">';
+        $html .= '<span>' . h($label) . '</span>';
+        $html .= '<select name="positions[]"' . $formAttr . $required . $disabledAttr . '>';
+        if ($index > 0) {
+            $html .= '<option value="">Sin posicion</option>';
+        }
+        foreach (allowed_positions() as $pos) {
+            $html .= '<option value="' . h($pos) . '"' . selected_attr($value === $pos) . '>' . h($pos) . '</option>';
+        }
+        $html .= '</select>';
+        $html .= '</label>';
+    }
+    $html .= '</div>';
+    return $html;
 }
 
 $players = repo_all_players($isAdmin ? false : true);
@@ -571,14 +617,7 @@ require __DIR__ . '/includes/header.php';
               </button>
             </td>
             <td>
-              <div class="inline-checks">
-                <?php foreach (allowed_positions() as $pos): ?>
-                  <label class="mini-chip">
-                    <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= $isAdmin ? 'form="' . h($rowFormId) . '"' : 'disabled' ?> <?= checked_attr(in_array($pos, $rowPositions, true)) ?>>
-                    <?= h($pos) ?>
-                  </label>
-                <?php endforeach; ?>
-              </div>
+              <?= player_position_selects($rowPositions, $isAdmin ? $rowFormId : null, !$isAdmin) ?>
             </td>
             <td>
               <div class="player-general-rating player-general-rating-compact" data-general-rating>
@@ -681,14 +720,7 @@ require __DIR__ . '/includes/header.php';
 
       <div class="form-row">
         <label>Posiciones</label>
-        <div class="check-row">
-          <?php foreach (allowed_positions() as $pos): ?>
-            <label class="chip">
-              <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= checked_attr(in_array($pos, $rowPositions, true)) ?> <?= $isAdmin ? '' : 'disabled' ?>>
-              <?= h($pos) ?>
-            </label>
-          <?php endforeach; ?>
-        </div>
+        <?= player_position_selects($rowPositions, null, !$isAdmin) ?>
       </div>
 
       <div class="form-grid">

@@ -45,37 +45,37 @@ $adminMenu = is_admin()
     <header class="topbar">
       <div class="brand">
         <?php if (is_file($brandLogoPath)): ?>
-          <img
-            class="brand-logo"
-            src="assets/goodfellas-logo.png"
-            alt="Goodfellas"
-            width="900"
-            height="730"
-          >
+          <a class="brand-logo-link" href="index.php" aria-label="Ir al inicio">
+            <img
+              class="brand-logo"
+              src="assets/goodfellas-logo.png"
+              alt="Goodfellas"
+              width="900"
+              height="730"
+            >
+          </a>
         <?php endif; ?>
-        <strong class="brand-claim">GESTIONA TU FULBITO</strong>
       </div>
+      <nav class="main-nav" id="mainNav" aria-label="Navegacion principal">
+        <div class="nav-group nav-group-public" aria-label="Opciones publicas">
+          <?php foreach ($publicMenu as $file => $label): ?>
+            <a class="<?= $activePage === $file ? 'active' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+          <?php endforeach; ?>
+        </div>
+        <div class="nav-group nav-group-admin" aria-label="<?= is_admin() ? 'Opciones admin' : 'Acceso admin' ?>">
+          <?php if (is_admin()): ?>
+            <span class="nav-group-label">Admin</span>
+          <?php endif; ?>
+          <?php foreach ($adminMenu as $file => $label): ?>
+            <a class="<?= $activePage === $file ? 'active' : '' ?> <?= $file === 'logout.php' ? 'nav-logout' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </nav>
       <div class="header-actions">
         <a class="mobile-admin-shortcut" href="<?= is_admin() ? 'editar_partidos.php' : 'login.php' ?>">Panel admin</a>
         <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">Menu</button>
       </div>
     </header>
-
-    <nav class="main-nav" id="mainNav" aria-label="Navegacion principal">
-      <div class="nav-group nav-group-public" aria-label="Opciones publicas">
-        <?php foreach ($publicMenu as $file => $label): ?>
-          <a class="<?= $activePage === $file ? 'active' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
-        <?php endforeach; ?>
-      </div>
-      <div class="nav-group nav-group-admin" aria-label="<?= is_admin() ? 'Opciones admin' : 'Acceso admin' ?>">
-        <?php if (is_admin()): ?>
-          <span class="nav-group-label">Admin</span>
-        <?php endif; ?>
-        <?php foreach ($adminMenu as $file => $label): ?>
-          <a class="<?= $activePage === $file ? 'active' : '' ?> <?= $file === 'logout.php' ? 'nav-logout' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
-        <?php endforeach; ?>
-      </div>
-    </nav>
 
     <main class="content">
       <?php foreach ($flashMessages as $msg): ?>

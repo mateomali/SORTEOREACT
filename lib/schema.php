@@ -245,8 +245,9 @@ function ensure_control_schema(): array
         ['players', 'rhythm', 'rhythm DECIMAL(3,1) NULL AFTER technique'],
         ['players', 'defense_physical', 'defense_physical DECIMAL(3,1) NULL AFTER rhythm'],
         ['players', 'attack', 'attack DECIMAL(3,1) NULL AFTER defense_physical'],
-        ['players', 'teamwork', 'teamwork DECIMAL(3,1) NULL AFTER attack'],
-        ['players', 'regularity', 'regularity DECIMAL(3,1) NULL AFTER teamwork'],
+        ['players', 'teamwork', 'teamwork DECIMAL(3,1) NOT NULL DEFAULT 3.0 AFTER attack'],
+        ['players', 'mentality', 'mentality DECIMAL(3,1) NOT NULL DEFAULT 3.0 AFTER teamwork'],
+        ['players', 'regularity', 'regularity DECIMAL(3,1) NULL AFTER mentality'],
         ['players', 'goalkeeper_skill', 'goalkeeper_skill DECIMAL(3,1) NULL AFTER regularity'],
     ];
 
@@ -361,6 +362,7 @@ function backfill_control_schema(PDO $pdo): void
                defense_physical = COALESCE(defense_physical, 3.0),
                attack = COALESCE(attack, skill),
                teamwork = COALESCE(teamwork, skill),
+               mentality = COALESCE(mentality, 3.0),
                regularity = COALESCE(regularity, 3.5),
                goalkeeper_skill = COALESCE(goalkeeper_skill, CASE WHEN positions LIKE '%ARQ%' THEN skill ELSE NULL END)"
         );
@@ -372,20 +374,22 @@ function backfill_control_schema(PDO $pdo): void
                  CASE
                    WHEN positions LIKE '%ARQ%' THEN
                     (
-                     (COALESCE(goalkeeper_skill, skill) * 0.45)
-                     + (defense_physical * 0.15)
-                     + (rhythm * 0.10)
-                     + (technique * 0.10)
-                     + (teamwork * 0.20)
-                    ) * (1 + ((regularity - 3.5) / 50.0))
-                   ELSE
-                    (
-                     (technique * 0.20)
-                     + (rhythm * 0.20)
-                     + (defense_physical * 0.20)
-                     + (attack * 0.25)
-                     + (teamwork * 0.15)
-                    ) * (1 + ((regularity - 3.5) / 50.0))
+                      (COALESCE(goalkeeper_skill, skill) * 0.42)
+                      + (defense_physical * 0.14)
+                      + (rhythm * 0.10)
+                      + (technique * 0.10)
+                      + (teamwork * 0.14)
+                      + (mentality * 0.10)
+                     ) * (1 + ((regularity - 3.5) / 50.0))
+                    ELSE
+                     (
+                      (technique * 0.18)
+                      + (rhythm * 0.18)
+                      + (defense_physical * 0.18)
+                      + (attack * 0.24)
+                      + (teamwork * 0.12)
+                      + (mentality * 0.10)
+                     ) * (1 + ((regularity - 3.5) / 50.0))
                  END
                )),
                  1
@@ -396,6 +400,7 @@ function backfill_control_schema(PDO $pdo): void
                AND defense_physical IS NOT NULL
                AND attack IS NOT NULL
                AND teamwork IS NOT NULL
+               AND mentality IS NOT NULL
                AND regularity IS NOT NULL"
         );
     }

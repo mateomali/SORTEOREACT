@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { StatRating } from '../components/StatRating.jsx';
 
 const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
-const fieldOrder = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity'];
+const fieldOrder = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 const defaults = {
   technique: 3,
   rhythm: 3,
   defense_physical: 3,
   attack: 3,
   teamwork: 3,
+  mentality: 3,
   regularity: 4,
   goalkeeper_skill: 3,
 };
@@ -24,18 +25,20 @@ function formatRating(value) {
 }
 
 function overall(stats, selectedPositions) {
-  const hasGoalkeeper = selectedPositions.includes('ARQ');
+  const hasGoalkeeper = selectedPositions[0] === 'ARQ';
   const base = hasGoalkeeper
-    ? (stats.goalkeeper_skill * 0.45)
-      + (stats.defense_physical * 0.15)
+    ? (stats.goalkeeper_skill * 0.42)
+      + (stats.defense_physical * 0.14)
       + (stats.rhythm * 0.10)
       + (stats.technique * 0.10)
-      + (stats.teamwork * 0.20)
-    : (stats.technique * 0.20)
-      + (stats.rhythm * 0.20)
-      + (stats.defense_physical * 0.20)
-      + (stats.attack * 0.25)
-      + (stats.teamwork * 0.15);
+      + (stats.teamwork * 0.14)
+      + (stats.mentality * 0.10)
+    : (stats.technique * 0.18)
+      + (stats.rhythm * 0.18)
+      + (stats.defense_physical * 0.18)
+      + (stats.attack * 0.24)
+      + (stats.teamwork * 0.12)
+      + (stats.mentality * 0.10);
   const regularityFactor = 1 + ((stats.regularity - 3.5) / 50);
   return Math.max(1, Math.min(6, Math.round(base * regularityFactor * 10) / 10));
 }
@@ -125,19 +128,20 @@ export function PlayerCreateIsland({ root }) {
   const [active, setActive] = useState(true);
   const [selectedPositions, setSelectedPositions] = useState([]);
   const [stats, setStats] = useState(defaults);
-  const hasGoalkeeper = selectedPositions.includes('ARQ');
+  const hasGoalkeeper = selectedPositions[0] === 'ARQ';
   const general = useMemo(() => overall(stats, selectedPositions), [stats, selectedPositions]);
 
   const updateStat = (field, value) => {
     setStats((current) => ({ ...current, [field]: value }));
   };
 
-  const togglePosition = (position) => {
-    setSelectedPositions((current) => (
-      current.includes(position)
-        ? current.filter((item) => item !== position)
-        : [...current, position]
-    ));
+  const updatePosition = (index, position) => {
+    setSelectedPositions((current) => {
+      const next = [...current];
+      next[index] = position;
+      const clean = next.filter(Boolean).filter((item, itemIndex, list) => list.indexOf(item) === itemIndex);
+      return clean.slice(0, 3);
+    });
   };
 
   return (
@@ -187,17 +191,27 @@ export function PlayerCreateIsland({ root }) {
 
         <div className="form-row">
           <label>Posiciones</label>
-          <div className="check-row">
-            {positions.map((position) => (
-              <label className="chip" key={position}>
-                <input
-                  type="checkbox"
+          <div className="player-position-selects" data-player-position-selects>
+            {['Primaria', 'Secundaria', 'Tercera'].map((label, index) => (
+              <label className="player-position-select" key={label}>
+                <span>{label}</span>
+                <select
                   name="positions[]"
-                  value={position}
-                  checked={selectedPositions.includes(position)}
-                  onChange={() => togglePosition(position)}
-                />
-                {position}
+                  required={index === 0}
+                  value={selectedPositions[index] || ''}
+                  onChange={(event) => updatePosition(index, event.target.value)}
+                >
+                  {index === 0 ? <option value="" disabled>Elegir</option> : <option value="">Sin posicion</option>}
+                  {positions.map((position) => (
+                    <option
+                      key={position}
+                      value={position}
+                      disabled={selectedPositions.includes(position) && selectedPositions[index] !== position}
+                    >
+                      {position}
+                    </option>
+                  ))}
+                </select>
               </label>
             ))}
           </div>
@@ -206,7 +220,6 @@ export function PlayerCreateIsland({ root }) {
         <div className="player-stats-editor">
           <div className="form-grid">
             {fieldOrder.map((field) => {
-              if (field === 'attack' && hasGoalkeeper) return null;
               return (
                 <div className="form-row stat-form-row" data-attack-stat-row={field === 'attack' ? '' : undefined} key={field}>
                   <label>{labels[field] || field}</label>

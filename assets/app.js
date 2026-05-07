@@ -29,6 +29,192 @@
     });
   };
 
+  const bindStaticTeamFormationDrag = () => {
+    if (document.documentElement.dataset.staticTeamFormationDragBound === '1') return;
+    document.documentElement.dataset.staticTeamFormationDragBound = '1';
+    let dragSource = null;
+    const undoStacks = new WeakMap();
+
+    const playerCardFromEvent = (event) => event.target?.closest?.('[data-static-formation-player]');
+    const formationLines = (formation) => Array.from(formation.querySelectorAll('.formation-line'));
+    const lineKey = (line) => line.querySelector('.line-label')?.textContent?.trim() || '';
+    const linePlayers = (line) => line.querySelector('.line-players');
+    const ensureUndoButton = (formation) => {
+      if (!formation || formation.querySelector(':scope > [data-static-formation-undo]')) return;
+      const button = document.createElement('button');
+      button.className = 'formation-undo-button';
+      button.type = 'button';
+      button.title = 'Deshacer ultimo cambio';
+      button.setAttribute('aria-label', 'Deshacer ultimo cambio');
+      button.dataset.staticFormationUndo = '1';
+      button.disabled = true;
+      button.textContent = '↶';
+      formation.prepend(button);
+    };
+    const refreshUndoButton = (formation) => {
+      ensureUndoButton(formation);
+      const button = formation.querySelector(':scope > [data-static-formation-undo]');
+      if (button) button.disabled = !(undoStacks.get(formation) || []).length;
+    };
+    const updateFormationTotal = (formation) => {
+      if (!formation) return;
+      let badge = formation.querySelector(':scope > [data-formation-total]');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'formation-total-badge';
+        badge.dataset.formationTotal = '1';
+        badge.setAttribute('aria-live', 'polite');
+        formation.prepend(badge);
+      }
+      const total = Array.from(formation.querySelectorAll('[data-static-formation-player]'))
+        .reduce((sum, card) => sum + Number(card.dataset.playerSkill || card.dataset.skill || 0), 0);
+      badge.textContent = `TOTAL: ${total.toFixed(1)} pts`;
+    };
+    const ensureAllUndoButtons = (root = document) => {
+      root.querySelectorAll?.('[data-static-team-formation]').forEach((formation) => {
+        refreshUndoButton(formation);
+        updateFormationTotal(formation);
+      });
+    };
+    const snapshotFormation = (formation) => formationLines(formation).flatMap((line) => {
+      const parent = linePlayers(line);
+      return Array.from(parent?.querySelectorAll('[data-static-formation-player]') || []).map((card, index) => ({
+        card,
+        index,
+        line: lineKey(line),
+        assignedPosition: card.dataset.assignedPosition || lineKey(line),
+      }));
+    });
+    const pushUndo = (formation) => {
+      const stack = undoStacks.get(formation) || [];
+      stack.push(snapshotFormation(formation));
+      undoStacks.set(formation, stack);
+      refreshUndoButton(formation);
+    };
+    const restoreSnapshot = (formation, snapshot) => {
+      snapshot.forEach((item) => {
+        const line = formationLines(formation).find((candidate) => lineKey(candidate) === item.line);
+        const parent = linePlayers(line);
+        if (!parent || !item.card) return;
+        const cards = Array.from(parent.querySelectorAll('[data-static-formation-player]'));
+        parent.insertBefore(item.card, cards[item.index] || null);
+        item.card.dataset.assignedPosition = item.assignedPosition || item.line;
+      });
+      syncAssignedPositions(formation);
+      updateFormationTotal(formation);
+    };
+    const undoFormation = (formation) => {
+      const stack = undoStacks.get(formation) || [];
+      const snapshot = stack.pop();
+      if (!snapshot) return;
+      restoreSnapshot(formation, snapshot);
+      refreshUndoButton(formation);
+    };
+    const cleanup = () => {
+      document.querySelectorAll('[data-static-formation-player].is-dragging, [data-static-formation-player].is-drag-over')
+        .forEach((card) => card.classList.remove('is-dragging', 'is-drag-over'));
+    };
+    const swapElements = (source, target) => {
+      const sourceParent = source.parentNode;
+      const targetParent = target.parentNode;
+      if (!sourceParent || !targetParent || source === target) return;
+      const sourceNext = source.nextSibling === target ? source : source.nextSibling;
+      const targetNext = target.nextSibling === source ? target : target.nextSibling;
+      targetParent.insertBefore(source, targetNext);
+      sourceParent.insertBefore(target, sourceNext);
+    };
+    const syncAssignedPositions = (formation) => {
+      formation.querySelectorAll('[data-static-formation-player]').forEach((card) => {
+        const line = card.closest('.formation-line')?.querySelector('.line-label')?.textContent?.trim() || '';
+        if (line) card.dataset.assignedPosition = line;
+      });
+    };
+    const wouldKeepSingleGoalkeeper = (formation, source, target) => {
+      let goalkeepers = 0;
+      formation.querySelectorAll('[data-static-formation-player]').forEach((card) => {
+        let position = card.dataset.assignedPosition || '';
+        if (card === source) {
+          position = target.dataset.assignedPosition || position;
+        } else if (card === target) {
+          position = source.dataset.assignedPosition || position;
+        }
+        if (position === 'ARQ') goalkeepers++;
+      });
+      return goalkeepers <= 1;
+    };
+
+    document.addEventListener('dragstart', (event) => {
+      const card = playerCardFromEvent(event);
+      if (!card || !card.closest('[data-static-team-formation]')) return;
+      dragSource = card;
+      card.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', card.dataset.staticPlayerKey || '');
+    });
+
+    document.addEventListener('dragover', (event) => {
+      const card = playerCardFromEvent(event);
+      if (!card || !dragSource || card === dragSource) return;
+      if (card.closest('[data-static-team-formation]') !== dragSource.closest('[data-static-team-formation]')) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      card.classList.add('is-drag-over');
+    });
+
+    document.addEventListener('dragleave', (event) => {
+      const card = playerCardFromEvent(event);
+      if (card) card.classList.remove('is-drag-over');
+    });
+
+    document.addEventListener('drop', (event) => {
+      const target = playerCardFromEvent(event);
+      if (!target || !dragSource || target === dragSource) return;
+      const formation = target.closest('[data-static-team-formation]');
+      if (!formation || formation !== dragSource.closest('[data-static-team-formation]')) return;
+      event.preventDefault();
+      if (!wouldKeepSingleGoalkeeper(formation, dragSource, target)) {
+        showToast('Cada equipo puede tener como maximo un arquero.', 'error');
+        cleanup();
+        dragSource = null;
+        return;
+      }
+      pushUndo(formation);
+      swapElements(dragSource, target);
+      syncAssignedPositions(formation);
+      updateFormationTotal(formation);
+      cleanup();
+      dragSource = null;
+    });
+
+    document.addEventListener('dragend', () => {
+      cleanup();
+      dragSource = null;
+    });
+
+    document.addEventListener('click', (event) => {
+      const button = event.target?.closest?.('[data-static-formation-undo]');
+      if (!button) return;
+      const formation = button.closest('[data-static-team-formation]');
+      if (!formation) return;
+      undoFormation(formation);
+    });
+
+    ensureAllUndoButtons();
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.matches('[data-static-team-formation]')) {
+            refreshUndoButton(node);
+          } else {
+            ensureAllUndoButtons(node);
+          }
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  };
+
   const updateActiveNavigation = (nextDocument) => {
     const nextNav = nextDocument.querySelector('#mainNav');
     const currentNav = document.querySelector('#mainNav');
@@ -79,6 +265,8 @@
       nextScript.remove();
     });
   };
+
+  bindStaticTeamFormationDrag();
 
   const updateStatsPlayerSearch = (input = document.querySelector('[data-stats-player-search]')) => {
     const statsPlayerSearch = input;
@@ -941,7 +1129,7 @@
     filterPlayerTableRows(root);
   };
 
-  const playerStatFields = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'regularity', 'goalkeeper_skill'];
+  const playerStatFields = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity', 'goalkeeper_skill'];
   const formatPlayerRating = (rating) => Number.isInteger(rating) ? String(rating) : Number(rating || 0).toFixed(1);
   const playerRatingStars = (rating) => {
     const number = Number(rating || 0);
@@ -1833,7 +2021,7 @@
     const statValue = (player, field) => {
       const value = Number(player[field]);
       if (Number.isFinite(value) && value > 0) return value;
-      return field === 'regularity' ? 3.5 : Number(player.skill || 0);
+      return field === 'regularity' ? 3.5 : (field === 'mentality' ? 3.0 : Number(player.skill || 0));
     };
 
     const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
@@ -1856,6 +2044,7 @@
         rhythm: average('rhythm'),
         technique: average('technique'),
         teamwork: average('teamwork'),
+        mentality: average('mentality'),
         regularity: average('regularity'),
         goalkeeperSkill,
         slow: team.filter(lowRhythm).length,
@@ -1889,7 +2078,8 @@
                   <span>Solidez ${summary.defensePhysical.toFixed(1)}</span>
                   <span>Ritmo ${summary.rhythm.toFixed(1)}</span>
                   <span>Tecnica ${summary.technique.toFixed(1)}</span>
-                  <span>Compromiso ${summary.teamwork.toFixed(1)}</span>
+                  <span>Juego en equipo ${summary.teamwork.toFixed(1)}</span>
+                  <span>Mentalidad ${summary.mentality.toFixed(1)}</span>
                   <span>Regularidad ${summary.regularity.toFixed(1)}</span>
                 </div>
               </article>
