@@ -13,26 +13,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     };
 
     const formatRating = (rating) => Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
-    const cardOverallFromSix = (value) => {
-      const clamped = Math.max(1, Math.min(6, Number(value) || 1));
-      const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 98]];
-      for (let index = 0; index < anchors.length - 1; index += 1) {
-        const [fromRating, fromOverall] = anchors[index];
-        const [toRating, toOverall] = anchors[index + 1];
-        if (clamped <= toRating) {
-          const ratio = (clamped - fromRating) / (toRating - fromRating);
-          return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-        }
-      }
-      return 98;
-    };
-    const statBarColor = (value) => {
-      const rating = Number(value) || 1;
-      if (rating >= 5.95) return '#67e8f9';
-      if (rating >= 4) return '#bef264';
-      if (rating >= 3) return '#fcd34d';
-      return '#f87171';
-    };
     const radarLabels = {
       technique: 'Tecnica',
       rhythm: 'Ritmo',
@@ -543,7 +523,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       });
       return player;
     };
-    const describeScoutPlayerLegacy = (player) => {
+    const describeScoutPlayer = (player) => {
       const isGoalkeeper = player.positions[0] === 'ARQ';
       const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper
         ? rule.field !== 'attack'
@@ -903,226 +883,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         ],
       };
     };
-    const describeScoutPlayer = (player) => {
-      const isGoalkeeper = player.positions[0] === 'ARQ';
-      const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper
-        ? rule.field !== 'attack'
-        : rule.field !== 'goalkeeper_skill');
-      const stats = visibleRules.map((rule) => ({
-        ...rule,
-        value: numberOr(player[rule.field], rule.field === 'regularity' ? 3.5 : 3),
-      }));
-      const sortedHigh = stats.slice().sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
-      const sortedLow = stats.slice().sort((a, b) => a.value - b.value || a.label.localeCompare(b.label));
-      const best = sortedHigh[0];
-      const weakest = sortedLow[0];
-      const role = isGoalkeeper
-        ? 'arquero'
-        : (player.positions.includes('DEL') ? 'delantero'
-          : (player.positions.includes('DEF') ? 'defensor'
-            : (player.positions.includes('MED') ? 'mediocampista' : 'comodin')));
-      const overall = numberOr(player.skill, 3);
-      const overallCard = cardOverallFromSix(overall);
-      const regularity = numberOr(player.regularity, 3.5);
-      const spread = Math.max(...stats.map((stat) => stat.value)) - Math.min(...stats.map((stat) => stat.value));
-      const pick = (key, pool) => pool[stableIndex(`${player.name}|${key}|${role}|${overallCard}|${best.field}|${weakest.field}`, pool.length)];
-      const fieldZones = {
-        technique: 'con la pelota',
-        rhythm: 'en el ritmo',
-        defense_physical: 'en la solidez',
-        attack: 'en ataque',
-        teamwork: 'en el juego colectivo',
-        mentality: 'en la cabeza',
-        regularity: 'en la regularidad',
-        goalkeeper_skill: 'bajo los tres palos',
-      };
-      const statSemantics = {
-        technique: {
-          high: ['recibe y decide con limpieza', 'puede darle pausa a una jugada que viene sucia', 'no necesita reventarla para salir del apuro'],
-          max: ['la tecnica esta al maximo: si le dan medio metro, la pelota empieza a obedecerle'],
-          low: ['cuando lo presionan, el control puede convertir una pelota simple en problema', 'si recibe incomodo, le conviene resolver facil y no inventar'],
-        },
-        rhythm: {
-          high: ['sostiene ida y vuelta sin perder presencia', 'llega a jugadas que parecian perdidas', 'acelera el partido y obliga al rival a correr para atras'],
-          max: ['el ritmo esta en 6/6: tiene motor para repetir esfuerzos y romper el partido por desgaste'],
-          low: ['si el partido se abre mucho, puede quedarse lejos de la jugada', 'cuando lo hacen correr largo, empieza a pagar el esfuerzo'],
-        },
-        defense_physical: {
-          high: ['compite fuerte en el roce y no regala metros', 'en la dividida deja claro que por ahi no se pasa gratis', 'sostiene la marca y ayuda a cerrar atras'],
-          max: ['la solidez esta en 6/6: en el choque y la marca tiene peso de jugador serio'],
-          low: ['si lo atacan con cuerpo, puede quedar demasiado liviano', 'en duelos fisicos fuertes necesita ayuda cerca'],
-        },
-        attack: {
-          high: ['cerca del arco toma mejores decisiones que el promedio', 'si pisa zona caliente, obliga a que lo sigan', 'puede transformar una pelota viva en peligro real'],
-          max: ['el ataque esta en 6/6: cuando aparece cerca del arco, el rival tiene que ajustar todo'],
-          low: ['en los ultimos metros le falta veneno', 'puede participar bien y apagarse justo cuando toca terminar la jugada'],
-        },
-        teamwork: {
-          high: ['juega mirando al equipo, no solo su jugada', 'suelta la pelota a tiempo y se ofrece de nuevo', 'ayuda a que la estructura no se parta'],
-          max: ['el juego en equipo esta en 6/6: conecta lineas, ayuda sin pelota y mejora al de al lado'],
-          low: ['a veces se corta solo y el equipo queda largo', 'si la jugada pide solidaridad, puede llegar tarde o elegir de mas'],
-        },
-        mentality: {
-          high: ['compite con foco y no se cae ante la primera mala', 'sostiene el caracter cuando el partido se ensucia', 'tiene temple para seguir jugando aunque el contexto apriete'],
-          max: ['la mentalidad esta en 6/6: cuando el partido quema, no se esconde'],
-          low: ['si lo sacan del eje, tarda en volver al partido', 'cuando algo sale mal, puede perder foco y contagiar desorden'],
-        },
-        regularity: {
-          high: ['suele repetir una version confiable', 'no depende de un solo chispazo para justificar su lugar', 'tiene un piso de rendimiento que ordena al equipo'],
-          max: ['la regularidad esta en 6/6: casi siempre entrega lo que promete la planilla'],
-          low: ['puede tener un rato muy bueno y despues desaparecer', 'su rendimiento todavia cambia demasiado de un tramo a otro'],
-        },
-        goalkeeper_skill: {
-          high: ['responde cuando le llegan y puede ordenar el area', 'bajo palos transmite mas calma que susto', 'achica bien y puede salvar una jugada que venia complicada'],
-          max: ['el arco esta en 6/6: bajo los tres palos puede sostener un partido entero'],
-          low: ['si lo bombardean, puede empezar a regalar dudas', 'en centros, rebotes o mano a mano necesita mas seguridad'],
-        },
-      };
-      const semanticLine = (stat, tone, key) => {
-        const semantics = statSemantics[stat.field] || statSemantics.mentality;
-        const pool = semantics[tone] || semantics.high;
-        return pick(`${key}-${stat.field}-${tone}`, pool);
-      };
-      const sentenceCase = (text) => text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
-      const maxStats = stats.filter((stat) => stat.value >= 5.95);
-      const lowStats = stats.filter((stat) => stat.value <= 2);
-      const introPool = overallCard >= 85
-        ? [
-          `Con ${overallCard} GEN, ${player.name} ya entra en zona de jugador diferencial: no es solo una buena stat, es un perfil para condicionar el armado.`,
-          `${player.name} marca ${overallCard} GEN, puntaje de los que se miran primero al repartir equipos. Si juega cerca de su funcion, puede inclinar la cancha.`,
-          `El ${overallCard} GEN lo pone arriba en la lista: no hace falta inflarlo, los numeros ya dicen que puede pesar mas que el promedio.`,
-        ]
-        : overallCard >= 70
-          ? [
-            `${player.name} queda en ${overallCard} GEN: perfil competitivo, con herramientas claras para sumar si no lo sacan de contexto.`,
-            `Con ${overallCard} GEN, la lectura es buena pero pide matiz: tiene valor, aunque no conviene tapar sus zonas flojas.`,
-            `${player.name} trae ${overallCard} GEN, suficiente para ser importante si el equipo lo usa en su zona natural.`,
-          ]
-          : overallCard <= 50
-            ? [
-              `${player.name} queda en ${overallCard} GEN: necesita una tarea simple, companeros cerca y poco heroismo.`,
-              `El ${overallCard} GEN avisa que no conviene pedirle de todo. Ordenado puede ayudar; expuesto puede sufrir.`,
-              `${player.name} tiene ${overallCard} GEN, asi que el plan tiene que ser claro: cumplir, tocar simple y no quedar solo resolviendo incendios.`,
-            ]
-            : [
-              `${player.name} marca ${overallCard} GEN: jugador de contexto, util si lo acercas a su fuerte y lo cubris donde sufre.`,
-              `Con ${overallCard} GEN no viene para salvar todo, pero tampoco para esconderlo. La clave es darle una funcion concreta.`,
-              `${player.name} queda en ${overallCard} GEN, un punto medio que pide lectura fina: donde esta comodo suma; fuera de ahi se le ven las costuras.`,
-            ];
-      const shapePool = spread <= 0.75
-        ? [
-          'El radar sale parejo: no grita una especialidad, pero tampoco deja una grieta facil para atacar.',
-          'La forma general es estable: varias cosas en tono similar, util para no romper el equipo.',
-          'No es un perfil de una sola tecla; su mapa muestra equilibrio y pocas sorpresas extremas.',
-        ]
-        : spread >= 2.5
-          ? [
-            `El radar muestra contraste fuerte: ${fieldZones[best.field]} puede darle ventaja, pero ${fieldZones[weakest.field]} lo puede exponer.`,
-            `La planilla dibuja especialista: muy claro en lo suyo, delicado si el partido lo empuja hacia ${fieldZones[weakest.field]}.`,
-            `No es para usarlo de cualquier cosa. Su fuerte esta ${fieldZones[best.field]}; su deuda aparece ${fieldZones[weakest.field]}.`,
-          ]
-          : [
-            `El perfil tiene matices: destaca ${fieldZones[best.field]}, pero todavia hay que cuidarlo ${fieldZones[weakest.field]}.`,
-            'La lectura semantica es clara: hay una virtud dominante y una zona que conviene no dejar aislada.',
-            `No es extremo, pero tiene direccion: potenciar ${fieldZones[best.field]} y cubrir ${fieldZones[weakest.field]}.`,
-          ];
-      const strengthLine = `${best.label} es su argumento principal: ${semanticLine(best, best.value >= 5.95 ? 'max' : 'high', 'best')}.`;
-      const weaknessLine = weakest.value <= 2
-        ? `${weakest.label} aparece como alerta roja: ${semanticLine(weakest, 'low', 'weak')}.`
-        : weakest.value <= 3
-          ? `${weakest.label} es el punto a cuidar: ${semanticLine(weakest, 'low', 'weak')}.`
-          : `Su punto menos fuerte es ${weakest.label.toLowerCase()}, aunque no aparece como alarma grave.`;
-      const maxLine = maxStats.length
-        ? `Valor maximo detectado: ${maxStats.map((stat) => stat.label).join(', ')} en 6/6. ${sentenceCase(semanticLine(maxStats[0], 'max', 'max'))}.`
-        : '';
-      const lowLine = lowStats.length
-        ? `Dato negativo importante: ${lowStats.map((stat) => `${stat.label} ${formatRating(stat.value)}/6`).join(', ')}. Eso hay que cubrirlo en el armado.`
-        : '';
-      const roleAdvice = {
-        arquero: {
-          elite: 'Como arquero, su relato se mide por seguridad: si ordena y ataja, cambia el humor de toda la defensa.',
-          normal: 'Como arquero, necesita defensa comunicada y decisiones simples: mandar cuando debe y no quedar a mitad de camino.',
-        },
-        defensor: {
-          elite: 'Como defensor, puede ser pieza de base: marca, sostiene y permite que otros jueguen mas sueltos.',
-          normal: 'Como defensor, rinde mejor si no lo obligan a resolver siempre lejos de su zona fuerte.',
-        },
-        mediocampista: {
-          elite: 'Como mediocampista, puede ordenar el partido: recibir, elegir y darle respiracion al equipo.',
-          normal: 'Como mediocampista, necesita compania y lineas cerca para no convertir cada pelota en una urgencia.',
-        },
-        delantero: {
-          elite: 'Como delantero, tiene que vivir cerca del area: ahi su puntaje se transforma en amenaza real.',
-          normal: 'Como delantero, conviene pedirle movimientos claros y no que fabrique todo desde lejos.',
-        },
-        comodin: {
-          elite: 'Como comodin fuerte, su valor esta en elegirle bien la funcion: donde encaja, puede resolver mucho.',
-          normal: 'Como comodin, sirve si la consigna es precisa; tirarlo a cualquier lado le baja el rendimiento.',
-        },
-      };
-      const regularityLine = regularity >= 4.5
-        ? 'La regularidad suma semanticamente: lo bueno que tiene no aparece solo una vez, suele repetirse.'
-        : regularity <= 2.5
-          ? 'La regularidad cambia la sintaxis del relato: puede tener una frase brillante y despues un bache que obliga a reordenar todo.'
-          : 'La regularidad esta en zona media: el relato no es de garantia total, pero tampoco de ruleta completa.';
-      const comboLine = (() => {
-        const high = (field) => numberOr(player[field], 3) >= 4.5;
-        const low = (field) => numberOr(player[field], 3) <= 2.5;
-        const combos = [];
-        if (high('technique') && low('rhythm')) combos.push('Tiene pie para pensar la jugada, pero no conviene hacerlo vivir a pura corrida.');
-        if (high('rhythm') && low('technique')) combos.push('Tiene piernas para llegar, aunque con la pelota necesita elegir simple.');
-        if (high('attack') && low('teamwork')) combos.push('Puede lastimar arriba, pero si no levanta la cabeza el equipo pierde fluidez.');
-        if (high('teamwork') && low('attack')) combos.push('Hace jugar a los demas, aunque cerca del arco todavia le falta decision.');
-        if (high('defense_physical') && low('technique')) combos.push('Gana duelos, pero despues necesita una salida limpia cerca para no rifarla.');
-        if (high('technique') && low('defense_physical')) combos.push('Con espacio juega, con roce puede sufrir; hay que protegerlo de la friccion constante.');
-        if (isGoalkeeper && high('goalkeeper_skill') && low('teamwork')) combos.push('Ataja, pero le conviene hablar mas con la defensa para que el area no sea improvisacion.');
-        return combos.length ? pick('combo', combos) : '';
-      })();
-      const closingPool = overallCard >= 85
-        ? [
-          'Conclusion: jugador para tomar decisiones alrededor de el. No hay que inventarle un altar, pero si darle contexto para que pese.',
-          'Resumen: si entra concentrado, es de los que cambian el reparto de fuerzas. El rival no deberia dejarlo comodo.',
-          'Cierre claro: puntaje alto, rasgos fuertes y capacidad de impacto. El equipo tiene que usarlo, no mirarlo.',
-        ]
-        : lowStats.length
-          ? [
-            'Conclusion: puede sumar, pero el armado tiene que esconder esa alerta baja y acercarlo a su virtud.',
-            'Resumen: tiene utilidad, aunque la zona floja no es decorativa; si el rival la encuentra, va a insistir.',
-            'Cierre claro: funcion simple, apoyos cerca y evitar que el partido lo lleve justo a su stat mas bajo.',
-          ]
-          : [
-            'Conclusion: buen perfil de uso si la consigna es clara y no se le pide jugar contra su naturaleza.',
-            'Resumen: no hay que exagerarlo ni subestimarlo; el valor aparece cuando el rol coincide con sus numeros.',
-            'Cierre claro: acercarlo a su fuerte, cuidarle el punto debil y dejar que el partido le quede comodo.',
-          ];
-      const titlePool = overallCard >= 85
-        ? [`${player.name}, ficha pesada`, `${player.name} en zona elite`, `Informe fuerte: ${player.name}`]
-        : [`${player.name}, lectura de cancha`, `Informe de ${player.name}`, `${player.name} bajo la lupa`];
-
-      return {
-        title: pick('title', titlePool),
-        body: [
-          pick('intro', introPool),
-          pick('shape', shapePool),
-          strengthLine,
-          maxLine,
-          weaknessLine,
-          lowLine,
-          comboLine,
-          regularityLine,
-          pick('role', [roleAdvice[role].normal, roleAdvice[role][overallCard >= 85 ? 'elite' : 'normal']]),
-          pick('closing', closingPool),
-        ].filter(Boolean).join(' '),
-        tags: [
-          role.toUpperCase(),
-          `GEN ${overallCard}`,
-          `Fuerte: ${best.label} ${formatRating(best.value)}/6`,
-          `A cuidar: ${weakest.label} ${formatRating(weakest.value)}/6`,
-          ...(maxStats.length ? [`6/6: ${maxStats.map((stat) => stat.label).join(', ')}`] : []),
-          ...(lowStats.length ? [`Alerta: ${lowStats.map((stat) => stat.label).join(', ')}`] : []),
-        ],
-      };
-    };
     const openPlayerScoutPanel = (trigger) => {
       const panel = document.querySelector('[data-player-scout-panel]');
       if (!panel) return;
@@ -1161,10 +921,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           option.disabled = option.value !== '' && option.value !== select.value && selected.includes(option.value);
         });
       });
-      const positionLabel = scope.querySelector('[data-general-card-position]');
-      if (positionLabel) {
-        positionLabel.textContent = selectedPositionsInOrder(scope).join(' / ');
-      }
     };
 
     const renderPlayerRadar = (scope) => {
@@ -1258,8 +1014,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const stars = general.querySelector('[data-general-rating-stars]');
       if (value) value.textContent = `${formatRating(rounded)}/6`;
       if (stars) stars.textContent = fullStars(rounded);
-      const cardValue = scope.querySelector('[data-general-card-value]');
-      if (cardValue) cardValue.textContent = String(cardOverallFromSix(rounded));
       renderPlayerRadar(scope);
     };
 
@@ -1276,11 +1030,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         }
       }
       if (label) label.textContent = `${rating}/6`;
-      const bar = root.parentElement?.querySelector?.('[data-stat-rating-bar]');
-      if (bar) {
-        bar.style.width = `${Math.max(0, Math.min(100, Math.round((rating / 6) * 100)))}%`;
-        bar.style.backgroundColor = statBarColor(rating);
-      }
       root.querySelectorAll('[data-stat-value]').forEach((button) => {
         const current = Number(button.getAttribute('data-stat-value') || '0');
         const active = current <= rating;

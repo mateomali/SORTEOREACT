@@ -30,6 +30,20 @@ function formatRating(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+function cardOverallFromSix(value) {
+  const clamped = Math.max(1, Math.min(6, Number(value) || 1));
+  const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 98]];
+  for (let index = 0; index < anchors.length - 1; index += 1) {
+    const [fromRating, fromOverall] = anchors[index];
+    const [toRating, toOverall] = anchors[index + 1];
+    if (clamped <= toRating) {
+      const ratio = (clamped - fromRating) / (toRating - fromRating);
+      return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
+    }
+  }
+  return 98;
+}
+
 function overall(stats, selectedPositions) {
   const hasGoalkeeper = selectedPositions[0] === 'ARQ';
   const base = hasGoalkeeper
@@ -147,6 +161,8 @@ export function PlayerCreateIsland({ root }) {
   const [stats, setStats] = useState(defaults);
   const hasGoalkeeper = selectedPositions[0] === 'ARQ';
   const general = useMemo(() => overall(stats, selectedPositions), [stats, selectedPositions]);
+  const generalCard = cardOverallFromSix(general);
+  const positionLabel = selectedPositions.length ? selectedPositions.join(' / ') : 'SIN POSICION';
 
   const updateStat = (field, value) => {
     setStats((current) => ({ ...current, [field]: value }));
@@ -162,7 +178,7 @@ export function PlayerCreateIsland({ root }) {
   };
 
   return (
-    <details className="card mb-3.5 player-create-drawer border-lime-200/55 bg-emerald-950 p-0 text-lime-50 shadow-xl shadow-emerald-950/20">
+    <details className="card mb-3.5 player-create-drawer players-admin-create border-lime-200/55 bg-emerald-950 p-0 text-lime-50 shadow-xl shadow-emerald-950/20">
       <summary className="player-create-summary flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <span className="text-lg font-extrabold text-lime-50">Agregar jugador</span>
         <small className="rounded-full bg-lime-100 px-2 py-1 text-xs font-extrabold text-emerald-950">Cargar nuevo jugador</small>
@@ -187,9 +203,21 @@ export function PlayerCreateIsland({ root }) {
           </div>
           <div className="form-row">
             <label className="text-lime-100">General</label>
-            <div className="player-general-rating grid min-h-11 items-center gap-3 rounded-xl border border-lime-200/45 bg-emerald-950/80 px-3 py-2 [grid-template-columns:minmax(0,1fr)_auto_minmax(0,1fr)]" data-general-rating>
-              <strong className="col-start-2 justify-self-center rounded-lg bg-lime-100 px-2 py-1 text-sm font-extrabold text-emerald-950" data-general-rating-value>{formatRating(general)}/6</strong>
-              <span className="col-start-3 min-w-0 justify-self-end text-right text-lg leading-none text-amber-300" data-general-rating-stars>{stars(general)}</span>
+            <div className="desktop-player-admin-general grid gap-2">
+              <div className="desktop-player-card-overall grid items-center gap-2 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-2">
+                <div className="mobile-player-card-rating">
+                  <strong data-general-card-value>{generalCard}</strong>
+                  <span>GEN</span>
+                </div>
+                <div className="mobile-player-card-meta">
+                  <span>GENERAL</span>
+                  <strong data-general-card-position>{positionLabel}</strong>
+                </div>
+              </div>
+              <div className="player-general-rating player-general-rating-compact flex min-h-0 flex-col items-start justify-center gap-1 rounded-xl border-0 bg-transparent px-0 py-0" data-general-rating>
+                <strong className="text-xs font-extrabold text-lime-50" data-general-rating-value>{formatRating(general)}/6</strong>
+                <span className="text-sm leading-none text-amber-300" data-general-rating-stars>{stars(general)}</span>
+              </div>
             </div>
           </div>
           <div className="form-row">

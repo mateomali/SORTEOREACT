@@ -5,12 +5,10 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/db.php';
 require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
-require_once __DIR__ . '/lib/directivos.php';
 
 $pdo = db();
 ensure_control_schema();
 ensure_match_awards_schema();
-directive_publish_due_results();
 $awardDefinitions = award_definitions();
 $awardDescriptions = [
     'player_of_match' => 'Jugador de la fecha.',

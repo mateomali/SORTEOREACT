@@ -2,29 +2,7 @@
   const nav = document.getElementById('mainNav');
   const toggle = document.getElementById('menuToggle');
   if (nav && toggle) {
-    const setMenuOpen = (open) => {
-      nav.classList.toggle('hidden', !open);
-      nav.classList.toggle('flex', open);
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      toggle.textContent = open ? 'Cerrar' : 'Menu';
-    };
-    toggle.addEventListener('click', () => setMenuOpen(nav.classList.contains('hidden')));
-    nav.querySelectorAll('a').forEach((link) => {
-      link.addEventListener('click', () => {
-        if (window.matchMedia('(max-width: 760px)').matches) {
-          setMenuOpen(false);
-        }
-      });
-    });
-    window.addEventListener('resize', () => {
-      if (!window.matchMedia('(max-width: 760px)').matches) {
-        nav.classList.remove('hidden', 'flex');
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.textContent = 'Menu';
-      } else if (!nav.classList.contains('flex')) {
-        nav.classList.add('hidden');
-      }
-    });
+    toggle.addEventListener('click', () => nav.classList.toggle('open'));
   }
 
   const getMainContent = () => document.querySelector('main.content');

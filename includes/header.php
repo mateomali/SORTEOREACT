@@ -14,16 +14,33 @@ $publicMenu = [
     'estadisticas.php' => 'Estadisticas',
     'jugadores.php' => 'Jugadores',
 ];
-$adminMenu = is_admin()
-    ? [
+$roleMenu = [];
+$roleLabel = '';
+if (is_admin()) {
+    $roleLabel = 'Admin';
+    $roleMenu = [
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
+        'directivos.php' => 'Directivos',
         'backup.php' => 'Backup',
         'logout.php' => 'Salir',
-    ]
-    : [
+    ];
+} elseif (is_directivo()) {
+    $roleLabel = 'Directivo';
+    $roleMenu = [
+        'junta_votaciones.php' => 'Votaciones',
+        'logout.php' => 'Salir',
+    ];
+} else {
+    $roleMenu = [
         'login.php' => 'Admin',
     ];
+}
+$roleShortcutHref = is_admin() ? 'editar_partidos.php' : (is_directivo() ? 'junta_votaciones.php' : 'login.php');
+$roleShortcutLabel = is_admin() ? 'Panel admin' : (is_directivo() ? 'Junta' : 'Panel admin');
+$navLinkBase = 'block rounded-xl border border-transparent px-3 py-2 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/35 hover:bg-lime-100/10 hover:text-lime-100 max-[760px]:w-full max-[760px]:border-lime-200/25 max-[760px]:bg-emerald-900/45 max-[760px]:px-2.5 max-[760px]:py-2 max-[760px]:text-xs max-[760px]:leading-tight max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
+$navLinkActive = 'border-lime-200/60 bg-lime-200 text-emerald-950 hover:bg-lime-100 hover:text-emerald-950';
+$navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:text-red-50';
 ?>
 <!doctype html>
 <html lang="es">
@@ -38,12 +55,12 @@ $adminMenu = is_admin()
 </head>
 <body>
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand">
+    <header class="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 bg-emerald-950 px-2.5 py-2 text-white sm:min-h-24 sm:px-5 sm:py-3">
+      <div class="flex min-w-0 items-center">
         <?php if (is_file($brandLogoPath)): ?>
-          <a class="brand-logo-link" href="index.php" aria-label="Ir al inicio">
+          <a class="inline-flex shrink-0 items-center no-underline" href="index.php" aria-label="Ir al inicio">
             <img
-              class="brand-logo"
+              class="h-10 w-auto max-w-[96px] shrink-0 object-contain sm:h-24 sm:max-w-[270px]"
               src="assets/goodfellas-logo.png"
               alt="Goodfellas"
               width="900"
@@ -52,24 +69,28 @@ $adminMenu = is_admin()
           </a>
         <?php endif; ?>
       </div>
-      <nav class="main-nav" id="mainNav" aria-label="Navegacion principal">
-        <div class="nav-group nav-group-public" aria-label="Opciones publicas">
+      <nav
+        class="col-span-full row-start-2 hidden w-full min-w-0 flex-col gap-2 border-t border-lime-200/15 pt-2 min-[761px]:col-auto min-[761px]:row-start-1 min-[761px]:flex min-[761px]:flex-row min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:justify-end min-[761px]:gap-2 min-[761px]:border-t-0 min-[761px]:pt-0"
+        id="mainNav"
+        aria-label="Navegacion principal"
+      >
+        <div class="grid grid-cols-2 gap-1.5 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1" aria-label="Opciones publicas">
           <?php foreach ($publicMenu as $file => $label): ?>
-            <a class="<?= $activePage === $file ? 'active' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+            <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
           <?php endforeach; ?>
         </div>
-        <div class="nav-group nav-group-admin" aria-label="<?= is_admin() ? 'Opciones admin' : 'Acceso admin' ?>">
-          <?php if (is_admin()): ?>
-            <span class="nav-group-label">Admin</span>
+        <div class="grid grid-cols-2 gap-1.5 border-t border-lime-200/20 pt-2 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1 min-[761px]:border-l min-[761px]:border-t-0 min-[761px]:pl-2 min-[761px]:pt-0" aria-label="<?= $roleLabel !== '' ? 'Opciones ' . h($roleLabel) : 'Acceso admin' ?>">
+          <?php if ($roleLabel !== ''): ?>
+            <span class="col-span-full w-fit rounded-full bg-lime-100/10 px-2 py-0.5 text-[9px] font-black uppercase leading-tight text-lime-50 min-[761px]:px-2.5 min-[761px]:py-1 min-[761px]:text-[10px]"><?= h($roleLabel) ?></span>
           <?php endif; ?>
-          <?php foreach ($adminMenu as $file => $label): ?>
-            <a class="<?= $activePage === $file ? 'active' : '' ?> <?= $file === 'logout.php' ? 'nav-logout' : '' ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+          <?php foreach ($roleMenu as $file => $label): ?>
+            <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '') . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
           <?php endforeach; ?>
         </div>
       </nav>
-      <div class="header-actions">
-        <a class="mobile-admin-shortcut" href="<?= is_admin() ? 'editar_partidos.php' : 'login.php' ?>">Panel admin</a>
-        <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">Menu</button>
+      <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-2">
+        <a class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 no-underline shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" href="<?= h($roleShortcutHref) ?>"><?= h($roleShortcutLabel) ?></a>
+        <button class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">Menu</button>
       </div>
     </header>
 

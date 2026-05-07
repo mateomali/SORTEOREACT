@@ -5,10 +5,8 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
-require_once __DIR__ . '/lib/directivos.php';
 
 ensure_control_schema();
-directive_publish_due_results();
 
 $showHistoryPage = defined('SHOW_HISTORY_PAGE') && SHOW_HISTORY_PAGE;
 $title = ($showHistoryPage ? 'Historial' : 'Inicio') . ' | ' . APP_NAME;

@@ -94,84 +94,6 @@
     @apply mx-auto my-3 min-h-[calc(100vh-1.5rem)] w-full max-w-7xl overflow-hidden bg-emerald-950/85 shadow-2xl shadow-emerald-950/15 sm:my-5 sm:w-[96%] sm:rounded-3xl;
   }
 
-  .topbar {
-    @apply flex min-h-24 items-center justify-between gap-3 bg-emerald-950 px-4 py-3 text-white sm:px-5;
-  }
-
-  .brand {
-    @apply flex min-w-0 items-center gap-3;
-    flex: 0 0 auto;
-  }
-
-  .brand strong {
-    @apply block text-sm font-extrabold tracking-wider sm:text-base;
-  }
-
-  .brand span {
-    @apply block text-xs font-medium text-emerald-100 sm:text-sm;
-  }
-
-  .brand-logo-link {
-    @apply inline-flex shrink-0 items-center no-underline;
-  }
-
-  .brand-logo {
-    @apply h-20 w-auto max-w-[220px] shrink-0 object-contain sm:h-24 sm:max-w-[270px];
-  }
-
-  .ball {
-    @apply h-9 w-9 rounded-full border-2 border-white/70 bg-emerald-950/95 shadow-inner;
-    background:
-      radial-gradient(circle at 35% 30%, #fff 0 20%, #dce8df 20% 42%, #0a2317 43%),
-      #fff;
-  }
-
-  .menu-toggle {
-    @apply hidden rounded-xl bg-lime-100/10 px-3 py-2 text-sm font-extrabold text-white hover:bg-lime-100/20 max-[760px]:inline-block;
-  }
-
-  .header-actions {
-    @apply flex shrink-0 items-center gap-2;
-  }
-
-  .mobile-admin-shortcut {
-    @apply hidden rounded-xl border border-white/15 bg-lime-100/10 px-3 py-2 text-sm font-extrabold text-white no-underline transition hover:bg-lime-100/20 max-[760px]:inline-flex max-[760px]:items-center max-[760px]:justify-center;
-  }
-
-  .main-nav {
-    @apply flex flex-1 flex-wrap items-center justify-end gap-2 bg-transparent px-0 py-0 max-[760px]:hidden max-[760px]:w-full max-[760px]:flex-col max-[760px]:items-stretch max-[760px]:border-t max-[760px]:border-white/10 max-[760px]:pt-2;
-    min-width: 0;
-  }
-
-  .main-nav.open {
-    @apply max-[760px]:flex;
-  }
-
-  .nav-group {
-    @apply flex flex-wrap items-center gap-1 max-[760px]:flex-col max-[760px]:items-stretch;
-    min-width: 0;
-  }
-
-  .nav-group-admin {
-    @apply border-l border-white/15 pl-2 max-[760px]:border-l-0 max-[760px]:border-t max-[760px]:pt-2 max-[760px]:pl-0;
-  }
-
-  .nav-group-label {
-    @apply mr-1 rounded-full bg-lime-100/10 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-50 max-[760px]:mr-0 max-[760px]:w-fit;
-  }
-
-  .main-nav a {
-    @apply rounded-xl border border-transparent px-3 py-2 text-sm font-bold text-emerald-50 no-underline transition hover:border-white/20 hover:bg-lime-100/10 hover:text-white;
-  }
-
-  .main-nav .nav-logout {
-    @apply text-red-100 hover:bg-red-500/15;
-  }
-
-  .main-nav a.active {
-    @apply border-lime-200/50 bg-lime-200 text-emerald-950 hover:bg-lime-100 hover:text-emerald-950;
-  }
-
   .content {
     @apply p-4 sm:p-5;
   }
@@ -3228,28 +3150,6 @@
 }
 
 @layer utilities {
-  @media (max-width: 980px) and (min-width: 761px) {
-    .topbar {
-      @apply min-h-0;
-    }
-
-    .main-nav {
-      @apply items-stretch gap-2;
-    }
-
-    .nav-group {
-      @apply w-full justify-start;
-    }
-
-    .nav-group-admin {
-      @apply border-l-0 border-t border-white/15 pt-2 pl-0;
-    }
-
-    .main-nav a {
-      @apply px-3 py-2;
-    }
-  }
-
   @media (max-width: 760px) {
     body {
       @apply bg-emerald-950/85;
@@ -3257,38 +3157,6 @@
 
     .app-shell {
       @apply my-0 min-h-screen w-full rounded-none shadow-none;
-    }
-
-    .topbar {
-      @apply grid min-h-0 grid-cols-[minmax(0,1fr)_auto] px-3 py-3;
-    }
-
-    .brand {
-      @apply min-w-0 gap-2;
-    }
-
-    .brand-logo {
-      @apply h-12 max-w-[112px];
-    }
-
-    .ball {
-      @apply h-8 w-8 shrink-0;
-    }
-
-    .brand strong {
-      @apply truncate text-sm leading-tight;
-    }
-
-    .brand span {
-      @apply truncate text-xs leading-tight;
-    }
-
-    .menu-toggle {
-      @apply min-h-9 px-3 py-2 text-xs;
-    }
-
-    .mobile-admin-shortcut {
-      @apply min-h-9 px-3 py-2 text-xs;
     }
 
     .content {
@@ -4258,42 +4126,6 @@
       @apply p-2.5;
     }
 
-    .topbar {
-      @apply gap-2 px-2.5;
-    }
-
-    .brand {
-      @apply gap-2;
-    }
-
-    .brand-logo {
-      @apply h-11 max-w-[104px];
-    }
-
-    .brand strong {
-      @apply text-xs;
-    }
-
-    .brand span {
-      @apply text-[11px];
-    }
-
-    .menu-toggle {
-      @apply px-2.5 text-[11px];
-    }
-
-    .mobile-admin-shortcut {
-      @apply px-2.5 text-[11px];
-    }
-
-    .main-nav {
-      @apply px-2 py-2;
-    }
-
-    .main-nav a {
-      @apply px-2.5 py-2 text-xs;
-    }
-
     .card,
     .team-card,
     .sorteo-page .accordion,
@@ -5022,7 +4854,6 @@ textarea,
   .btn-muted,
   .btn-secondary,
   .icon-button,
-  .menu-toggle,
 .award-summary-button,
 .action-button {
   @apply border border-lime-200/35 bg-emerald-950/55 text-lime-50 shadow-md shadow-emerald-950/15;
@@ -5033,7 +4864,6 @@ textarea,
   .btn-muted:hover,
   .btn-secondary:hover,
   .icon-button:hover,
-  .menu-toggle:hover,
   .award-summary-button:hover,
   .action-button:hover {
     @apply border-lime-200/75 bg-lime-100/15 text-lime-100;
@@ -5279,6 +5109,189 @@ textarea,
 
   .mobile-player-card-meta strong {
     @apply block text-2xl font-black leading-tight text-lime-50;
+  }
+
+  .desktop-player-card-overall {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .desktop-player-card-overall .mobile-player-card-rating {
+    @apply h-14 w-14 rounded-lg;
+  }
+
+  .desktop-player-card-overall .mobile-player-card-rating strong {
+    @apply text-2xl;
+  }
+
+  .desktop-player-card-overall .mobile-player-card-meta strong {
+    @apply text-xl whitespace-nowrap;
+  }
+
+  .desktop-player-admin-general .player-general-rating {
+    @apply rounded-xl border border-lime-200/20 bg-emerald-950/45 px-2 py-1;
+  }
+
+  .players-admin-table {
+    @apply !border-lime-200/45 !bg-emerald-950/80 ring-1 ring-lime-200/10;
+  }
+
+  .players-admin-table thead th {
+    @apply !border-lime-200/30 !bg-emerald-950 !text-lime-100;
+  }
+
+  .players-admin-table tbody tr {
+    @apply transition;
+  }
+
+  .players-admin-table tbody td {
+    @apply !border-lime-200/22 !bg-emerald-950/72 align-middle;
+  }
+
+  .players-admin-table tbody tr:hover td {
+    @apply !bg-emerald-900/85;
+  }
+
+  .players-admin-table tbody tr:nth-child(even) td {
+    @apply !bg-emerald-900/55;
+  }
+
+  .players-admin-table tbody tr:nth-child(even):hover td {
+    @apply !bg-emerald-900/85;
+  }
+
+  .players-admin-table .table-input {
+    @apply !border-lime-200/40 !bg-emerald-950/85 !text-lime-50 !shadow-inner !shadow-emerald-950/20 focus:!border-lime-200/80 focus:!ring-lime-200/20;
+  }
+
+  .players-admin-table .player-active-inline {
+    @apply !border-lime-200/45 !bg-lime-100/12 !text-lime-100 !shadow-sm !shadow-emerald-950/15;
+  }
+
+  .players-admin-table .player-position-select {
+    @apply !border-lime-200/28 !bg-emerald-950/70 !p-2;
+  }
+
+  .players-admin-table .player-position-select span,
+  .players-admin-table .player-table-stat > span {
+    @apply !text-lime-100;
+  }
+
+  .players-admin-table .desktop-player-admin-general {
+    @apply rounded-2xl border border-lime-200/24 bg-emerald-950/45 p-2 shadow-md shadow-emerald-950/15;
+  }
+
+  .players-admin-table .desktop-player-card-overall,
+  .players-admin-create .desktop-player-card-overall {
+    @apply !border-lime-200/45 !bg-gradient-to-br !from-emerald-950 !via-emerald-900/90 !to-emerald-950 !shadow-md !shadow-emerald-950/20;
+  }
+
+  .players-admin-table .desktop-player-card-overall .mobile-player-card-rating,
+  .players-admin-create .desktop-player-card-overall .mobile-player-card-rating {
+    @apply !border-lime-200/70 !bg-lime-100 !text-emerald-950 !shadow-lg !shadow-emerald-950/25;
+  }
+
+  .players-admin-table .desktop-player-card-overall .mobile-player-card-meta span,
+  .players-admin-create .desktop-player-card-overall .mobile-player-card-meta span {
+    @apply !text-lime-100/85;
+  }
+
+  .players-admin-table .desktop-player-card-overall .mobile-player-card-meta strong,
+  .players-admin-create .desktop-player-card-overall .mobile-player-card-meta strong {
+    @apply !text-lime-50;
+  }
+
+  .players-admin-table .player-general-rating,
+  .players-admin-create .player-general-rating {
+    @apply !border-lime-200/30 !bg-lime-100/10 !px-2 !py-1;
+  }
+
+  .players-admin-table .player-radar-card,
+  .players-admin-create .player-radar-card {
+    @apply !border-lime-200/28 !bg-emerald-950/62;
+  }
+
+  .players-admin-table .player-table-stat,
+  .players-admin-create .stat-form-row {
+    @apply !border-lime-200/32 !bg-emerald-950/70 !shadow-md !shadow-emerald-950/15;
+  }
+
+  .players-admin-table .stat-rating,
+  .players-admin-create .stat-rating {
+    @apply !border-lime-200/24 !bg-emerald-900/42;
+  }
+
+  .players-admin-table .stat-rating-value,
+  .players-admin-create .stat-rating-value {
+    @apply !bg-lime-100 !text-emerald-950;
+  }
+
+  .players-admin-table .player-save-icon {
+    @apply !border-lime-200/70 !bg-lime-100 !text-emerald-950 !shadow-lg !shadow-emerald-950/20 hover:!bg-lime-200;
+  }
+
+  .players-admin-table .player-trash-icon {
+    @apply !border-red-300/55 !bg-red-950/85 !text-red-100 hover:!bg-red-900 hover:!text-white;
+  }
+
+  .mobile-player-admin-card {
+    @apply !border-lime-200/34 !bg-gradient-to-br !from-emerald-950 !via-emerald-900/88 !to-emerald-950 !shadow-md !shadow-emerald-950/18;
+  }
+
+  .mobile-player-admin-card .mobile-player-overall-chip {
+    @apply !border-lime-200/55 !bg-lime-100 !text-emerald-950;
+  }
+
+  .mobile-player-admin-card .mobile-player-overall-chip small {
+    @apply !text-emerald-950/75;
+  }
+
+  .mobile-player-admin-card .player-status-pill.is-active {
+    @apply !border-lime-200/65 !bg-lime-100 !text-emerald-950;
+  }
+
+  .mobile-player-admin-card .player-status-pill.is-inactive {
+    @apply !border-emerald-200/30 !bg-emerald-950/70 !text-emerald-100/70;
+  }
+
+  .players-admin-create {
+    @apply !border-lime-200/45 !bg-emerald-950/78 ring-1 ring-lime-200/10;
+  }
+
+  .players-admin-create .player-create-summary {
+    @apply !border-b !border-lime-200/24 !bg-gradient-to-r !from-emerald-950 !via-emerald-900/80 !to-emerald-950;
+  }
+
+  .players-admin-create .player-create-body {
+    @apply !bg-emerald-950/35;
+  }
+
+  .stat-rating-progress {
+    @apply shadow-inner shadow-emerald-950/20;
+  }
+
+  .players-desktop-table .player-radar-card-compact {
+    @apply mt-2 min-w-0 p-2.5;
+  }
+
+  .players-desktop-table .player-radar-card-compact .player-radar-head {
+    @apply mb-1.5 items-center;
+  }
+
+  .players-desktop-table .player-radar-card-compact .player-radar-head strong,
+  .players-desktop-table .player-radar-card-compact .player-radar-head span {
+    @apply whitespace-nowrap;
+  }
+
+  .players-desktop-table .player-radar-card-compact .player-radar-canvas svg {
+    @apply max-w-[220px];
+  }
+
+  .desktop-player-stat-bars {
+    @apply pr-1;
+  }
+
+  .desktop-player-stat-explainer summary::-webkit-details-marker {
+    @apply hidden;
   }
 
   .mobile-player-profile-panel .player-radar-card {

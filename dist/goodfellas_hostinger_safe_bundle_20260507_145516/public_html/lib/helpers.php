@@ -36,24 +36,6 @@ function is_admin(): bool
     return !empty($_SESSION['is_admin']);
 }
 
-function current_role(): string
-{
-    if (is_admin()) {
-        return 'admin';
-    }
-    return !empty($_SESSION['directivo_id']) ? 'directivo' : 'usuario';
-}
-
-function is_directivo(): bool
-{
-    return current_role() === 'directivo';
-}
-
-function current_directivo_id(): int
-{
-    return (int) ($_SESSION['directivo_id'] ?? 0);
-}
-
 function require_admin(): void
 {
     if (is_admin()) {
@@ -62,17 +44,6 @@ function require_admin(): void
 
     $next = $_SERVER['REQUEST_URI'] ?? 'index.php';
     flash('error', 'Debes ingresar como admin para acceder a esa seccion.');
-    redirect('login.php?next=' . rawurlencode((string) $next));
-}
-
-function require_directivo_or_admin(): void
-{
-    if (is_admin() || is_directivo()) {
-        return;
-    }
-
-    $next = $_SERVER['REQUEST_URI'] ?? 'index.php';
-    flash('error', 'Debes ingresar como directivo o admin para acceder a esa seccion.');
     redirect('login.php?next=' . rawurlencode((string) $next));
 }
 
