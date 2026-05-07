@@ -42,6 +42,25 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         if (Number.isFinite(value) && value > 0) return value;
         return field === 'regularity' ? 3.5 : (field === 'mentality' ? 3.0 : Number(player.skill || 0));
       };
+      const playerPositions = (player) => String(player.positions || '')
+        .split('/')
+        .map(pos => pos.trim().toUpperCase())
+        .filter(Boolean);
+      const primaryPositionOf = (player) => String(player.primary_position || playerPositions(player)[0] || 'MED').toUpperCase();
+      const hasSecondaryPosition = (player, position) => playerPositions(player).slice(1).includes(position);
+      const findFormationGoalkeeper = (players) => (
+        players.find(player => primaryPositionOf(player) === 'ARQ')
+        || players.find(player => hasSecondaryPosition(player, 'ARQ'))
+        || players[0]
+      );
+      const orderedLineCandidates = (players, line, assignments) => {
+        const available = players.filter(player => !assignments[player.id]);
+        const primary = available.filter(player => primaryPositionOf(player) === line);
+        const secondary = available.filter(player => primaryPositionOf(player) !== line && hasSecondaryPosition(player, line));
+        const used = new Set([...primary, ...secondary].map(player => Number(player.id)));
+        const fallback = available.filter(player => !used.has(Number(player.id)));
+        return [...primary, ...secondary, ...fallback];
+      };
       const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
       const teamCharacteristics = (players) => {
         const average = (field) => players.length
@@ -285,17 +304,15 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         if (!preset) return;
         const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
         pushFormationUndo([teamNumber]);
-        const goalkeeper = players.find(p => String(p.positions).split('/').includes('ARQ')) || players[0];
-        const remaining = players.filter(p => p.id !== goalkeeper.id);
+        const goalkeeper = findFormationGoalkeeper(players);
+        const remaining = players.filter(p => !goalkeeper || p.id !== goalkeeper.id);
         const assignments = {};
         if (goalkeeper) {
           assignments[goalkeeper.id] = 'ARQ';
         }
         for (const line of ['DEF', 'MED', 'DEL']) {
           let needed = preset.counts[line] || 0;
-          const preferred = remaining.filter(p => !assignments[p.id] && String(p.positions).split('/').includes(line));
-          const fallback = remaining.filter(p => !assignments[p.id] && !preferred.includes(p));
-          for (const player of [...preferred, ...fallback]) {
+          for (const player of orderedLineCandidates(remaining, line, assignments)) {
             if (needed <= 0) break;
             assignments[player.id] = line;
             needed--;
@@ -397,8 +414,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         ensureFormationState(teamNumber, players);
         pushFormationUndo([teamNumber]);
         const currentGoalkeeper = players.find(player => formationDrafts[teamNumber]?.[player.id] === 'ARQ');
-        const capableGoalkeeper = players.find(player => String(player.positions).split('/').includes('ARQ'));
-        const goalkeeper = currentGoalkeeper || capableGoalkeeper || players[0];
+        const goalkeeper = currentGoalkeeper || findFormationGoalkeeper(players);
         const fieldPlayers = orderedFormationPlayers(teamNumber, players, 'DEF')
           .concat(orderedFormationPlayers(teamNumber, players, 'MED'))
           .concat(orderedFormationPlayers(teamNumber, players, 'DEL'))
@@ -503,8 +519,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           }
         });
         const goalkeeper = players.find(player => formationDrafts[teamNumber][player.id] === 'ARQ')
-          || players.find(player => String(player.positions).split('/').includes('ARQ'))
-          || players[0];
+          || findFormationGoalkeeper(players);
         if (goalkeeper) {
           formationDrafts[teamNumber][goalkeeper.id] = 'ARQ';
           players.forEach((player) => {

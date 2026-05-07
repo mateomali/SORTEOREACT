@@ -763,6 +763,7 @@
     const selectAll = document.querySelector(`[data-select-all="${target}"]`);
     const limitMessage = document.querySelector('[data-selection-limit-message]');
     const mobileSubmit = document.querySelector('[data-mobile-submit]');
+    const mobileMarquee = document.querySelector('[data-participant-marquee]');
 
     let checked = checkboxes.filter((el) => el.checked);
     let limit = checkboxes.length;
@@ -812,6 +813,12 @@
       const isComplete = checked.length === limit;
       mobileSubmit.disabled = !isComplete;
       mobileSubmit.classList.toggle('is-ready', isComplete);
+    }
+    if (target === 'participants' && mobileMarquee) {
+      mobileMarquee.hidden = checked.length === 0;
+      if (checked.length === 0) {
+        mobileMarquee.open = false;
+      }
     }
     if (selectAll) {
       const availableCheckboxes = target === 'participants'

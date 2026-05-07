@@ -74,9 +74,9 @@ test('admin player create form reacts without submitting', async ({ page }) => {
   await page.getByText('Agregar jugador').click();
   const createForm = page.locator('.react-player-create-form');
   await createForm.locator('#reactPlayerName').fill('Jugador Prueba UI');
-  await createForm.locator('label.chip').filter({ hasText: 'ARQ' }).locator('input').check();
+  await createForm.locator('select[name="positions[]"]').first().selectOption('ARQ');
   await expect(createForm.locator('[data-goalkeeper-stat-row]')).toBeVisible();
-  await expect(createForm.locator('[data-attack-stat-row]')).toHaveCount(0);
+  await expect(createForm.locator('[data-attack-stat-row]')).toBeVisible();
   await expect(createForm.locator('[data-general-rating-value]')).toContainText('/6');
   await expect(createForm.locator('[data-player-radar]')).toBeVisible();
   expect(errors).toEqual([]);

@@ -364,7 +364,7 @@ function backfill_control_schema(PDO $pdo): void
                teamwork = COALESCE(teamwork, skill),
                mentality = COALESCE(mentality, 3.0),
                regularity = COALESCE(regularity, 3.5),
-               goalkeeper_skill = COALESCE(goalkeeper_skill, CASE WHEN positions LIKE '%ARQ%' THEN skill ELSE NULL END)"
+               goalkeeper_skill = COALESCE(goalkeeper_skill, CASE WHEN positions = 'ARQ' OR positions LIKE 'ARQ/%' OR positions LIKE '%/ARQ%' THEN skill ELSE NULL END)"
         );
 
         $pdo->exec(
@@ -372,7 +372,7 @@ function backfill_control_schema(PDO $pdo): void
              SET
                skill = ROUND(LEAST(6.0, GREATEST(1.0,
                  CASE
-                   WHEN positions LIKE '%ARQ%' THEN
+                   WHEN positions = 'ARQ' OR positions LIKE 'ARQ/%' THEN
                     (
                       (COALESCE(goalkeeper_skill, skill) * 0.42)
                       + (defense_physical * 0.14)

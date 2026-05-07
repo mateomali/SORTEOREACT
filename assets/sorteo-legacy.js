@@ -403,10 +403,19 @@ function getPlayerOrder(player) {
 }
 
 function getOrderedPlayerPositions(player) {
-  const ordenCancha = ['ARQ', 'DEF', 'MED', 'DEL'];
-  const posiciones = player.posicion.split('/').map(p => p.trim()).filter(Boolean);
-  const posicionesOrdenadas = ordenCancha.filter(pos => posiciones.includes(pos));
-  return posicionesOrdenadas.length ? posicionesOrdenadas : ['MED'];
+  const posicionesValidas = ['ARQ', 'DEF', 'MED', 'DEL'];
+  const posiciones = String(player.posicion || '').split('/').map(p => p.trim().toUpperCase()).filter(Boolean);
+  const limpias = [];
+  posiciones.forEach(pos => {
+    if (posicionesValidas.includes(pos) && !limpias.includes(pos)) {
+      limpias.push(pos);
+    }
+  });
+  return limpias.length ? limpias.slice(0, 2) : ['MED'];
+}
+
+function getPrimaryPlayerPosition(player) {
+  return getOrderedPlayerPositions(player)[0] || 'MED';
 }
 
 function isPureGoalkeeper(player) {
@@ -418,8 +427,12 @@ function isEmergencyGoalkeeper(player) {
   return player && player.emergencyGoalkeeper === true;
 }
 
+function hasSecondaryPlayerPosition(player, position) {
+  return getOrderedPlayerPositions(player).slice(1).includes(position);
+}
+
 function prepareEmergencyGoalkeepers(players, numEquipos) {
-  const arqueros = players.filter(p => getOrderedPlayerPositions(p).includes('ARQ'));
+  const arqueros = players.filter(p => getPrimaryPlayerPosition(p) === 'ARQ');
   const missing = Math.max(0, numEquipos - arqueros.length);
   if (missing === 0) {
     return { players, emergencyGoalkeepers: [] };
@@ -427,9 +440,14 @@ function prepareEmergencyGoalkeepers(players, numEquipos) {
 
   const emergencyIds = new Set(
     players
-      .filter(p => !getOrderedPlayerPositions(p).includes('ARQ'))
+      .filter(p => getPrimaryPlayerPosition(p) !== 'ARQ')
       .slice()
-      .sort((a, b) => (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre)))
+      .sort((a, b) => {
+        const secondaryA = hasSecondaryPlayerPosition(a, 'ARQ') ? 0 : 1;
+        const secondaryB = hasSecondaryPlayerPosition(b, 'ARQ') ? 0 : 1;
+        if (secondaryA !== secondaryB) return secondaryA - secondaryB;
+        return (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre));
+      })
       .slice(0, missing)
       .map(playerKey)
   );
@@ -438,9 +456,10 @@ function prepareEmergencyGoalkeepers(players, numEquipos) {
     if (!emergencyIds.has(playerKey(player))) {
       return player;
     }
+    const fieldPositions = getOrderedPlayerPositions(player).filter(position => position !== 'ARQ');
     return {
       ...player,
-      posicion: `ARQ/${player.posicion}`,
+      posicion: ['ARQ', ...fieldPositions].slice(0, 2).join('/'),
       habilidad_arquero: 2.0,
       emergencyGoalkeeper: true,
     };
@@ -456,7 +475,7 @@ function buildTeamPositionAssignment(equipo) {
   const lineasCampo = ['DEF', 'MED', 'DEL'];
   const maxPorLinea = maxFieldPlayersPerLine(equipo.length);
   const candidatosArq = equipo
-    .filter(jugador => getOrderedPlayerPositions(jugador).includes('ARQ'))
+    .filter(jugador => getPrimaryPlayerPosition(jugador) === 'ARQ' || isEmergencyGoalkeeper(jugador))
     .sort((a, b) => {
       const emergencyA = isEmergencyGoalkeeper(a) ? 1 : 0;
       const emergencyB = isEmergencyGoalkeeper(b) ? 1 : 0;
@@ -579,7 +598,7 @@ function buildFlexibleTeamPositionAssignment(equipo) {
 
   const maxPerLine = maxFieldPlayersPerLine(equipo.length);
   const goalkeeper = equipo.find(jugador => base.asignacion.get(jugador) === 'ARQ')
-    || equipo.find(jugador => getOrderedPlayerPositions(jugador).includes('ARQ'))
+    || equipo.find(jugador => getPrimaryPlayerPosition(jugador) === 'ARQ' || isEmergencyGoalkeeper(jugador))
     || equipo.slice().sort((a, b) => (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre)))[0]
     || null;
   const fieldPlayers = equipo.filter(jugador => jugador !== goalkeeper);
@@ -664,7 +683,7 @@ function getPrimaryPosition(player, asignacionEquipo = null) {
   if (asignacionEquipo && asignacionEquipo.has(player)) {
     return asignacionEquipo.get(player);
   }
-  return getOrderedPlayerPositions(player)[0];
+  return getPrimaryPlayerPosition(player);
 }
 
 function actualizarListaJugadores() {
@@ -799,7 +818,7 @@ function explicarBloqueoSorteo(players, numEquipos, maxDiff) {
   if (teamSize > maxTeamSizeByFormation) {
     return `Cada equipo tendria ${teamSize} jugadores. La regla actual permite maximo 1 arquero y ${maxPerLine} por linea de campo (${maxTeamSizeByFormation} por equipo).`;
   }
-  const arqueros = players.filter(p => p.posicion.includes('ARQ'));
+  const arqueros = players.filter(p => getPrimaryPlayerPosition(p) === 'ARQ');
   if (arqueros.length < numEquipos) {
     return `Hay ${arqueros.length} arqueros naturales para ${numEquipos} equipos. Se completaran los arqueros faltantes con los jugadores de menor puntaje.`;
   }
@@ -869,7 +888,7 @@ async function generarEquipos() {
     return;
   }
   
-  const arqueros = selectedPlayers.filter(p => p.posicion.includes('ARQ'));
+  const arqueros = selectedPlayers.filter(p => getPrimaryPlayerPosition(p) === 'ARQ');
   const arquerosPuros = arqueros.filter(isPureGoalkeeper);
   if (arquerosPuros.length > numEquipos) {
     errorDiv.textContent = `Hay ${arquerosPuros.length} arqueros puros para ${numEquipos} equipos. Debe haber como maximo 1 arquero puro por equipo.`;
@@ -1040,7 +1059,7 @@ function evaluarEquipos(equipos, teamSize, maxDiff, options = {}) {
 }
 
 function construirCandidato(players, numEquipos, teamSize, semilla, options = {}) {
-  const arqueros = players.filter(p => p.posicion.includes('ARQ')).sort(() => Math.random() - 0.5);
+  const arqueros = players.filter(p => getPrimaryPlayerPosition(p) === 'ARQ' || isEmergencyGoalkeeper(p)).sort(() => Math.random() - 0.5);
   const arquerosPuros = arqueros.filter(isPureGoalkeeper);
   const arquerosMixtos = arqueros.filter(p => !isPureGoalkeeper(p));
   const arquerosTitulares = [...arquerosPuros, ...arquerosMixtos]
@@ -1483,7 +1502,7 @@ function buildFormationAssignment(equipo, teamIndex = 0) {
   const assignment = new Map();
   const assigned = new Set();
   const baseGoalkeeper = equipo.find(jugador => base.asignacion.get(jugador) === 'ARQ')
-    || equipo.find(jugador => getOrderedPlayerPositions(jugador).includes('ARQ'));
+    || equipo.find(jugador => getPrimaryPlayerPosition(jugador) === 'ARQ' || isEmergencyGoalkeeper(jugador));
   const manualGoalkeeper = equipo.find(jugador => manualAssignments[playerKey(jugador)] === 'ARQ');
   const selectedGoalkeeper = manualGoalkeeper || baseGoalkeeper;
 

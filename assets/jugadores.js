@@ -909,7 +909,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const raw = selects.length
         ? selects.map((select) => select.value)
         : Array.from(scope.querySelectorAll('input[name="positions[]"]:checked')).map((input) => input.value);
-      return raw.filter((position, index, list) => position && list.indexOf(position) === index).slice(0, 3);
+      return raw.filter((position, index, list) => position && list.indexOf(position) === index).slice(0, 2);
     };
     const hasPrimaryGoalkeeper = (scope) => selectedPositionsInOrder(scope)[0] === 'ARQ';
     const syncPositionSelectOptions = (scope) => {

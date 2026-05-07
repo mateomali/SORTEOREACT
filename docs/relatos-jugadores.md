@@ -434,3 +434,237 @@ TAG-001 | {rol}
 TAG-002 | Fuerte: {zona_fuerte}
 TAG-003 | A cuidar: {zona_debil}
 TAG-004 | Regularidad {valor}/6
+
+## Nuevos textos para primaria/secundaria y sorteo
+
+Bloque editable para los ultimos cambios:
+- Posicion primaria y secundaria opcional.
+- Roles visibles con nombre completo: Arquero, Defensor, Mediocampista, Delantero.
+- Sorteo balanceado por stats, ritmo, arquero y formacion.
+- Draft de capitanes por sumatoria.
+
+Placeholders nuevos sugeridos:
+- `{jugador}`: nombre del jugador.
+- `{posicion_primaria}`: Arquero, Defensor, Mediocampista o Delantero.
+- `{posicion_secundaria}`: Arquero, Defensor, Mediocampista o Delantero.
+- `{posicion_secundaria_o_vacia}`: texto opcional si no tiene secundaria.
+- `{zona_fuerte}`: zona donde mejor rinde.
+- `{zona_debil}`: zona a cubrir.
+- `{equipo}`: nombre/color del equipo.
+- `{capitan}`: nombre del capitan.
+- `{total}`: sumatoria del equipo.
+- `{diferencia}`: diferencia de puntos contra otro equipo.
+
+### Lectura de posicion primaria
+
+POS-PRI-ARQ-001 | Como Arquero, {jugador} parte de una idea simple: si responde en las pelotas que queman, todo el equipo juega con menos miedo.
+POS-PRI-ARQ-002 | La posicion primaria de {jugador} es Arquero, asi que su partido se mide mas por calma, reflejos y mando que por la fantasia con la pelota.
+POS-PRI-ARQ-003 | Si {jugador} va al arco, no alcanza con atajar una linda: tiene que ordenar, hablar y no regalar dudas.
+POS-PRI-ARQ-004 | Poner a {jugador} de Arquero es asumir que el equipo necesita una ultima pared, no otro jugador escondido bajo los tres palos.
+POS-PRI-ARQ-005 | En el arco, {jugador} puede sostener o complicar la tarde: no hay puesto mas ingrato para esconder errores.
+
+POS-PRI-DEF-001 | Como Defensor, {jugador} tiene que hacer que el rival juegue incomodo, aunque no salga en ningun resumen lindo.
+POS-PRI-DEF-002 | La posicion primaria de {jugador} es Defensor: ahi se espera cierre, roce y pocas concesiones cerca del arco propio.
+POS-PRI-DEF-003 | Si {jugador} juega atras, la prioridad es clara: primero que no pasen, despues vemos si sale con elegancia.
+POS-PRI-DEF-004 | En defensa, {jugador} suma cuando achica espacios y no transforma cada salida en una aventura.
+POS-PRI-DEF-005 | Como Defensor, {jugador} tiene que ser solucion sobria: cortar, cubrir y no dejar al arquero pagando.
+
+POS-PRI-MED-001 | Como Mediocampista, {jugador} vive donde el partido se decide sin tanto ruido: recibir, soltar y sostener el orden.
+POS-PRI-MED-002 | La posicion primaria de {jugador} es Mediocampista, asi que se le pide criterio cuando todos empiezan a correr de mas.
+POS-PRI-MED-003 | Si {jugador} juega en el medio, tiene que ser puente: ni esconderse atras ni rifarla para adelante.
+POS-PRI-MED-004 | En el medio, {jugador} puede darle aire al equipo si entiende cuando acelerar y cuando poner pausa.
+POS-PRI-MED-005 | Como Mediocampista, {jugador} rinde cuando la pelota pasa por el sin quedar secuestrada.
+
+POS-PRI-DEL-001 | Como Delantero, {jugador} tiene una tarea cruel y directa: aparecer donde la jugada pide gol.
+POS-PRI-DEL-002 | La posicion primaria de {jugador} es Delantero, asi que se lo mide por peligro, decisiones y presencia arriba.
+POS-PRI-DEL-003 | Si {jugador} juega arriba, puede tocar poco, pero cada intervencion deberia dejar al rival mirando de reojo.
+POS-PRI-DEL-004 | En ataque, {jugador} suma cuando obliga a defender distinto, no cuando espera que la pelota le resuelva la vida.
+POS-PRI-DEL-005 | Como Delantero, {jugador} tiene que vivir cerca del problema rival y no lejos de la jugada.
+
+### Lectura de posicion secundaria
+
+POS-SEC-SIN-001 | No tiene secundaria cargada: eso lo vuelve mas claro para armar, pero tambien menos flexible si el equipo queda torcido.
+POS-SEC-SIN-002 | Sin posicion secundaria, {jugador} pide una funcion bien definida. Si lo sacas de ahi, ya estas improvisando.
+POS-SEC-SIN-003 | El perfil viene limpio: {posicion_primaria} y nada mas. Sirve para ordenar, no para tapar huecos por todos lados.
+POS-SEC-SIN-004 | Al no tener secundaria, conviene no inventarle una vida nueva en mitad del partido.
+POS-SEC-SIN-005 | Sin alternativa marcada, {jugador} queda como pieza especifica: util si cae en su lugar, delicado si falta equilibrio.
+
+POS-SEC-GEN-001 | Su secundaria como {posicion_secundaria} le da margen al armado, pero no licencia para tirarlo en cualquier lado.
+POS-SEC-GEN-002 | Que tambien pueda jugar de {posicion_secundaria} ayuda, siempre que no se confunda flexibilidad con desorden.
+POS-SEC-GEN-003 | La secundaria de {jugador} abre una puerta: puede moverse a {posicion_secundaria} si el partido o el sorteo lo piden.
+POS-SEC-GEN-004 | Tener {posicion_secundaria} como alternativa lo vuelve mas facil de acomodar sin romper la estructura del equipo.
+POS-SEC-GEN-005 | Si lo pasan a {posicion_secundaria}, hay que darle una consigna clara; si no, la secundaria queda como excusa.
+
+### Combinaciones primaria/secundaria
+
+POS-COMBO-DEF-MED-001 | Defensor con secundaria de Mediocampista: puede salir un paso mas arriba si el equipo necesita orden y no solo rechazo.
+POS-COMBO-DEF-MED-002 | Si arranca de Defensor y puede ir al medio, {jugador} sirve para cerrar atras sin quedar inutil cuando toca jugar.
+POS-COMBO-DEF-MED-003 | Esa mezcla Defensor/Mediocampista vale oro cuando el partido pide marca, pase simple y cero inventos raros.
+
+POS-COMBO-MED-DEF-001 | Mediocampista con secundaria de Defensor: puede bajar a dar una mano si el equipo queda partido.
+POS-COMBO-MED-DEF-002 | Si {jugador} empieza en el medio y puede retroceder, el equipo gana una rueda de auxilio para sostener el fondo.
+POS-COMBO-MED-DEF-003 | La combinacion Mediocampista/Defensor pide inteligencia: ordenar primero, meter pierna despues.
+
+POS-COMBO-MED-DEL-001 | Mediocampista con secundaria de Delantero: puede llegar desde atras y lastimar si no lo encadenan al circulo central.
+POS-COMBO-MED-DEL-002 | Si {jugador} puede pasar del medio al ataque, el rival tiene que cuidarlo cuando aparece de frente.
+POS-COMBO-MED-DEL-003 | Mediocampista/Delantero es perfil para romper lineas: sirve si el equipo le da pelota limpia y no solo pelotazos.
+
+POS-COMBO-DEL-MED-001 | Delantero con secundaria de Mediocampista: no solo espera arriba, tambien puede bajar a conectar la jugada.
+POS-COMBO-DEL-MED-002 | Si {jugador} arranca arriba pero puede jugar en el medio, el equipo gana una salida cuando no le llega nada.
+POS-COMBO-DEL-MED-003 | La mezcla Delantero/Mediocampista funciona si baja a jugar sin olvidarse de volver al area.
+
+POS-COMBO-DEF-DEL-001 | Defensor con secundaria de Delantero: perfil raro, util si el partido pide potencia en las dos areas.
+POS-COMBO-DEF-DEL-002 | Si {jugador} puede ir de atras hacia adelante, hay que usarlo con cuidado: no todo cierre se convierte en ataque.
+POS-COMBO-DEF-DEL-003 | Defensor/Delantero es de esos perfiles que pueden salvar una fecha o desordenarla si se emocionan de mas.
+
+POS-COMBO-DEL-DEF-001 | Delantero con secundaria de Defensor: puede ayudar en el retroceso, pero no conviene gastarlo persiguiendo todo el partido.
+POS-COMBO-DEL-DEF-002 | Si {jugador} tambien puede defender, suma cuando el equipo necesita cerrar el partido sin regalar contras.
+POS-COMBO-DEL-DEF-003 | Delantero/Defensor pide equilibrio: que baje a morder, pero que no desaparezca de donde se hacen los goles.
+
+POS-COMBO-ARQ-DEF-001 | Arquero con secundaria de Defensor: puede salir del arco si sobran manos, pero no hay que confundir recurso con plan principal.
+POS-COMBO-ARQ-DEF-002 | Si {jugador} es Arquero y tambien Defensor, el sorteo gana aire cuando faltan piezas atras.
+POS-COMBO-ARQ-DEF-003 | Arquero/Defensor sirve para emergencias bien pensadas: bajo palos primero, atras si el equipo lo necesita.
+
+POS-COMBO-DEF-ARQ-001 | Defensor con secundaria de Arquero: puede tapar el hueco si falta arquero, aunque el equipo deberia protegerlo mas.
+POS-COMBO-DEF-ARQ-002 | Si {jugador} no es Arquero primario pero puede ir al arco, conviene tratarlo como solucion de emergencia, no como milagro.
+POS-COMBO-DEF-ARQ-003 | Defensor/Arquero es perfil de fecha complicada: te salva el armado, pero hay que cuidarle el contexto.
+
+### Relatos para sorteo balanceado
+
+SORTEO-BAL-001 | El sorteo no lo mira solo por promedio: tambien pesa donde rinde, donde sufre y cuanto desbalance puede generar.
+SORTEO-BAL-002 | En el armado, {jugador} no es un numero suelto. Su primaria, su secundaria y sus stats empujan para ubicarlo con sentido.
+SORTEO-BAL-003 | Si el equipo queda fuerte en una zona pero flojo en otra, perfiles como {jugador} pueden acomodar o romper la balanza.
+SORTEO-BAL-004 | El balance bueno no es juntar estrellas: es que cada equipo tenga arquero, lineas vivas y menos agujeros evidentes.
+SORTEO-BAL-005 | Con el nuevo armado, {jugador} cuenta por lo que suma y por lo que obliga a cubrir.
+SORTEO-BAL-006 | La gracia del sorteo esta en no esconder problemas: si {jugador} cae fuera de lugar, el equipo lo siente.
+SORTEO-BAL-007 | Un equipo parejo necesita algo mas que promedio similar; necesita roles claros y jugadores que no se pisen.
+SORTEO-BAL-008 | Cuando la sumatoria parece pareja, todavia falta mirar ritmo, defensa, ataque y quien sostiene el arco.
+
+SORTEO-ARQ-001 | Cada equipo necesita un Arquero real o una solucion de emergencia bien protegida.
+SORTEO-ARQ-002 | Si faltan arqueros, el sistema puede inventar una emergencia; la cancha despues decide si fue parche o drama.
+SORTEO-ARQ-003 | El arco no se rellena con cualquiera: si alguien cae ahi de emergencia, el resto del equipo tiene que ayudar mas.
+SORTEO-ARQ-004 | Un equipo sin arquero claro puede tener buen promedio y aun asi vivir al borde del incendio.
+SORTEO-ARQ-005 | Cuando el sorteo reparte arqueros, tambien reparte tranquilidad. No es un detalle, es medio partido.
+
+SORTEO-RIT-001 | El ritmo tambien entra en la cuenta: juntar demasiados jugadores sin piernas puede convertir al equipo en estacionamiento.
+SORTEO-RIT-002 | Si un equipo queda lento, no alcanza con nombres lindos; necesita alguien que sostenga los regresos.
+SORTEO-RIT-003 | La velocidad no gana sola, pero evita que cada contra parezca una mudanza.
+SORTEO-RIT-004 | Repartir ritmo es repartir aire: sin eso, el segundo tramo del partido se cobra todo.
+SORTEO-RIT-005 | El sorteo intenta que los equipos no queden con todos los pulmones de un lado y todos los pedidos de cambio del otro.
+
+### Juego en equipo - nuevos textos
+
+EQU-GOOD-011 | entiende que el pase bueno no siempre es el mas vistoso: a veces es el que deja al compañero de cara.
+EQU-GOOD-012 | juega mirando alrededor, no solo la pelota: eso ayuda a que el equipo no se parta.
+EQU-GOOD-013 | cuando la jugada pide apoyo, suele estar cerca y bien perfilado.
+EQU-GOOD-014 | no necesita ser dueño de todas las pelotas para sentirse importante.
+EQU-GOOD-015 | si el equipo queda largo, suele ofrecer una descarga para volver a juntar lineas.
+EQU-GOOD-016 | tiene generosidad para tocar y moverse, que en fulbito vale mas que hablar lindo.
+EQU-GOOD-017 | sabe cubrir una espalda sin hacer cartel, detalle que despues evita puteadas.
+EQU-GOOD-018 | cuando el partido pide sociedad, no se esconde ni juega a la suya.
+EQU-GOOD-019 | hace circular la pelota sin enamorarse de cada toque.
+EQU-GOOD-020 | puede mejorar a los de al lado porque ordena, acompaña y no rompe el circuito.
+
+EQU-WEAK-011 | cuando se encierra en su jugada, los compañeros quedan mirando desde afuera.
+EQU-WEAK-012 | a veces elige resolver solo cuando tenia pase simple al lado.
+EQU-WEAK-013 | le falta mostrarse mas cuando otro queda apretado.
+EQU-WEAK-014 | puede desaparecer sin pelota, justo cuando el equipo necesita una ayuda corta.
+EQU-WEAK-015 | si la pelota no pasa por el, le cuesta seguir conectado al partido.
+EQU-WEAK-016 | necesita entender que jugar para el equipo tambien es arrastrar una marca o cubrir un hueco.
+EQU-WEAK-017 | a veces confunde participar con pedirla siempre al pie.
+EQU-WEAK-018 | cuando toca soltar rapido, puede quedarse un segundo de mas y ensuciar la jugada.
+EQU-WEAK-019 | le falta leer mejor cuando el equipo necesita pausa y cuando necesita pase vertical.
+EQU-WEAK-020 | si queda aislado, empieza a jugar otro partido dentro del mismo partido.
+
+### Mentalidad - positivo
+
+MEN-GOOD-001 | sostiene la cabeza cuando el partido se pone espeso y todos empiezan a protestar.
+MEN-GOOD-002 | si arranca con una mala, no se le cae la persiana: vuelve a competir.
+MEN-GOOD-003 | tiene temple para seguir jugando aunque el contexto venga torcido.
+MEN-GOOD-004 | no se va facil del partido; puede fallar, pero no queda mirando la desgracia.
+MEN-GOOD-005 | cuando la cancha se llena de gritos, suele elegir jugar antes que entrar en la novela.
+MEN-GOOD-006 | tiene caracter para pedirla cuando otros empiezan a esconderse.
+MEN-GOOD-007 | si el resultado aprieta, no se achica ni empieza a regalar decisiones.
+MEN-GOOD-008 | mantiene foco aun cuando el rival busca sacarlo de eje.
+MEN-GOOD-009 | compite con cabeza fria: no todo roce lo convierte en quilombo.
+MEN-GOOD-010 | puede ordenar al equipo desde la actitud, sin necesidad de hablar todo el partido.
+MEN-GOOD-011 | tiene esa cabeza util de cancha chica: se equivoca y sigue, sin hacer funeral.
+MEN-GOOD-012 | cuando el partido pide personalidad, aparece mas cerca de la pelota que de la excusa.
+
+### Mentalidad - a mejorar
+
+MEN-WEAK-001 | si algo sale mal temprano, puede quedarse masticando la jugada demasiado tiempo.
+MEN-WEAK-002 | cuando lo apuran o lo cargan, corre riesgo de perder foco.
+MEN-WEAK-003 | necesita bajar revoluciones para que una protesta no le coma dos jugadas.
+MEN-WEAK-004 | si el partido se pone caliente, puede entrar en el ruido y olvidarse de jugar.
+MEN-WEAK-005 | a veces una mala decision le arrastra la siguiente.
+MEN-WEAK-006 | le falta temple para sostenerse cuando el equipo no lo ayuda.
+MEN-WEAK-007 | puede empezar ordenado y terminar peleando con el partido.
+MEN-WEAK-008 | cuando el rival lo busca, tiene que aprender a responder con juego y no con apuro.
+MEN-WEAK-009 | si queda expuesto, puede tomar decisiones de bronca.
+MEN-WEAK-010 | necesita que la cabeza vuelva mas rapido despues del error.
+MEN-WEAK-011 | en partidos trabados puede frustrarse antes de encontrar la solucion.
+MEN-WEAK-012 | si no entra en ritmo, empieza a jugar contra su propia ansiedad.
+
+### Mentalidad y juego en equipo combinados
+
+MEN-EQU-001 | Buena cabeza y buen juego colectivo: {jugador} puede ser de esos que ordenan sin gritar y ayudan sin pedir medalla.
+MEN-EQU-002 | Si mentalidad y juego en equipo vienen altos, {jugador} es confiable para partidos cerrados: piensa, acompaña y no se desespera.
+MEN-EQU-003 | Cuando combina foco con solidaridad, {jugador} hace que el equipo juegue mas simple.
+MEN-EQU-004 | Si tiene cabeza fria y mirada colectiva, conviene tenerlo cerca de las decisiones importantes.
+MEN-EQU-005 | Mentalidad alta con poco juego en equipo puede volverlo testarudo: compite bien, pero a veces se olvida de los demas.
+MEN-EQU-006 | Mucha solidaridad con poca mentalidad puede hacerlo noble pero irregular: ayuda, aunque el ruido lo puede sacar.
+MEN-EQU-007 | Si flojea en cabeza y en juego colectivo, el equipo tiene que rodearlo bien para que no se aisle.
+MEN-EQU-008 | Cuando {jugador} piensa en equipo y no se va del partido, el sorteo gana una pieza que sostiene mas de lo que luce.
+
+### Sorteo con mentalidad y juego en equipo
+
+SORTEO-MEN-EQU-001 | El balance no mira solo piernas y gol: tambien importa quien piensa para el equipo y quien se mantiene enfocado.
+SORTEO-MEN-EQU-002 | Un equipo lleno de talento pero sin juego colectivo puede terminar siendo cinco partidos separados.
+SORTEO-MEN-EQU-003 | La mentalidad reparte estabilidad: cuando el partido se tuerce, no todos reaccionan igual.
+SORTEO-MEN-EQU-004 | Juego en equipo alto ayuda a que las piezas encajen aunque no sean las mas brillantes.
+SORTEO-MEN-EQU-005 | Si un equipo queda bajo de mentalidad, cualquier gol en contra puede pesar mas de la cuenta.
+SORTEO-MEN-EQU-006 | Si un equipo queda bajo de juego colectivo, la pelota puede morir en cada ego.
+SORTEO-MEN-EQU-007 | Repartir solidaridad tambien es balancear: no alcanza con dividir delanteros y defensores.
+SORTEO-MEN-EQU-008 | Repartir cabeza tambien es balancear: el partido largo premia al que no se desordena.
+
+### Relatos para capitanes y draft
+
+CAP-DRAFT-001 | En modo capitanes, elegir bien no es agarrar al mas famoso: es mirar la sumatoria y no dejar al equipo torcido.
+CAP-DRAFT-002 | El turno acompaña al equipo que viene mas abajo, para que el draft no se convierta en abuso desde temprano.
+CAP-DRAFT-003 | Si la regla te limita una eleccion, no es capricho: es el sistema evitando que un equipo se vaya demasiado arriba.
+CAP-DRAFT-004 | El capitan que entiende el balance no elige solo figuras; elige piezas que cierren el equipo.
+CAP-DRAFT-005 | Cuando quedan pocos jugadores, cada pick pesa doble: suma puntos, pero tambien acomoda o rompe posiciones.
+CAP-DRAFT-006 | Un buen capitan mira quien falta, no solo quien brilla.
+CAP-DRAFT-007 | Si tu equipo necesita arquero, primero se tapa el arco; despues vemos quien tira paredes.
+CAP-DRAFT-008 | El draft ordenado premia al que arma equipo, no al que colecciona nombres.
+
+### Relatos para formaciones
+
+FORM-001 | La formacion no es decoracion: si {jugador} queda en su primaria, el equipo entiende mejor que tiene que hacer.
+FORM-002 | Mover a {jugador} a su secundaria puede servir, pero solo si la linea queda mas equilibrada.
+FORM-003 | Una buena formacion evita que tres jugadores quieran vivir en la misma baldosa.
+FORM-004 | Si el equipo queda sin Defensor, Mediocampista o Delantero claro, el dibujo ya avisa donde va a sufrir.
+FORM-005 | La secundaria sirve para acomodar, no para disfrazar un equipo mal armado.
+FORM-006 | Cuando cada jugador cae cerca de su funcion natural, el partido arranca con menos explicaciones.
+FORM-007 | Si {jugador} tiene que correrse de lugar, que sea para ordenar al equipo y no para tapar una improvisacion eterna.
+FORM-008 | Una linea saturada puede parecer fuerte, pero tambien deja otra zona pidiendo auxilio.
+
+### Cierres nuevos segun uso de posicion
+
+CIERRE-POS-001 | La mejor version de {jugador} aparece si se respeta su primaria y se usa la secundaria como recurso, no como castigo.
+CIERRE-POS-002 | Para armar equipos, {jugador} pide una lectura simple: primero donde rinde, despues donde puede ayudar.
+CIERRE-POS-003 | Si lo ubicas bien, {jugador} suma sin tanta vuelta; si lo mandas a apagar incendios ajenos, se nota.
+CIERRE-POS-004 | Su secundaria puede salvar el armado, pero su primaria sigue marcando donde conviene buscarle rendimiento.
+CIERRE-POS-005 | No hace falta inventarle tres vidas: con primaria clara y secundaria honesta, {jugador} ya dice bastante.
+CIERRE-POS-006 | El equipo que lo use bien va a entender algo basico: una posicion clara vale mas que una promesa de comodin infinito.
+
+### Etiquetas nuevas del panel
+
+TAG-POS-001 | Primaria: {posicion_primaria}
+TAG-POS-002 | Secundaria: {posicion_secundaria}
+TAG-POS-003 | Sin secundaria
+TAG-POS-004 | Flexible con cuidado
+TAG-POS-005 | Arquero de emergencia
+TAG-POS-006 | Balance: {total}
+TAG-POS-007 | Diferencia: {diferencia}

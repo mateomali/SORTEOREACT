@@ -69,6 +69,11 @@ function backup_tables_for_sections(array $sectionKeys): array
     ));
 }
 
+function backup_zip_available(): bool
+{
+    return class_exists('ZipArchive');
+}
+
 function table_exists(PDO $pdo, string $table): bool
 {
     $stmt = $pdo->prepare(
@@ -121,8 +126,52 @@ function csv_from_table(PDO $pdo, string $table, array $columns): string
     return $csv;
 }
 
+function backup_export_data(PDO $pdo): array
+{
+    $manifest = [
+        'app' => APP_NAME,
+        'version' => 1,
+        'exported_at' => date('c'),
+        'format' => 'goodfellas-backup',
+        'tables' => [],
+    ];
+    $csv = [];
+
+    foreach (backup_tables() as $table) {
+        if (!table_exists($pdo, $table)) {
+            continue;
+        }
+        $columns = table_columns($pdo, $table);
+        $manifest['tables'][$table] = $columns;
+        $csv[$table] = csv_from_table($pdo, $table, $columns);
+    }
+
+    return ['manifest' => $manifest, 'csv' => $csv];
+}
+
+function send_backup_json(PDO $pdo): void
+{
+    $payload = backup_export_data($pdo);
+    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        throw new RuntimeException('No se pudo generar el backup JSON.');
+    }
+
+    $filename = 'goodfellas-backup-' . date('Ymd-His') . '.json';
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Length: ' . (string) strlen($json));
+    header('Cache-Control: no-store');
+    echo $json;
+    exit;
+}
+
 function send_backup_zip(PDO $pdo): void
 {
+    if (!backup_zip_available()) {
+        send_backup_json($pdo);
+    }
+
     $zip = new ZipArchive();
     $tmpPath = tempnam(sys_get_temp_dir(), 'goodfellas-backup-');
     if ($tmpPath === false) {
@@ -134,22 +183,11 @@ function send_backup_zip(PDO $pdo): void
         throw new RuntimeException('No se pudo abrir el ZIP.');
     }
 
-    $manifest = [
-        'app' => APP_NAME,
-        'version' => 1,
-        'exported_at' => date('c'),
-        'tables' => [],
-    ];
-
-    foreach (backup_tables() as $table) {
-        if (!table_exists($pdo, $table)) {
-            continue;
-        }
-        $columns = table_columns($pdo, $table);
-        $manifest['tables'][$table] = $columns;
-        $zip->addFromString('csv/' . $table . '.csv', csv_from_table($pdo, $table, $columns));
+    $payload = backup_export_data($pdo);
+    foreach ($payload['csv'] as $table => $csv) {
+        $zip->addFromString('csv/' . $table . '.csv', $csv);
     }
-
+    $manifest = $payload['manifest'];
     $zip->addFromString('manifest.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     $zip->close();
 
@@ -163,16 +201,11 @@ function send_backup_zip(PDO $pdo): void
     exit;
 }
 
-function read_csv_from_zip(ZipArchive $zip, string $table): ?array
+function read_csv_content(string $content, string $label): ?array
 {
-    $content = $zip->getFromName('csv/' . $table . '.csv');
-    if ($content === false) {
-        return null;
-    }
-
     $stream = fopen('php://temp', 'r+');
     if ($stream === false) {
-        throw new RuntimeException('No se pudo abrir el CSV de ' . $table . '.');
+        throw new RuntimeException('No se pudo abrir el CSV de ' . $label . '.');
     }
     fwrite($stream, $content);
     rewind($stream);
@@ -197,14 +230,44 @@ function read_csv_from_zip(ZipArchive $zip, string $table): ?array
     return ['columns' => array_map('strval', $headers), 'rows' => $rows];
 }
 
-function import_backup_zip(PDO $pdo, string $path, array $selectedTables): array
+function read_csv_from_zip(ZipArchive $zip, string $table): ?array
 {
-    $selectedTables = array_values(array_filter(
-        backup_tables(),
-        static fn(string $table): bool => in_array($table, $selectedTables, true)
-    ));
-    if (!$selectedTables) {
-        throw new RuntimeException('Selecciona al menos una seccion para importar.');
+    $content = $zip->getFromName('csv/' . $table . '.csv');
+    if ($content === false) {
+        return null;
+    }
+
+    return read_csv_content($content, $table);
+}
+
+function read_backup_json(string $path, array $selectedTables): array
+{
+    $content = file_get_contents($path);
+    if ($content === false) {
+        throw new RuntimeException('No se pudo leer el archivo JSON.');
+    }
+    $payload = json_decode($content, true);
+    if (!is_array($payload) || !isset($payload['csv']) || !is_array($payload['csv'])) {
+        throw new RuntimeException('El archivo JSON no tiene formato de backup valido.');
+    }
+
+    $importData = [];
+    foreach ($selectedTables as $table) {
+        if (!isset($payload['csv'][$table]) || !is_string($payload['csv'][$table])) {
+            continue;
+        }
+        $csv = read_csv_content($payload['csv'][$table], $table);
+        if ($csv !== null) {
+            $importData[$table] = $csv;
+        }
+    }
+    return $importData;
+}
+
+function read_backup_zip(string $path, array $selectedTables): array
+{
+    if (!backup_zip_available()) {
+        throw new RuntimeException('El servidor no tiene la extension ZIP habilitada. Exporta o importa el backup JSON.');
     }
 
     $zip = new ZipArchive();
@@ -220,6 +283,23 @@ function import_backup_zip(PDO $pdo, string $path, array $selectedTables): array
         }
     }
     $zip->close();
+    return $importData;
+}
+
+function import_backup_file(PDO $pdo, string $path, array $selectedTables, string $originalName = ''): array
+{
+    $selectedTables = array_values(array_filter(
+        backup_tables(),
+        static fn(string $table): bool => in_array($table, $selectedTables, true)
+    ));
+    if (!$selectedTables) {
+        throw new RuntimeException('Selecciona al menos una seccion para importar.');
+    }
+
+    $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    $importData = $extension === 'json'
+        ? read_backup_json($path, $selectedTables)
+        : read_backup_zip($path, $selectedTables);
 
     if (!$importData) {
         throw new RuntimeException('El backup no contiene CSV validos.');
@@ -292,7 +372,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
             $sectionKeys = [];
         }
         $selectedTables = backup_tables_for_sections(array_map('strval', $sectionKeys));
-        $counts = import_backup_zip($pdo, (string) $_FILES['backup_file']['tmp_name'], $selectedTables);
+        $counts = import_backup_file(
+            $pdo,
+            (string) $_FILES['backup_file']['tmp_name'],
+            $selectedTables,
+            (string) ($_FILES['backup_file']['name'] ?? '')
+        );
         $summary = [];
         foreach ($counts as $table => $count) {
             $summary[] = $table . ': ' . $count;
@@ -327,7 +412,10 @@ require __DIR__ . '/includes/header.php';
 <section class="grid cols-2 backup-grid">
   <article class="card">
     <h3>Exportar backup</h3>
-    <p class="small-muted">Descarga un ZIP con archivos CSV de jugadores, fechas, equipos, premios y capitanes.</p>
+    <p class="small-muted">
+      Descarga <?= backup_zip_available() ? 'un ZIP con archivos CSV' : 'un JSON compatible porque la extension ZIP no esta habilitada' ?>
+      de jugadores, fechas, equipos, premios y capitanes.
+    </p>
     <form method="post" class="btn-row" data-no-partial>
       <input type="hidden" name="action" value="export_backup">
       <button class="btn btn-primary" type="submit">Descargar backup CSV</button>
@@ -336,12 +424,12 @@ require __DIR__ . '/includes/header.php';
 
   <article class="card">
     <h3>Importar backup</h3>
-    <p class="small-muted">Reemplaza solamente las secciones marcadas. Usa archivos generados por esta pantalla.</p>
+    <p class="small-muted">Reemplaza solamente las secciones marcadas. Usa archivos ZIP o JSON generados por esta pantalla.</p>
     <form method="post" enctype="multipart/form-data" class="form-grid" data-no-partial>
       <input type="hidden" name="action" value="import_backup">
       <div class="form-row">
-        <label for="backupFile">Archivo backup .zip</label>
-        <input id="backupFile" type="file" name="backup_file" accept=".zip,application/zip" required>
+        <label for="backupFile">Archivo backup .zip o .json</label>
+        <input id="backupFile" type="file" name="backup_file" accept=".zip,.json,application/zip,application/json" required>
       </div>
       <div class="form-row">
         <label>Que importar</label>

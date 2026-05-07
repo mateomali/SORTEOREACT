@@ -505,7 +505,7 @@
   }
 
   .player-position-selects {
-    @apply grid grid-cols-1 gap-2 sm:grid-cols-3;
+    @apply grid grid-cols-1 gap-2 sm:grid-cols-2;
   }
 
   .player-position-select {
@@ -513,7 +513,7 @@
   }
 
   .player-position-select span {
-    @apply text-xs font-bold text-slate-500;
+    @apply truncate text-xs font-bold text-slate-500;
   }
 
   .player-position-select select {
@@ -762,7 +762,7 @@
 
   .players-desktop-table table {
     table-layout: auto;
-    min-width: 1080px;
+    min-width: 1180px;
   }
 
   .players-desktop-table th:nth-child(1),
@@ -773,8 +773,8 @@
 
   .players-desktop-table th:nth-child(2),
   .players-desktop-table td:nth-child(2) {
-    @apply w-28;
-    min-width: 112px;
+    @apply w-44;
+    min-width: 176px;
   }
 
   .players-desktop-table th:nth-child(3),
@@ -804,6 +804,19 @@
 
   .players-desktop-table td:nth-child(2) .mini-chip {
     @apply gap-1 rounded-lg px-1.5 py-1 text-[11px];
+  }
+
+  .players-desktop-table td:nth-child(2) .player-position-selects {
+    grid-template-columns: minmax(144px, 1fr);
+    @apply min-w-40 gap-2;
+  }
+
+  .players-desktop-table td:nth-child(2) .player-position-select {
+    @apply gap-1;
+  }
+
+  .players-desktop-table td:nth-child(2) .player-position-select select {
+    @apply min-h-10 rounded-lg px-2 py-2 text-xs font-extrabold;
   }
 
   .player-action-icon {
@@ -3926,6 +3939,10 @@
       @apply fixed inset-x-3 bottom-3 z-40 block overflow-hidden rounded-2xl border border-emerald-800 bg-emerald-950 text-white shadow-2xl shadow-emerald-950/35;
     }
 
+    .participant-picker-layout {
+      @apply pb-24;
+    }
+
     .participant-selected-desktop {
       @apply hidden;
     }
@@ -5918,8 +5935,8 @@
   }
 
   .sorteo-page h1 {
-    color: #ffffff;
-    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.22);
+    color: #082017;
+    text-shadow: 0 2px 14px rgba(255, 255, 255, 0.9);
   }
 
   .sorteo-page .soccer-ball {

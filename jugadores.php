@@ -199,14 +199,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
         }
         $positionCount = count(parse_positions_csv($positionsCsv));
-        if ($positionCount < 1 || $positionCount > 3) {
+        if ($positionCount < 1 || $positionCount > 2) {
             if ($ajax) {
                 http_response_code(422);
                 header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['ok' => false, 'message' => 'Elige una posicion primaria y hasta 2 secundarias.']);
+                echo json_encode(['ok' => false, 'message' => 'Elige una posicion primaria y una secundaria opcional.']);
                 exit;
             }
-            flash('error', 'Elige una posicion primaria y hasta 2 secundarias.');
+            flash('error', 'Elige una posicion primaria y una secundaria opcional.');
             redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
         }
 
@@ -446,7 +446,13 @@ function player_stats_radar_panel(bool $compact = false): string
 
 function player_position_selects(array $selectedPositions, ?string $formId = null, bool $disabled = false): string
 {
-    $labels = ['Primaria', 'Secundaria', 'Tercera'];
+    $labels = ['Primaria', 'Secundaria'];
+    $positionLabels = [
+        'ARQ' => 'Arquero',
+        'DEF' => 'Defensor',
+        'MED' => 'Mediocampista',
+        'DEL' => 'Delantero',
+    ];
     $formAttr = $formId !== null ? ' form="' . h($formId) . '"' : '';
     $disabledAttr = $disabled ? ' disabled' : '';
     $html = '<div class="player-position-selects" data-player-position-selects>';
@@ -460,7 +466,7 @@ function player_position_selects(array $selectedPositions, ?string $formId = nul
             $html .= '<option value="">Sin posicion</option>';
         }
         foreach (allowed_positions() as $pos) {
-            $html .= '<option value="' . h($pos) . '"' . selected_attr($value === $pos) . '>' . h($pos) . '</option>';
+            $html .= '<option value="' . h($pos) . '"' . selected_attr($value === $pos) . '>' . h($positionLabels[$pos] ?? $pos) . '</option>';
         }
         $html .= '</select>';
         $html .= '</label>';

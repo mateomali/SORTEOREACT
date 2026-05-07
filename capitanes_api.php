@@ -94,6 +94,12 @@ function primary_position(array $player): string
     return $positions[0] ?? 'MED';
 }
 
+function has_secondary_position(array $player, string $position): bool
+{
+    $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
+    return in_array($position, array_slice($positions, 1), true);
+}
+
 function captain_recent_non_captain_pick_streak(int $matchId, int $captainCount): array
 {
     $stmt = db()->prepare(
@@ -251,6 +257,26 @@ function captain_goalkeeper_counts(int $matchId): array
     return $counts;
 }
 
+function captain_secondary_goalkeeper_counts(int $matchId): array
+{
+    $stmt = db()->prepare(
+        'SELECT mp.team_number, COUNT(*) AS goalkeeper_count
+         FROM match_players mp
+         INNER JOIN players p ON p.id = mp.player_id
+         WHERE mp.match_id = :mid
+           AND mp.team_number IS NOT NULL
+           AND p.positions LIKE "%/ARQ%"
+           AND p.positions NOT LIKE "ARQ/%"
+         GROUP BY mp.team_number'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $counts = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $counts[(int) $row['team_number']] = (int) $row['goalkeeper_count'];
+    }
+    return $counts;
+}
+
 function captain_pick_rule(int $matchId, array $available, array $draft): array
 {
     if (!$available) {
@@ -267,13 +293,25 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     $currentTeam = (int) ($draft['current_team'] ?? 0);
     $teamNumbers = captain_numbers($draft);
     $goalkeeperCounts = captain_goalkeeper_counts($matchId);
-    $teamNeedsGoalkeeper = $currentTeam > 0 && (($goalkeeperCounts[$currentTeam] ?? 0) <= 0);
     $availableGoalkeepers = array_values(array_filter($available, static fn(array $player): bool => primary_position($player) === 'ARQ'));
+    if (!$availableGoalkeepers) {
+        $secondaryGoalkeeperCounts = captain_secondary_goalkeeper_counts($matchId);
+        foreach ($secondaryGoalkeeperCounts as $teamNumber => $count) {
+            if ($count > 0 && (($goalkeeperCounts[$teamNumber] ?? 0) <= 0)) {
+                $goalkeeperCounts[$teamNumber] = 1;
+            }
+        }
+    }
+    $teamNeedsGoalkeeper = $currentTeam > 0 && (($goalkeeperCounts[$currentTeam] ?? 0) <= 0);
+    $availableSecondaryGoalkeepers = array_values(array_filter($available, static fn(array $player): bool => primary_position($player) !== 'ARQ' && has_secondary_position($player, 'ARQ')));
     $pool = $available;
     $activePot = null;
     if ($teamNeedsGoalkeeper && $availableGoalkeepers) {
         $pool = $availableGoalkeepers;
         $activePot = 'ARQ';
+    } elseif ($teamNeedsGoalkeeper && !$availableGoalkeepers && $availableSecondaryGoalkeepers) {
+        $pool = $availableSecondaryGoalkeepers;
+        $activePot = 'ARQ secundaria';
     } elseif ($availableGoalkeepers) {
         $teamsWithoutGoalkeeper = 0;
         foreach ($teamNumbers as $teamNumber) {
@@ -340,6 +378,22 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
             'range' => $margin,
             'allowed_ids' => $allowedIds,
             'message' => 'Tu equipo necesita arquero. Elegi un ARQ que mantenga la sumatoria cerca del equipo mas alto.',
+        ];
+    }
+    if ($activePot === 'ARQ secundaria') {
+        return [
+            'active' => true,
+            'enforced' => true,
+            'mode' => 'goalkeeper_balance',
+            'active_pot' => $activePot,
+            'reference_skill' => null,
+            'current_total' => $currentTotal,
+            'highest_total' => $highestTotal,
+            'min_skill' => null,
+            'max_skill' => max(0.0, $maxProjectedTotal - $currentTotal),
+            'range' => $margin,
+            'allowed_ids' => $allowedIds,
+            'message' => 'No quedan arqueros primarios. Elegi un jugador con ARQ secundaria que mantenga la sumatoria cerca del equipo mas alto.',
         ];
     }
 

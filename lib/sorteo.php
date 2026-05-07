@@ -26,6 +26,11 @@ function is_emergency_goalkeeper(array $player): bool
     return !empty($player['emergency_goalkeeper']);
 }
 
+function player_has_secondary_position(array $player, string $position): bool
+{
+    return in_array($position, array_slice(ordered_player_positions($player), 1), true);
+}
+
 function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 {
     $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => player_primary_position($p) === 'ARQ'));
@@ -36,6 +41,11 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 
     $candidates = array_values(array_filter($players, static fn(array $p): bool => player_primary_position($p) !== 'ARQ'));
     usort($candidates, static function (array $a, array $b): int {
+        $secondaryA = player_has_secondary_position($a, 'ARQ') ? 0 : 1;
+        $secondaryB = player_has_secondary_position($b, 'ARQ') ? 0 : 1;
+        if ($secondaryA !== $secondaryB) {
+            return $secondaryA <=> $secondaryB;
+        }
         $ratingA = player_overall_rating($a);
         $ratingB = player_overall_rating($b);
         if ($ratingA !== $ratingB) {
@@ -49,7 +59,8 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
         if (!isset($emergencyIds[(int) $player['id']])) {
             return $player;
         }
-        $player['positions'] = 'ARQ/' . (string) ($player['positions'] ?? '');
+        $fieldPositions = array_values(array_filter(parse_positions_csv((string) ($player['positions'] ?? '')), static fn(string $position): bool => $position !== 'ARQ'));
+        $player['positions'] = join_positions(array_merge(['ARQ'], $fieldPositions));
         $player['goalkeeper_skill'] = 2.0;
         $player['emergency_goalkeeper'] = true;
         return $player;
@@ -321,7 +332,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
     $teamSize = (int) ($totalPlayers / $numTeams);
     $players = prepare_emergency_goalkeepers($players, $numTeams);
 
-    $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => in_array('ARQ', ordered_player_positions($p), true)));
+    $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => player_primary_position($p) === 'ARQ' || is_emergency_goalkeeper($p)));
 
     for ($try = 0; $try < $attempts; $try++) {
         $gkPool = $goalkeepers;

@@ -2,6 +2,12 @@ import { useMemo, useState } from 'react';
 import { StatRating } from '../components/StatRating.jsx';
 
 const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
+const positionLabels = {
+  ARQ: 'Arquero',
+  DEF: 'Defensor',
+  MED: 'Mediocampista',
+  DEL: 'Delantero',
+};
 const fieldOrder = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 const defaults = {
   technique: 3,
@@ -140,7 +146,7 @@ export function PlayerCreateIsland({ root }) {
       const next = [...current];
       next[index] = position;
       const clean = next.filter(Boolean).filter((item, itemIndex, list) => list.indexOf(item) === itemIndex);
-      return clean.slice(0, 3);
+      return clean.slice(0, 2);
     });
   };
 
@@ -192,7 +198,7 @@ export function PlayerCreateIsland({ root }) {
         <div className="form-row">
           <label>Posiciones</label>
           <div className="player-position-selects" data-player-position-selects>
-            {['Primaria', 'Secundaria', 'Tercera'].map((label, index) => (
+            {['Primaria', 'Secundaria'].map((label, index) => (
               <label className="player-position-select" key={label}>
                 <span>{label}</span>
                 <select
@@ -208,7 +214,7 @@ export function PlayerCreateIsland({ root }) {
                       value={position}
                       disabled={selectedPositions.includes(position) && selectedPositions[index] !== position}
                     >
-                      {position}
+                      {positionLabels[position] || position}
                     </option>
                   ))}
                 </select>

@@ -197,7 +197,7 @@ function parse_positions_csv(string $positions): array
             $clean[] = $pos;
         }
     }
-    return array_slice($clean, 0, 3);
+    return array_slice($clean, 0, 2);
 }
 
 function player_primary_position(array $player): string
@@ -216,7 +216,7 @@ function join_positions(array $positions): string
             $clean[] = $pos;
         }
     }
-    return implode('/', array_slice($clean, 0, 3));
+    return implode('/', array_slice($clean, 0, 2));
 }
 
 function selected_attr(bool $condition): string

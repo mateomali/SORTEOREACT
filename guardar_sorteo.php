@@ -38,7 +38,7 @@ function parse_positions_legacy(string $positions): array
             $ordered[] = $pos;
         }
     }
-    return array_slice($ordered, 0, 3) ?: ['MED'];
+    return array_slice($ordered, 0, 2) ?: ['MED'];
 }
 
 function get_primary_position_legacy(array $player): string
