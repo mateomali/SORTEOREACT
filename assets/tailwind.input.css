@@ -4746,24 +4746,20 @@ body {
   @apply bg-emerald-900/45 text-lime-50;
 }
 
-  .page-head,
+.page-head {
+  @apply rounded-2xl border border-lime-200/55 bg-gradient-to-br from-emerald-950 via-emerald-900/90 to-emerald-950 px-4 py-3 text-lime-50 shadow-xl shadow-emerald-950/25;
+}
+
   .card,
-  .section-toolbar,
   .table-wrap,
-  .stats-filter-menu,
   .stats-collapsible,
   .stats-compact-grid,
   .stats-player-grid,
-  .stats-summary,
-  .history-search,
-  .encounter-history-search,
   .history-match-card,
   .encounter-card,
   .team-card,
   .participant-panel,
   .participant-picker,
-  .selected-player-item,
-  .player-picker-item,
   .captain-pot,
   .mobile-result-team,
   .finish-result-team,
@@ -4772,17 +4768,13 @@ body {
   .manual-team-card,
   .manual-list-card,
   .manual-player-card,
-  .manual-search-panel,
   .login-card,
   .backup-card,
   .import-card,
   .import-list,
   .modal-card,
-  .modal-content,
   .drawer-card,
   .accordion,
-  .accordion-content,
-  .sort-dropdown-content,
   .stat-box,
   .empty-state,
   .flash,
@@ -4796,21 +4788,31 @@ body {
   .public-team-characteristics,
   .react-system-status,
   .react-modal-card,
+  .sorteo-page .team,
+  .totals,
+  .totals-breakdown,
+  .final-actions,
+  .match-list-item {
+    @apply border border-lime-200/28 bg-emerald-900/60 text-lime-50 shadow-lg shadow-emerald-950/15;
+  }
+
+  .section-toolbar,
+  .stats-filter-menu,
+  .stats-summary,
+  .history-search,
+  .encounter-history-search,
+  .selected-player-item,
+  .player-picker-item,
+  .manual-search-panel,
+  .accordion-content,
+  .sort-dropdown-content,
+  .modal-content,
   .react-search-box,
   .react-filters,
   .manual-search-assist,
   .react-stats-search,
-  .finish-valuation-controls,
-  .sorteo-page .team,
-  .totals,
-  .totals-breakdown,
-.final-actions,
-.match-list-item {
-  @apply border border-lime-200/35 bg-emerald-900/70 text-lime-50 shadow-lg shadow-emerald-950/20;
-}
-
-.page-head {
-  @apply rounded-2xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-950 px-4 py-3;
+  .finish-valuation-controls {
+    @apply border border-emerald-200/28 bg-emerald-800/25 text-lime-50 shadow-md shadow-emerald-950/10;
 }
 
   .page-head h1,
@@ -4857,7 +4859,7 @@ textarea,
 .search-input,
 .filter-input,
 .form-control {
-  @apply border-lime-200/35 bg-emerald-800/35 text-lime-50 shadow-inner shadow-emerald-950/20;
+  @apply border-emerald-200/35 bg-emerald-800/35 text-lime-50 shadow-inner shadow-emerald-950/15;
 }
 
   input::placeholder,
@@ -4938,7 +4940,7 @@ textarea,
 .accordion-content,
 .sort-dropdown-content,
 .modal-content {
-  @apply border-lime-200/35 bg-emerald-900/85 text-lime-50;
+  @apply border-emerald-200/35 bg-emerald-900/70 text-lime-50;
 }
 
   .sort-dropdown-content a,
@@ -5023,7 +5025,7 @@ textarea,
   .menu-toggle,
 .award-summary-button,
 .action-button {
-  @apply border border-lime-200/45 bg-emerald-900/85 text-lime-50 shadow-md shadow-emerald-950/20;
+  @apply border border-lime-200/35 bg-emerald-950/55 text-lime-50 shadow-md shadow-emerald-950/15;
 }
 
   .btn:hover,
@@ -5084,5 +5086,165 @@ textarea,
   .segmented-control button[aria-pressed="true"],
   .segmented-control button.is-active {
     @apply border-lime-200/75 bg-lime-100 text-emerald-950;
+  }
+
+  .page-head {
+    @apply !border-lime-200/55 !bg-emerald-950 !bg-gradient-to-br !from-emerald-950 !via-emerald-900/90 !to-emerald-950 !text-lime-50 !shadow-xl !shadow-emerald-950/25;
+  }
+
+  .card,
+  .team-card,
+  .backup-card,
+  .login-card,
+  .captain-card,
+  .manual-team-card,
+  .manual-list-card,
+  .finish-result-team,
+  .finish-valuation-panel,
+  .participant-panel,
+  .stats-collapsible,
+  .encounter-card,
+  .history-match-card {
+    @apply !border-lime-200/28 !bg-emerald-900/60 !text-lime-50 !shadow-lg !shadow-emerald-950/15;
+  }
+
+  .section-toolbar,
+  .react-search-box,
+  .react-filters,
+  .history-search,
+  .encounter-history-search,
+  .stats-filter-menu,
+  .filters-panel,
+  .settings-panel,
+  .draw-settings,
+  .manual-search-panel,
+  .finish-valuation-controls {
+    @apply !border-emerald-200/28 !bg-emerald-800/25 !text-lime-50 !shadow-md !shadow-emerald-950/10;
+  }
+
+  input[type="text"],
+  input[type="search"],
+  input[type="number"],
+  input[type="datetime-local"],
+  input[type="date"],
+  select,
+  textarea,
+  .search-input,
+  .filter-input,
+  .form-control {
+    @apply !border-emerald-200/35 !bg-emerald-800/35 !text-lime-50 !shadow-inner !shadow-emerald-950/15 placeholder:!text-emerald-100/55;
+  }
+
+  .backup-section-list .inline-check {
+    @apply !border-emerald-200/28 !bg-emerald-950/45 !text-lime-50;
+  }
+
+  .sorteo-page .container {
+    @apply !bg-emerald-900/45 sm:!shadow-2xl sm:!shadow-emerald-950/20;
+  }
+
+  .sorteo-page h1 {
+    @apply !rounded-2xl !border !border-lime-200/45 !bg-gradient-to-br !from-emerald-950 !via-emerald-900/90 !to-emerald-950 !px-4 !py-3 !text-lime-50 !shadow-lg !shadow-emerald-950/20;
+  }
+
+  .sorteo-page .accordion,
+  .sorteo-page .team-color-config,
+  .sorteo-page .team,
+  .sorteo-page .sorteo-matchup-title,
+  .sorteo-page .draw-loading,
+  .sorteo-page .modal-content {
+    @apply !border-lime-200/28 !bg-emerald-900/60 !text-lime-50 !shadow-lg !shadow-emerald-950/15;
+  }
+
+  .sorteo-page .accordion-header,
+  .sorteo-page .controls,
+  .sorteo-page .data-controls,
+  .sorteo-page .sort-controls,
+  .sorteo-page .select-all,
+  .sorteo-page .players-list {
+    @apply !border-emerald-200/28 !bg-emerald-800/25 !text-lime-50;
+  }
+
+  .sorteo-page .accordion-header {
+    @apply !rounded-t-2xl !border-b !px-4 !py-3;
+  }
+
+  .sorteo-page .accordion-content {
+    @apply !bg-emerald-950/30;
+  }
+
+  .sorteo-page .success {
+    @apply !border-lime-200/45 !bg-lime-100/12 !text-lime-100;
+  }
+
+  .sorteo-page .error {
+    @apply !border-red-300/50 !bg-red-950/80 !text-red-100;
+  }
+
+  .sorteo-page .player-item {
+    @apply !border-emerald-200/25 !bg-emerald-950/45;
+  }
+
+  .players-desktop-table,
+  .mobile-full-player-list {
+    @apply !border-lime-200/30 !bg-emerald-900/55 !shadow-lg !shadow-emerald-950/15;
+  }
+
+  section.card:has(.player-list-react-controls),
+  section.card:has(.players-desktop-table),
+  section.card:has(.mobile-full-player-list) {
+    @apply !border-lime-200/30 !bg-emerald-900/60 !shadow-lg !shadow-emerald-950/15;
+  }
+
+  section.card .section-toolbar:has(.player-list-react-controls) {
+    @apply !border-emerald-200/30 !bg-emerald-800/25 !shadow-md !shadow-emerald-950/10;
+  }
+
+  .player-list-react-controls,
+  .players-desktop-help .player-stat-help,
+  .players-mobile-help .player-stat-help {
+    @apply !border-emerald-200/30 !bg-emerald-800/25 !shadow-md !shadow-emerald-950/10;
+  }
+
+  .player-list-react-controls input,
+  .player-list-search-shell input {
+    @apply !border-emerald-200/35 !bg-emerald-800/35 !text-lime-50 placeholder:!text-emerald-100/55;
+  }
+
+  .mobile-player-list-body {
+    @apply !border-lime-200/20 !bg-emerald-950/20;
+  }
+
+  .mobile-player-list-item {
+    @apply !border-emerald-200/25 !bg-emerald-950/45 !shadow-sm !shadow-emerald-950/10;
+  }
+
+  .mobile-player-list-item:hover {
+    @apply !border-lime-200/45 !bg-emerald-900/70;
+  }
+
+  .players-desktop-table thead th {
+    @apply !border-lime-200/25 !bg-emerald-950/90 !text-lime-100;
+  }
+
+  .players-desktop-table tbody td {
+    @apply !border-lime-200/18 !bg-emerald-950/42;
+  }
+
+  .player-table-stat,
+  .player-position-select,
+  .player-general-rating,
+  .player-radar-card {
+    @apply !border-emerald-200/28 !bg-emerald-950/45 !shadow-sm !shadow-emerald-950/10;
+  }
+
+  .player-scout-row-button,
+  .player-icon-button:not(.btn-danger) {
+    @apply !border-lime-200/35 !bg-emerald-950/55 !text-lime-50;
+  }
+
+  .player-icon-button:not(.btn-danger):hover,
+  .player-scout-row-button:hover {
+    @apply !border-lime-200/65 !bg-lime-100/15 !text-lime-100;
   }
 }
