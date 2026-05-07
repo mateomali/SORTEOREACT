@@ -495,6 +495,36 @@ function player_mobile_stat_color(float $value): string
     }
     return '#f87171';
 }
+function player_fifa_overall(float $value): int
+{
+    $clamped = max(1.0, min(6.0, $value));
+    $anchorPoints = [
+        [1.0, 35.0],
+        [2.5, 54.0],
+        [3.0, 64.0],
+        [3.2, 69.0],
+        [3.5, 74.0],
+        [3.8, 79.0],
+        [4.0, 81.0],
+        [4.4, 86.0],
+        [4.5, 87.0],
+        [5.0, 92.0],
+        [5.2, 93.0],
+        [5.3, 94.0],
+        [6.0, 98.0],
+    ];
+
+    for ($i = 0, $count = count($anchorPoints) - 1; $i < $count; $i++) {
+        [$fromRating, $fromOverall] = $anchorPoints[$i];
+        [$toRating, $toOverall] = $anchorPoints[$i + 1];
+        if ($clamped <= $toRating) {
+            $ratio = ($clamped - $fromRating) / ($toRating - $fromRating);
+            return (int) round($fromOverall + (($toOverall - $fromOverall) * $ratio));
+        }
+    }
+
+    return 98;
+}
 function player_mobile_profile_panel(array $player, array $statLabels, array $statHelp): string
 {
     $fields = player_field_stat_fields();
@@ -516,9 +546,17 @@ function player_mobile_profile_panel(array $player, array $statLabels, array $st
         $html .= '<span class="rounded-full border border-lime-200/35 bg-lime-100 px-2.5 py-1 text-[11px] font-extrabold text-emerald-950">' . h($position) . '</span>';
     }
     $html .= '</div>';
-    $html .= '<div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-xl border border-lime-200/25 bg-emerald-900/45 px-3 py-2">';
-    $html .= '<span class="text-[10px] font-black uppercase text-lime-100/80">General</span>';
-    $html .= '<strong class="justify-self-end text-lg font-extrabold text-lime-50">' . h(number_format(player_overall_rating($player), 1)) . '/6</strong>';
+    $overallSix = player_overall_rating($player);
+    $overallCard = player_fifa_overall($overallSix);
+    $html .= '<div class="mobile-player-card-overall">';
+    $html .= '<div class="mobile-player-card-rating">';
+    $html .= '<strong>' . h((string) $overallCard) . '</strong>';
+    $html .= '<span>GEN</span>';
+    $html .= '</div>';
+    $html .= '<div class="mobile-player-card-meta">';
+    $html .= '<span>GENERAL</span>';
+    $html .= '<strong>' . h((string) ($positions[0] ?? '')) . '</strong>';
+    $html .= '</div>';
     $html .= '</div>';
     $html .= '</div>';
     $html .= '<div class="mobile-player-stat-list grid gap-2">';
@@ -678,7 +716,13 @@ require __DIR__ . '/includes/header.php';
                   <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?></strong>
                   <small class="block text-xs text-emerald-100/75"><?= player_mobile_rating_summary($player) ?></small>
                 </span>
-                <span class="mobile-player-view-action shrink-0 rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-[11px] font-extrabold text-emerald-950">VER</span>
+                <span class="mobile-player-view-actions shrink-0 inline-flex items-center gap-1.5">
+                  <span class="mobile-player-overall-chip inline-flex min-w-10 flex-col items-center justify-center rounded-xl border border-lime-200/45 bg-emerald-900 px-2 py-1 text-lime-50">
+                    <strong class="text-sm font-black leading-none"><?= h((string) player_fifa_overall(player_overall_rating($player))) ?></strong>
+                    <small class="text-[8px] font-black uppercase leading-none text-lime-100/80">GEN</small>
+                  </span>
+                  <span class="mobile-player-view-action rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-[11px] font-extrabold text-emerald-950">VER</span>
+                </span>
               </summary>
               <?= player_mobile_profile_panel($player, $statLabels, $statHelp) ?>
             </details>

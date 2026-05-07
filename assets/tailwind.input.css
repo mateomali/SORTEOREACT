@@ -5251,6 +5251,36 @@ textarea,
     @apply mx-2 mb-2;
   }
 
+  .mobile-player-card-overall {
+    @apply grid items-center gap-3 rounded-xl border border-lime-200/25 bg-emerald-900/45 px-3 py-2;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .mobile-player-card-rating {
+    @apply grid h-16 w-16 place-items-center rounded-xl border border-lime-200/55 bg-lime-100 text-emerald-950 shadow-sm shadow-emerald-950/15;
+    grid-template-rows: 1fr auto;
+  }
+
+  .mobile-player-card-rating strong {
+    @apply self-end text-3xl font-black leading-none;
+  }
+
+  .mobile-player-card-rating span {
+    @apply self-start text-[10px] font-black uppercase leading-none;
+  }
+
+  .mobile-player-card-meta {
+    @apply min-w-0;
+  }
+
+  .mobile-player-card-meta span {
+    @apply block text-[10px] font-black uppercase text-lime-100/80;
+  }
+
+  .mobile-player-card-meta strong {
+    @apply block text-2xl font-black leading-tight text-lime-50;
+  }
+
   .mobile-player-profile-panel .player-radar-card {
     @apply mt-3 !border-lime-200/25 !bg-emerald-900/35;
   }
