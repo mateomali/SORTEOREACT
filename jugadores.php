@@ -198,6 +198,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Debes seleccionar al menos una posicion valida.');
             redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
         }
+        $positionCount = count(parse_positions_csv($positionsCsv));
+        if ($positionCount < 1 || $positionCount > 3) {
+            if ($ajax) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'message' => 'Elige una posicion primaria y hasta 2 secundarias.']);
+                exit;
+            }
+            flash('error', 'Elige una posicion primaria y hasta 2 secundarias.');
+            redirect($id > 0 ? $playersReturnUrl : 'jugadores.php');
+        }
 
         $technique = normalize_player_stat($_POST['technique'] ?? null);
         $rhythm = normalize_player_stat($_POST['rhythm'] ?? null);
@@ -433,6 +444,31 @@ function player_stats_radar_panel(bool $compact = false): string
     </aside>';
 }
 
+function player_position_selects(array $selectedPositions, ?string $formId = null, bool $disabled = false): string
+{
+    $labels = ['Primaria', 'Secundaria', 'Tercera'];
+    $formAttr = $formId !== null ? ' form="' . h($formId) . '"' : '';
+    $disabledAttr = $disabled ? ' disabled' : '';
+    $html = '<div class="player-position-selects" data-player-position-selects>';
+    foreach ($labels as $index => $label) {
+        $required = $index === 0 ? ' required' : '';
+        $value = (string) ($selectedPositions[$index] ?? '');
+        $html .= '<label class="player-position-select">';
+        $html .= '<span>' . h($label) . '</span>';
+        $html .= '<select name="positions[]"' . $formAttr . $required . $disabledAttr . '>';
+        if ($index > 0) {
+            $html .= '<option value="">Sin posicion</option>';
+        }
+        foreach (allowed_positions() as $pos) {
+            $html .= '<option value="' . h($pos) . '"' . selected_attr($value === $pos) . '>' . h($pos) . '</option>';
+        }
+        $html .= '</select>';
+        $html .= '</label>';
+    }
+    $html .= '</div>';
+    return $html;
+}
+
 $players = repo_all_players($isAdmin ? false : true);
 $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores.php';
@@ -581,14 +617,7 @@ require __DIR__ . '/includes/header.php';
               </button>
             </td>
             <td>
-              <div class="inline-checks">
-                <?php foreach (allowed_positions() as $pos): ?>
-                  <label class="mini-chip">
-                    <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= $isAdmin ? 'form="' . h($rowFormId) . '"' : 'disabled' ?> <?= checked_attr(in_array($pos, $rowPositions, true)) ?>>
-                    <?= h($pos) ?>
-                  </label>
-                <?php endforeach; ?>
-              </div>
+              <?= player_position_selects($rowPositions, $isAdmin ? $rowFormId : null, !$isAdmin) ?>
             </td>
             <td>
               <div class="player-general-rating player-general-rating-compact" data-general-rating>
@@ -691,14 +720,7 @@ require __DIR__ . '/includes/header.php';
 
       <div class="form-row">
         <label>Posiciones</label>
-        <div class="check-row">
-          <?php foreach (allowed_positions() as $pos): ?>
-            <label class="chip">
-              <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" <?= checked_attr(in_array($pos, $rowPositions, true)) ?> <?= $isAdmin ? '' : 'disabled' ?>>
-              <?= h($pos) ?>
-            </label>
-          <?php endforeach; ?>
-        </div>
+        <?= player_position_selects($rowPositions, null, !$isAdmin) ?>
       </div>
 
       <div class="form-grid">

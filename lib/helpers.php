@@ -144,7 +144,7 @@ function player_effective_stat(array $player, string $field): float
 
 function player_has_goalkeeper_position(array $player): bool
 {
-    return in_array('ARQ', parse_positions_csv((string) ($player['positions'] ?? '')), true);
+    return player_primary_position($player) === 'ARQ';
 }
 
 function player_overall_rating(array $player): float
@@ -191,25 +191,32 @@ function parse_positions_csv(string $positions): array
     $parts = array_map('trim', explode('/', $positions));
     $parts = array_filter($parts, static fn($p) => $p !== '');
     $allowed = allowed_positions();
-    $ordered = [];
-    foreach ($allowed as $pos) {
-        if (in_array($pos, $parts, true)) {
-            $ordered[] = $pos;
+    $clean = [];
+    foreach ($parts as $pos) {
+        if (in_array($pos, $allowed, true) && !in_array($pos, $clean, true)) {
+            $clean[] = $pos;
         }
     }
-    return $ordered;
+    return array_slice($clean, 0, 3);
+}
+
+function player_primary_position(array $player): string
+{
+    $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
+    return $positions[0] ?? 'MED';
 }
 
 function join_positions(array $positions): string
 {
     $allowed = allowed_positions();
     $clean = [];
-    foreach ($allowed as $pos) {
-        if (in_array($pos, $positions, true)) {
+    foreach ($positions as $position) {
+        $pos = strtoupper(trim((string) $position));
+        if (in_array($pos, $allowed, true) && !in_array($pos, $clean, true)) {
             $clean[] = $pos;
         }
     }
-    return implode('/', $clean);
+    return implode('/', array_slice($clean, 0, 3));
 }
 
 function selected_attr(bool $condition): string

@@ -233,7 +233,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const teamwork = numberOr(player.teamwork, 3);
       const regularity = numberOr(player.regularity, 3.5);
       const goalkeeper = numberOr(player.goalkeeper_skill, 3);
-      const isGoalkeeper = player.positions.includes('ARQ');
+      const isGoalkeeper = player.positions[0] === 'ARQ';
       const high = (value) => value >= 4.5;
       const low = (value) => value <= 2.5;
       const matches = [];
@@ -499,7 +499,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     const scoutDataFromTrigger = (trigger) => {
       const row = trigger.closest('[data-player-edit-row]');
       if (row) {
-        const positions = Array.from(row.querySelectorAll('input[name="positions[]"]:checked')).map((input) => input.value);
+        const positions = selectedPositionsInOrder(row);
         const getValue = (field) => numberOr(row.querySelector(`[data-stat-rating-input][name="${field}"]`)?.value, field === 'regularity' ? 3.5 : 3);
         const player = {
           name: row.querySelector('input[name="name"]')?.value || row.querySelector('.player-readonly-name')?.textContent || 'Este jugador',
@@ -524,7 +524,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       return player;
     };
     const describeScoutPlayer = (player) => {
-      const isGoalkeeper = player.positions.includes('ARQ');
+      const isGoalkeeper = player.positions[0] === 'ARQ';
       const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper
         ? rule.field !== 'attack'
         : rule.field !== 'goalkeeper_skill');
@@ -904,6 +904,24 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         y: centerY + Math.sin(angle) * radius,
       };
     };
+    const selectedPositionsInOrder = (scope) => {
+      const selects = Array.from(scope.querySelectorAll('select[name="positions[]"]'));
+      const raw = selects.length
+        ? selects.map((select) => select.value)
+        : Array.from(scope.querySelectorAll('input[name="positions[]"]:checked')).map((input) => input.value);
+      return raw.filter((position, index, list) => position && list.indexOf(position) === index).slice(0, 3);
+    };
+    const hasPrimaryGoalkeeper = (scope) => selectedPositionsInOrder(scope)[0] === 'ARQ';
+    const syncPositionSelectOptions = (scope) => {
+      const selects = Array.from(scope.querySelectorAll('select[name="positions[]"]'));
+      if (!selects.length) return;
+      const selected = selects.map((select) => select.value).filter(Boolean);
+      selects.forEach((select) => {
+        Array.from(select.options).forEach((option) => {
+          option.disabled = option.value !== '' && option.value !== select.value && selected.includes(option.value);
+        });
+      });
+    };
 
     const renderPlayerRadar = (scope) => {
       const card = scope.querySelector('[data-player-radar]');
@@ -911,7 +929,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (!card || !canvas) return;
 
       const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
-      const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
+      const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       const fields = hasGoalkeeper ? statNames.map((field) => field === 'attack' ? 'goalkeeper_skill' : field) : statNames;
       const isCompact = card.classList.contains('player-radar-card-compact');
       const labels = isCompact ? radarShortLabels : radarLabels;
@@ -974,7 +992,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       }
 
       const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
-      const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
+      const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       const raw = hasGoalkeeper
         ? (getValue('goalkeeper_skill') * 0.42)
           + (getValue('defense_physical') * 0.14)
@@ -1044,7 +1062,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     });
 
     const syncGoalkeeperStats = (scope) => {
-      const hasGoalkeeper = Boolean(scope.querySelector('input[name="positions[]"][value="ARQ"]:checked'));
+      syncPositionSelectOptions(scope);
+      const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       scope.querySelectorAll('[data-goalkeeper-stat-row]').forEach((row) => {
         row.hidden = !hasGoalkeeper;
         row.querySelectorAll('input, select, textarea').forEach((input) => {
@@ -1067,7 +1086,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         input.addEventListener('input', () => updateGeneralRating(scope));
         input.addEventListener('change', () => updateGeneralRating(scope));
       });
-      scope.querySelectorAll('input[name="positions[]"]').forEach((input) => {
+      scope.querySelectorAll('input[name="positions[]"], select[name="positions[]"]').forEach((input) => {
         input.addEventListener('change', () => syncGoalkeeperStats(scope));
       });
       updateGeneralRating(scope);

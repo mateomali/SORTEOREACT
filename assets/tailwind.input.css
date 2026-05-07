@@ -504,6 +504,22 @@
     @apply text-sm;
   }
 
+  .player-position-selects {
+    @apply grid grid-cols-1 gap-2 sm:grid-cols-3;
+  }
+
+  .player-position-select {
+    @apply grid min-w-0 gap-1;
+  }
+
+  .player-position-select span {
+    @apply text-xs font-bold text-slate-500;
+  }
+
+  .player-position-select select {
+    @apply w-full min-w-0;
+  }
+
   .stat-rating-compact {
     @apply gap-1 border-0 bg-transparent p-0;
   }

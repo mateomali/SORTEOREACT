@@ -31,13 +31,14 @@ function parse_positions_legacy(string $positions): array
         explode('/', $positions)
     );
     $parts = array_values(array_filter($parts, static fn($p): bool => $p !== ''));
+    $allowed = ['ARQ', 'DEF', 'MED', 'DEL'];
     $ordered = [];
-    foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $pos) {
-        if (in_array($pos, $parts, true)) {
+    foreach ($parts as $pos) {
+        if (in_array($pos, $allowed, true) && !in_array($pos, $ordered, true)) {
             $ordered[] = $pos;
         }
     }
-    return $ordered ?: ['MED'];
+    return array_slice($ordered, 0, 3) ?: ['MED'];
 }
 
 function get_primary_position_legacy(array $player): string

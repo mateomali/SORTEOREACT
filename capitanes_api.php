@@ -88,30 +88,40 @@ function next_captain_team(array $draft, int $currentTeam): int
     return $numbers[($index + 1) % count($numbers)];
 }
 
-function captain_position_order(): array
-{
-    return ['ARQ', 'DEF', 'MED', 'DEL'];
-}
-
 function primary_position(array $player): string
 {
     $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
     return $positions[0] ?? 'MED';
 }
 
-function captain_active_pot(array $available): ?string
+function captain_recent_non_captain_pick_streak(int $matchId, int $captainCount): array
 {
-    foreach (captain_position_order() as $position) {
-        foreach ($available as $player) {
-            if (primary_position($player) === $position) {
-                return $position;
-            }
-        }
+    $stmt = db()->prepare(
+        'SELECT team_number
+         FROM captain_picks
+         WHERE match_id = :mid AND pick_order > :captain_count
+         ORDER BY pick_order DESC
+         LIMIT 10'
+    );
+    $stmt->execute(['mid' => $matchId, 'captain_count' => $captainCount]);
+    $rows = $stmt->fetchAll();
+    if (!$rows) {
+        return ['team_number' => null, 'count' => 0];
     }
-    return null;
+
+    $teamNumber = (int) $rows[0]['team_number'];
+    $count = 0;
+    foreach ($rows as $row) {
+        if ((int) $row['team_number'] !== $teamNumber) {
+            break;
+        }
+        $count++;
+    }
+
+    return ['team_number' => $teamNumber, 'count' => $count];
 }
 
-function captain_next_team_by_lowest_average(int $matchId, array $draft): int
+function captain_next_team_by_lowest_total_skill(int $matchId, array $draft, int $maxConsecutiveTurns = 2): int
 {
     $teamNumbers = captain_numbers($draft);
     $captainCount = count($teamNumbers);
@@ -120,7 +130,7 @@ function captain_next_team_by_lowest_average(int $matchId, array $draft): int
     $targetSize = $captainCount > 0 ? (int) ((int) $totalStmt->fetchColumn() / $captainCount) : 0;
 
     $stmt = db()->prepare(
-        'SELECT mp.team_number, COUNT(*) AS picked_count, COALESCE(AVG(p.skill), 0) AS avg_skill, COALESCE(SUM(p.skill), 0) AS total_skill
+        'SELECT mp.team_number, COUNT(*) AS picked_count, COALESCE(SUM(p.skill), 0) AS total_skill
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
@@ -131,7 +141,6 @@ function captain_next_team_by_lowest_average(int $matchId, array $draft): int
     foreach ($stmt->fetchAll() as $row) {
         $stats[(int) $row['team_number']] = [
             'picked_count' => (int) $row['picked_count'],
-            'avg_skill' => (float) $row['avg_skill'],
             'total_skill' => (float) $row['total_skill'],
         ];
     }
@@ -144,30 +153,44 @@ function captain_next_team_by_lowest_average(int $matchId, array $draft): int
         if ($fullA !== $fullB) {
             return $fullA <=> $fullB;
         }
-        $avgA = $stats[$a]['avg_skill'] ?? 0.0;
-        $avgB = $stats[$b]['avg_skill'] ?? 0.0;
-        if (abs($avgA - $avgB) > 0.0001) {
-            return $avgA <=> $avgB;
-        }
-        if ($countA !== $countB) {
-            return $countA <=> $countB;
-        }
         $totalA = $stats[$a]['total_skill'] ?? 0.0;
         $totalB = $stats[$b]['total_skill'] ?? 0.0;
         if (abs($totalA - $totalB) > 0.0001) {
             return $totalA <=> $totalB;
         }
+        if ($countA !== $countB) {
+            return $countA <=> $countB;
+        }
         return $a <=> $b;
     });
 
+    $openTeams = [];
     foreach ($teamNumbers as $teamNumber) {
         $count = $stats[$teamNumber]['picked_count'] ?? 0;
         if ($targetSize <= 0 || $count < $targetSize) {
-            return $teamNumber;
+            $openTeams[] = $teamNumber;
         }
     }
 
-    return $teamNumbers[0] ?? 1;
+    if (!$openTeams) {
+        return $teamNumbers[0] ?? 1;
+    }
+
+    $streak = captain_recent_non_captain_pick_streak($matchId, $captainCount);
+    if (
+        $maxConsecutiveTurns > 0
+        && (int) ($streak['count'] ?? 0) >= $maxConsecutiveTurns
+        && count($openTeams) > 1
+    ) {
+        $streakTeam = (int) ($streak['team_number'] ?? 0);
+        foreach ($openTeams as $teamNumber) {
+            if ($teamNumber !== $streakTeam) {
+                return $teamNumber;
+            }
+        }
+    }
+
+    return $openTeams[0];
 }
 
 function can_edit_captain_formation(array $match): bool
@@ -189,36 +212,48 @@ function validate_captain_formation_line_counts(array $counts): void
     }
 }
 
-function skill_allowed_ids_in_range(array $available, float $targetSkill, float $range = 1.0): array
+function captain_team_skill_totals(int $matchId): array
 {
-    $ids = [];
-    foreach ($available as $player) {
-        if (abs((float) ($player['skill'] ?? 0) - $targetSkill) <= $range) {
-            $ids[] = (int) $player['id'];
-        }
+    $stmt = db()->prepare(
+        'SELECT mp.team_number, COUNT(*) AS picked_count, COALESCE(SUM(p.skill), 0) AS total_skill
+         FROM match_players mp
+         INNER JOIN players p ON p.id = mp.player_id
+         WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
+         GROUP BY mp.team_number'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $totals = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $totals[(int) $row['team_number']] = [
+            'picked_count' => (int) $row['picked_count'],
+            'total_skill' => (float) $row['total_skill'],
+        ];
     }
-    if ($ids) {
-        return $ids;
-    }
+    return $totals;
+}
 
-    $closestDistance = null;
-    $closestIds = [];
-    foreach ($available as $player) {
-        $distance = abs((float) ($player['skill'] ?? 0) - $targetSkill);
-        if ($closestDistance === null || $distance < $closestDistance) {
-            $closestDistance = $distance;
-            $closestIds = [(int) $player['id']];
-        } elseif ($distance === $closestDistance) {
-            $closestIds[] = (int) $player['id'];
-        }
+function captain_goalkeeper_counts(int $matchId): array
+{
+    $stmt = db()->prepare(
+        'SELECT mp.team_number, COUNT(*) AS goalkeeper_count
+         FROM match_players mp
+         INNER JOIN players p ON p.id = mp.player_id
+         WHERE mp.match_id = :mid
+           AND mp.team_number IS NOT NULL
+           AND (p.positions = "ARQ" OR p.positions LIKE "ARQ/%")
+         GROUP BY mp.team_number'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $counts = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $counts[(int) $row['team_number']] = (int) $row['goalkeeper_count'];
     }
-    return $closestIds;
+    return $counts;
 }
 
 function captain_pick_rule(int $matchId, array $available, array $draft): array
 {
-    $activePot = captain_active_pot($available);
-    if ($activePot === null) {
+    if (!$available) {
         return [
             'active' => false,
             'enforced' => false,
@@ -228,86 +263,99 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
             'message' => 'No quedan jugadores disponibles.',
         ];
     }
-    $potAvailable = array_values(array_filter($available, static fn(array $player): bool => primary_position($player) === $activePot));
-    $stmt = db()->prepare(
-        'SELECT p.skill, p.positions
-         FROM captain_picks cp
-         INNER JOIN players p ON p.id = cp.player_id
-         WHERE cp.match_id = :mid AND cp.pick_order > :captain_count
-         ORDER BY cp.pick_order DESC
-         LIMIT 40'
-    );
-    $captainNumbers = captain_turn_order($draft);
-    $stmt->execute(['mid' => $matchId, 'captain_count' => count($captainNumbers)]);
-    $lastSkill = false;
-    foreach ($stmt->fetchAll() as $row) {
-        if (primary_position($row) === $activePot) {
-            $lastSkill = (float) $row['skill'];
-            break;
+
+    $currentTeam = (int) ($draft['current_team'] ?? 0);
+    $teamNumbers = captain_numbers($draft);
+    $goalkeeperCounts = captain_goalkeeper_counts($matchId);
+    $teamNeedsGoalkeeper = $currentTeam > 0 && (($goalkeeperCounts[$currentTeam] ?? 0) <= 0);
+    $availableGoalkeepers = array_values(array_filter($available, static fn(array $player): bool => primary_position($player) === 'ARQ'));
+    $pool = $available;
+    $activePot = null;
+    if ($teamNeedsGoalkeeper && $availableGoalkeepers) {
+        $pool = $availableGoalkeepers;
+        $activePot = 'ARQ';
+    } elseif ($availableGoalkeepers) {
+        $teamsWithoutGoalkeeper = 0;
+        foreach ($teamNumbers as $teamNumber) {
+            if (($goalkeeperCounts[$teamNumber] ?? 0) <= 0) {
+                $teamsWithoutGoalkeeper++;
+            }
+        }
+        if ($teamsWithoutGoalkeeper > 0) {
+            $pool = array_values(array_filter($available, static fn(array $player): bool => primary_position($player) !== 'ARQ'));
         }
     }
 
-    if ($lastSkill === false) {
-        return [
-            'active' => true,
-            'enforced' => true,
-            'mode' => 'position_pot',
-            'active_pot' => $activePot,
-            'reference_skill' => null,
-            'last_skill' => null,
-            'min_skill' => null,
-            'max_skill' => null,
-            'allowed_ids' => array_map(static fn(array $player): int => (int) $player['id'], $potAvailable),
-            'message' => 'Pote activo: ' . $activePot . '. Elige dentro de esta posicion. Turno para el equipo con menor promedio acumulado.',
-        ];
+    if (!$pool) {
+        $pool = $available;
     }
 
-    $lastSkill = (float) $lastSkill;
-    $range = 1.0;
+    $totals = captain_team_skill_totals($matchId);
+    $currentTotal = $currentTeam > 0 ? (float) ($totals[$currentTeam]['total_skill'] ?? 0.0) : 0.0;
+    $highestTotal = $currentTotal;
+    foreach ($teamNumbers as $teamNumber) {
+        $highestTotal = max($highestTotal, (float) ($totals[$teamNumber]['total_skill'] ?? 0.0));
+    }
+
+    $margin = 1.0;
     $allowedIds = [];
-    while ($range <= 10.0 && !$allowedIds) {
-        foreach ($potAvailable as $player) {
-            $skill = (float) ($player['skill'] ?? 0);
-            if (abs($skill - $lastSkill) <= $range) {
+    while ($margin <= 8.0 && !$allowedIds) {
+        foreach ($pool as $player) {
+            $projectedTotal = $currentTotal + (float) ($player['skill'] ?? 0);
+            if ($projectedTotal <= $highestTotal + $margin) {
                 $allowedIds[] = (int) $player['id'];
             }
         }
         if (!$allowedIds) {
-            $range += 0.5;
+            $margin += 0.5;
         }
     }
-    $minSkill = $lastSkill - $range;
-    $maxSkill = $lastSkill + $range;
 
     if (!$allowedIds) {
-        $fallbackIds = array_map(static fn(array $player): int => (int) $player['id'], $potAvailable);
+        $bestDistance = null;
+        foreach ($pool as $player) {
+            $projectedTotal = $currentTotal + (float) ($player['skill'] ?? 0);
+            $distance = abs($projectedTotal - $highestTotal);
+            if ($bestDistance === null || $distance < $bestDistance) {
+                $bestDistance = $distance;
+                $allowedIds = [(int) $player['id']];
+            } elseif (abs($distance - $bestDistance) < 0.0001) {
+                $allowedIds[] = (int) $player['id'];
+            }
+        }
+    }
+
+    $maxProjectedTotal = $highestTotal + $margin;
+    if ($activePot === 'ARQ') {
         return [
             'active' => true,
             'enforced' => true,
-            'mode' => 'chain',
+            'mode' => 'goalkeeper_balance',
             'active_pot' => $activePot,
-        'reference_skill' => null,
-            'last_skill' => $lastSkill,
-            'min_skill' => $minSkill,
-            'max_skill' => $maxSkill,
-            'range' => $range,
-            'allowed_ids' => $fallbackIds,
-            'message' => 'Pote activo: ' . $activePot . '. No quedan jugadores dentro de la banda de puntaje; se fuerza elegir de menor puntaje dentro del pote.',
+            'reference_skill' => null,
+            'current_total' => $currentTotal,
+            'highest_total' => $highestTotal,
+            'min_skill' => null,
+            'max_skill' => max(0.0, $maxProjectedTotal - $currentTotal),
+            'range' => $margin,
+            'allowed_ids' => $allowedIds,
+            'message' => 'Tu equipo necesita arquero. Elegi un ARQ que mantenga la sumatoria cerca del equipo mas alto.',
         ];
     }
 
     return [
         'active' => true,
         'enforced' => true,
-        'mode' => 'chain',
-        'active_pot' => $activePot,
+        'mode' => 'team_total_balance',
+        'active_pot' => null,
         'reference_skill' => null,
-        'last_skill' => $lastSkill,
-        'min_skill' => $minSkill,
-        'max_skill' => $maxSkill,
-        'range' => $range,
+        'current_total' => $currentTotal,
+        'highest_total' => $highestTotal,
+        'min_skill' => null,
+        'max_skill' => max(0.0, $maxProjectedTotal - $currentTotal),
+        'range' => $margin,
         'allowed_ids' => $allowedIds,
-        'message' => 'Pote activo: ' . $activePot . '. Elegir jugadores entre ' . number_format($minSkill, 1) . ' y ' . number_format($maxSkill, 1) . ' puntos.',
+        'message' => 'Equilibrio por sumatoria: elegi un jugador que deje a tu equipo hasta ' . number_format($maxProjectedTotal, 1) . ' puntos totales.',
     ];
 }
 
@@ -858,7 +906,7 @@ try {
     if ($remaining === 0) {
         finish_captain_draft($matchId);
     } else {
-        $nextTeam = captain_next_team_by_lowest_average($matchId, $draft);
+        $nextTeam = captain_next_team_by_lowest_total_skill($matchId, $draft);
         $pdo->prepare('UPDATE captain_drafts SET current_team = :team WHERE match_id = :mid')
             ->execute(['team' => $nextTeam, 'mid' => $matchId]);
     }

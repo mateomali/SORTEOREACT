@@ -25,7 +25,7 @@ function formatRating(value) {
 }
 
 function overall(stats, selectedPositions) {
-  const hasGoalkeeper = selectedPositions.includes('ARQ');
+  const hasGoalkeeper = selectedPositions[0] === 'ARQ';
   const base = hasGoalkeeper
     ? (stats.goalkeeper_skill * 0.42)
       + (stats.defense_physical * 0.14)
@@ -128,19 +128,20 @@ export function PlayerCreateIsland({ root }) {
   const [active, setActive] = useState(true);
   const [selectedPositions, setSelectedPositions] = useState([]);
   const [stats, setStats] = useState(defaults);
-  const hasGoalkeeper = selectedPositions.includes('ARQ');
+  const hasGoalkeeper = selectedPositions[0] === 'ARQ';
   const general = useMemo(() => overall(stats, selectedPositions), [stats, selectedPositions]);
 
   const updateStat = (field, value) => {
     setStats((current) => ({ ...current, [field]: value }));
   };
 
-  const togglePosition = (position) => {
-    setSelectedPositions((current) => (
-      current.includes(position)
-        ? current.filter((item) => item !== position)
-        : [...current, position]
-    ));
+  const updatePosition = (index, position) => {
+    setSelectedPositions((current) => {
+      const next = [...current];
+      next[index] = position;
+      const clean = next.filter(Boolean).filter((item, itemIndex, list) => list.indexOf(item) === itemIndex);
+      return clean.slice(0, 3);
+    });
   };
 
   return (
@@ -190,17 +191,27 @@ export function PlayerCreateIsland({ root }) {
 
         <div className="form-row">
           <label>Posiciones</label>
-          <div className="check-row">
-            {positions.map((position) => (
-              <label className="chip" key={position}>
-                <input
-                  type="checkbox"
+          <div className="player-position-selects" data-player-position-selects>
+            {['Primaria', 'Secundaria', 'Tercera'].map((label, index) => (
+              <label className="player-position-select" key={label}>
+                <span>{label}</span>
+                <select
                   name="positions[]"
-                  value={position}
-                  checked={selectedPositions.includes(position)}
-                  onChange={() => togglePosition(position)}
-                />
-                {position}
+                  required={index === 0}
+                  value={selectedPositions[index] || ''}
+                  onChange={(event) => updatePosition(index, event.target.value)}
+                >
+                  {index === 0 ? <option value="" disabled>Elegir</option> : <option value="">Sin posicion</option>}
+                  {positions.map((position) => (
+                    <option
+                      key={position}
+                      value={position}
+                      disabled={selectedPositions.includes(position) && selectedPositions[index] !== position}
+                    >
+                      {position}
+                    </option>
+                  ))}
+                </select>
               </label>
             ))}
           </div>
