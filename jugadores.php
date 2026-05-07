@@ -495,7 +495,7 @@ function player_mobile_stat_color(float $value): string
     }
     return '#f87171';
 }
-function player_mobile_profile_panel(array $player, array $statLabels): string
+function player_mobile_profile_panel(array $player, array $statLabels, array $statHelp): string
 {
     $fields = player_field_stat_fields();
     $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
@@ -526,7 +526,8 @@ function player_mobile_profile_panel(array $player, array $statLabels): string
         $value = player_effective_stat($player, $field);
         $percent = max(0, min(100, (int) round(($value / 6) * 100)));
         $barColor = player_mobile_stat_color($value);
-        $html .= '<div class="mobile-player-stat-row rounded-xl border border-lime-200/25 bg-emerald-900/35 p-2.5">';
+        $html .= '<details class="mobile-player-stat-row mobile-player-stat-explainer rounded-xl border border-lime-200/25 bg-emerald-900/35 p-0">';
+        $html .= '<summary class="cursor-pointer list-none p-2.5">';
         $html .= '<div class="mb-1.5 flex items-center justify-between gap-2">';
         $html .= '<span class="min-w-0 truncate text-xs font-extrabold text-lime-100">' . h((string) ($statLabels[$field] ?? $field)) . '</span>';
         $html .= '<strong class="shrink-0 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-extrabold text-emerald-950">' . h(number_format($value, 1)) . '/6</strong>';
@@ -534,7 +535,11 @@ function player_mobile_profile_panel(array $player, array $statLabels): string
         $html .= '<div class="h-2 overflow-hidden rounded-full bg-emerald-950/80">';
         $html .= '<span class="block h-full rounded-full" style="width: ' . $percent . '%; background-color: ' . h($barColor) . '"></span>';
         $html .= '</div>';
+        $html .= '</summary>';
+        $html .= '<div class="mobile-player-stat-help border-t border-lime-200/20 px-2.5 pb-2.5 pt-2 text-xs font-semibold leading-snug text-emerald-100/85">';
+        $html .= h((string) ($statHelp[$field] ?? 'Sin descripcion disponible.'));
         $html .= '</div>';
+        $html .= '</details>';
     }
     $html .= '</div>';
     $html .= player_stats_radar_panel(true);
@@ -675,7 +680,7 @@ require __DIR__ . '/includes/header.php';
                 </span>
                 <span class="mobile-player-view-action shrink-0 rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-[11px] font-extrabold text-emerald-950">VER</span>
               </summary>
-              <?= player_mobile_profile_panel($player, $statLabels) ?>
+              <?= player_mobile_profile_panel($player, $statLabels, $statHelp) ?>
             </details>
           <?php endif; ?>
         <?php endforeach; ?>

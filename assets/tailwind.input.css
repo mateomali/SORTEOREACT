@@ -5271,6 +5271,22 @@ textarea,
     @apply min-w-0;
   }
 
+  .mobile-player-stat-explainer summary::-webkit-details-marker {
+    @apply hidden;
+  }
+
+  .mobile-player-stat-explainer summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-player-stat-explainer[open] {
+    @apply !border-lime-200/45 !bg-emerald-900/55;
+  }
+
+  .mobile-player-stat-help {
+    @apply rounded-b-xl;
+  }
+
   .players-desktop-table thead th {
     @apply !border-lime-200/25 !bg-emerald-950/90 !text-lime-100;
   }
