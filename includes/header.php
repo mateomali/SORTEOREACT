@@ -55,12 +55,12 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
 </head>
 <body>
   <div class="app-shell">
-    <header class="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 bg-emerald-950 px-2.5 py-2 text-white sm:min-h-24 sm:px-5 sm:py-3">
-      <div class="flex min-w-0 items-center">
+    <header class="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 bg-emerald-950 px-2.5 py-2 text-white sm:min-h-24 sm:px-5 sm:py-3 min-[761px]:pl-0 min-[761px]:pr-5">
+      <div class="flex min-w-0 items-center min-[761px]:col-start-1 min-[761px]:row-start-1">
         <?php if (is_file($brandLogoPath)): ?>
           <a class="inline-flex shrink-0 items-center no-underline" href="index.php" aria-label="Ir al inicio">
             <img
-              class="h-10 w-auto max-w-[96px] shrink-0 object-contain sm:h-24 sm:max-w-[270px]"
+              class="h-10 w-auto max-w-[96px] shrink-0 object-contain sm:h-24 sm:max-w-[270px] min-[761px]:-ml-1.5"
               src="assets/goodfellas-logo.png"
               alt="Goodfellas"
               width="900"
@@ -70,7 +70,7 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
         <?php endif; ?>
       </div>
       <nav
-        class="col-span-full row-start-2 hidden w-full min-w-0 flex-col gap-2 border-t border-lime-200/15 pt-2 min-[761px]:col-auto min-[761px]:row-start-1 min-[761px]:flex min-[761px]:flex-row min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:justify-end min-[761px]:gap-2 min-[761px]:border-t-0 min-[761px]:pt-0"
+        class="col-span-full row-start-2 hidden w-full min-w-0 flex-col gap-2 border-t border-lime-200/15 pt-2 min-[761px]:col-start-2 min-[761px]:row-start-1 min-[761px]:flex min-[761px]:flex-row min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:justify-end min-[761px]:gap-2 min-[761px]:border-t-0 min-[761px]:pt-0"
         id="mainNav"
         aria-label="Navegacion principal"
       >
@@ -88,7 +88,7 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
           <?php endforeach; ?>
         </div>
       </nav>
-      <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-2">
+      <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-2 min-[761px]:col-start-3 min-[761px]:row-start-1">
         <a class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 no-underline shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" href="<?= h($roleShortcutHref) ?>"><?= h($roleShortcutLabel) ?></a>
         <button class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">Menu</button>
       </div>

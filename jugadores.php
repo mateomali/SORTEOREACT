@@ -948,6 +948,21 @@ require __DIR__ . '/includes/header.php';
   </article>
 </div>
 
+<div class="player-radar-floating-panel fixed inset-0 z-[90] flex items-center justify-center bg-emerald-950/60 p-4 hidden:[display:none]" data-player-radar-panel hidden>
+  <article class="player-radar-floating-card w-[min(92vw,640px)] rounded-2xl border border-lime-200/55 bg-emerald-950 p-4 text-left text-lime-50 shadow-2xl shadow-emerald-950/25" role="dialog" aria-modal="true" aria-labelledby="playerRadarTitle">
+    <div class="player-radar-floating-head mb-3 flex items-center justify-between gap-3 border-b border-lime-200/30 pb-3">
+      <span class="text-xs font-black uppercase tracking-wide text-lime-100">Radar del jugador</span>
+      <button class="player-radar-close inline-flex h-8 w-8 items-center justify-center rounded-xl bg-lime-100 text-sm font-extrabold text-emerald-950 transition hover:bg-lime-200" type="button" data-player-radar-close aria-label="Cerrar">x</button>
+    </div>
+    <h3 class="mb-1 text-xl font-extrabold leading-tight text-lime-50" id="playerRadarTitle" data-player-radar-title>Perfil del jugador</h3>
+    <p class="small-muted mb-3 text-emerald-100/80">Vista ampliada del perfil de stats.</p>
+    <div class="player-radar-floating-body grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_minmax(180px,240px)]">
+      <div class="player-radar-floating-canvas rounded-2xl border border-lime-200/35 bg-emerald-900/45 p-3" data-player-radar-large-canvas></div>
+      <div class="player-radar-floating-stats grid gap-2" data-player-radar-stats></div>
+    </div>
+  </article>
+</div>
+
 <?php foreach ($players as $player): ?>
   <?php
     $playerId = (int) $player['id'];

@@ -315,15 +315,19 @@
   }
 
   .stats-search-card {
-    @apply mb-4;
+    @apply mb-4 border-lime-200/45 bg-emerald-950/92 p-4 shadow-lg shadow-emerald-950/18;
   }
 
   .stats-player-search {
-    @apply p-0;
+    @apply grid gap-2 rounded-2xl border border-lime-200/45 bg-emerald-900/65 p-3 shadow-inner shadow-emerald-950/20 md:grid-cols-[max-content_minmax(0,1fr)_auto] md:items-center md:gap-3;
+  }
+
+  .stats-player-search label {
+    @apply mb-0 whitespace-nowrap text-sm font-black text-lime-100;
   }
 
   .stats-player-search input {
-    @apply max-w-md;
+    @apply min-h-12 max-w-none border-lime-200/55 bg-emerald-950/95 px-4 py-3 text-base font-semibold text-lime-50 placeholder:text-emerald-100/70 focus:border-lime-100 focus:ring-4 focus:ring-lime-200/25;
   }
 
   .stats-player-result {
@@ -599,7 +603,7 @@
   }
 
   .home-next-card {
-    @apply mb-3 grid items-center gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto];
+    @apply mb-3 grid items-center gap-3 border-lime-200/55 bg-emerald-950/95 px-4 py-3 shadow-xl shadow-emerald-950/22 md:grid-cols-[minmax(0,1fr)_auto];
     min-width: 0;
   }
 
@@ -656,11 +660,11 @@
   }
 
   .home-next-card .match-detail-toggle-btn {
-    @apply min-h-10 justify-center px-4 py-2;
+    @apply min-h-10 justify-center border-lime-200/45 bg-emerald-950 px-4 py-2 text-lime-50 shadow-md shadow-emerald-950/18 hover:border-lime-200/70 hover:bg-lime-100/15 hover:text-lime-100;
   }
 
   .home-kicker {
-    @apply mb-0.5 inline-block text-[10px] font-extrabold uppercase tracking-wide text-lime-100;
+    @apply mb-1 inline-block rounded-full border border-lime-200/35 bg-lime-100/12 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-lime-100;
   }
 
   .home-result-line {
@@ -5353,5 +5357,414 @@ textarea,
   .player-icon-button:not(.btn-danger):hover,
   .player-scout-row-button:hover {
     @apply !border-lime-200/65 !bg-lime-100/15 !text-lime-100;
+  }
+
+  #mainNav a[class*="bg-lime-200"] {
+    @apply !text-emerald-950 hover:!text-emerald-950;
+  }
+
+  .stats-player-search.react-stats-search {
+    display: grid !important;
+    grid-template-columns: max-content minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    border-color: color-mix(in oklab, var(--color-lime-200) 62%, transparent) !important;
+    background-color: color-mix(in oklab, var(--color-emerald-950) 88%, transparent) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-lime-200) 10%, transparent), 0 14px 26px color-mix(in oklab, var(--color-emerald-950) 20%, transparent) !important;
+  }
+
+  .stats-player-search.react-stats-search input {
+    width: 100% !important;
+    max-width: none !important;
+    background-color: color-mix(in oklab, var(--color-emerald-900) 72%, transparent) !important;
+  }
+
+  .home-next-card.card {
+    @apply !border-lime-200/55 !bg-emerald-950/95 !shadow-xl !shadow-emerald-950/22;
+    background:
+      linear-gradient(135deg, rgba(1, 34, 25, 0.98), rgba(0, 25, 18, 0.98)) !important;
+  }
+
+  section.card:has(.players-desktop-table) {
+    @apply !p-4;
+  }
+
+  section.card:has(.player-list-react-controls) > .section-toolbar {
+    @apply !grid !grid-cols-[minmax(0,1fr)_minmax(320px,420px)] !items-center !gap-3 !px-3 !py-3;
+  }
+
+  section.card:has(.player-list-react-controls) > .section-toolbar > div:first-child {
+    @apply min-w-0;
+  }
+
+  section.card:has(.player-list-react-controls) > .section-toolbar h3 {
+    @apply !text-lg !leading-tight;
+  }
+
+  section.card:has(.player-list-react-controls) > .section-toolbar .small-muted {
+    @apply !mt-0.5 !text-sm !leading-snug;
+  }
+
+  .player-list-react-controls {
+    @apply !grid-cols-[minmax(0,1fr)_auto] !items-end !gap-2 !rounded-xl !p-2.5;
+  }
+
+  .player-list-react-controls .player-list-search-shell {
+    @apply !gap-1;
+  }
+
+  .player-list-react-controls label {
+    @apply !text-[10px] !leading-none;
+  }
+
+  .player-list-react-controls input {
+    @apply !min-h-10 !px-3 !py-2 !text-sm;
+  }
+
+  .player-list-react-controls .player-count-filter {
+    @apply !min-h-10 !whitespace-nowrap !px-3 !py-2;
+  }
+
+  .players-desktop-help {
+    @apply !mb-2;
+  }
+
+  .players-desktop-help .player-stat-help summary {
+    @apply !px-3 !py-2;
+  }
+
+  .players-desktop-table {
+    @apply !rounded-xl;
+  }
+
+  .players-desktop-table table {
+    border-spacing: 0 !important;
+  }
+
+  .players-desktop-table thead th {
+    @apply !px-3 !py-2 !text-[11px] !leading-tight;
+  }
+
+  .players-desktop-table tbody td {
+    @apply !px-3 !py-2 !align-middle;
+  }
+
+  .players-user-table tbody td {
+    @apply !py-2;
+  }
+
+  .players-user-table .player-readonly-name {
+    @apply !text-sm !leading-tight;
+  }
+
+  .players-user-table .player-scout-row-button {
+    @apply !mt-1.5 !min-h-7 !rounded-lg !px-2 !py-1 !text-[11px];
+  }
+
+  .players-user-table .desktop-player-card-overall {
+    @apply !grid-cols-[auto_minmax(0,1fr)] !gap-2 !rounded-lg !px-2 !py-1.5;
+  }
+
+  .players-user-table .desktop-player-card-overall .mobile-player-card-rating {
+    @apply !h-11 !w-11 !rounded-lg;
+  }
+
+  .players-user-table .desktop-player-card-overall .mobile-player-card-rating strong {
+    @apply !text-xl !leading-none;
+  }
+
+  .players-user-table .desktop-player-card-overall .mobile-player-card-rating span {
+    @apply !text-[8px];
+  }
+
+  .players-user-table .desktop-player-card-overall .mobile-player-card-meta span {
+    @apply !text-[9px] !leading-none;
+  }
+
+  .players-user-table .desktop-player-card-overall .mobile-player-card-meta strong {
+    @apply !text-lg !leading-tight;
+  }
+
+  .players-desktop-table .player-radar-card-compact {
+    @apply !mt-1.5 !rounded-lg !px-2 !py-1.5;
+  }
+
+  .players-desktop-table .player-radar-card-compact .player-radar-head {
+    @apply !mb-0.5;
+  }
+
+  .players-desktop-table .player-radar-card-compact .player-radar-head strong {
+    @apply !text-[10px];
+  }
+
+  .players-desktop-table .player-radar-card-compact .player-radar-head span {
+    @apply !text-[9px];
+  }
+
+  .players-desktop-table .player-radar-card-compact .player-radar-canvas svg {
+    max-width: 128px !important;
+  }
+
+  .players-desktop-table .player-radar-card-compact .radar-axis text {
+    font-size: 7px !important;
+  }
+
+  .players-user-table .desktop-player-stat-bars {
+    @apply !grid-cols-4 !gap-1.5 !pr-0;
+    min-width: 720px !important;
+  }
+
+  .players-user-table .desktop-player-stat-explainer {
+    @apply !rounded-lg;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary {
+    @apply !px-2 !py-1.5;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary > div:first-child {
+    @apply !mb-1;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary span {
+    @apply !text-[10px] !leading-none;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary strong {
+    @apply !px-1.5 !py-0 !text-[9px] !leading-4;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary .h-2 {
+    height: 0.375rem !important;
+  }
+
+  .players-user-table .mobile-player-stat-help {
+    @apply !px-2 !pb-1.5 !pt-1 !text-[10px];
+  }
+
+  @media (max-width: 1120px) {
+    section.card:has(.player-list-react-controls) > .section-toolbar {
+      @apply !grid-cols-1;
+    }
+
+    .player-list-react-controls {
+      @apply !grid-cols-1;
+    }
+  }
+
+  section.card .section-toolbar,
+  section.card .section-toolbar:has(.player-list-react-controls),
+  section.card:has(.player-list-react-controls) .section-toolbar,
+  .players-desktop-help .player-stat-help,
+  .players-mobile-help .player-stat-help {
+    @apply !border-lime-200/50 !bg-emerald-950/82 !shadow-lg !shadow-emerald-950/18;
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--color-lime-200) 8%, transparent),
+      0 14px 28px color-mix(in oklab, var(--color-emerald-950) 18%, transparent) !important;
+  }
+
+  .section-toolbar,
+  .react-search-box,
+  .react-filters,
+  .history-search,
+  .encounter-history-search,
+  .stats-filter-menu,
+  .filters-panel,
+  .settings-panel,
+  .draw-settings,
+  .manual-search-panel,
+  .manual-search-assist,
+  .react-stats-search,
+  .finish-valuation-controls,
+  .participant-search,
+  .participant-search-shell,
+  .player-list-react-controls,
+  .player-list-search-shell,
+  .manual-player-search,
+  .manual-player-search-box {
+    @apply !border-lime-200/50 !bg-emerald-950/82 !shadow-lg !shadow-emerald-950/18;
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--color-lime-200) 8%, transparent),
+      0 14px 28px color-mix(in oklab, var(--color-emerald-950) 18%, transparent) !important;
+  }
+
+  .section-toolbar input,
+  .react-search-box input,
+  .history-search input,
+  .encounter-history-search input,
+  .stats-player-search input,
+  .finish-valuation-controls input,
+  .participant-search input,
+  .player-list-react-controls input,
+  .player-list-search-shell input,
+  .manual-player-search input,
+  .manual-player-search-box input,
+  input.search-input {
+    @apply !min-h-11 !border-lime-200/50 !bg-emerald-900/74 !text-lime-50 placeholder:!text-emerald-50/64 focus:!border-lime-100 focus:!ring-4 focus:!ring-lime-200/25;
+  }
+
+  details.card,
+  .stats-collapsible,
+  .history-match-accordion,
+  .finish-collapse,
+  .participant-mobile-marquee,
+  .import-list-panel,
+  .import-missing-player,
+  .encounter-action-menu,
+  .mobile-player-view-card,
+  .desktop-player-stat-explainer,
+  .mobile-player-stat-explainer,
+  .player-stat-help,
+  .finish-awards,
+  .sorteo-page .accordion {
+    @apply !border-lime-200/40 !shadow-lg !shadow-emerald-950/14;
+  }
+
+  details.card > summary,
+  .stats-collapsible summary,
+  .history-match-summary,
+  .finish-collapse summary,
+  .participant-mobile-marquee summary,
+  .import-list-summary-row,
+  .import-missing-player summary,
+  .encounter-action-menu summary,
+  .mobile-player-view-summary,
+  .desktop-player-stat-explainer summary,
+  .mobile-player-stat-explainer summary,
+  .player-stat-help summary,
+  .finish-awards summary,
+  .sorteo-page .accordion-header {
+    @apply !rounded-xl !border !border-lime-200/35 !bg-emerald-950/72 !px-4 !py-3 !text-lime-50 !shadow-sm !shadow-emerald-950/12;
+  }
+
+  details.card[open] > summary,
+  .stats-collapsible[open] summary,
+  .history-match-accordion[open] .history-match-summary,
+  .finish-collapse[open] summary,
+  .participant-mobile-marquee[open] summary,
+  .import-list-panel[open] .import-list-summary-row,
+  .import-missing-player[open] summary,
+  .encounter-action-menu[open] summary,
+  .mobile-player-view-card[open] .mobile-player-view-summary,
+  .desktop-player-stat-explainer[open] summary,
+  .mobile-player-stat-explainer[open] summary,
+  .player-stat-help[open] summary,
+  .finish-awards[open] summary,
+  .sorteo-page .accordion.active .accordion-header {
+    @apply !border-lime-200/62 !bg-emerald-950/95 !text-lime-100;
+  }
+
+  details.card > summary:hover,
+  .stats-collapsible summary:hover,
+  .history-match-summary:hover,
+  .finish-collapse summary:hover,
+  .participant-mobile-marquee summary:hover,
+  .import-list-summary-row:hover,
+  .import-missing-player summary:hover,
+  .encounter-action-menu summary:hover,
+  .mobile-player-view-summary:hover,
+  .desktop-player-stat-explainer summary:hover,
+  .mobile-player-stat-explainer summary:hover,
+  .player-stat-help summary:hover,
+  .finish-awards summary:hover,
+  .sorteo-page .accordion-header:hover {
+    @apply !border-lime-200/70 !bg-lime-100/10;
+  }
+
+  .players-user-table td:has(> .desktop-player-card-overall + .player-radar-card-compact) {
+    display: grid !important;
+    grid-template-columns: minmax(9rem, 1fr) 5.25rem !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+
+  .players-user-table .player-radar-card-compact {
+    display: block !important;
+    margin-top: 0 !important;
+    padding: 0.375rem !important;
+    border-radius: 0.625rem !important;
+    cursor: zoom-in !important;
+    transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease !important;
+  }
+
+  .players-user-table .player-radar-card-compact:hover,
+  .players-user-table .player-radar-card-compact:focus-visible {
+    border-color: color-mix(in oklab, var(--color-lime-200) 72%, transparent) !important;
+    background-color: color-mix(in oklab, var(--color-lime-100) 10%, var(--color-emerald-950)) !important;
+    outline: none !important;
+    transform: translateY(-1px);
+  }
+
+  .players-user-table .player-radar-card-compact .player-radar-head {
+    display: none !important;
+  }
+
+  .players-user-table .player-radar-card-compact .player-radar-canvas svg {
+    max-width: 4.25rem !important;
+  }
+
+  .players-user-table .player-radar-card-compact .radar-axis text {
+    font-size: 6px !important;
+  }
+
+  .player-radar-floating-panel[hidden] {
+    display: none !important;
+  }
+
+  .player-radar-floating-card {
+    background:
+      radial-gradient(circle at 18% 0%, color-mix(in oklab, var(--color-lime-100) 10%, transparent), transparent 34%),
+      color-mix(in oklab, var(--color-emerald-950) 96%, black) !important;
+  }
+
+  .player-radar-floating-canvas svg,
+  .player-radar-large-svg {
+    width: 100% !important;
+    max-width: 21rem !important;
+    height: auto !important;
+    margin-inline: auto;
+  }
+
+  .players-user-table .desktop-player-stat-bars {
+    grid-template-columns: repeat(4, minmax(9.5rem, 1fr)) !important;
+    gap: 0.375rem !important;
+    min-width: 680px !important;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary {
+    padding: 0.375rem 0.5rem !important;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary > div:first-child {
+    margin-bottom: 0.25rem !important;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary span {
+    font-size: 0.625rem !important;
+    line-height: 1 !important;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary strong {
+    padding: 0 0.375rem !important;
+    font-size: 0.5625rem !important;
+    line-height: 1rem !important;
+  }
+
+  .players-user-table .desktop-player-stat-explainer summary .h-2 {
+    height: 0.3125rem !important;
+  }
+
+  .players-user-table tbody td {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .players-user-table .desktop-player-card-overall {
+    padding: 0.375rem 0.5rem !important;
+  }
+
+  @media (max-width: 760px) {
+    .stats-player-search.react-stats-search {
+      grid-template-columns: 1fr !important;
+    }
   }
 }

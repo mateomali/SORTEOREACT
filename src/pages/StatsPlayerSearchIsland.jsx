@@ -68,7 +68,7 @@ export function StatsPlayerSearchIsland({ root }) {
         id="statsPlayerSearchReact"
         type="search"
         list="statsPlayerList"
-        placeholder="Escribe o elige un jugador"
+        placeholder="Escribe o elige un jugador..."
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
