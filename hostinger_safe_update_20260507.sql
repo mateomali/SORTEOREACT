@@ -259,11 +259,15 @@ CREATE TABLE IF NOT EXISTS directive_members (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  password_needs_setup TINYINT(1) NOT NULL DEFAULT 0,
   active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_directive_member_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE directive_members
+  ADD COLUMN IF NOT EXISTS password_needs_setup TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash;
 
 CREATE TABLE IF NOT EXISTS match_director_rating_votes (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -298,9 +302,28 @@ CREATE TABLE IF NOT EXISTS match_director_award_votes (
 CREATE TABLE IF NOT EXISTS match_director_publications (
   match_id INT UNSIGNED PRIMARY KEY,
   published_at DATETIME NOT NULL,
-  reason ENUM('all_voted', 'deadline') NOT NULL,
+  reason ENUM('all_voted', 'deadline', 'admin') NOT NULL,
   eligible_voters SMALLINT UNSIGNED NOT NULL DEFAULT 0,
   submitted_voters SMALLINT UNSIGNED NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_director_publication_match FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE match_director_publications
+  MODIFY reason ENUM('all_voted', 'deadline', 'admin') NOT NULL;
+
+CREATE TABLE IF NOT EXISTS match_director_vote_invites (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  match_id INT UNSIGNED NOT NULL,
+  player_id INT UNSIGNED NOT NULL,
+  voter_member_id INT UNSIGNED NOT NULL,
+  token VARCHAR(5) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_director_vote_invite_match_player (match_id, player_id),
+  UNIQUE KEY uniq_director_vote_invite_token (token),
+  INDEX idx_director_vote_invite_match (match_id),
+  CONSTRAINT fk_director_vote_invite_match FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_vote_invite_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_vote_invite_voter FOREIGN KEY (voter_member_id) REFERENCES directive_members(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

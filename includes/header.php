@@ -31,13 +31,19 @@ if (is_admin()) {
         'junta_votaciones.php' => 'Votaciones',
         'logout.php' => 'Salir',
     ];
+} elseif (!empty($_SESSION['guest_vote_invite_id'])) {
+    $roleLabel = 'Invitado';
+    $roleMenu = [
+        'junta_votaciones.php' => 'Votacion',
+        'logout.php' => 'Salir',
+    ];
 } else {
     $roleMenu = [
         'login.php' => 'Admin',
     ];
 }
-$roleShortcutHref = is_admin() ? 'editar_partidos.php' : (is_directivo() ? 'junta_votaciones.php' : 'login.php');
-$roleShortcutLabel = is_admin() ? 'Panel admin' : (is_directivo() ? 'Junta' : 'Panel admin');
+$roleShortcutHref = is_admin() ? 'editar_partidos.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : 'login.php');
+$roleShortcutLabel = is_admin() ? 'Panel admin' : (is_directivo() ? 'Junta' : (!empty($_SESSION['guest_vote_invite_id']) ? 'Votacion' : 'Panel admin'));
 $navLinkBase = 'block rounded-xl border border-transparent px-3 py-2 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/35 hover:bg-lime-100/10 hover:text-lime-100 max-[760px]:w-full max-[760px]:border-lime-200/25 max-[760px]:bg-emerald-900/45 max-[760px]:px-2.5 max-[760px]:py-2 max-[760px]:text-xs max-[760px]:leading-tight max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
 $navLinkActive = 'border-lime-200/60 bg-lime-200 text-emerald-950 hover:bg-lime-100 hover:text-emerald-950';
 $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:text-red-50';

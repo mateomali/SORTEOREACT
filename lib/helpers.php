@@ -82,7 +82,7 @@ function normalize_pace(string $pace): string
     if ($value === 'lento') {
         return 'lento';
     }
-    if ($value === 'rápido' || $value === 'rapido') {
+    if (in_array($value, ['rápido', 'rÃ¡pido', 'rapido'], true)) {
         return 'rapido';
     }
     return 'rapido';
@@ -266,3 +266,5 @@ function sort_positions_for_display(array $positions): array
     });
     return $positions;
 }
+
+

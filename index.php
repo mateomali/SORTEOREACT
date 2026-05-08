@@ -501,6 +501,15 @@ function public_team_players_from_lines(array $lines): array
     return $players;
 }
 
+function public_team_tactic_label(array $lines): string
+{
+    $counts = [];
+    foreach (['DEF', 'MED', 'DEL'] as $line) {
+        $counts[] = (string) count($lines[$line] ?? []);
+    }
+    return 'TACTICA ' . implode('-', $counts);
+}
+
 function public_team_characteristics_summary(array $players): array
 {
     $count = count($players);
@@ -567,9 +576,21 @@ function render_formation_total_title(float $total, string $label = 'Base'): str
 {
     ob_start();
     ?>
-    <div class="formation-total-title">
+    <div class="formation-total-title" data-formation-total-title>
       <span><?= h($label) ?></span>
       <strong><?= h(number_format($total, 1)) ?> pts</strong>
+    </div>
+    <?php
+    return trim((string) ob_get_clean());
+}
+
+function render_formation_title_row(float $total, string $tactic): string
+{
+    ob_start();
+    ?>
+    <div class="formation-title-row">
+      <?= render_formation_total_title($total) ?>
+      <div class="formation-total-title formation-tactic-title"><span>TACTICA</span><strong data-formation-tactic><?= h(str_replace('TACTICA ', '', $tactic)) ?></strong></div>
     </div>
     <?php
     return trim((string) ob_get_clean());
@@ -655,7 +676,10 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     <?php else: ?>
       <div class="grid cols-2 public-teams">
         <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
-          <?php $teamPlayersForCharacteristics = public_team_players_from_lines($lines); ?>
+          <?php
+            $teamPlayersForCharacteristics = public_team_players_from_lines($lines);
+            $teamTacticLabel = public_team_tactic_label($lines);
+          ?>
           <article class="team-card">
             <div class="team-head">
               <h4>
@@ -672,8 +696,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                 <?php endif; ?>
               </span>
             </div>
-            <?= render_formation_total_title((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0)) ?>
-            <div class="team-formation" data-static-team-formation data-team-number="<?= h((string) $teamNumber) ?>">
+            <?= render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $teamTacticLabel) ?>
+            <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
               <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
                 <div class="formation-line">
                   <div class="line-label"><?= h($line) ?></div>
@@ -689,7 +713,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                         ?>
                         <div
                           class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?>"
-                          draggable="true"
+                          draggable="false"
                           data-static-formation-player
                           data-static-player-key="<?= h((string) $player['id']) ?>"
                           data-assigned-position="<?= h($line) ?>"
@@ -1005,7 +1029,14 @@ require __DIR__ . '/includes/header.php';
                 </span>
               </summary>
               <div class="history-match-body">
-                <?= render_public_match_detail_content($match, $awardDefinitions, $awardDescriptions) ?>
+                <?php if ($isSelected): ?>
+                  <?= render_public_match_detail_content($match, $awardDefinitions, $awardDescriptions) ?>
+                <?php else: ?>
+                  <div class="history-match-preview">
+                    <p class="small-muted">Detalle completo disponible al abrir esta fecha.</p>
+                    <a class="btn btn-muted" href="historial.php?match_id=<?= (int) $match['id'] ?>#partido-<?= (int) $match['id'] ?>">Abrir detalle</a>
+                  </div>
+                <?php endif; ?>
               </div>
             </details>
           <?php endforeach; ?>
@@ -1038,14 +1069,14 @@ require __DIR__ . '/includes/header.php';
               <h4>Equipo 1</h4>
               <span class="small-muted">Esperando datos...</span>
             </div>
-            <div class="team-formation" data-static-team-formation data-team-number="1"></div>
+            <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="1"></div>
           </article>
           <article class="team-card">
             <div class="team-head">
               <h4>Equipo 2</h4>
               <span class="small-muted">Esperando datos...</span>
             </div>
-            <div class="team-formation" data-static-team-formation data-team-number="2"></div>
+            <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="2"></div>
           </article>
         </div>
       <?php elseif (!$groupedTeams): ?>
@@ -1065,7 +1096,10 @@ require __DIR__ . '/includes/header.php';
       <?php else: ?>
         <div class="grid cols-2 public-teams">
           <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
-            <?php $teamPlayersForCharacteristics = public_team_players_from_lines($lines); ?>
+            <?php
+              $teamPlayersForCharacteristics = public_team_players_from_lines($lines);
+              $teamTacticLabel = public_team_tactic_label($lines);
+            ?>
             <article class="team-card">
               <div class="team-head">
                 <h4>
@@ -1082,8 +1116,8 @@ require __DIR__ . '/includes/header.php';
                   <?php endif; ?>
                 </span>
               </div>
-              <?= render_formation_total_title((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0)) ?>
-              <div class="team-formation" data-static-team-formation data-team-number="<?= h((string) $teamNumber) ?>">
+              <?= render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $teamTacticLabel) ?>
+              <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
                 <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
                   <div class="formation-line">
                     <div class="line-label"><?= h($line) ?></div>
@@ -1099,7 +1133,7 @@ require __DIR__ . '/includes/header.php';
                           ?>
                           <div
                             class="formation-player <?= (int) ($player['goals'] ?? 0) > 0 ? 'scored-player' : '' ?>"
-                            draggable="true"
+                            draggable="false"
                             data-static-formation-player
                             data-static-player-key="<?= h((string) $player['id']) ?>"
                             data-assigned-position="<?= h($line) ?>"

@@ -14,12 +14,18 @@ function ensure_directivos_schema(): void
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(120) NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            password_needs_setup TINYINT(1) NOT NULL DEFAULT 0,
             active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uniq_directive_member_name (name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+    try {
+        $pdo->exec("ALTER TABLE directive_members ADD COLUMN password_needs_setup TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash");
+    } catch (Throwable) {
+        // Column already exists.
+    }
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS match_director_rating_votes (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -56,11 +62,33 @@ function ensure_directivos_schema(): void
         "CREATE TABLE IF NOT EXISTS match_director_publications (
             match_id INT UNSIGNED PRIMARY KEY,
             published_at DATETIME NOT NULL,
-            reason ENUM('all_voted', 'deadline') NOT NULL,
+            reason ENUM('all_voted', 'deadline', 'admin') NOT NULL,
             eligible_voters SMALLINT UNSIGNED NOT NULL DEFAULT 0,
             submitted_voters SMALLINT UNSIGNED NOT NULL DEFAULT 0,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_director_publication_match FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    try {
+        $pdo->exec("ALTER TABLE match_director_publications MODIFY reason ENUM('all_voted', 'deadline', 'admin') NOT NULL");
+    } catch (Throwable) {
+        // Older or non-MySQL local engines may not need this migration.
+    }
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS match_director_vote_invites (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            match_id INT UNSIGNED NOT NULL,
+            player_id INT UNSIGNED NOT NULL,
+            voter_member_id INT UNSIGNED NOT NULL,
+            token VARCHAR(5) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_director_vote_invite_match_player (match_id, player_id),
+            UNIQUE KEY uniq_director_vote_invite_token (token),
+            INDEX idx_director_vote_invite_match (match_id),
+            CONSTRAINT fk_director_vote_invite_match FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            CONSTRAINT fk_director_vote_invite_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            CONSTRAINT fk_director_vote_invite_voter FOREIGN KEY (voter_member_id) REFERENCES directive_members(id) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
 }
@@ -68,10 +96,12 @@ function ensure_directivos_schema(): void
 function directive_members(bool $onlyActive = false): array
 {
     ensure_directivos_schema();
-    $sql = 'SELECT id, name, active, created_at, updated_at FROM directive_members';
+    $sql = 'SELECT id, name, password_needs_setup, active, created_at, updated_at FROM directive_members';
+    $conditions = ["name NOT LIKE 'Invitado voto %'"];
     if ($onlyActive) {
-        $sql .= ' WHERE active = 1';
+        $conditions[] = 'active = 1';
     }
+    $sql .= ' WHERE ' . implode(' AND ', $conditions);
     $sql .= ' ORDER BY active DESC, name ASC';
     return db()->query($sql)->fetchAll();
 }
@@ -96,12 +126,21 @@ function directive_member_by_id(int $id): ?array
 
 function directive_voting_deadline(array $match): ?int
 {
-    if ((string) ($match['status'] ?? '') !== 'finalizado') {
+    if (!directive_match_ready_for_voting($match)) {
         return null;
     }
-    $finalizedAt = trim((string) ($match['finalized_at'] ?? $match['updated_at'] ?? $match['match_date'] ?? ''));
+    $finalizedAt = trim((string) ($match['finalized_at'] ?? ''));
     $timestamp = strtotime($finalizedAt);
     return $timestamp === false ? null : $timestamp + (24 * 60 * 60);
+}
+
+function directive_match_ready_for_voting(array $match): bool
+{
+    if ((string) ($match['status'] ?? '') !== 'finalizado') {
+        return false;
+    }
+    $finalizedAt = trim((string) ($match['finalized_at'] ?? ''));
+    return $finalizedAt !== '' && strtotime($finalizedAt) !== false;
 }
 
 function directive_voting_is_open(array $match): bool
@@ -197,6 +236,28 @@ function directive_vote_status(int $matchId, int $participantCount): array
     return ['eligible' => count($eligibleIds), 'submitted' => $submitted, 'eligible_ids' => $eligibleIds];
 }
 
+function directive_complete_vote_count(int $matchId, int $participantCount): int
+{
+    ensure_directivos_schema();
+    if ($participantCount <= 0) {
+        return 0;
+    }
+    $stmt = db()->prepare(
+        'SELECT voter_id, COUNT(*) AS rating_count
+         FROM match_director_rating_votes
+         WHERE match_id = :mid
+         GROUP BY voter_id'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $submitted = 0;
+    foreach ($stmt->fetchAll() as $row) {
+        if ((int) $row['rating_count'] >= $participantCount) {
+            $submitted++;
+        }
+    }
+    return $submitted;
+}
+
 function directive_save_vote(int $matchId, int $voterId, array $ratings, array $awards, array $allowedPlayerIds): void
 {
     ensure_directivos_schema();
@@ -256,7 +317,7 @@ function directive_publish_if_ready(array $match, array $participants): bool
     if ($matchId <= 0 || directive_match_is_published($matchId)) {
         return false;
     }
-    if ((string) ($match['status'] ?? '') !== 'finalizado') {
+    if (!directive_match_ready_for_voting($match)) {
         return false;
     }
     $participantIds = array_values(array_map(static fn(array $p): int => (int) $p['id'], array_filter($participants, static fn(array $p): bool => $p['team_number'] !== null)));
@@ -271,6 +332,154 @@ function directive_publish_if_ready(array $match, array $participants): bool
     if (!$allVoted && !$deadlineExpired) {
         return false;
     }
+
+    return directive_publish_match_results($match, $participants, $allVoted ? 'all_voted' : 'deadline', false);
+}
+
+function directive_generate_vote_invite_token(): string
+{
+    $stmt = db()->prepare('SELECT COUNT(*) FROM match_director_vote_invites WHERE token = :token');
+    for ($attempt = 0; $attempt < 40; $attempt++) {
+        $token = (string) random_int(10000, 99999);
+        $stmt->execute(['token' => $token]);
+        if ((int) $stmt->fetchColumn() === 0) {
+            return $token;
+        }
+    }
+    throw new RuntimeException('No se pudo generar un token disponible.');
+}
+
+function directive_create_vote_invite(int $matchId, int $playerId): array
+{
+    ensure_directivos_schema();
+    $match = repo_match_by_id($matchId);
+    if (!$match || !directive_match_ready_for_voting($match)) {
+        throw new RuntimeException('Fecha invalida para invitar a votar.');
+    }
+    if (!directive_voting_is_open($match)) {
+        throw new RuntimeException('La votacion de esta fecha no esta abierta.');
+    }
+    $player = repo_player_by_id($playerId);
+    if (!$player || (int) ($player['active'] ?? 1) !== 1) {
+        throw new RuntimeException('Jugador invalido para invitar.');
+    }
+
+    $pdo = db();
+    $existing = directive_vote_invite_for_player($matchId, $playerId);
+    $token = directive_generate_vote_invite_token();
+    if ($existing) {
+        $stmt = $pdo->prepare('UPDATE match_director_vote_invites SET token = :token WHERE id = :id');
+        $stmt->execute(['id' => (int) $existing['id'], 'token' => $token]);
+        return directive_vote_invite_by_id((int) $existing['id']) ?: array_merge($existing, ['token' => $token]);
+    }
+
+    $name = 'Invitado voto ' . $matchId . '-' . $playerId . ' ' . trim((string) ($player['name'] ?? ''));
+    $memberStmt = $pdo->prepare(
+        'INSERT INTO directive_members (name, password_hash, password_needs_setup, active)
+         VALUES (:name, :password_hash, 0, 0)'
+    );
+    $memberStmt->execute([
+        'name' => substr($name, 0, 120),
+        'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+    ]);
+    $voterMemberId = (int) $pdo->lastInsertId();
+    $inviteStmt = $pdo->prepare(
+        'INSERT INTO match_director_vote_invites (match_id, player_id, voter_member_id, token)
+         VALUES (:mid, :pid, :voter_member_id, :token)'
+    );
+    $inviteStmt->execute([
+        'mid' => $matchId,
+        'pid' => $playerId,
+        'voter_member_id' => $voterMemberId,
+        'token' => $token,
+    ]);
+    return directive_vote_invite_by_id((int) $pdo->lastInsertId()) ?: [];
+}
+
+function directive_vote_invite_by_id(int $id): ?array
+{
+    ensure_directivos_schema();
+    $stmt = db()->prepare(
+        'SELECT i.*, p.name AS player_name, m.title AS match_title, m.match_date, m.status AS match_status
+         FROM match_director_vote_invites i
+         INNER JOIN players p ON p.id = i.player_id
+         INNER JOIN matches m ON m.id = i.match_id
+         WHERE i.id = :id
+         LIMIT 1'
+    );
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function directive_vote_invite_for_player(int $matchId, int $playerId): ?array
+{
+    ensure_directivos_schema();
+    $stmt = db()->prepare('SELECT * FROM match_director_vote_invites WHERE match_id = :mid AND player_id = :pid LIMIT 1');
+    $stmt->execute(['mid' => $matchId, 'pid' => $playerId]);
+    $row = $stmt->fetch();
+    return $row ? directive_vote_invite_by_id((int) $row['id']) : null;
+}
+
+function directive_vote_invite_by_token(string $token): ?array
+{
+    ensure_directivos_schema();
+    if (!preg_match('/^\d{5}$/', $token)) {
+        return null;
+    }
+    $stmt = db()->prepare(
+        'SELECT i.id
+         FROM match_director_vote_invites i
+         INNER JOIN matches m ON m.id = i.match_id
+         WHERE i.token = :token AND m.status = \'finalizado\'
+         LIMIT 1'
+    );
+    $stmt->execute(['token' => $token]);
+    $id = (int) ($stmt->fetchColumn() ?: 0);
+    return $id > 0 ? directive_vote_invite_by_id($id) : null;
+}
+
+function directive_vote_invites_for_match(int $matchId, int $participantCount = 0): array
+{
+    ensure_directivos_schema();
+    $stmt = db()->prepare(
+        'SELECT i.*, p.name AS player_name
+         FROM match_director_vote_invites i
+         INNER JOIN players p ON p.id = i.player_id
+         WHERE i.match_id = :mid
+         ORDER BY p.name ASC'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    $rows = $stmt->fetchAll();
+    foreach ($rows as &$row) {
+        $row['vote_complete'] = $participantCount > 0
+            ? directive_member_completed_match($matchId, (int) $row['voter_member_id'], $participantCount)
+            : false;
+    }
+    unset($row);
+    return $rows;
+}
+
+function directive_publish_match_results(array $match, array $participants, string $reason = 'admin', bool $requireSubmittedVote = true): bool
+{
+    ensure_directivos_schema();
+    $matchId = (int) ($match['id'] ?? 0);
+    if ($matchId <= 0 || directive_match_is_published($matchId)) {
+        return false;
+    }
+    if (!directive_match_ready_for_voting($match)) {
+        return false;
+    }
+    $participantIds = array_values(array_map(static fn(array $p): int => (int) $p['id'], array_filter($participants, static fn(array $p): bool => $p['team_number'] !== null)));
+    $participantCount = count($participantIds);
+    if ($participantCount === 0) {
+        return false;
+    }
+    $status = directive_vote_status($matchId, $participantCount);
+    if ($requireSubmittedVote && directive_complete_vote_count($matchId, $participantCount) <= 0) {
+        throw new RuntimeException('Todavia no hay votos completos para publicar resultados.');
+    }
+    $reason = in_array($reason, ['all_voted', 'deadline', 'admin'], true) ? $reason : 'admin';
 
     $pdo = db();
     $pdo->beginTransaction();
@@ -302,7 +511,7 @@ function directive_publish_if_ready(array $match, array $participants): bool
         );
         $insertPublication->execute([
             'mid' => $matchId,
-            'reason' => $allVoted ? 'all_voted' : 'deadline',
+            'reason' => $reason,
             'eligible' => (int) $status['eligible'],
             'submitted' => (int) $status['submitted'],
         ]);

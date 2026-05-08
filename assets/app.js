@@ -51,6 +51,24 @@
     });
   };
 
+  const focusHashTarget = () => {
+    if (!window.location.hash) return;
+    let targetId = window.location.hash.slice(1);
+    try {
+      targetId = decodeURIComponent(targetId);
+    } catch (error) {
+      return;
+    }
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    if (!target.hasAttribute('tabindex')) {
+      target.setAttribute('tabindex', '-1');
+    }
+    window.setTimeout(() => {
+      target.focus({ preventScroll: false });
+    }, 0);
+  };
+
   const bindStaticTeamFormationDrag = () => {
     if (document.documentElement.dataset.staticTeamFormationDragBound === '1') return;
     document.documentElement.dataset.staticTeamFormationDragBound = '1';
@@ -59,9 +77,11 @@
 
     const playerCardFromEvent = (event) => event.target?.closest?.('[data-static-formation-player]');
     const formationLines = (formation) => Array.from(formation.querySelectorAll('.formation-line'));
+    const formationLocked = (formation) => formation?.dataset?.staticFormationLocked === '1';
     const lineKey = (line) => line.querySelector('.line-label')?.textContent?.trim() || '';
     const linePlayers = (line) => line.querySelector('.line-players');
     const ensureUndoButton = (formation) => {
+      if (formationLocked(formation)) return;
       if (!formation || formation.querySelector(':scope > [data-static-formation-undo]')) return;
       const button = document.createElement('button');
       button.className = 'formation-undo-button';
@@ -70,19 +90,23 @@
       button.setAttribute('aria-label', 'Deshacer ultimo cambio');
       button.dataset.staticFormationUndo = '1';
       button.disabled = true;
-      button.textContent = '↶';
+      button.textContent = '\u21b6';
       formation.prepend(button);
     };
     const refreshUndoButton = (formation) => {
+      if (formationLocked(formation)) return;
       ensureUndoButton(formation);
       const button = formation.querySelector(':scope > [data-static-formation-undo]');
       if (button) button.disabled = !(undoStacks.get(formation) || []).length;
     };
     const updateFormationTotal = (formation) => {
       if (!formation) return;
-      const externalTitle = formation.previousElementSibling?.matches?.('.formation-total-title')
+      const titleContainer = formation.previousElementSibling?.matches?.('.formation-title-row')
         ? formation.previousElementSibling
         : null;
+      const externalTitle = formation.previousElementSibling?.matches?.('.formation-total-title')
+        ? formation.previousElementSibling
+        : titleContainer?.querySelector('[data-formation-total-title]') || null;
       let badge = formation.querySelector(':scope > [data-formation-total]');
       if (externalTitle) {
         if (badge) badge.remove();
@@ -93,6 +117,14 @@
       if (externalTitle) {
         const value = externalTitle.querySelector('strong');
         if (value) value.textContent = `${total.toFixed(1)} pts`;
+        const tactic = titleContainer?.querySelector('[data-formation-tactic]') || externalTitle.querySelector('[data-formation-tactic]');
+        if (tactic) {
+          const counts = ['DEF', 'MED', 'DEL'].map((line) => {
+            const formationLine = formationLines(formation).find((candidate) => lineKey(candidate) === line);
+            return formationLine?.querySelectorAll('[data-static-formation-player]')?.length || 0;
+          });
+          tactic.textContent = counts.join('-');
+        }
         return;
       }
       if (!badge) {
@@ -179,7 +211,13 @@
 
     document.addEventListener('dragstart', (event) => {
       const card = playerCardFromEvent(event);
-      if (!card || !card.closest('[data-static-team-formation]')) return;
+      const formation = card?.closest('[data-static-team-formation]');
+      if (!card || !formation) return;
+      if (formationLocked(formation)) {
+        event.preventDefault();
+        dragSource = null;
+        return;
+      }
       dragSource = card;
       card.classList.add('is-dragging');
       event.dataTransfer.effectAllowed = 'move';
@@ -189,7 +227,9 @@
     document.addEventListener('dragover', (event) => {
       const card = playerCardFromEvent(event);
       if (!card || !dragSource || card === dragSource) return;
-      if (card.closest('[data-static-team-formation]') !== dragSource.closest('[data-static-team-formation]')) return;
+      const formation = card.closest('[data-static-team-formation]');
+      if (formationLocked(formation)) return;
+      if (formation !== dragSource.closest('[data-static-team-formation]')) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
       card.classList.add('is-drag-over');
@@ -205,6 +245,7 @@
       if (!target || !dragSource || target === dragSource) return;
       const formation = target.closest('[data-static-team-formation]');
       if (!formation || formation !== dragSource.closest('[data-static-team-formation]')) return;
+      if (formationLocked(formation)) return;
       event.preventDefault();
       if (!wouldKeepSingleGoalkeeper(formation, dragSource, target)) {
         showToast('Cada equipo puede tener como maximo un arquero.', 'error');
@@ -1176,7 +1217,7 @@
     const number = Number(rating || 0);
     const full = Math.floor(number);
     const half = number % 1 !== 0;
-    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)));
+    return '\u2605'.repeat(full) + (half ? '1/2' : '') + '\u2606'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)));
   };
   const parsePlayerJsonResponse = async (response) => {
     const text = await response.text();
@@ -1908,6 +1949,35 @@
   });
 
   document.addEventListener('submit', (event) => {
+    const juntaVoteForm = event.target.closest('[data-junta-vote-submit]');
+    if (juntaVoteForm) {
+      if (juntaVoteForm.dataset.submitting === '1') {
+        event.preventDefault();
+        return;
+      }
+      const ratingCount = juntaVoteForm.querySelectorAll('input[name^="rating["]').length;
+      const awardCount = Array.from(juntaVoteForm.querySelectorAll('input[name^="awards["]'))
+        .filter((input) => String(input.value || '').trim() !== '').length;
+      const confirmMessage = `Esta seguro que esta es su votacion?\n\nPuntajes cargados: ${ratingCount}\nPremios elegidos: ${awardCount}`;
+      if (!window.confirm(confirmMessage)) {
+        event.preventDefault();
+        return;
+      }
+      juntaVoteForm.dataset.submitting = '1';
+      const message = document.createElement('p');
+      message.className = 'flash flash-success junta-vote-pending-message';
+      message.setAttribute('role', 'status');
+      message.setAttribute('tabindex', '-1');
+      message.textContent = 'gracias por votar, retornando al sitio...';
+      juntaVoteForm.before(message);
+      message.focus?.({ preventScroll: false });
+      const submitter = event.submitter || juntaVoteForm.querySelector('[type="submit"]');
+      if (submitter) {
+        submitter.disabled = true;
+        submitter.textContent = 'Enviando...';
+      }
+    }
+
     const roundRobinForm = event.target.closest('[data-round-robin-form]');
     const roundRobinSubmitter = event.submitter || lastRoundRobinSubmitter;
     if (roundRobinForm && ['save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'].includes(roundRobinSubmitter?.value || '')) {
@@ -1929,6 +1999,31 @@
       event.preventDefault();
       submitFormPartially(partialCandidate, event.submitter || null);
       return;
+    }
+
+    const postForm = event.target.closest('form');
+    if (
+      postForm
+      && String(postForm.getAttribute('method') || 'get').toLowerCase() === 'post'
+      && !postForm.hasAttribute('data-junta-vote-submit')
+      && !postForm.hasAttribute('data-no-submit-lock')
+      && !postForm.hasAttribute('data-no-partial')
+    ) {
+      if (postForm.dataset.submitting === '1') {
+        event.preventDefault();
+        return;
+      }
+      postForm.dataset.submitting = '1';
+      const submitter = event.submitter || postForm.querySelector('[type="submit"]');
+      if (submitter && !submitter.hasAttribute('data-keep-enabled') && !submitter.name) {
+        submitter.disabled = true;
+        if (!submitter.dataset.originalText) {
+          submitter.dataset.originalText = submitter.textContent || '';
+        }
+        if (!submitter.closest('[data-junta-vote-submit]')) {
+          submitter.textContent = 'Procesando...';
+        }
+      }
     }
 
     const form = event.target.closest('form[data-partial-form]');
@@ -1956,6 +2051,46 @@
     } else {
       form.submit();
     }
+  });
+
+  document.addEventListener('click', async (event) => {
+    const copyButton = event.target.closest('[data-copy-token]');
+    if (!copyButton) return;
+    const token = String(copyButton.getAttribute('data-copy-token') || '').trim();
+    if (!token) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(token);
+      } else {
+        const input = document.createElement('textarea');
+        input.value = token;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.left = '-9999px';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        input.remove();
+      }
+      const original = copyButton.textContent;
+      copyButton.textContent = 'Copiado';
+      showToast('Token copiado.', 'success');
+      window.setTimeout(() => { copyButton.textContent = original || 'Copiar'; }, 1400);
+    } catch (error) {
+      showToast('No se pudo copiar el token.', 'error');
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-password-toggle]');
+    if (!toggle) return;
+    const targetId = toggle.getAttribute('data-password-toggle');
+    const input = targetId ? document.getElementById(targetId) : toggle.closest('.password-field')?.querySelector('input');
+    if (!(input instanceof HTMLInputElement)) return;
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    toggle.textContent = showing ? 'Ver' : 'Ocultar';
+    toggle.setAttribute('aria-pressed', showing ? 'false' : 'true');
   });
 
   document.addEventListener('click', (event) => {
@@ -2528,5 +2663,15 @@
 
   initManualTeams();
 
+  const returnHomeAfterJuntaVote = document.querySelector('[data-junta-return-home="1"]');
+  if (returnHomeAfterJuntaVote) {
+    window.setTimeout(() => {
+      window.location.href = 'index.php';
+    }, 2600);
+  }
+
   hydrateDynamicContent(document);
+  focusHashTarget();
+  window.addEventListener('hashchange', focusHashTarget);
 })();
+

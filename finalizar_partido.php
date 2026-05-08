@@ -1017,7 +1017,7 @@ require __DIR__ . '/includes/header.php';
             <div data-round-robin-winner-target></div>
             <div class="btn-row finish-score-actions">
               <button class="btn btn-primary" type="submit" name="action" value="calculate_round_robin_winner">Calcular ganador</button>
-              <button class="btn btn-warning" type="submit" name="action" value="finalize_round_robin_date">Finalizar fecha</button>
+              <button class="btn btn-warning" type="submit" name="action" value="finalize_round_robin_date" data-confirm="Finalizar esta fecha y publicar el ganador?">Finalizar fecha</button>
               <?php if ($scoreSaved && !$valuationsLocked): ?>
                 <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
               <?php endif; ?>
@@ -1044,7 +1044,7 @@ require __DIR__ . '/includes/header.php';
               <?php endforeach; ?>
             </div>
             <div class="btn-row finish-score-actions">
-              <button class="btn btn-primary" type="submit">Guardar resultado</button>
+              <button class="btn btn-primary" type="submit" data-confirm="Guardar este resultado?">Guardar resultado</button>
               <?php if ($scoreSaved && !$valuationsLocked): ?>
                 <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
               <?php elseif ($scoreSaved && $valuationsLocked): ?>
@@ -1189,7 +1189,7 @@ require __DIR__ . '/includes/header.php';
         </details>
 
         <div class="btn-row finish-valuations-actions">
-          <button class="btn btn-primary" type="submit">GUARDAR VALORACIONES</button>
+          <button class="btn btn-primary" type="submit" data-confirm="Guardar valoraciones y premios de esta fecha?">GUARDAR VALORACIONES</button>
         </div>
       </form>
       <?php if ($detailFormError !== ''): ?>

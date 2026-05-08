@@ -7,10 +7,30 @@ require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/directivos.php';
 
-require_directivo_or_admin();
 ensure_control_schema();
 ensure_match_awards_schema();
 ensure_directivos_schema();
+
+function junta_current_guest_vote_invite(): ?array
+{
+    $inviteId = (int) ($_SESSION['guest_vote_invite_id'] ?? 0);
+    if ($inviteId <= 0) {
+        return null;
+    }
+    $invite = directive_vote_invite_by_id($inviteId);
+    if (!$invite) {
+        unset($_SESSION['guest_vote_invite_id'], $_SESSION['guest_vote_match_id'], $_SESSION['guest_vote_voter_id'], $_SESSION['guest_vote_name']);
+        return null;
+    }
+    return $invite;
+}
+
+$guestVoteInvite = junta_current_guest_vote_invite();
+$isGuestVoter = $guestVoteInvite !== null;
+if (!is_admin() && !is_directivo() && !$isGuestVoter) {
+    flash('error', 'Debes ingresar como directivo, admin o con token de votacion.');
+    redirect('login.php?next=' . rawurlencode('junta_votaciones.php'));
+}
 
 function junta_match_label(array $match): string
 {
@@ -57,6 +77,15 @@ function junta_player_team_label(array $player, array $teamLabels): string
     return implode(' - ', $pieces);
 }
 
+function junta_publication_reason_label(string $reason): string
+{
+    return match ($reason) {
+        'all_voted' => 'voto completo de la junta',
+        'admin' => 'cierre manual del admin',
+        default => 'fin de plazo',
+    };
+}
+
 try {
     directive_publish_due_results();
 } catch (Throwable $e) {
@@ -64,15 +93,51 @@ try {
 }
 $matches = repo_matches("m.status = 'finalizado'");
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_directive_vote') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'force_publish_directive_vote') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
     $match = repo_match_by_id($matchId);
     try {
-        if (!is_directivo()) {
-            throw new RuntimeException('El admin administra la junta, pero no vota como directivo.');
+        if (!is_admin()) {
+            throw new RuntimeException('Solo el admin puede finalizar la votacion manualmente.');
         }
-        if (!$match || (string) $match['status'] !== 'finalizado') {
-            throw new RuntimeException('Fecha invalida.');
+        if (!$match || !directive_match_ready_for_voting($match)) {
+            throw new RuntimeException('Primero hay que finalizar el partido con el resultado cargado.');
+        }
+        $published = directive_publish_match_results($match, repo_match_participants($matchId), 'admin', true);
+        flash($published ? 'success' : 'info', $published ? 'Votacion finalizada y resultados publicados.' : 'La votacion ya estaba publicada.');
+    } catch (Throwable $e) {
+        flash('error', $e->getMessage());
+    }
+    redirect('junta_votaciones.php?match_id=' . $matchId . '#junta-voto-estado');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'create_vote_invite') {
+    $matchId = (int) ($_POST['match_id'] ?? 0);
+    $playerId = (int) ($_POST['player_id'] ?? 0);
+    try {
+        if (!is_admin()) {
+            throw new RuntimeException('Solo el admin puede invitar jugadores a votar.');
+        }
+        $invite = directive_create_vote_invite($matchId, $playerId);
+        flash('success', 'Token para ' . (string) $invite['player_name'] . ': ' . (string) $invite['token']);
+    } catch (Throwable $e) {
+        flash('error', $e->getMessage());
+    }
+    redirect('junta_votaciones.php?match_id=' . $matchId);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_directive_vote') {
+    $matchId = (int) ($_POST['match_id'] ?? 0);
+    $match = repo_match_by_id($matchId);
+    $redirectHash = '';
+    try {
+        $currentVoterId = is_directivo() ? current_directivo_id() : (int) ($_SESSION['guest_vote_voter_id'] ?? 0);
+        $currentGuestMatchId = (int) ($_SESSION['guest_vote_match_id'] ?? 0);
+        if (!is_directivo() && (!$isGuestVoter || $currentGuestMatchId !== $matchId || $currentVoterId <= 0)) {
+            throw new RuntimeException('Necesitas ingresar con un token valido para votar.');
+        }
+        if (!$match || !directive_match_ready_for_voting($match)) {
+            throw new RuntimeException('Primero hay que finalizar el partido con el resultado cargado.');
         }
         if (!directive_voting_is_open($match)) {
             throw new RuntimeException('La votacion de esta fecha ya no esta abierta.');
@@ -81,26 +146,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $participantIds = junta_participant_ids($participants);
         directive_save_vote(
             $matchId,
-            current_directivo_id(),
+            $currentVoterId,
             is_array($_POST['rating'] ?? null) ? $_POST['rating'] : [],
             is_array($_POST['awards'] ?? null) ? $_POST['awards'] : [],
             $participantIds
         );
         $published = directive_publish_if_ready($match, $participants);
-        flash('success', $published ? 'Voto guardado y resultados publicados.' : 'Voto guardado.');
+        $redirectHash = '&vote_saved=1#junta-voto-estado';
     } catch (Throwable $e) {
         flash('error', $e->getMessage());
     }
-    redirect('junta_votaciones.php?match_id=' . $matchId);
+    redirect('junta_votaciones.php?match_id=' . $matchId . $redirectHash);
+}
+
+$matchSummaries = [];
+$openVoteMatches = [];
+$historyVoteMatches = [];
+foreach ($matches as $match) {
+    if (!directive_match_ready_for_voting($match)) {
+        continue;
+    }
+    $matchId = (int) $match['id'];
+    $matchParticipants = repo_match_participants($matchId);
+    $matchParticipantCount = count(junta_participant_ids($matchParticipants));
+    $matchPublication = directive_publication($matchId);
+    $matchStatus = directive_vote_status($matchId, $matchParticipantCount);
+    $matchDeadline = directive_voting_deadline($match);
+    $matchOpen = directive_voting_is_open($match);
+    $matchDirectivoComplete = is_directivo()
+        ? directive_member_completed_match($matchId, current_directivo_id(), $matchParticipantCount)
+        : ($isGuestVoter && (int) $guestVoteInvite['match_id'] === $matchId
+            ? directive_member_completed_match($matchId, (int) $guestVoteInvite['voter_member_id'], $matchParticipantCount)
+            : false);
+    $summary = [
+        'match' => $match,
+        'participants_count' => $matchParticipantCount,
+        'publication' => $matchPublication,
+        'status' => $matchStatus,
+        'deadline' => $matchDeadline,
+        'open' => $matchOpen,
+        'directivo_complete' => $matchDirectivoComplete,
+    ];
+    $matchSummaries[$matchId] = $summary;
+    if ($isGuestVoter && (int) $guestVoteInvite['match_id'] !== $matchId) {
+        continue;
+    }
+    if ($matchOpen) {
+        $openVoteMatches[] = $summary;
+    } elseif (is_admin() || $matchDirectivoComplete) {
+        $historyVoteMatches[] = $summary;
+    }
 }
 
 $selectedMatchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
+if ($selectedMatchId <= 0 && $openVoteMatches) {
+    $selectedMatchId = (int) $openVoteMatches[0]['match']['id'];
+}
+if ($selectedMatchId <= 0 && $historyVoteMatches) {
+    $selectedMatchId = (int) $historyVoteMatches[0]['match']['id'];
+}
 if ($selectedMatchId <= 0 && $matches) {
     $selectedMatchId = (int) $matches[0]['id'];
 }
 $selectedMatch = $selectedMatchId > 0 ? repo_match_by_id($selectedMatchId) : null;
-if ($selectedMatch && (string) $selectedMatch['status'] !== 'finalizado') {
+if ($selectedMatch && !directive_match_ready_for_voting($selectedMatch)) {
     $selectedMatch = null;
+}
+if ($selectedMatch && $isGuestVoter && (int) $guestVoteInvite['match_id'] !== (int) $selectedMatch['id']) {
+    redirect('junta_votaciones.php?match_id=' . (int) $guestVoteInvite['match_id']);
 }
 
 $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['id']) : [];
@@ -111,19 +224,33 @@ $teamLabels = $selectedMatch ? repo_match_team_labels($selectedMatch, $teams) : 
 $awardDefinitions = award_definitions();
 $publication = $selectedMatch ? directive_publication((int) $selectedMatch['id']) : null;
 $voteStatus = $selectedMatch ? directive_vote_status((int) $selectedMatch['id'], $participantCount) : ['eligible' => 0, 'submitted' => 0];
+$voteProgressPercent = (int) ($voteStatus['eligible'] ?? 0) > 0
+    ? min(100, (int) round(((int) ($voteStatus['submitted'] ?? 0) / (int) $voteStatus['eligible']) * 100))
+    : 0;
+$inviteRows = (is_admin() && $selectedMatch) ? directive_vote_invites_for_match((int) $selectedMatch['id'], $participantCount) : [];
+$invitePlayerOptions = [];
+if (is_admin() && $selectedMatch) {
+    $invitedPlayerIds = array_flip(array_map(static fn(array $invite): int => (int) $invite['player_id'], $inviteRows));
+    $invitePlayerOptions = array_values(array_filter(
+        repo_all_players(true),
+        static fn(array $player): bool => !isset($invitedPlayerIds[(int) $player['id']])
+    ));
+}
 $deadline = $selectedMatch ? directive_voting_deadline($selectedMatch) : null;
 $isOpen = $selectedMatch ? directive_voting_is_open($selectedMatch) : false;
-$myRatingVotes = (is_directivo() && $selectedMatch) ? directive_member_rating_votes((int) $selectedMatch['id'], current_directivo_id()) : [];
-$myAwardVotes = (is_directivo() && $selectedMatch) ? directive_member_award_votes((int) $selectedMatch['id'], current_directivo_id()) : [];
-$myVoteComplete = (is_directivo() && $selectedMatch) ? directive_member_completed_match((int) $selectedMatch['id'], current_directivo_id(), $participantCount) : false;
+$currentVoteMemberId = is_directivo() ? current_directivo_id() : ($isGuestVoter ? (int) $guestVoteInvite['voter_member_id'] : 0);
+$myRatingVotes = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_rating_votes((int) $selectedMatch['id'], $currentVoteMemberId) : [];
+$myAwardVotes = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_award_votes((int) $selectedMatch['id'], $currentVoteMemberId) : [];
+$myVoteComplete = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_completed_match((int) $selectedMatch['id'], $currentVoteMemberId, $participantCount) : false;
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
+$shouldReturnHomeAfterVote = (string) ($_GET['vote_saved'] ?? '') === '1';
 
 $title = 'Junta directiva | ' . APP_NAME;
 $activePage = 'junta_votaciones.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head">
+<section class="page-head junta-page-head">
   <div>
     <h1>Junta directiva</h1>
     <p class="small-muted">Votacion de puntajes y premios de fechas finalizadas.</p>
@@ -134,56 +261,158 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <?php if (!$matches): ?>
-  <section class="card">
+  <section class="junta-panel">
     <p class="small-muted">No hay fechas finalizadas para votar.</p>
   </section>
 <?php else: ?>
-  <section class="grid cols-2 mb-3">
-    <?php foreach ($matches as $match): ?>
-      <?php
-        $matchId = (int) $match['id'];
-        $matchParticipants = repo_match_participants($matchId);
-        $matchParticipantCount = count(junta_participant_ids($matchParticipants));
-        $matchPublication = directive_publication($matchId);
-        $matchStatus = directive_vote_status($matchId, $matchParticipantCount);
-        $matchDeadline = directive_voting_deadline($match);
-        $matchOpen = directive_voting_is_open($match);
-      ?>
-      <a class="card home-next-card <?= $selectedMatchId === $matchId ? 'active' : '' ?>" href="junta_votaciones.php?match_id=<?= $matchId ?>">
-        <h3><?= h(junta_match_label($match)) ?></h3>
-        <p class="small-muted"><?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?></p>
-        <div class="stats-grid mt-2">
-          <span class="chip"><?= (int) $matchStatus['submitted'] ?>/<?= (int) $matchStatus['eligible'] ?> votos</span>
-          <span class="chip"><?= $matchPublication ? 'Publicado' : ($matchOpen ? 'Abierto' : 'Pendiente') ?></span>
-        </div>
-        <small class="small-muted">Cierre: <?= h(junta_format_datetime($matchDeadline)) ?></small>
-      </a>
-    <?php endforeach; ?>
+  <section class="junta-panel mb-3">
+    <div class="junta-panel-head">
+      <div>
+        <h3>Votaciones abiertas</h3>
+        <p class="small-muted">Fechas con votacion activa y tiempo disponible.</p>
+      </div>
+      <span class="chip"><?= h((string) count($openVoteMatches)) ?> abiertas</span>
+    </div>
+    <?php if (!$openVoteMatches): ?>
+      <p class="small-muted">No hay votaciones abiertas en este momento.</p>
+    <?php else: ?>
+      <div class="junta-vote-grid">
+        <?php foreach ($openVoteMatches as $summary): ?>
+          <?php
+            $match = $summary['match'];
+            $matchId = (int) $match['id'];
+            $matchStatus = $summary['status'];
+            $matchDeadline = $summary['deadline'];
+          ?>
+          <a class="junta-vote-card <?= $selectedMatchId === $matchId ? 'active' : '' ?>" href="junta_votaciones.php?match_id=<?= $matchId ?>">
+            <h3><?= h(junta_match_label($match)) ?></h3>
+            <p class="small-muted"><?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?></p>
+            <div class="stats-grid mt-2">
+              <span class="chip"><?= (int) $matchStatus['submitted'] ?>/<?= (int) $matchStatus['eligible'] ?> votos</span>
+              <span class="chip">Abierta</span>
+            </div>
+            <small class="small-muted">Cierre: <?= h(junta_format_datetime($matchDeadline)) ?></small>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </section>
 
+  <details class="junta-panel junta-history finish-collapse mb-3">
+    <summary>
+      <span>Historial de votaciones</span>
+      <small><?= h((string) count($historyVoteMatches)) ?> fechas</small>
+    </summary>
+    <?php if (!$historyVoteMatches): ?>
+      <p class="small-muted junta-history-empty">Todavia no hay historial de votaciones cerradas.</p>
+    <?php else: ?>
+      <div class="match-list junta-history-list">
+        <?php foreach ($historyVoteMatches as $summary): ?>
+          <?php
+            $match = $summary['match'];
+            $matchId = (int) $match['id'];
+            $matchStatus = $summary['status'];
+            $matchPublication = $summary['publication'];
+            $historyStatus = $matchPublication
+                ? ('Publicado por ' . junta_publication_reason_label((string) $matchPublication['reason']))
+                : ($summary['directivo_complete'] ? 'Tu voto cargado' : 'Sin publicar');
+          ?>
+          <a class="match-list-item <?= $selectedMatchId === $matchId ? 'active' : '' ?>" href="junta_votaciones.php?match_id=<?= $matchId ?>">
+            <span>
+              <strong><?= h(junta_match_label($match)) ?></strong>
+              <small><?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?> | <?= h($historyStatus) ?></small>
+            </span>
+            <span class="match-list-side">
+              <span class="badge"><?= (int) $matchStatus['submitted'] ?>/<?= (int) $matchStatus['eligible'] ?> votos</span>
+            </span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </details>
+
   <?php if ($selectedMatch): ?>
-    <section class="card mb-3">
-      <div class="finish-score-head">
+    <section class="junta-panel junta-status-panel mb-3">
+      <div class="junta-panel-head">
         <div>
           <h3><?= h(junta_match_label($selectedMatch)) ?></h3>
           <p class="small-muted">
             <?= h((string) $voteStatus['submitted']) ?>/<?= h((string) $voteStatus['eligible']) ?> directivos votaron.
             Cierre automatico: <?= h(junta_format_datetime($deadline)) ?>.
           </p>
+          <div class="junta-vote-progress" aria-label="Progreso de votacion <?= h((string) $voteProgressPercent) ?>%">
+            <span style="width: <?= h((string) $voteProgressPercent) ?>%"></span>
+          </div>
         </div>
         <span class="chip"><?= $publication ? 'Resultados publicados' : ($isOpen ? 'Votacion abierta' : 'En cierre automatico') ?></span>
       </div>
+      <?php if (is_admin() && !$publication): ?>
+        <form method="post" class="junta-admin-actions mb-3">
+          <input type="hidden" name="action" value="force_publish_directive_vote">
+          <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+          <button class="btn btn-warning" type="submit" data-confirm="Finalizar la votacion y publicar resultados con los votos cargados hasta ahora?">Finalizar votacion</button>
+        </form>
+      <?php endif; ?>
       <?php if ($publication): ?>
-        <p class="small-muted">Publicado el <?= h(date('d/m/Y H:i', strtotime((string) $publication['published_at']))) ?> por <?= h($publication['reason'] === 'all_voted' ? 'voto completo de la junta' : 'fin de plazo') ?>.</p>
+        <p id="junta-voto-estado" class="<?= $shouldReturnHomeAfterVote ? 'flash flash-success' : 'small-muted' ?>" tabindex="-1" <?= $shouldReturnHomeAfterVote ? 'role="status" data-junta-return-home="1"' : '' ?>><?= h($shouldReturnHomeAfterVote ? 'gracias por votar, retornando al sitio...' : ('Publicado el ' . date('d/m/Y H:i', strtotime((string) $publication['published_at'])) . ' por ' . junta_publication_reason_label((string) $publication['reason']) . '.')) ?></p>
       <?php elseif ($myVoteComplete): ?>
-        <p class="flash flash-success">Tu voto esta cargado. Los resultados se publican cuando vote toda la junta o al cumplirse el plazo.</p>
+        <p id="junta-voto-estado" class="flash flash-success" tabindex="-1" role="status" <?= $shouldReturnHomeAfterVote ? 'data-junta-return-home="1"' : '' ?>><?= h($shouldReturnHomeAfterVote ? 'gracias por votar, retornando al sitio...' : 'Tu voto esta cargado. Los resultados se publican cuando vote toda la junta o al cumplirse el plazo.') ?></p>
       <?php elseif (!is_directivo()): ?>
-        <p class="flash flash-info">Como admin podes ver el estado y habilitar directivos, pero el voto lo carga cada directivo con su usuario.</p>
+        <p class="flash flash-info"><?= is_admin() ? 'Como admin podes ver el estado, invitar jugadores y cerrar la votacion.' : 'Ingresa los puntajes y premios con tu token de invitacion.' ?></p>
       <?php endif; ?>
     </section>
 
+    <?php if (is_admin() && !$publication && $isOpen): ?>
+      <section class="junta-panel junta-invite-panel mb-3">
+        <div class="junta-panel-head">
+          <div>
+            <h3>Invitar jugadores a votar</h3>
+            <p class="small-muted">Genera tokens numericos de 5 cifras. Cada token sirve solo para esta fecha.</p>
+          </div>
+        </div>
+        <?php if ($invitePlayerOptions): ?>
+          <form method="post" class="junta-invite-form mb-3">
+            <input type="hidden" name="action" value="create_vote_invite">
+            <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+            <div class="form-row">
+              <label>Jugador invitado</label>
+              <select name="player_id" required>
+                <option value="">Seleccionar jugador</option>
+                <?php foreach ($invitePlayerOptions as $player): ?>
+                  <option value="<?= (int) $player['id'] ?>"><?= h((string) $player['name']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" type="submit" data-confirm="Generar token para este jugador y esta votacion?">Generar token</button>
+            </div>
+          </form>
+        <?php else: ?>
+          <p class="small-muted">Todos los jugadores activos ya tienen token para esta votacion.</p>
+        <?php endif; ?>
+        <?php if (!$inviteRows): ?>
+          <p class="small-muted">Todavia no hay invitados para esta votacion.</p>
+        <?php else: ?>
+          <div class="match-list">
+            <?php foreach ($inviteRows as $invite): ?>
+              <div class="match-list-item">
+                <span>
+                  <strong><?= h((string) $invite['player_name']) ?></strong>
+                  <small><span class="badge <?= ((bool) $invite['vote_complete']) ? 'done' : 'warn' ?>"><?= ((bool) $invite['vote_complete']) ? 'Usado' : 'Pendiente' ?></span></small>
+                </span>
+                <span class="match-list-side">
+                  <span class="badge"><?= h((string) $invite['token']) ?></span>
+                  <button class="btn btn-muted token-copy-btn" type="button" data-copy-token="<?= h((string) $invite['token']) ?>">Copiar</button>
+                </span>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </section>
+    <?php endif; ?>
+
     <?php if ($publication): ?>
-      <section class="card mb-3">
+      <section class="junta-panel mb-3">
         <h3>Resultados publicados</h3>
         <div class="table-wrap">
           <table>
@@ -208,7 +437,7 @@ require __DIR__ . '/includes/header.php';
         </div>
       </section>
 
-      <section class="card">
+      <section class="junta-panel">
         <h3>Premios</h3>
         <div class="award-grid">
           <?php foreach ($awardDefinitions as $code => $award): ?>
@@ -223,8 +452,8 @@ require __DIR__ . '/includes/header.php';
           <?php endforeach; ?>
         </div>
       </section>
-    <?php elseif (is_directivo() && $isOpen): ?>
-      <form method="post">
+    <?php elseif ($currentVoteMemberId > 0 && $isOpen): ?>
+      <form method="post" class="junta-vote-form" data-junta-vote-submit="1">
         <input type="hidden" name="action" value="save_directive_vote">
         <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
         <datalist id="matchAwardPlayers">
@@ -240,7 +469,7 @@ require __DIR__ . '/includes/header.php';
           <?php endforeach; ?>
         </datalist>
 
-        <details class="card finish-collapse finish-valuations" open>
+        <details class="junta-panel finish-collapse finish-valuations" open>
           <summary>
             <span>Puntajes</span>
             <small>Promedio final por junta</small>
@@ -278,7 +507,7 @@ require __DIR__ . '/includes/header.php';
           </div>
         </details>
 
-        <details class="card finish-collapse finish-awards" open>
+        <details class="junta-panel finish-collapse finish-awards" open>
           <summary>
             <span>Premios</span>
             <small>Gana quien tenga mas votos</small>
@@ -297,12 +526,12 @@ require __DIR__ . '/includes/header.php';
           </div>
         </details>
 
-        <div class="btn-row finish-valuations-actions">
+        <div class="junta-submit-row finish-valuations-actions">
           <button class="btn btn-primary" type="submit">Enviar voto</button>
         </div>
       </form>
     <?php else: ?>
-      <section class="card">
+      <section class="junta-panel">
         <p class="small-muted">La votacion no esta abierta para este usuario o ya termino el plazo. Al refrescar la pagina se revisa si corresponde publicar.</p>
       </section>
     <?php endif; ?>

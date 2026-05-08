@@ -7,6 +7,10 @@ require_once __DIR__ . '/lib/schema.php';
 
 require_admin();
 
+if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'encuentros.php' && !defined('MATCH_ADMIN_VIEW')) {
+    redirect('editar_partidos.php');
+}
+
 $pdo = db();
 ensure_control_schema();
 
@@ -1115,7 +1119,7 @@ require __DIR__ . '/includes/header.php';
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-primary" type="submit"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
+      <button class="btn btn-primary" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
       <?php if ($form['id']): ?>
         <a class="btn btn-muted" href="<?= h($matchListPage) ?>">Cancelar</a>
       <?php endif; ?>

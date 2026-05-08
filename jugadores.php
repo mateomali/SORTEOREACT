@@ -459,6 +459,7 @@ function player_action_icon(string $icon): string
     $icons = [
         'story' => '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 8h8"/><path d="M8 12h6"/>',
         'edit' => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+        'info' => '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
         'save' => '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8A2 2 0 0 1 21 8.8V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/>',
         'delete' => '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>',
         'close' => '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
@@ -481,10 +482,6 @@ function player_mobile_rating_summary(array $player): string
 
     return '<span class="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">' .
         '<span class="truncate">' . h((string) $player['positions']) . '</span>' .
-        '<span class="inline-flex items-center gap-1 font-extrabold text-lime-50" aria-label="General ' . h($formatted) . ' de 6">' .
-        '<span>' . h($formatted) . '</span>' .
-        '<span class="text-[11px] leading-none text-amber-300" aria-hidden="true">' . h($stars) . '</span>' .
-        '</span>' .
         '</span>';
 }
 function player_mobile_stat_color(float $value): string
@@ -714,6 +711,7 @@ function player_position_selects(array $selectedPositions, ?string $formId = nul
 }
 
 $players = repo_all_players($isAdmin ? false : true);
+$editDialogPlayerId = $isAdmin ? max(0, (int) ($_GET['edit_player'] ?? 0)) : 0;
 $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores.php';
 require __DIR__ . '/includes/header.php';
@@ -796,7 +794,7 @@ require __DIR__ . '/includes/header.php';
                   </button>
                 </form>
                 <button class="btn player-icon-button inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-900 px-0 text-sm font-extrabold leading-none text-lime-50 hover:bg-emerald-800" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato"><?= player_action_icon('story') ?></button>
-                <button class="btn player-icon-button inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-900 px-0 text-sm font-extrabold leading-none text-lime-50 hover:bg-emerald-800" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"><?= player_action_icon('edit') ?></button>
+                <a class="btn player-icon-button inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-900 px-0 text-sm font-extrabold leading-none text-lime-50 hover:bg-emerald-800" href="jugadores.php?edit_player=<?= (int) $player['id'] ?><?= $showInactive ? '&show_inactive=1' : '' ?>#player-<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"><?= player_action_icon('edit') ?></a>
                 <form method="post" class="inline">
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
@@ -818,7 +816,7 @@ require __DIR__ . '/includes/header.php';
                     <strong class="text-sm font-black leading-none"><?= h((string) player_fifa_overall(player_overall_rating($player))) ?></strong>
                     <small class="text-[8px] font-black uppercase leading-none text-lime-100/80">GEN</small>
                   </span>
-                  <span class="mobile-player-view-action rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-[11px] font-extrabold text-emerald-950">VER</span>
+                  <span class="mobile-player-view-action inline-flex h-9 w-9 items-center justify-center rounded-full border border-lime-200/45 bg-lime-100 p-0 text-emerald-950" aria-label="Ver detalle" title="Ver detalle"><?= player_action_icon('info') ?></span>
                 </span>
               </summary>
               <?= player_mobile_profile_panel($player, $statLabels, $statHelp) ?>
@@ -963,12 +961,16 @@ require __DIR__ . '/includes/header.php';
   </article>
 </div>
 
+<?php if ($isAdmin): ?>
 <?php foreach ($players as $player): ?>
   <?php
+    if ($editDialogPlayerId !== (int) $player['id']) {
+        continue;
+    }
     $playerId = (int) $player['id'];
     $rowPositions = parse_positions_csv((string) $player['positions']);
   ?>
-  <dialog class="player-edit-dialog m-auto w-[min(92vw,720px)] rounded-2xl border-0 bg-transparent p-0 text-left backdrop:bg-emerald-950/55 max-[760px]:fixed max-[760px]:inset-0 max-[760px]:h-fit max-[760px]:max-h-[calc(100dvh-1.5rem)] max-[760px]:w-[calc(100vw-1.5rem)] max-[760px]:max-w-none max-[760px]:overflow-visible max-[760px]:rounded-xl" data-player-edit-dialog="<?= $playerId ?>">
+  <dialog class="player-edit-dialog m-auto w-[min(92vw,720px)] rounded-2xl border-0 bg-transparent p-0 text-left backdrop:bg-emerald-950/55 max-[760px]:fixed max-[760px]:inset-0 max-[760px]:h-fit max-[760px]:max-h-[calc(100dvh-1.5rem)] max-[760px]:w-[calc(100vw-1.5rem)] max-[760px]:max-w-none max-[760px]:overflow-visible max-[760px]:rounded-xl" data-player-edit-dialog="<?= $playerId ?>" open>
     <form method="post" class="player-edit-panel rounded-2xl border border-lime-200/55 bg-emerald-950 p-4 text-lime-50 shadow-2xl shadow-emerald-950/25 max-[760px]:max-h-[calc(100dvh-1.5rem)] max-[760px]:overflow-y-auto max-[760px]:rounded-xl max-[760px]:p-3" <?= $isAdmin ? '' : 'data-player-readonly-form' ?>>
       <div class="player-edit-head mb-4 flex items-start justify-between gap-3 border-b border-lime-200/30 pb-3 max-[760px]:sticky max-[760px]:top-0 max-[760px]:z-10 max-[760px]:mb-3 max-[760px]:bg-emerald-950 max-[760px]:pb-2">
         <div>
@@ -1041,6 +1043,7 @@ require __DIR__ . '/includes/header.php';
     </form>
   </dialog>
 <?php endforeach; ?>
+<?php endif; ?>
 
 <span hidden data-player-ajax-token="<?= $isAdmin ? h(player_ajax_token()) : '' ?>"></span>
 <script src="assets/jugadores.js"></script>

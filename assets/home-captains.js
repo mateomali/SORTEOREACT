@@ -24,6 +24,12 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
     const ratingWithStar = (value) => `${formatSkill(value)} ⭐`;
 
     const teamTotalSkill = (players) => players.reduce((total, player) => total + Number(player.skill || 0), 0);
+    const teamTacticLabel = (players) => {
+      const counts = ['DEF', 'MED', 'DEL'].map((position) => (
+        players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === position).length
+      ));
+      return counts.join('-');
+    };
     const statValue = (player, field) => {
       const value = Number(player[field]);
       if (Number.isFinite(value) && value > 0) return value;
@@ -64,7 +70,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
         const linePlayers = players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === position);
         const playerHtml = linePlayers.length
           ? linePlayers.map((player) => `
-              <div class="formation-player" draggable="true" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${position}" data-player-skill="${Number(player.skill || 0)}">
+              <div class="formation-player" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${position}" data-player-skill="${Number(player.skill || 0)}">
                 <strong>${escapeHtml(player.name)}</strong>
                 <span class="formation-player-meta">${ratingWithStar(player.skill)}</span>
               </div>
@@ -92,8 +98,11 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             <h4>${escapeHtml(captainName)}</h4>
               <span class="small-muted">${players.length}/${targetSize} jugadores</span>
             </div>
-          <div class="formation-total-title"><span>Base</span><strong>${totalSkill.toFixed(1)} pts</strong></div>
-          <div class="team-formation" data-static-team-formation data-team-number="${teamNumber}">${renderFormation(players, teamNumber)}</div>
+          <div class="formation-title-row">
+            <div class="formation-total-title" data-formation-total-title><span>Base</span><strong>${totalSkill.toFixed(1)} pts</strong></div>
+            <div class="formation-total-title formation-tactic-title"><span>TACTICA</span><strong data-formation-tactic>${teamTacticLabel(players)}</strong></div>
+          </div>
+          <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="${teamNumber}">${renderFormation(players, teamNumber)}</div>
           ${renderTeamCharacteristics(players)}
         </article>
       `;
