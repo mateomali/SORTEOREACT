@@ -883,6 +883,7 @@ $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
 $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['id']) : [];
 $groupedTeams = $selectedMatch ? repo_grouped_team_players((int) $selectedMatch['id']) : [];
 $awardDefinitions = award_definitions();
+$awardDescriptions = award_descriptions();
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
 $valuationsLocked = $selectedMatch ? valuations_locked_after_deadline($selectedMatch) : false;
 $editDetails = !$valuationsLocked && ($forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1'));
@@ -1105,9 +1106,15 @@ require __DIR__ . '/includes/header.php';
 
         <details class="card finish-collapse finish-valuations" id="valoraciones" open>
           <summary>
-            <span>Valoraciones</span>
-            <small>Goles y puntajes</small>
+            <span>Puntajes y premios</span>
+            <small>Menu</small>
           </summary>
+          <div class="finish-valuations-menu">
+            <details class="finish-submenu finish-collapse finish-ratings-menu" open>
+              <summary>
+                <span>Puntajes</span>
+                <small>Goles</small>
+              </summary>
           <div
             data-react-root
             data-react-island="finish_valuation_controls"
@@ -1161,14 +1168,15 @@ require __DIR__ . '/includes/header.php';
               </article>
             <?php endforeach; ?>
           </div>
-        </details>
+            </details>
 
-        <details class="card finish-collapse finish-awards">
+            <details class="finish-submenu finish-collapse finish-awards">
           <summary>
             <span>Premios</span>
             <small>Opcional</small>
           </summary>
           <p class="small-muted">Busca y elige un jugador convocado para cada premio.</p>
+          <?= award_legend_details_html($awardDefinitions, $awardDescriptions) ?>
           <div class="award-grid">
             <?php foreach ($awardDefinitions as $code => $award): ?>
               <?php
@@ -1185,6 +1193,8 @@ require __DIR__ . '/includes/header.php';
                 <input id="award-<?= h($code) ?>" type="text" list="<?= $code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers' ?>" name="awards[<?= h($code) ?>]" value="<?= h($savedValue) ?>" placeholder="Buscar jugador">
               </div>
             <?php endforeach; ?>
+          </div>
+            </details>
           </div>
         </details>
 

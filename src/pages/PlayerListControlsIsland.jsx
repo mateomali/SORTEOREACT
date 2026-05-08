@@ -127,7 +127,7 @@ export function PlayerListControlsIsland({ root }) {
       <div className="player-list-search-shell grid gap-1">
         <label className="mb-0 text-xs font-extrabold uppercase tracking-wide text-lime-100" htmlFor="playerListSearchReact">Buscar jugador</label>
         <input
-          className="w-full rounded-xl border border-lime-200/40 bg-emerald-950 px-3 py-2.5 text-sm text-lime-50 shadow-sm placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/20"
+          className="player-list-search-input w-full rounded-xl border border-lime-200/40 bg-emerald-950 px-3 py-2.5 text-sm text-lime-50 shadow-sm placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/20"
           id="playerListSearchReact"
           type="search"
           placeholder="Nombre, posicion o stats"
@@ -142,6 +142,7 @@ export function PlayerListControlsIsland({ root }) {
           {canFilterActive ? (
             <label className="mb-0 inline-flex items-center gap-1.5 text-emerald-950">
               <input
+                className="player-active-filter-checkbox"
                 type="checkbox"
                 checked={activeOnly}
                 onChange={(event) => setActiveOnly(event.target.checked)}

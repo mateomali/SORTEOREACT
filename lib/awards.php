@@ -21,6 +21,53 @@ function award_definitions(): array
     ];
 }
 
+function award_descriptions(): array
+{
+    return [
+        'player_of_match' => 'Jugador de la fecha.',
+        'goal_of_week' => 'Mejor gol de la fecha.',
+        'lyrical' => 'Jugada fantastica o recurso tecnico destacado.',
+        'wall' => 'Mejor defensor de la fecha.',
+        'capocannoniere' => 'Goleador destacado de la fecha.',
+        'terminator' => 'Jugador mas bruto o jugada mas fuerte.',
+        'tractor' => 'Jugador mas aguerrido e intenso.',
+        'guinda' => 'Mejor pase o asistencia.',
+        'putita' => 'Jugador no comprometido o problematico.',
+        'ghost' => 'Jugador que erro mucho o participo poco.',
+        'keeper' => 'Mejor arquero de la fecha.',
+        'goodfellas' => 'Mejor actitud y buen companero.',
+    ];
+}
+
+function award_legend_details_html(array $awardDefinitions, ?array $awardDescriptions = null, string $title = 'Referencia de premios', bool $open = false): string
+{
+    $awardDescriptions ??= award_descriptions();
+    $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $openAttr = $open ? ' open' : '';
+
+    $html = '<details class="card stats-section award-legend-section scroll-mt-20"' . $openAttr . '>';
+    $html .= '<summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-extrabold text-lime-50">';
+    $html .= $escape($title);
+    $html .= '<span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-emerald-950 shadow-sm" aria-hidden="true">?</span>';
+    $html .= '</summary>';
+    $html .= '<div class="award-legend-grid border-t border-lime-200/30 bg-emerald-950/70 p-3">';
+
+    foreach ($awardDefinitions as $code => $award) {
+        $html .= '<article class="award-legend-item">';
+        $html .= '<span class="award-legend-icon">' . $escape((string) ($award['icon'] ?? '')) . '</span>';
+        $html .= '<span>';
+        $html .= '<strong>' . $escape((string) ($award['label'] ?? 'Premio')) . '</strong>';
+        $html .= '<small>' . $escape((string) ($awardDescriptions[$code] ?? 'Premio destacado de la fecha.')) . '</small>';
+        $html .= '</span>';
+        $html .= '</article>';
+    }
+
+    $html .= '</div>';
+    $html .= '</details>';
+
+    return $html;
+}
+
 function ensure_match_awards_schema(): void
 {
     db()->exec(

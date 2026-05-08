@@ -626,19 +626,8 @@ require __DIR__ . '/includes/header.php';
   </div>
 </details>
 
-<section id="stats-premios" class="card stats-section award-legend-section scroll-mt-20">
-  <h3>Referencia de premios</h3>
-  <div class="award-legend-grid">
-    <?php foreach ($awardDefinitions as $code => $award): ?>
-      <article class="award-legend-item">
-        <span class="award-legend-icon"><?= h((string) $award['icon']) ?></span>
-        <span>
-          <strong><?= h((string) $award['label']) ?></strong>
-          <small><?= h($awardDescriptions[$code] ?? 'Premio destacado de la fecha.') ?></small>
-        </span>
-      </article>
-    <?php endforeach; ?>
-  </div>
-</section>
+<div id="stats-premios" class="scroll-mt-20">
+  <?= award_legend_details_html($awardDefinitions, $awardDescriptions) ?>
+</div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

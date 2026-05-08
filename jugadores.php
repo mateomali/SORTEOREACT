@@ -727,13 +727,6 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 </section>
 
-<nav class="visual-tab-nav players-tab-nav" aria-label="Secciones de jugadores">
-  <?php if ($isAdmin): ?><a href="#player-create">Crear</a><?php endif; ?>
-  <a href="#player-list">Listado</a>
-  <a href="#player-help">Stats</a>
-  <?php if ($isAdmin): ?><a href="jugadores.php<?= $showInactive ? '' : '?show_inactive=1' ?>">Inactivos</a><?php endif; ?>
-</nav>
-
 <div class="players-mobile-help hidden max-[900px]:mb-2.5 max-[900px]:block">
   <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 </div>

@@ -607,6 +607,10 @@
     @apply mb-0;
   }
 
+  .award-legend-section summary::-webkit-details-marker {
+    @apply hidden;
+  }
+
   .match-award-legend {
     @apply mt-4;
   }
@@ -3141,6 +3145,22 @@
     @apply grid gap-3 p-3;
   }
 
+  .finish-valuations-menu {
+    @apply grid gap-3 p-3;
+  }
+
+  .finish-submenu {
+    @apply mb-0 rounded-2xl border border-lime-200/35 bg-emerald-950/70 p-0 shadow-md shadow-emerald-950/12;
+  }
+
+  .finish-submenu summary span {
+    @apply text-base;
+  }
+
+  .finish-submenu .award-legend-section {
+    @apply mx-3 mt-3;
+  }
+
   .finish-valuations-actions {
     @apply justify-center;
   }
@@ -5082,8 +5102,8 @@ textarea,
     @apply !border-emerald-200/30 !bg-emerald-800/25 !shadow-md !shadow-emerald-950/10;
   }
 
-  .player-list-react-controls input,
-  .player-list-search-shell input {
+  .player-list-react-controls .player-list-search-input,
+  .player-list-search-shell .player-list-search-input {
     @apply !border-emerald-200/35 !bg-emerald-800/35 !text-lime-50 placeholder:!text-emerald-100/55;
   }
 
@@ -5458,7 +5478,7 @@ textarea,
     @apply !text-[10px] !leading-none;
   }
 
-  .player-list-react-controls input {
+  .player-list-react-controls .player-list-search-input {
     @apply !min-h-10 !px-3 !py-2 !text-sm;
   }
 
@@ -5593,6 +5613,66 @@ textarea,
     }
   }
 
+  @media (max-width: 900px) {
+    section.card:has(.player-list-react-controls) {
+      @apply !p-3;
+    }
+
+    section.card:has(.player-list-react-controls) > .section-toolbar {
+      @apply !gap-3 !rounded-xl !p-3;
+    }
+
+    section.card:has(.player-list-react-controls) > .section-toolbar h3 {
+      @apply !text-xl;
+    }
+
+    .player-list-react-controls {
+      @apply !gap-2.5 !rounded-xl !p-2.5;
+    }
+
+    .player-list-react-controls .player-list-search-shell {
+      @apply !border-0 !bg-transparent !p-0 !shadow-none;
+      box-shadow: none !important;
+    }
+
+    .player-list-react-controls label {
+      @apply !text-[11px];
+    }
+
+    .player-list-react-controls .player-list-search-input {
+      @apply !min-h-12 !rounded-xl !px-3.5 !text-base;
+    }
+
+    .player-list-react-side,
+    .player-list-react-controls .player-count-filter {
+      @apply !w-full;
+    }
+
+    .player-list-react-controls .player-count-filter {
+      @apply !grid !min-h-11 !grid-cols-[minmax(0,1fr)_auto] !items-center !gap-3 !rounded-xl !px-3.5 !py-2.5 !text-sm;
+    }
+
+    .player-list-react-controls .player-count-filter > strong {
+      @apply !min-w-0 !whitespace-nowrap;
+    }
+
+    .player-list-react-controls .player-count-filter label {
+      @apply !min-w-0 !whitespace-nowrap !text-sm !normal-case !tracking-normal;
+    }
+
+    .player-list-react-controls .player-active-filter-checkbox {
+      @apply !h-4 !min-h-4 !w-4 !shrink-0 !rounded !border-emerald-800/50 !bg-lime-50 !p-0 !shadow-none;
+    }
+
+    .player-mobile-sort-strip {
+      @apply !gap-1.5;
+    }
+
+    .player-mobile-sort-strip button {
+      @apply !min-h-10 !rounded-xl !px-2 !py-2 !text-[12px];
+    }
+  }
+
   section.card .section-toolbar,
   section.card .section-toolbar:has(.player-list-react-controls),
   section.card:has(.player-list-react-controls) .section-toolbar,
@@ -5620,7 +5700,6 @@ textarea,
   .participant-search,
   .participant-search-shell,
   .player-list-react-controls,
-  .player-list-search-shell,
   .manual-player-search,
   .manual-player-search-box {
     @apply !border-lime-200/50 !bg-emerald-950/82 !shadow-lg !shadow-emerald-950/18;
@@ -5636,8 +5715,8 @@ textarea,
   .stats-player-search input,
   .finish-valuation-controls input,
   .participant-search input,
-  .player-list-react-controls input,
-  .player-list-search-shell input,
+  .player-list-react-controls .player-list-search-input,
+  .player-list-search-shell .player-list-search-input,
   .manual-player-search input,
   .manual-player-search-box input,
   input.search-input {
@@ -5656,6 +5735,7 @@ textarea,
   .desktop-player-stat-explainer,
   .mobile-player-stat-explainer,
   .player-stat-help,
+  .award-legend-section,
   .finish-awards,
   .sorteo-page .accordion {
     @apply !border-lime-200/40 !shadow-lg !shadow-emerald-950/14;
@@ -5673,6 +5753,7 @@ textarea,
   .desktop-player-stat-explainer summary,
   .mobile-player-stat-explainer summary,
   .player-stat-help summary,
+  .award-legend-section summary,
   .finish-awards summary,
   .sorteo-page .accordion-header {
     @apply !rounded-xl !border !border-lime-200/35 !bg-emerald-950/72 !px-4 !py-3 !text-lime-50 !shadow-sm !shadow-emerald-950/12;
@@ -5690,6 +5771,7 @@ textarea,
   .desktop-player-stat-explainer[open] summary,
   .mobile-player-stat-explainer[open] summary,
   .player-stat-help[open] summary,
+  .award-legend-section[open] summary,
   .finish-awards[open] summary,
   .sorteo-page .accordion.active .accordion-header {
     @apply !border-lime-200/62 !bg-emerald-950/95 !text-lime-100;
@@ -5703,6 +5785,7 @@ textarea,
   .desktop-player-stat-explainer summary small,
   .mobile-player-stat-explainer summary small,
   .player-stat-help summary small,
+  .award-legend-section summary small,
   .finish-awards summary small {
     @apply !rounded-full !border !border-lime-200/45 !bg-lime-100 !px-2.5 !py-1 !text-xs !font-extrabold !uppercase !leading-none !text-emerald-950 !shadow-sm !shadow-emerald-950/10;
   }
@@ -5719,6 +5802,7 @@ textarea,
   .desktop-player-stat-explainer summary:hover,
   .mobile-player-stat-explainer summary:hover,
   .player-stat-help summary:hover,
+  .award-legend-section summary:hover,
   .finish-awards summary:hover,
   .sorteo-page .accordion-header:hover {
     @apply !border-lime-200/70 !bg-lime-100/10;
