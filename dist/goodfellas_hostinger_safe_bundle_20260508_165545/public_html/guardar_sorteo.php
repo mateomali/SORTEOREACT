@@ -101,6 +101,40 @@ function adjusted_position_rating_legacy(array $player, string $assigned): float
     return max(1.0, min(6.0, $base));
 }
 
+function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): bool
+{
+    $scores = [];
+    foreach ($teams as $team) {
+        if (count($team) !== $teamSize) {
+            return false;
+        }
+
+        $lineCounts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        $score = 0.0;
+
+        foreach ($team as $player) {
+            $assigned = normalize_assigned_position_legacy(
+                isset($player['assigned_position']) ? (string) $player['assigned_position'] : '',
+                $player
+            );
+            $lineCounts[$assigned] = ($lineCounts[$assigned] ?? 0) + 1;
+
+            $score += player_overall_rating($player);
+        }
+
+        if (($lineCounts['ARQ'] ?? 0) !== 1) {
+            return false;
+        }
+        $scores[] = $score;
+    }
+
+    if ((max($scores) - min($scores)) > $maxDiff) {
+        return false;
+    }
+
+    return true;
+}
+
 function normalize_team_color_name_legacy(string $color): string
 {
     return strtoupper(trim($color));
@@ -321,6 +355,12 @@ $teamScores = array_map(
     $teams
 );
 $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
+
+if ($drawMode !== 'manual' && !validate_teams_legacy($teams, $teamSize, $maxDiff)) {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan las reglas de guardado: cada equipo debe tener exactamente 1 arquero asignado.']);
+    exit;
+}
 
 $pdo = db();
 $pdo->beginTransaction();
