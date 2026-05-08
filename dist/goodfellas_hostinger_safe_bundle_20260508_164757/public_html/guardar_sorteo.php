@@ -104,6 +104,9 @@ function adjusted_position_rating_legacy(array $player, string $assigned): float
 function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): bool
 {
     $scores = [];
+    $fieldPlayers = max(0, $teamSize - 1);
+    $minFieldLine = $fieldPlayers >= 3 ? 1 : 0;
+    $maxPerFieldLine = max(0, intdiv($teamSize, 2));
     foreach ($teams as $team) {
         if (count($team) !== $teamSize) {
             return false;
@@ -124,6 +127,12 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
 
         if (($lineCounts['ARQ'] ?? 0) !== 1) {
             return false;
+        }
+        foreach (['DEF', 'MED', 'DEL'] as $line) {
+            $count = $lineCounts[$line] ?? 0;
+            if ($count < $minFieldLine || $count > $maxPerFieldLine) {
+                return false;
+            }
         }
         $scores[] = $score;
     }
@@ -358,7 +367,7 @@ $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
 
 if ($drawMode !== 'manual' && !validate_teams_legacy($teams, $teamSize, $maxDiff)) {
     http_response_code(422);
-    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan las reglas de guardado: cada equipo debe tener exactamente 1 arquero asignado.']);
+    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan las reglas de guardado: 1 arquero por equipo y formacion valida para la cantidad de jugadores por equipo.']);
     exit;
 }
 
