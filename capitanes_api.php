@@ -39,7 +39,20 @@ function captain_draft_row(int $matchId): ?array
     );
     $stmt->execute(['mid' => $matchId]);
     $row = $stmt->fetch();
-    return $row ?: null;
+    if (!$row) {
+        return null;
+    }
+    foreach ([1, 2, 3, 4] as $teamNumber) {
+        $captainId = (int) ($row['captain' . $teamNumber . '_player_id'] ?? 0);
+        if ($captainId <= 0) {
+            continue;
+        }
+        $captain = repo_player_by_id($captainId);
+        if ($captain) {
+            $row['captain' . $teamNumber . '_skill'] = player_overall_rating($captain);
+        }
+    }
+    return $row;
 }
 
 function captain_numbers(array $draft): array
@@ -104,7 +117,7 @@ function captain_position_base_rating(array $player, string $position): float
 {
     $position = strtoupper($position);
     $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
-    $rating = (float) ($player['skill'] ?? 0);
+    $rating = player_overall_rating($player);
     if ($position === 'ARQ') {
         $goalkeeperSkill = in_array('ARQ', $positions, true) ? player_effective_stat($player, 'goalkeeper_skill') : 2.0;
         $rating = ($goalkeeperSkill * 0.42)
@@ -114,12 +127,12 @@ function captain_position_base_rating(array $player, string $position): float
             + (player_effective_stat($player, 'teamwork') * 0.14)
             + (player_effective_stat($player, 'mentality') * 0.10);
     } elseif ($position === 'DEF') {
-        $rating = (player_effective_stat($player, 'defense_physical') * 0.38)
-            + (player_effective_stat($player, 'rhythm') * 0.16)
-            + (player_effective_stat($player, 'technique') * 0.12)
-            + (player_effective_stat($player, 'teamwork') * 0.14)
-            + (player_effective_stat($player, 'mentality') * 0.12)
-            + (player_effective_stat($player, 'attack') * 0.08);
+        $rating = (player_effective_stat($player, 'defense_physical') * 0.60)
+            + (player_effective_stat($player, 'rhythm') * 0.12)
+            + (player_effective_stat($player, 'technique') * 0.08)
+            + (player_effective_stat($player, 'teamwork') * 0.08)
+            + (player_effective_stat($player, 'mentality') * 0.08)
+            + (player_effective_stat($player, 'attack') * 0.04);
     } elseif ($position === 'MED') {
         $rating = (player_effective_stat($player, 'technique') * 0.22)
             + (player_effective_stat($player, 'teamwork') * 0.20)
@@ -128,12 +141,12 @@ function captain_position_base_rating(array $player, string $position): float
             + (player_effective_stat($player, 'defense_physical') * 0.13)
             + (player_effective_stat($player, 'attack') * 0.13);
     } elseif ($position === 'DEL') {
-        $rating = (player_effective_stat($player, 'attack') * 0.40)
-            + (player_effective_stat($player, 'technique') * 0.18)
-            + (player_effective_stat($player, 'rhythm') * 0.16)
-            + (player_effective_stat($player, 'mentality') * 0.12)
-            + (player_effective_stat($player, 'teamwork') * 0.08)
-            + (player_effective_stat($player, 'defense_physical') * 0.06);
+        $rating = (player_effective_stat($player, 'attack') * 0.60)
+            + (player_effective_stat($player, 'technique') * 0.12)
+            + (player_effective_stat($player, 'rhythm') * 0.10)
+            + (player_effective_stat($player, 'mentality') * 0.08)
+            + (player_effective_stat($player, 'teamwork') * 0.06)
+            + (player_effective_stat($player, 'defense_physical') * 0.04);
     }
     return player_apply_regularity_adjustment($rating, $player);
 }
@@ -141,6 +154,10 @@ function captain_position_base_rating(array $player, string $position): float
 function captain_adjusted_position_rating(array $player, string $position): float
 {
     $position = strtoupper($position);
+    $general = player_overall_rating($player);
+    if ($position === '' || in_array($position, parse_positions_csv((string) ($player['positions'] ?? '')), true)) {
+        return max(1.0, min(6.0, $general));
+    }
     $base = captain_position_base_rating($player, $position);
     return max(1.0, min(6.0, $base));
 }
@@ -180,21 +197,7 @@ function captain_next_team_by_lowest_total_skill(int $matchId, array $draft, int
     $totalStmt->execute(['mid' => $matchId]);
     $targetSize = $captainCount > 0 ? (int) ((int) $totalStmt->fetchColumn() / $captainCount) : 0;
 
-    $stmt = db()->prepare(
-        'SELECT mp.team_number, COUNT(*) AS picked_count, COALESCE(SUM(p.skill), 0) AS total_skill
-         FROM match_players mp
-         INNER JOIN players p ON p.id = mp.player_id
-         WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
-         GROUP BY mp.team_number'
-    );
-    $stmt->execute(['mid' => $matchId]);
-    $stats = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $stats[(int) $row['team_number']] = [
-            'picked_count' => (int) $row['picked_count'],
-            'total_skill' => (float) $row['total_skill'],
-        ];
-    }
+    $stats = captain_team_skill_totals($matchId);
 
     usort($teamNumbers, static function (int $a, int $b) use ($stats, $targetSize): int {
         $countA = $stats[$a]['picked_count'] ?? 0;
@@ -266,19 +269,24 @@ function validate_captain_formation_line_counts(array $counts): void
 function captain_team_skill_totals(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT mp.team_number, COUNT(*) AS picked_count, COALESCE(SUM(p.skill), 0) AS total_skill
+        'SELECT mp.team_number, p.*
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
-         GROUP BY mp.team_number'
+         ORDER BY mp.team_number ASC, p.name ASC'
     );
     $stmt->execute(['mid' => $matchId]);
     $totals = [];
     foreach ($stmt->fetchAll() as $row) {
-        $totals[(int) $row['team_number']] = [
-            'picked_count' => (int) $row['picked_count'],
-            'total_skill' => (float) $row['total_skill'],
-        ];
+        $teamNumber = (int) $row['team_number'];
+        if (!isset($totals[$teamNumber])) {
+            $totals[$teamNumber] = [
+                'picked_count' => 0,
+                'total_skill' => 0.0,
+            ];
+        }
+        $totals[$teamNumber]['picked_count']++;
+        $totals[$teamNumber]['total_skill'] += player_overall_rating($row);
     }
     return $totals;
 }
@@ -384,7 +392,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     $allowedIds = [];
     while ($margin <= 8.0 && !$allowedIds) {
         foreach ($pool as $player) {
-            $projectedTotal = $currentTotal + (float) ($player['skill'] ?? 0);
+            $projectedTotal = $currentTotal + player_overall_rating($player);
             if ($projectedTotal <= $highestTotal + $margin) {
                 $allowedIds[] = (int) $player['id'];
             }
@@ -397,7 +405,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     if (!$allowedIds) {
         $bestDistance = null;
         foreach ($pool as $player) {
-            $projectedTotal = $currentTotal + (float) ($player['skill'] ?? 0);
+            $projectedTotal = $currentTotal + player_overall_rating($player);
             $distance = abs($projectedTotal - $highestTotal);
             if ($bestDistance === null || $distance < $bestDistance) {
                 $bestDistance = $distance;
@@ -491,7 +499,8 @@ function captain_state(int $matchId): array
             'primary_position' => primary_position($p),
             'pace' => (string) $p['pace'],
             'pace_label' => pace_label((string) $p['pace']),
-            'skill' => (float) $p['skill'],
+            'skill' => player_overall_rating($p),
+            'base_skill' => (float) $p['skill'],
             'technique' => player_effective_stat($p, 'technique'),
             'rhythm' => player_effective_stat($p, 'rhythm'),
             'defense_physical' => player_effective_stat($p, 'defense_physical'),
@@ -633,7 +642,7 @@ function finish_captain_draft(int $matchId): void
         $totalSkill = 0.0;
         foreach ($team as $p) {
             $line = $assignmentData['assignment'][(int) $p['id']] ?? primary_position($p);
-            $totalSkill += captain_adjusted_position_rating($p, $line);
+            $totalSkill += player_overall_rating($p);
         }
         $lineCounts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
         foreach ($team as $p) {
@@ -845,7 +854,7 @@ try {
             $totalSkill = 0.0;
             foreach ($teamRows as $row) {
                 $counts[(string) $row['position']]++;
-                $totalSkill += captain_adjusted_position_rating((array) $row['player'], (string) $row['position']);
+                $totalSkill += player_overall_rating((array) $row['player']);
             }
             $updateTeam->execute([
                 'mid' => $matchId,
@@ -946,7 +955,7 @@ try {
             'mid' => $matchId,
             'team' => $teamNumber,
             'total_skill' => array_reduce($validRows, static function (float $sum, array $row) use ($teamPlayerLookup): float {
-                return $sum + captain_adjusted_position_rating($teamPlayerLookup[(int) $row['player_id']], (string) $row['position']);
+                return $sum + player_overall_rating($teamPlayerLookup[(int) $row['player_id']]);
             }, 0.0),
             'formation_name' => implode('-', [$lineOrder['ARQ'], $lineOrder['DEF'], $lineOrder['MED'], $lineOrder['DEL']]),
             'formation_data' => json_encode($formationData, JSON_UNESCAPED_UNICODE),
@@ -956,9 +965,8 @@ try {
     }
 
     $playerStmt = $pdo->prepare(
-        'SELECT mp.player_id, mp.team_number, p.skill
+        'SELECT mp.player_id, mp.team_number
          FROM match_players mp
-         INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid AND mp.player_id = :pid
          LIMIT 1
          FOR UPDATE'
@@ -984,7 +992,8 @@ try {
         throw new RuntimeException('No hay draft de capitanes para esta fecha.');
     }
     $availableStmt = $pdo->prepare(
-        'SELECT p.id, p.skill, p.positions
+        'SELECT p.id, p.name, p.positions, p.pace, p.skill,
+                p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid AND mp.team_number IS NULL'

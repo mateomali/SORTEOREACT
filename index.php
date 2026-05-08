@@ -14,6 +14,109 @@ $showHistoryPage = defined('SHOW_HISTORY_PAGE') && SHOW_HISTORY_PAGE;
 $title = ($showHistoryPage ? 'Historial' : 'Inicio') . ' | ' . APP_NAME;
 $activePage = $showHistoryPage ? 'historial.php' : 'index.php';
 
+function home_player_card_rating(float $value): int
+{
+    $clamped = max(1.0, min(6.0, $value));
+    $anchorPoints = [
+        [1.0, 35.0],
+        [2.5, 54.0],
+        [3.0, 64.0],
+        [3.2, 69.0],
+        [3.5, 74.0],
+        [3.8, 79.0],
+        [4.0, 81.0],
+        [4.4, 86.0],
+        [4.5, 87.0],
+        [5.0, 92.0],
+        [5.2, 93.0],
+        [5.3, 94.0],
+        [6.0, 98.0],
+    ];
+
+    for ($i = 0, $count = count($anchorPoints) - 1; $i < $count; $i++) {
+        [$fromRating, $fromOverall] = $anchorPoints[$i];
+        [$toRating, $toOverall] = $anchorPoints[$i + 1];
+        if ($clamped <= $toRating) {
+            $ratio = ($clamped - $fromRating) / ($toRating - $fromRating);
+            return (int) round($fromOverall + (($toOverall - $fromOverall) * $ratio));
+        }
+    }
+
+    return 98;
+}
+
+function render_player_card_rating(float $value, string $label = 'GEN'): string
+{
+    return '<span class="player-card-rating" title="Puntaje tarjeta"><strong>'
+        . h((string) home_player_card_rating($value))
+        . '</strong><span>' . h(strtoupper($label)) . '</span></span>';
+}
+
+function home_position_base_rating(array $player, string $position): float
+{
+    $position = strtoupper($position);
+    if ($position === 'ARQ') {
+        $goalkeeperSkill = in_array('ARQ', parse_positions_csv((string) ($player['positions'] ?? '')), true)
+            ? player_effective_stat($player, 'goalkeeper_skill')
+            : 2.0;
+        return player_apply_regularity_adjustment(
+            ($goalkeeperSkill * 0.42)
+            + (player_effective_stat($player, 'defense_physical') * 0.14)
+            + (player_effective_stat($player, 'rhythm') * 0.10)
+            + (player_effective_stat($player, 'technique') * 0.10)
+            + (player_effective_stat($player, 'teamwork') * 0.14)
+            + (player_effective_stat($player, 'mentality') * 0.10),
+            $player
+        );
+    }
+    if ($position === 'DEF') {
+        return player_apply_regularity_adjustment(
+            (player_effective_stat($player, 'defense_physical') * 0.60)
+            + (player_effective_stat($player, 'rhythm') * 0.12)
+            + (player_effective_stat($player, 'technique') * 0.08)
+            + (player_effective_stat($player, 'teamwork') * 0.08)
+            + (player_effective_stat($player, 'mentality') * 0.08)
+            + (player_effective_stat($player, 'attack') * 0.04),
+            $player
+        );
+    }
+    if ($position === 'MED') {
+        return player_apply_regularity_adjustment(
+            (player_effective_stat($player, 'technique') * 0.22)
+            + (player_effective_stat($player, 'teamwork') * 0.20)
+            + (player_effective_stat($player, 'rhythm') * 0.18)
+            + (player_effective_stat($player, 'mentality') * 0.14)
+            + (player_effective_stat($player, 'defense_physical') * 0.13)
+            + (player_effective_stat($player, 'attack') * 0.13),
+            $player
+        );
+    }
+    if ($position === 'DEL') {
+        return player_apply_regularity_adjustment(
+            (player_effective_stat($player, 'attack') * 0.60)
+            + (player_effective_stat($player, 'technique') * 0.12)
+            + (player_effective_stat($player, 'rhythm') * 0.10)
+            + (player_effective_stat($player, 'mentality') * 0.08)
+            + (player_effective_stat($player, 'teamwork') * 0.06)
+            + (player_effective_stat($player, 'defense_physical') * 0.04),
+            $player
+        );
+    }
+
+    return player_overall_rating($player);
+}
+
+function home_adjusted_position_rating(array $player, string $position): float
+{
+    $position = strtoupper($position);
+    $general = player_overall_rating($player);
+    if ($position === '' || in_array($position, parse_positions_csv((string) ($player['positions'] ?? '')), true)) {
+        return max(1.0, min(6.0, $general));
+    }
+
+    return max(1.0, min(6.0, home_position_base_rating($player, $position)));
+}
+
 $pdo = db();
 $matches = $pdo->query(
     "SELECT m.*,
@@ -710,6 +813,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $formationGoals = (int) ($player['goals'] ?? 0);
                           $formationRating = $player['rating'] !== null ? number_format((float) $player['rating'], 1) : '-';
                           $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
+                          $formationOverall = player_overall_rating($player);
+                          $formationCardRating = home_adjusted_position_rating($player, $line);
                         ?>
                         <div
                           class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?>"
@@ -717,8 +822,18 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           data-static-formation-player
                           data-static-player-key="<?= h((string) $player['id']) ?>"
                           data-assigned-position="<?= h($line) ?>"
-                          data-player-skill="<?= h((string) (float) $player['skill']) ?>"
+                          data-player-skill="<?= h(number_format($formationOverall, 1, '.', '')) ?>"
+                          data-player-positions="<?= h((string) ($player['positions'] ?? '')) ?>"
+                          data-player-technique="<?= h(number_format(player_effective_stat($player, 'technique'), 1, '.', '')) ?>"
+                          data-player-rhythm="<?= h(number_format(player_effective_stat($player, 'rhythm'), 1, '.', '')) ?>"
+                          data-player-defense-physical="<?= h(number_format(player_effective_stat($player, 'defense_physical'), 1, '.', '')) ?>"
+                          data-player-attack="<?= h(number_format(player_effective_stat($player, 'attack'), 1, '.', '')) ?>"
+                          data-player-teamwork="<?= h(number_format(player_effective_stat($player, 'teamwork'), 1, '.', '')) ?>"
+                          data-player-mentality="<?= h(number_format(player_effective_stat($player, 'mentality'), 1, '.', '')) ?>"
+                          data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
+                          data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
                         >
+                          <?= render_player_card_rating($formationCardRating, $line) ?>
                           <strong><?= h((string) $player['name']) ?><?php if ((string) $match['status'] === 'finalizado'): ?> (<?= h($formationRating) ?>)<?php endif; ?></strong>
                           <?php if ((string) $match['status'] === 'finalizado'): ?>
                             <?php if ($formationGoals > 0 || $formationAwards): ?>
@@ -739,7 +854,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                               </span>
                             <?php endif; ?>
                           <?php else: ?>
-                            <span class="formation-player-meta"><?= h(rtrim(rtrim(number_format((float) $player['skill'], 1, '.', ''), '0'), '.')) ?> ⭐</span>
+                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> ⭐</span>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>
@@ -1130,6 +1245,8 @@ require __DIR__ . '/includes/header.php';
                             $formationGoals = (int) ($player['goals'] ?? 0);
                             $formationRating = $player['rating'] !== null ? number_format((float) $player['rating'], 1) : '-';
                             $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
+                            $formationOverall = player_overall_rating($player);
+                            $formationCardRating = home_adjusted_position_rating($player, $line);
                           ?>
                           <div
                             class="formation-player <?= (int) ($player['goals'] ?? 0) > 0 ? 'scored-player' : '' ?>"
@@ -1137,8 +1254,18 @@ require __DIR__ . '/includes/header.php';
                             data-static-formation-player
                             data-static-player-key="<?= h((string) $player['id']) ?>"
                             data-assigned-position="<?= h($line) ?>"
-                            data-player-skill="<?= h((string) (float) $player['skill']) ?>"
+                            data-player-skill="<?= h(number_format($formationOverall, 1, '.', '')) ?>"
+                            data-player-positions="<?= h((string) ($player['positions'] ?? '')) ?>"
+                            data-player-technique="<?= h(number_format(player_effective_stat($player, 'technique'), 1, '.', '')) ?>"
+                            data-player-rhythm="<?= h(number_format(player_effective_stat($player, 'rhythm'), 1, '.', '')) ?>"
+                            data-player-defense-physical="<?= h(number_format(player_effective_stat($player, 'defense_physical'), 1, '.', '')) ?>"
+                            data-player-attack="<?= h(number_format(player_effective_stat($player, 'attack'), 1, '.', '')) ?>"
+                            data-player-teamwork="<?= h(number_format(player_effective_stat($player, 'teamwork'), 1, '.', '')) ?>"
+                            data-player-mentality="<?= h(number_format(player_effective_stat($player, 'mentality'), 1, '.', '')) ?>"
+                            data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
+                            data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
                           >
+                            <?= render_player_card_rating($formationCardRating, $line) ?>
                             <strong><?= h((string) $player['name']) ?><?php if ((string) $selectedMatch['status'] === 'finalizado'): ?> (<?= h($formationRating) ?>)<?php endif; ?></strong>
                             <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
                               <?php if ($formationGoals > 0 || $formationAwards): ?>
@@ -1159,7 +1286,7 @@ require __DIR__ . '/includes/header.php';
                                 </span>
                               <?php endif; ?>
                             <?php else: ?>
-                              <span class="formation-player-meta"><?= h(rtrim(rtrim(number_format((float) $player['skill'], 1, '.', ''), '0'), '.')) ?> ⭐</span>
+                              <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> ⭐</span>
                             <?php endif; ?>
                           </div>
                         <?php endforeach; ?>

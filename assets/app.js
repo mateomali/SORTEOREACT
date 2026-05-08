@@ -80,6 +80,91 @@
     const formationLocked = (formation) => formation?.dataset?.staticFormationLocked === '1';
     const lineKey = (line) => line.querySelector('.line-label')?.textContent?.trim() || '';
     const linePlayers = (line) => line.querySelector('.line-players');
+    const clampRating = (value) => Math.max(1, Math.min(6, Number(value || 0)));
+    const playerCardRating = (value) => {
+      const rating = clampRating(value);
+      const anchors = [
+        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
+        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
+        [5.2, 93], [5.3, 94], [6.0, 98],
+      ];
+      for (let i = 0; i < anchors.length - 1; i += 1) {
+        const [fromRating, fromOverall] = anchors[i];
+        const [toRating, toOverall] = anchors[i + 1];
+        if (rating <= toRating) {
+          const ratio = (rating - fromRating) / (toRating - fromRating);
+          return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
+        }
+      }
+      return 98;
+    };
+    const cardPositions = (card) => String(card.dataset.playerPositions || '')
+      .split('/')
+      .map((position) => position.trim().toUpperCase())
+      .filter(Boolean);
+    const cardStat = (card, field) => {
+      const datasetKey = `player${field.charAt(0).toUpperCase()}${field.slice(1)}`;
+      const fallback = field === 'Regularity' ? 3.5 : (field === 'Mentality' ? 3.0 : Number(card.dataset.playerSkill || 0));
+      const value = Number(card.dataset[datasetKey]);
+      return Number.isFinite(value) && value > 0 ? value : fallback;
+    };
+    const weightedCardRating = (card, weights) => (
+      Object.entries(weights).reduce((total, [field, weight]) => total + (cardStat(card, field) * weight), 0)
+    );
+    const applyCardRegularity = (rating, card) => clampRating(rating * (1 + ((cardStat(card, 'Regularity') - 3.5) / 50)));
+    const adjustedCardRating = (card, assignedPosition) => {
+      const position = String(assignedPosition || '').toUpperCase();
+      const generalRating = clampRating(card.dataset.playerSkill || 0);
+      const positions = cardPositions(card);
+      if (!position || positions.includes(position)) return generalRating;
+      let rating = generalRating;
+      if (position === 'ARQ') {
+        const goalkeeperSkill = positions.includes('ARQ') ? cardStat(card, 'GoalkeeperSkill') : 2.0;
+        rating = (goalkeeperSkill * 0.42)
+          + (cardStat(card, 'DefensePhysical') * 0.14)
+          + (cardStat(card, 'Rhythm') * 0.10)
+          + (cardStat(card, 'Technique') * 0.10)
+          + (cardStat(card, 'Teamwork') * 0.14)
+          + (cardStat(card, 'Mentality') * 0.10);
+      } else if (position === 'DEF') {
+        rating = weightedCardRating(card, {
+          DefensePhysical: 0.60,
+          Rhythm: 0.12,
+          Technique: 0.08,
+          Teamwork: 0.08,
+          Mentality: 0.08,
+          Attack: 0.04,
+        });
+      } else if (position === 'MED') {
+        rating = weightedCardRating(card, {
+          Technique: 0.22,
+          Teamwork: 0.20,
+          Rhythm: 0.18,
+          Mentality: 0.14,
+          DefensePhysical: 0.13,
+          Attack: 0.13,
+        });
+      } else if (position === 'DEL') {
+        rating = weightedCardRating(card, {
+          Attack: 0.60,
+          Technique: 0.12,
+          Rhythm: 0.10,
+          Mentality: 0.08,
+          Teamwork: 0.06,
+          DefensePhysical: 0.04,
+        });
+      }
+      return applyCardRegularity(rating, card);
+    };
+    const updatePlayerCardRating = (card) => {
+      const ratingBox = card?.querySelector?.('.player-card-rating');
+      if (!ratingBox) return;
+      const position = String(card.dataset.assignedPosition || '').toUpperCase();
+      const value = ratingBox.querySelector('strong');
+      const label = ratingBox.querySelector('span');
+      if (value) value.textContent = String(playerCardRating(adjustedCardRating(card, position)));
+      if (label) label.textContent = position || 'GEN';
+    };
     const ensureUndoButton = (formation) => {
       if (formationLocked(formation)) return;
       if (!formation || formation.querySelector(':scope > [data-static-formation-undo]')) return;
@@ -139,6 +224,7 @@
     const ensureAllUndoButtons = (root = document) => {
       root.querySelectorAll?.('[data-static-team-formation]').forEach((formation) => {
         refreshUndoButton(formation);
+        syncAssignedPositions(formation);
         updateFormationTotal(formation);
       });
     };
@@ -193,6 +279,7 @@
       formation.querySelectorAll('[data-static-formation-player]').forEach((card) => {
         const line = card.closest('.formation-line')?.querySelector('.line-label')?.textContent?.trim() || '';
         if (line) card.dataset.assignedPosition = line;
+        updatePlayerCardRating(card);
       });
     };
     const wouldKeepSingleGoalkeeper = (formation, source, target) => {
@@ -865,19 +952,31 @@
       }
     }
 
+    const toggleClassList = (element, classes, enabled) => {
+      if (!element) return;
+      classes.forEach((className) => element.classList.toggle(className, enabled));
+    };
+    const selectedRowClasses = ['!border-lime-200/70', '!bg-emerald-800/90', 'ring-2', 'ring-lime-200/25'];
+    const addedButtonClasses = ['!bg-emerald-600', '!text-white', 'hover:!bg-emerald-700'];
+    const defaultButtonClasses = ['!bg-lime-100', '!text-emerald-950', 'hover:!bg-lime-200'];
+    const disabledRemoveClasses = ['opacity-40', 'cursor-not-allowed'];
+    const readyMobileClasses = ['!bg-lime-100', '!text-emerald-950', 'hover:!bg-lime-200'];
+    const idleMobileClasses = ['!bg-lime-100/15', '!text-emerald-100/70'];
+
     checkboxes.forEach((el) => {
-      const row = el.closest('.player-picker-item');
+      const row = el.closest('[data-player-row]');
       const toggle = row?.querySelector('[data-participant-toggle]');
       const remove = row?.querySelector('[data-remove-player-row]');
-      row?.classList.toggle('selected', el.checked);
-      toggle?.classList.toggle('is-added', el.checked);
+      toggleClassList(row, selectedRowClasses, el.checked);
+      toggleClassList(toggle, addedButtonClasses, el.checked);
+      toggleClassList(toggle, defaultButtonClasses, !el.checked);
       if (toggle) {
         toggle.textContent = el.checked ? 'Convocado' : 'Agregar';
         toggle.disabled = !el.checked && el.disabled;
       }
       if (remove) {
         remove.disabled = el.checked;
-        remove.classList.toggle('is-disabled', el.checked);
+        toggleClassList(remove, disabledRemoveClasses, el.checked);
       }
     });
 
@@ -887,7 +986,8 @@
     if (target === 'participants' && mobileSubmit) {
       const isComplete = checked.length === limit;
       mobileSubmit.disabled = !isComplete;
-      mobileSubmit.classList.toggle('is-ready', isComplete);
+      toggleClassList(mobileSubmit, readyMobileClasses, isComplete);
+      toggleClassList(mobileSubmit, idleMobileClasses, !isComplete);
     }
     if (target === 'participants' && mobileMarquee) {
       mobileMarquee.hidden = checked.length === 0;
@@ -925,12 +1025,12 @@
 
     emptyMessages.forEach((empty) => empty.classList.add('hidden'));
     const html = checked.map((el, index) => `
-      <div class="selected-player-item">
-        <span>
-          <strong>${index + 1}. ${escapeHtml(el.dataset.playerName || '')}</strong>
-          <small>${escapeHtml(el.dataset.playerMeta || '')}</small>
+      <div class="flex items-center justify-between gap-2 rounded-xl border border-lime-200/55 bg-emerald-800/90 p-2 text-lime-50 shadow-sm shadow-emerald-950/20">
+        <span class="min-w-0">
+          <strong class="block truncate text-sm font-black text-lime-50">${index + 1}. ${escapeHtml(el.dataset.playerName || '')}</strong>
+          <small class="block truncate text-xs font-semibold text-emerald-100/82">${escapeHtml(el.dataset.playerMeta || '')}</small>
         </span>
-        <button type="button" data-remove-participant="${escapeHtml(el.value)}" aria-label="Quitar ${escapeHtml(el.dataset.playerName || 'jugador')}">
+        <button class="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border border-red-300/45 bg-red-950/85 px-2.5 py-2 text-sm font-black text-red-100 transition hover:bg-red-900 hover:text-white" type="button" data-remove-participant="${escapeHtml(el.value)}" aria-label="Quitar ${escapeHtml(el.dataset.playerName || 'jugador')}">
           <span class="remove-label">Quitar</span>
           <span class="remove-icon">x</span>
         </button>
@@ -1060,7 +1160,7 @@
     title.textContent = matches[0].score === 100 ? 'Jugador ya existente' : 'Posibles coincidencias';
     options.innerHTML = matches.map(({ player }) => `
       <button
-        class="btn btn-muted"
+        class="inline-flex min-h-10 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-50 transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100"
         type="submit"
         form="useExistingImportPlayerForm${escapeHtml(index)}"
         data-use-existing-player="${escapeHtml(index)}"
@@ -1140,7 +1240,7 @@
         const checkbox = document.querySelector(`input[name="participants[]"][value="${cssEscape(id)}"]`);
         if (!checkbox) return;
         checkbox.checked = false;
-        button.closest('.import-list-matches span')?.remove();
+        button.closest('span')?.remove();
         updateSelectionCount('participants');
       });
     });

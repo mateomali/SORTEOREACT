@@ -30,8 +30,31 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const formatSkill = (value) => {
         const number = Number(value || 0);
-        return `${Number.isInteger(number) ? String(number) : number.toFixed(1)}⭐`;
+        return `${number.toFixed(1)}⭐`;
       };
+      const playerCardRating = (value) => {
+        const rating = Math.max(1, Math.min(6, Number(value || 0)));
+        const anchors = [
+          [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
+          [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
+          [5.2, 93], [5.3, 94], [6.0, 98],
+        ];
+        for (let i = 0; i < anchors.length - 1; i += 1) {
+          const [fromRating, fromOverall] = anchors[i];
+          const [toRating, toOverall] = anchors[i + 1];
+          if (rating <= toRating) {
+            const ratio = (rating - fromRating) / (toRating - fromRating);
+            return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
+          }
+        }
+        return 98;
+      };
+      const playerCardRatingHtml = (value, label = 'GEN') => `
+        <span class="player-card-rating" title="Puntaje tarjeta">
+          <strong>${playerCardRating(value)}</strong>
+          <span>${escapeHtml(label)}</span>
+        </span>
+      `;
       const playerMeta = (p) => `${escapeHtml(p.positions)} | ${escapeHtml(p.pace_label)} | ${formatSkill(p.skill)}`;
       const teamTotalSkill = (teamNumber) => {
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
@@ -501,12 +524,12 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
             + (statValue(player, 'mentality') * 0.10);
         } else if (position === 'DEF') {
           rating = weightedPositionRating(player, {
-            defense_physical: 0.38,
-            rhythm: 0.16,
-            technique: 0.12,
-            teamwork: 0.14,
-            mentality: 0.12,
-            attack: 0.08,
+            defense_physical: 0.60,
+            rhythm: 0.12,
+            technique: 0.08,
+            teamwork: 0.08,
+            mentality: 0.08,
+            attack: 0.04,
           });
         } else if (position === 'MED') {
           rating = weightedPositionRating(player, {
@@ -519,12 +542,12 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           });
         } else if (position === 'DEL') {
           rating = weightedPositionRating(player, {
-            attack: 0.40,
-            technique: 0.18,
-            rhythm: 0.16,
-            mentality: 0.12,
-            teamwork: 0.08,
-            defense_physical: 0.06,
+            attack: 0.60,
+            technique: 0.12,
+            rhythm: 0.10,
+            mentality: 0.08,
+            teamwork: 0.06,
+            defense_physical: 0.04,
           });
         }
         return applyRegularityAdjustment(rating, player);
@@ -532,6 +555,10 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const adjustedPositionRating = (player, assignedPosition) => {
         const position = String(assignedPosition || '').toUpperCase();
+        const generalRating = Number(player.skill || 0);
+        if (!position || playerPositions(player).includes(position)) {
+          return Math.max(1, Math.min(6, generalRating));
+        }
         const base = positionBaseRating(player, position);
         return Math.max(1, Math.min(6, base));
       };
@@ -990,13 +1017,16 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
               <div class="line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
                 ${linePlayers.length ? linePlayers.map(player => {
                   const adjustedRating = adjustedPositionRating(player, pos);
+                  const generalRating = Number(player.skill || 0);
                   const outOfPosition = !playerPositions(player).includes(pos);
                   const penaltyPercent = positionPenaltyPercent(player, pos);
+                  const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${pos} ${formatSkill(adjustedRating)}`;
                   return `
-                  <div class="formation-player captain-formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}">
+                  <div class="formation-player captain-formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
+                    ${playerCardRatingHtml(adjustedRating, pos)}
                     <strong>${escapeHtml(player.name)}</strong>
                     ${playerPositionIconsHtml(player)}
-                    <span class="formation-player-meta">${formatSkill(adjustedRating)}${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
+                    <span class="formation-player-meta">${formatSkill(generalRating)}${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
                   </div>
                 `;
                 }).join('') : '<span class="formation-player empty-slot">-</span>'}

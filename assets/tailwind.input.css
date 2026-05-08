@@ -2560,6 +2560,43 @@
     @apply text-emerald-950;
   }
 
+  .player-card-rating {
+    @apply mx-auto mb-1 grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-lime-200 bg-lime-100 text-emerald-950 shadow-md shadow-emerald-950/35 ring-1 ring-emerald-950/25;
+    grid-template-rows: 1fr auto;
+  }
+
+  .formation-player .player-card-rating,
+  .captain-formation-player .player-card-rating {
+    @apply border-2 border-lime-200 bg-lime-100 text-emerald-950;
+  }
+
+  .player-card-rating strong {
+    @apply block self-end truncate text-lg font-black leading-none text-emerald-950;
+  }
+
+  .player-card-rating span {
+    @apply block self-start text-[8px] font-black uppercase leading-none text-emerald-950;
+  }
+
+  .formation-player .player-card-rating strong,
+  .formation-player .player-card-rating span,
+  .formation-player[data-static-formation-player].is-drag-over .player-card-rating strong,
+  .formation-player[data-static-formation-player].is-drag-over .player-card-rating span {
+    @apply text-emerald-950;
+  }
+
+  .captain-formation-player.is-out-of-position .player-card-rating,
+  .captain-formation-player.is-drag-over .player-card-rating {
+    @apply bg-lime-100 text-emerald-950;
+  }
+
+  .captain-formation-player.is-out-of-position .player-card-rating strong,
+  .captain-formation-player.is-out-of-position .player-card-rating span,
+  .captain-formation-player.is-drag-over .player-card-rating strong,
+  .captain-formation-player.is-drag-over .player-card-rating span {
+    @apply text-emerald-950;
+  }
+
   .captain-player-position-icons {
     @apply mt-1 flex items-center justify-center gap-1;
   }
@@ -4359,6 +4396,18 @@
       @apply text-[10px] leading-tight;
     }
 
+    .formation-player:not(.captain-formation-player) .player-card-rating {
+      @apply mb-0.5 h-9 w-9 rounded-md border-2 border-lime-200;
+    }
+
+    .formation-player:not(.captain-formation-player) .player-card-rating strong {
+      @apply text-sm leading-none text-emerald-950;
+    }
+
+    .formation-player:not(.captain-formation-player) .player-card-rating span {
+      @apply text-[7px] leading-none text-emerald-950;
+    }
+
     .mobile-result-grid {
       @apply grid-cols-[minmax(0,1fr)_32px_42px_minmax(54px,.8fr)] text-[10px];
     }
@@ -4591,6 +4640,18 @@
       @apply text-[8.5px] leading-tight;
     }
 
+    .captain-formation-field .captain-formation-player .player-card-rating {
+      @apply mb-0.5 h-9 w-9 rounded-md border-2 border-lime-200;
+    }
+
+    .captain-formation-field .captain-formation-player .player-card-rating strong {
+      @apply text-sm leading-none text-emerald-950;
+    }
+
+    .captain-formation-field .captain-formation-player .player-card-rating span {
+      @apply text-[7px] leading-none text-emerald-950;
+    }
+
     .captain-formation-field .captain-player-position-icons {
       @apply mt-0.5 gap-0.5;
     }
@@ -4625,6 +4686,18 @@
     .captain-formation-field .captain-formation-player strong,
     .captain-formation-field .captain-formation-player span {
       @apply text-[8px];
+    }
+
+    .captain-formation-field .captain-formation-player .player-card-rating {
+      @apply h-8 w-8 rounded-md border-2 border-lime-200;
+    }
+
+    .captain-formation-field .captain-formation-player .player-card-rating strong {
+      @apply text-xs leading-none text-emerald-950;
+    }
+
+    .captain-formation-field .captain-formation-player .player-card-rating span {
+      @apply text-[6px] leading-none text-emerald-950;
     }
 
     .captain-formation-field .captain-position-pill {

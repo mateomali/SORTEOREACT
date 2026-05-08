@@ -22,7 +22,6 @@ var HISTORICAL_TEAMMATE_PAIRS = sorteoLegacyConfig.pairHistory || {};
 var DRAW_BALANCE_WEIGHTS = sorteoLegacyConfig.drawBalanceWeights || {};
 var LOCKED_MATCH_MODE = MATCH_ID > 0;
 var REQUIRED_FIELD_LINES = ['DEF', 'MED', 'DEL'];
-var OUT_OF_POSITION_PENALTY_RATE = Number(sorteoLegacyConfig.outOfPositionPenaltyRate || 0.15);
 var STRICT_MAX_DIFF = 2.5;
 var FLEXIBLE_MAX_DIFF = 6.0;
 
@@ -380,10 +379,20 @@ function positionBaseRating(jugador, assignedPosition) {
     return statValue(jugador, 'habilidad_arquero');
   }
   if (position === 'DEF') {
-    return statValue(jugador, 'solidez');
+    return (statValue(jugador, 'solidez') * 0.60)
+      + (statValue(jugador, 'ritmo_stat') * 0.12)
+      + (statValue(jugador, 'tecnica') * 0.08)
+      + (statValue(jugador, 'compromiso') * 0.08)
+      + (statValue(jugador, 'mentalidad') * 0.08)
+      + (statValue(jugador, 'ataque') * 0.04);
   }
   if (position === 'DEL') {
-    return statValue(jugador, 'ataque');
+    return (statValue(jugador, 'ataque') * 0.60)
+      + (statValue(jugador, 'tecnica') * 0.12)
+      + (statValue(jugador, 'ritmo_stat') * 0.10)
+      + (statValue(jugador, 'mentalidad') * 0.08)
+      + (statValue(jugador, 'compromiso') * 0.06)
+      + (statValue(jugador, 'solidez') * 0.04);
   }
   if (position === 'MED') {
     return (statValue(jugador, 'solidez') + statValue(jugador, 'ataque')) / 2;
@@ -394,15 +403,53 @@ function positionBaseRating(jugador, assignedPosition) {
 function adjustedPositionRating(jugador, assignedPosition) {
   const position = String(assignedPosition || '').toUpperCase();
   const naturalPositions = getOrderedPlayerPositions(jugador);
+  const generalRating = Number(jugador.puntuacion || 0);
+  if (!position || naturalPositions.includes(position)) {
+    return Math.max(1, Math.min(6, generalRating));
+  }
   const baseRating = positionBaseRating(jugador, position);
-  const isNatural = naturalPositions.includes(position);
-  const adjusted = isNatural ? baseRating : baseRating * (1 - OUT_OF_POSITION_PENALTY_RATE);
-  return Math.max(1, Math.min(6, adjusted));
+  return Math.max(1, Math.min(6, baseRating));
+}
+
+function positionPenaltyPercent(jugador, assignedPosition) {
+  const position = String(assignedPosition || '').toUpperCase();
+  if (!position || getOrderedPlayerPositions(jugador).includes(position)) return 0;
+  const generalRating = Number(jugador.puntuacion || 0);
+  const adjustedRating = adjustedPositionRating(jugador, position);
+  if (!generalRating || adjustedRating >= generalRating) return 0;
+  return Math.max(1, Math.min(99, Math.round((1 - (adjustedRating / generalRating)) * 100)));
 }
 
 function formatRating(value) {
   const number = Number(value || 0);
-  return Number.isInteger(number) ? String(number) : number.toFixed(1);
+  return number.toFixed(1);
+}
+
+function playerCardRating(value) {
+  const rating = Math.max(1, Math.min(6, Number(value || 0)));
+  const anchors = [
+    [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
+    [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
+    [5.2, 93], [5.3, 94], [6.0, 98],
+  ];
+  for (let i = 0; i < anchors.length - 1; i += 1) {
+    const [fromRating, fromOverall] = anchors[i];
+    const [toRating, toOverall] = anchors[i + 1];
+    if (rating <= toRating) {
+      const ratio = (rating - fromRating) / (toRating - fromRating);
+      return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
+    }
+  }
+  return 98;
+}
+
+function playerCardRatingHtml(value, label = 'GEN') {
+  return `
+    <span class="player-card-rating" title="Puntaje tarjeta">
+      <strong>${playerCardRating(value)}</strong>
+      <span>${escapeHtml(label)}</span>
+    </span>
+  `;
 }
 
 function playerPositionPillsHtml(jugador) {
@@ -659,7 +706,7 @@ function buildFlexibleTeamPositionAssignment(equipo) {
         remaining.delete(chosen);
         score += adjustedPositionRating(chosen, line);
         if (!getOrderedPlayerPositions(chosen).includes(line)) {
-          score -= OUT_OF_POSITION_PENALTY_RATE * 2;
+          score -= 2;
         }
       }
     }
@@ -966,10 +1013,7 @@ function clonarEquipos(equipos) {
 
 function teamStats(equipo, { allowOutOfPosition = false } = {}) {
   const assignment = buildPositionAssignment(equipo, { allowOutOfPosition });
-  const total = equipo.reduce((sum, j) => {
-    const assignedPosition = getPrimaryPosition(j, assignment.asignacion);
-    return sum + (allowOutOfPosition ? adjustedPositionRating(j, assignedPosition) : j.puntuacion);
-  }, 0);
+  const total = equipo.reduce((sum, j) => sum + Number(j.puntuacion || 0), 0);
   const lentos = equipo.filter(isLowRhythmPlayer).length;
   const rapidos = equipo.length - lentos;
   const balance = {
@@ -1317,10 +1361,7 @@ function validarEquiposDetalle(equipos, teamSize, maxDiff, { strictBalance = tru
       return { ok: false, reason: `${nombreEquipo} no cubre todas las lineas requeridas. Falta: ${faltantes}.` };
     }
 
-    const puntuacion = equipo.reduce((sum, j) => {
-      const assignedPosition = getPrimaryPosition(j, asignacion);
-      return sum + (allowOutOfPosition ? adjustedPositionRating(j, assignedPosition) : j.puntuacion);
-    }, 0);
+    const puntuacion = equipo.reduce((sum, j) => sum + Number(j.puntuacion || 0), 0);
     puntuaciones.push(puntuacion);
 
   }
@@ -1695,13 +1736,16 @@ function mostrarEquipos(equipos) {
             <div class="line-players" data-sorteo-drop-line="${pos}" data-team-index="${index}">
               ${jugadoresPorLinea[pos].map(j => {
                 const adjustedRating = adjustedPositionRating(j, pos);
+                const generalRating = Number(j.puntuacion || 0);
                 const outOfPosition = !getOrderedPlayerPositions(j).includes(pos);
-                const penaltyPercent = outOfPosition ? Math.round(OUT_OF_POSITION_PENALTY_RATE * 100) : 0;
+                const penaltyPercent = positionPenaltyPercent(j, pos);
+                const cardTitle = `General ${formatRating(generalRating)} ⭐ | Ajustada ${pos} ${formatRating(adjustedRating)} ⭐`;
                 return `
-                <div class="formation-player captain-formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${pos}">
+                <div class="formation-player captain-formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${pos}" title="${escapeHtml(cardTitle)}">
+                  ${playerCardRatingHtml(adjustedRating, pos)}
                   <strong>${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
                   ${playerPositionPillsHtml(j)}
-                  <span class="formation-player-meta">${formatRating(adjustedRating)} &#11088;${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
+                  <span class="formation-player-meta">${formatRating(generalRating)} &#11088;${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
                 </div>
               `}).join('')}
             </div>

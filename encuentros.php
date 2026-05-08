@@ -799,11 +799,14 @@ $activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchL
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head">
+<section class="<?= $showCreateSection && !$showEditSection ? 'mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">
   <div>
-    <h1><?= h($pageHeading) ?></h1>
-    <p class="small-muted"><?= h($pageDescription) ?></p>
+    <h1 class="<?= $showCreateSection && !$showEditSection ? 'mb-1 text-3xl font-extrabold leading-tight tracking-normal text-lime-50 max-[760px]:text-2xl' : '' ?>"><?= h($pageHeading) ?></h1>
+    <p class="<?= $showCreateSection && !$showEditSection ? 'max-w-2xl text-sm text-emerald-100/80' : 'small-muted' ?>"><?= h($pageDescription) ?></p>
   </div>
+  <?php if ($showCreateSection && !$showEditSection): ?>
+    <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-100 no-underline shadow-md shadow-emerald-950/15 transition hover:border-lime-200/65 hover:bg-lime-100/12" href="<?= h($matchListPage) ?>">Ver fechas cargadas</a>
+  <?php endif; ?>
 </section>
 
 <?php if ($showEditSection): ?>
@@ -824,13 +827,23 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <?php if ($showCreateSection): ?>
-<details class="encounter-drawer <?= $form['id'] ? 'is-editing' : 'is-new' ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
-  <summary class="encounter-drawer-tab">
-    <span><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></span>
-    <small><?= $targetSelection ?> convocados requeridos</small>
+<details class="<?= $showCreateSection && !$showEditSection ? 'relative mb-4 min-h-0 overflow-hidden rounded-2xl border border-lime-200/38 bg-emerald-950/88 p-0 shadow-xl shadow-emerald-950/24' : 'encounter-drawer ' . ($form['id'] ? 'is-editing' : 'is-new') ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
+  <summary class="<?= $showCreateSection && !$showEditSection ? 'flex cursor-pointer list-none items-center justify-between gap-3 border-b border-lime-200/25 bg-emerald-950 px-4 py-3 text-lime-50 [&::-webkit-details-marker]:hidden' : 'encounter-drawer-tab' ?>">
+    <span class="<?= $showCreateSection && !$showEditSection ? 'text-sm font-black uppercase tracking-wide text-lime-50' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></span>
+    <small class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-xs font-extrabold uppercase leading-none text-emerald-950 shadow-sm shadow-emerald-950/10' : '' ?>"><?= $targetSelection ?> convocados requeridos</small>
   </summary>
-  <section class="card encounter-drawer-body">
-  <h3><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></h3>
+  <section class="<?= $showCreateSection && !$showEditSection ? 'bg-emerald-950/72 p-4 text-lime-50 max-[760px]:p-3' : 'card encounter-drawer-body' ?>">
+  <div class="<?= $showCreateSection && !$showEditSection ? 'mb-4 grid items-start gap-3 border-b border-lime-200/20 pb-4 md:grid-cols-[minmax(0,1fr)_auto] max-[760px]:grid-cols-1 max-[760px]:gap-2 max-[760px]:pb-3' : '' ?>">
+    <div>
+      <span class="<?= $showCreateSection && !$showEditSection ? 'mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-950' : '' ?>"><?= $form['id'] ? 'Edicion' : 'Nueva fecha' ?></span>
+      <h3 class="<?= $showCreateSection && !$showEditSection ? 'm-0 text-2xl font-extrabold leading-tight text-lime-50 max-[760px]:text-xl' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'Crear nueva fecha' ?></h3>
+    </div>
+    <div class="<?= $showCreateSection && !$showEditSection ? 'flex flex-wrap gap-2 md:justify-end max-[760px]:grid max-[760px]:grid-cols-3 max-[760px]:gap-1.5' : '' ?>" aria-label="Resumen de cupos">
+      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong class="text-base text-lime-100"><?= h((string) $targetSelection) ?></strong> cupos</span>
+      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong class="text-base text-lime-100"><?= h((string) min(4, max(2, (int) $form['num_teams']))) ?></strong> equipos</span>
+      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong class="text-base text-lime-100"><?= h((string) $form['players_per_team']) ?></strong> por equipo</span>
+    </div>
+  </div>
 
   <?php if (!$form['id']): ?>
     <form id="importPlayersForm" method="post" class="hidden">
@@ -852,97 +865,98 @@ require __DIR__ . '/includes/header.php';
     <?php endforeach; ?>
   <?php endif; ?>
 
-  <form method="post">
+  <form method="post" class="<?= $showCreateSection && !$showEditSection ? 'grid gap-4' : '' ?>">
     <input type="hidden" name="action" value="save_match">
     <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
 
-    <div class="form-grid">
-      <div class="form-row">
-        <label>Titulo (opcional)</label>
-        <input type="text" name="title" value="<?= h((string) ($form['title'] ?? '')) ?>" placeholder="<?= h($titlePlaceholder) ?>">
+    <div class="<?= $showCreateSection && !$showEditSection ? 'grid grid-cols-1 gap-3 md:grid-cols-2' : 'form-grid' ?>">
+      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Titulo (opcional)</label>
+        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="text" name="title" value="<?= h((string) ($form['title'] ?? '')) ?>" placeholder="<?= h($titlePlaceholder) ?>">
       </div>
-      <div class="form-row">
-        <label>Fecha y hora</label>
-        <input type="datetime-local" name="match_date" step="3600" required value="<?= h(date('Y-m-d\TH:00', strtotime((string) $form['match_date']))) ?>">
+      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Fecha y hora</label>
+        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="datetime-local" name="match_date" step="3600" required value="<?= h(date('Y-m-d\TH:00', strtotime((string) $form['match_date']))) ?>">
       </div>
-      <div class="form-row">
-        <label>Numero de equipos</label>
-        <input type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams>
+      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Numero de equipos</label>
+        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams>
       </div>
-      <div class="form-row">
-        <label>Jugadores por equipo</label>
-        <input type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team>
+      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Jugadores por equipo</label>
+        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team>
       </div>
     </div>
 
-    <div class="form-row">
-      <div class="participant-head">
-        <label>Jugadores convocados</label>
-        <span class="participant-count">
+    <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 grid gap-3 rounded-2xl border border-lime-200/28 bg-emerald-900/28 p-3 shadow-inner shadow-emerald-950/15' : 'form-row' ?>">
+      <div class="<?= $showCreateSection && !$showEditSection ? 'flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20' : 'participant-head' ?>">
+        <label class="<?= $showCreateSection && !$showEditSection ? 'm-0 text-base font-black text-lime-50' : '' ?>">Jugadores convocados</label>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-sm font-bold text-emerald-950 shadow-sm shadow-emerald-950/10' : 'participant-count' ?>">
           Seleccionados: <strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong>
         </span>
       </div>
       <?php if (!$form['id']): ?>
-        <details class="import-list-panel" id="importar-listado" <?= $importList ? 'open' : '' ?>>
-          <summary class="import-list-summary-row">
+        <details class="rounded-2xl border border-lime-200/38 bg-emerald-950/88 text-lime-50 shadow-lg shadow-emerald-950/16" id="importar-listado" <?= $importList ? 'open' : '' ?>>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-4 py-3 text-sm font-extrabold text-lime-50 shadow-md shadow-emerald-950/20 [&::-webkit-details-marker]:hidden">
             <span>Importar listado</span>
-            <small><?= $importList ? h((string) count($importMatched)) . ' encontrados | ' . h((string) count($importMissing)) . ' faltantes' : 'Pegar lista numerada' ?></small>
+            <small class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold uppercase leading-none text-emerald-950 shadow-sm shadow-emerald-950/10"><?= $importList ? h((string) count($importMatched)) . ' encontrados | ' . h((string) count($importMissing)) . ' faltantes' : 'Pegar lista numerada' ?></small>
           </summary>
 
-          <div class="import-list-body">
+          <div class="p-3">
             <script type="application/json" data-existing-import-players><?= json_encode(array_map(static fn(array $player): array => [
                 'id' => (int) $player['id'],
                 'name' => (string) $player['name'],
                 'meta' => (string) $player['positions'] . ' | ' . pace_label((string) $player['pace']) . ' | ' . skill_label((float) $player['skill']),
             ], $activePlayers), JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-            <div class="import-list-head">
+            <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h4>Importar listado</h4>
+                <h4 class="m-0 text-base font-extrabold text-lime-50">Importar listado</h4>
               </div>
               <?php if ($importList): ?>
-                <button class="btn btn-muted" type="submit" form="clearImportPlayersForm">Limpiar</button>
+                <button class="inline-flex min-h-10 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-50 transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100" type="submit" form="clearImportPlayersForm">Limpiar</button>
               <?php endif; ?>
             </div>
 
-            <div class="import-list-form">
+            <div class="grid gap-3">
               <input type="hidden" name="import_max_players" value="<?= h((string) $targetSelection) ?>" data-import-max-players form="importPlayersForm">
               <textarea
+                class="min-h-44 w-full resize-y rounded-2xl border border-lime-200/35 bg-emerald-950/95 px-4 py-3 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25"
                 name="import_players_text"
                 rows="8"
                 placeholder="1 Marcelo&#10;2 Pela&#10;3 Mauri&#10;4 Tebo"
                 form="importPlayersForm"><?= h((string) ($importList['source'] ?? '')) ?></textarea>
-              <button class="btn btn-primary" type="submit" form="importPlayersForm">Importar listado</button>
+              <button class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" form="importPlayersForm">Importar listado</button>
             </div>
 
             <?php if ($importList): ?>
               <script type="application/json" data-imported-player-ids><?= h(json_encode($importMatchedIds, JSON_THROW_ON_ERROR)) ?></script>
-              <div class="import-list-result">
-                <div class="import-list-summary">
-                  <span><?= h((string) count($importMatched)) ?> encontrados</span>
-                  <span><?= h((string) count($importMissing)) ?> faltantes</span>
+              <div class="mt-3 grid gap-3">
+                <div class="flex flex-wrap gap-2">
+                  <span class="rounded-full bg-emerald-950/95 px-3 py-1.5 text-xs font-extrabold text-lime-100"><?= h((string) count($importMatched)) ?> encontrados</span>
+                  <span class="rounded-full bg-emerald-950/95 px-3 py-1.5 text-xs font-extrabold text-lime-100"><?= h((string) count($importMissing)) ?> faltantes</span>
                   <?php if ($importErrors): ?>
-                    <span><?= h((string) count($importErrors)) ?> lineas a revisar</span>
+                    <span class="rounded-full bg-emerald-950/95 px-3 py-1.5 text-xs font-extrabold text-lime-100"><?= h((string) count($importErrors)) ?> lineas a revisar</span>
                   <?php endif; ?>
                 </div>
 
                 <?php if ($importErrors): ?>
-                  <div class="import-list-errors">
+                  <div class="rounded-xl border border-red-200 bg-red-950/85 px-3 py-2 text-sm font-bold text-red-100">
                     <?php foreach ($importErrors as $error): ?>
-                      <p><?= h((string) $error) ?></p>
+                      <p class="m-0"><?= h((string) $error) ?></p>
                     <?php endforeach; ?>
                   </div>
                 <?php endif; ?>
 
                 <?php if ($importMatched): ?>
-                  <div class="import-list-matches">
+                  <div class="flex max-h-36 flex-wrap gap-1.5 overflow-auto rounded-xl border border-lime-200/35 bg-emerald-950/95 p-2">
                     <?php foreach ($importMatched as $matchRow): ?>
                       <?php $matchedPlayer = $matchRow['player']; ?>
-                      <span>
+                      <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-900/80 px-2.5 py-1.5 text-xs font-bold text-lime-50">
                         <strong><?= h((string) $matchRow['number']) ?>.</strong>
                         <?= h((string) $matchedPlayer['name']) ?>
                         <button
                           type="button"
-                          class="import-list-remove"
+                          class="inline-flex h-5 min-h-5 w-5 items-center justify-center rounded-full bg-emerald-950 p-0 text-xs font-extrabold leading-none text-lime-50 transition hover:bg-red-700 hover:text-white"
                           data-remove-import-participant="<?= h((string) ((int) $matchedPlayer['id'])) ?>"
                           aria-label="Quitar <?= h((string) $matchedPlayer['name']) ?> de convocados"
                           title="Quitar de convocados"
@@ -953,7 +967,7 @@ require __DIR__ . '/includes/header.php';
                 <?php endif; ?>
 
                 <?php if ($importMissing): ?>
-                  <div class="import-missing-list">
+                  <div class="grid gap-2">
                     <?php foreach ($importMissing as $missingIndex => $missing): ?>
                       <?php
                         $missingFormId = 'missing-player-' . $missingIndex;
@@ -961,16 +975,17 @@ require __DIR__ . '/includes/header.php';
                         $useExistingFormId = 'useExistingImportPlayerForm' . $missingIndex;
                         $suggestions = import_player_suggestions((string) $missing['name'], $activePlayers);
                       ?>
-                      <details class="import-missing-player">
-                        <summary>
+                      <details class="rounded-xl border border-lime-200/35 bg-emerald-950/90 p-2 text-lime-50">
+                        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm font-extrabold text-lime-50 [&::-webkit-details-marker]:hidden">
                           <span><?= h((string) $missing['number']) ?>. <?= h((string) $missing['name']) ?></span>
-                          <strong>Agregar jugador</strong>
+                          <strong class="rounded-full bg-lime-100 px-3 py-1 text-xs text-emerald-950">Agregar jugador</strong>
                         </summary>
-                        <div class="import-player-form">
-                          <div class="form-grid">
-                            <div class="form-row">
-                              <label for="<?= h($missingFormId) ?>-name">Nombre</label>
+                        <div class="mt-2 rounded-xl border border-lime-200/35 bg-emerald-950/90 p-3">
+                          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <div class="mb-2">
+                              <label class="mb-1.5 block text-sm font-bold text-emerald-100" for="<?= h($missingFormId) ?>-name">Nombre</label>
                               <input
+                                class="w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25"
                                 id="<?= h($missingFormId) ?>-name"
                                 type="text"
                                 name="name"
@@ -981,31 +996,31 @@ require __DIR__ . '/includes/header.php';
                                 data-missing-index="<?= h((string) $missingIndex) ?>"
                               >
                             </div>
-                            <div class="form-row">
-                              <label for="<?= h($missingFormId) ?>-pace">Ritmo</label>
-                              <select id="<?= h($missingFormId) ?>-pace" name="pace" form="<?= h($createFormId) ?>">
+                            <div class="mb-2">
+                              <label class="mb-1.5 block text-sm font-bold text-emerald-100" for="<?= h($missingFormId) ?>-pace">Ritmo</label>
+                              <select class="w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25" id="<?= h($missingFormId) ?>-pace" name="pace" form="<?= h($createFormId) ?>">
                                 <option value="rapido">Rapido</option>
                                 <option value="lento">Lento</option>
                               </select>
                             </div>
-                            <div class="form-row">
-                              <label for="<?= h($missingFormId) ?>-skill">Puntuacion Base (1 a 6)</label>
-                              <input id="<?= h($missingFormId) ?>-skill" type="number" name="skill" min="1" max="6" step="0.5" value="1.0" form="<?= h($createFormId) ?>">
+                            <div class="mb-2">
+                              <label class="mb-1.5 block text-sm font-bold text-emerald-100" for="<?= h($missingFormId) ?>-skill">Puntuacion Base (1 a 6)</label>
+                              <input class="w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25" id="<?= h($missingFormId) ?>-skill" type="number" name="skill" min="1" max="6" step="0.5" value="1.0" form="<?= h($createFormId) ?>">
                             </div>
-                            <div class="form-row">
-                              <label>Estado</label>
-                              <label class="chip">
+                            <div class="mb-2">
+                              <label class="mb-1.5 block text-sm font-bold text-emerald-100">Estado</label>
+                              <label class="inline-flex items-center gap-2 rounded-full border border-lime-200/35 bg-emerald-950/95 px-3 py-2 text-sm text-lime-50">
                                 <input type="checkbox" name="active" value="1" checked form="<?= h($createFormId) ?>">
                                 Jugador activo
                               </label>
                             </div>
                           </div>
 
-                          <div class="form-row">
-                            <label>Posiciones</label>
-                            <div class="check-row">
+                          <div class="mb-2">
+                            <label class="mb-1.5 block text-sm font-bold text-emerald-100">Posiciones</label>
+                            <div class="flex flex-wrap gap-2">
                               <?php foreach (allowed_positions() as $pos): ?>
-                                <label class="chip">
+                                <label class="inline-flex items-center gap-2 rounded-full border border-lime-200/35 bg-emerald-950/95 px-3 py-2 text-sm text-lime-50">
                                   <input type="checkbox" name="positions[]" value="<?= h($pos) ?>" form="<?= h($createFormId) ?>">
                                   <?= h($pos) ?>
                                 </label>
@@ -1013,13 +1028,13 @@ require __DIR__ . '/includes/header.php';
                             </div>
                           </div>
 
-                          <div class="import-existing-panel <?= $suggestions ? '' : 'hidden' ?>" data-existing-player-panel="<?= h((string) $missingIndex) ?>">
-                            <strong data-existing-player-title><?= $suggestions && (int) $suggestions[0]['score'] === 100 ? 'Jugador ya existente' : 'Posibles coincidencias' ?></strong>
-                            <div data-existing-player-options>
+                          <div class="<?= $suggestions ? '' : 'hidden' ?> mb-3 grid gap-2 rounded-xl border border-lime-200/35 bg-emerald-950/90 px-3 py-2" data-existing-player-panel="<?= h((string) $missingIndex) ?>">
+                            <strong class="text-sm text-lime-50" data-existing-player-title><?= $suggestions && (int) $suggestions[0]['score'] === 100 ? 'Jugador ya existente' : 'Posibles coincidencias' ?></strong>
+                            <div class="flex flex-wrap gap-2" data-existing-player-options>
                               <?php foreach ($suggestions as $suggestion): ?>
                                 <?php $suggestedPlayer = $suggestion['player']; ?>
                                 <button
-                                  class="btn btn-muted"
+                                  class="inline-flex min-h-10 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-50 transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100"
                                   type="submit"
                                   form="<?= h($useExistingFormId) ?>"
                                   data-use-existing-player="<?= h((string) $missingIndex) ?>"
@@ -1031,7 +1046,7 @@ require __DIR__ . '/includes/header.php';
                             </div>
                           </div>
 
-                          <button class="btn btn-primary" type="submit" form="<?= h($createFormId) ?>">Guardar jugador</button>
+                          <button class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" form="<?= h($createFormId) ?>">Guardar jugador</button>
                         </div>
                       </details>
                     <?php endforeach; ?>
@@ -1049,36 +1064,36 @@ require __DIR__ . '/includes/header.php';
         data-limit="<?= h((string) $targetSelection) ?>"
       ></div>
 
-      <div class="participant-picker-layout">
-      <section class="participant-panel participant-roster-panel">
-        <div class="participant-roster-head">
+      <div class="grid grid-cols-1 items-start gap-3 pb-24 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
+      <section class="min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16">
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20">
           <div>
-            <span class="participant-panel-kicker">Disponibles</span>
-            <h4>Lista de jugadores activos</h4>
+            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-950">Disponibles</span>
+            <h4 class="m-0 text-base font-extrabold text-lime-50">Lista de jugadores activos</h4>
           </div>
-          <div class="participant-roster-counters">
-            <span><?= h((string) count($activePlayers)) ?> activos</span>
-            <span><strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong> jugadores elegidos</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><?= h((string) count($activePlayers)) ?> activos</span>
+            <span class="rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong> jugadores elegidos</span>
           </div>
         </div>
-        <div class="participant-roster-list" data-participant-list>
+        <div class="grid max-h-[34rem] gap-1.5 overflow-auto rounded-xl border border-lime-200/28 bg-emerald-950/74 p-2" data-participant-list>
           <?php foreach ($activePlayers as $p): ?>
             <?php
               $pid = (int) $p['id'];
               $checked = in_array($pid, $editingParticipants, true);
               $searchText = strtolower(trim((string) $p['name'] . ' ' . $p['positions'] . ' ' . pace_label((string) $p['pace']) . ' ' . number_format((float) $p['skill'], 1)));
             ?>
-            <article class="participant-roster-item player-picker-item" data-player-row data-player-id="<?= $pid ?>" data-search="<?= h($searchText) ?>">
-              <span>
-                <strong><?= h((string) $p['name']) ?></strong>
-                <small><?= h((string) $p['positions']) ?> | <?= h(pace_label((string) $p['pace'])) ?> | <?= h(skill_label((float) $p['skill'])) ?></small>
+            <article class="flex items-center justify-between gap-2 rounded-lg border border-lime-200/24 bg-emerald-900/72 px-2.5 py-2 text-sm text-lime-50 shadow-sm shadow-emerald-950/18 transition hover:border-lime-200/52 hover:bg-emerald-800/82 <?= $checked ? '!border-lime-200/70 !bg-emerald-800/90 ring-2 ring-lime-200/25' : '' ?>" data-player-row data-player-id="<?= $pid ?>" data-search="<?= h($searchText) ?>">
+              <span class="min-w-0">
+                <strong class="block truncate text-sm font-extrabold text-lime-50"><?= h((string) $p['name']) ?></strong>
+                <small class="block truncate text-xs text-emerald-100/82"><?= h((string) $p['positions']) ?> | <?= h(pace_label((string) $p['pace'])) ?> | <?= h(skill_label((float) $p['skill'])) ?></small>
               </span>
-              <span class="participant-roster-actions">
-                <button class="btn btn-danger participant-remove-button" type="button" data-remove-player-row aria-label="Quitar <?= h((string) $p['name']) ?>" title="Quitar">X</button>
-                <button class="participant-add-button" type="button" data-participant-toggle><?= $checked ? 'Convocado' : 'Agregar' ?></button>
+              <span class="flex shrink-0 items-center gap-1.5">
+                <button class="inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-red-300/55 bg-red-950/85 px-0 py-2 text-sm font-extrabold text-red-100 transition hover:bg-red-900 hover:text-white <?= $checked ? 'cursor-not-allowed opacity-40' : '' ?>" type="button" data-remove-player-row aria-label="Quitar <?= h((string) $p['name']) ?>" title="Quitar">X</button>
+                <button class="inline-flex min-h-9 items-center justify-center rounded-full px-3 py-1.5 text-sm font-extrabold transition <?= $checked ? '!bg-emerald-600 !text-white hover:!bg-emerald-700' : '!bg-lime-100 !text-emerald-950 hover:!bg-lime-200' ?>" type="button" data-participant-toggle><?= $checked ? 'Convocado' : 'Agregar' ?></button>
               </span>
               <input
-                class="participant-hidden-checkbox"
+                class="sr-only"
                 type="checkbox"
                 name="participants[]"
                 value="<?= $pid ?>"
@@ -1089,39 +1104,39 @@ require __DIR__ . '/includes/header.php';
             </article>
           <?php endforeach; ?>
         </div>
-        <p class="small-muted hidden" data-participant-empty>No hay jugadores que coincidan con la busqueda.</p>
+        <p class="hidden text-sm text-emerald-100/82" data-participant-empty>No hay jugadores que coincidan con la busqueda.</p>
       </section>
 
-      <section class="participant-panel selected-panel participant-selected-desktop">
-        <div class="selected-panel-head">
+      <section class="min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16 lg:sticky lg:top-3 max-[760px]:hidden">
+        <div class="mb-2 flex items-start justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20">
           <div>
-            <span class="participant-panel-kicker">Convocados</span>
-            <h4>Seleccionados para esta fecha</h4>
+            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-950">Convocados</span>
+            <h4 class="m-0 text-base font-extrabold text-lime-50">Seleccionados para esta fecha</h4>
           </div>
-          <span class="selected-panel-count"><strong data-selection-count="participants">0</strong>/<strong data-selection-max="participants"><?= $targetSelection ?></strong></span>
+          <span class="inline-flex shrink-0 rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><strong data-selection-count="participants">0</strong>/<strong data-selection-max="participants"><?= $targetSelection ?></strong></span>
         </div>
-        <div class="selected-player-list" data-selected-participants></div>
-        <p class="small-muted" data-selected-empty>Agrega jugadores desde la lista.</p>
+        <div class="grid max-h-[34rem] gap-2 overflow-auto" data-selected-participants></div>
+        <p class="text-sm text-emerald-100/82" data-selected-empty>Agrega jugadores desde la lista.</p>
       </section>
       </div>
 
-      <details class="participant-mobile-marquee" data-participant-marquee>
-        <summary>
-          <span>CONVOCADOS</span>
-          <strong><span data-selection-count="participants">0</span> / <span data-selection-max="participants"><?= $targetSelection ?></span></strong>
-          <button class="btn btn-primary participant-mobile-submit" type="submit" data-mobile-submit disabled>
+      <details class="fixed inset-x-3 bottom-3 z-40 hidden overflow-hidden rounded-2xl border border-emerald-800 bg-emerald-950 text-white shadow-2xl shadow-emerald-950/35 max-[760px]:block" data-participant-marquee>
+        <summary class="grid cursor-pointer list-none items-center gap-2 px-3 py-3 [grid-template-columns:minmax(0,1fr)_auto_auto_auto] [&::-webkit-details-marker]:hidden">
+          <span class="text-sm font-extrabold">CONVOCADOS</span>
+          <strong class="rounded-full bg-emerald-950/95 px-3 py-1 text-sm font-extrabold text-lime-50"><span data-selection-count="participants">0</span> / <span data-selection-max="participants"><?= $targetSelection ?></span></strong>
+          <button class="m-0 inline-flex min-h-8 w-auto items-center justify-center rounded-full bg-lime-100/15 px-3 py-1 text-[11px] font-extrabold text-emerald-100/70 disabled:cursor-not-allowed disabled:opacity-70" type="submit" data-mobile-submit disabled>
             CONTINUAR
           </button>
         </summary>
-        <div class="participant-mobile-selected-list" data-selected-participants></div>
-        <p class="small-muted" data-selected-empty>Agrega jugadores desde la lista.</p>
+        <div class="grid max-h-[45dvh] gap-2 overflow-y-auto border-t border-white/10 bg-emerald-950/95 p-2 text-lime-50" data-selected-participants></div>
+        <p class="m-0 border-t border-white/10 bg-emerald-950/95 px-3 py-2 text-xs text-emerald-100/70" data-selected-empty>Agrega jugadores desde la lista.</p>
       </details>
     </div>
 
-    <div class="btn-row">
-      <button class="btn btn-primary" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
+    <div class="sticky bottom-3 z-30 mt-0 flex flex-wrap gap-2 rounded-2xl border border-lime-200/35 bg-emerald-950/92 p-2 shadow-2xl shadow-emerald-950/25 max-[760px]:fixed max-[760px]:inset-x-3 max-[760px]:grid max-[760px]:grid-cols-1">
+      <button class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
       <?php if ($form['id']): ?>
-        <a class="btn btn-muted" href="<?= h($matchListPage) ?>">Cancelar</a>
+        <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100" href="<?= h($matchListPage) ?>">Cancelar</a>
       <?php endif; ?>
     </div>
   </form>

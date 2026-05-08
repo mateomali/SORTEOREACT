@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers.php';
 
 function repo_all_players(bool $onlyActive = false): array
 {
@@ -187,26 +188,28 @@ function repo_grouped_team_players(int $matchId): array
 function repo_team_totals(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT mp.team_number,
-                COUNT(mp.id) AS players,
-                SUM(p.skill) AS total_skill,
-                SUM(CASE WHEN p.rhythm <= 2.5 OR (p.rhythm IS NULL AND p.pace = "lento") THEN 1 ELSE 0 END) AS slow_count
+        'SELECT mp.team_number, p.*
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
-         GROUP BY mp.team_number
-         ORDER BY mp.team_number ASC'
+         ORDER BY mp.team_number ASC, p.name ASC'
     );
     $stmt->execute(['mid' => $matchId]);
-    $rows = $stmt->fetchAll();
     $totals = [];
-    foreach ($rows as $row) {
+    foreach ($stmt->fetchAll() as $row) {
         $team = (int) $row['team_number'];
-        $totals[$team] = [
-            'players' => (int) $row['players'],
-            'total_skill' => (float) $row['total_skill'],
-            'slow_count' => (int) $row['slow_count'],
-        ];
+        if (!isset($totals[$team])) {
+            $totals[$team] = [
+                'players' => 0,
+                'total_skill' => 0.0,
+                'slow_count' => 0,
+            ];
+        }
+        $totals[$team]['players']++;
+        $totals[$team]['total_skill'] += player_overall_rating($row);
+        if (player_is_low_rhythm($row)) {
+            $totals[$team]['slow_count']++;
+        }
     }
     return $totals;
 }

@@ -120,10 +120,11 @@ export function ParticipantControlsIsland({ root }) {
   };
 
   return (
-    <div className="participant-search react-participant-controls">
-      <div className="participant-search-shell">
-        <label htmlFor="participantSearchReact">Buscar jugador</label>
+    <div className="grid items-end gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 p-3 text-lime-50 shadow-md shadow-emerald-950/20 md:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="min-w-0">
+        <label className="mb-1.5 block text-sm font-black text-lime-100" htmlFor="participantSearchReact">Buscar jugador</label>
         <input
+          className="min-h-11 w-full rounded-xl border border-lime-200/40 bg-emerald-900/60 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/60 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25"
           id="participantSearchReact"
           type="search"
           placeholder="Nombre, posicion o ritmo"
@@ -132,17 +133,18 @@ export function ParticipantControlsIsland({ root }) {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-      <div className="participant-search-actions">
-        <label className="participant-select-visible">
+      <div className="flex flex-wrap items-center justify-end gap-2 max-[760px]:items-stretch">
+        <label className="mb-0 inline-flex min-h-11 items-center gap-2 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-sm font-bold text-lime-50 shadow-sm">
           <input
+            className="h-4 w-4 accent-lime-200"
             type="checkbox"
             checked={visible > 0 && selected >= Math.min(limit || visible, visible)}
             onChange={(event) => selectAll(event.target.checked)}
           />
-          <small>Seleccionar visibles</small>
+          <small className="text-xs font-black">Seleccionar visibles</small>
         </label>
-        <button className="btn btn-muted" type="button" onClick={randomSelect}>Seleccion al azar</button>
-        <span className="participant-react-helper" aria-live="polite">
+        <button className="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-black text-lime-50 shadow-md shadow-emerald-950/15 transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100" type="button" onClick={randomSelect}>Seleccion al azar</button>
+        <span className="inline-flex min-h-11 items-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-black text-lime-100" aria-live="polite">
           {selected}/{limit || selected} convocados - {visible} visibles - {helper}
         </span>
       </div>

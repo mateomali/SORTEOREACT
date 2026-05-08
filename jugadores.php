@@ -723,7 +723,13 @@ require __DIR__ . '/includes/header.php';
     <p class="small-muted text-emerald-100/80"><?= $isAdmin ? 'Alta, edicion y administracion general de la plantilla.' : 'Consulta de plantilla, posiciones y stats actuales.' ?></p>
   </div>
   <?php if ($isAdmin): ?>
-    <a class="btn border border-lime-200/55 bg-lime-100 text-emerald-950 hover:bg-lime-200" href="migrar_csv.php">Migrar desde CSV</a>
+    <div class="flex flex-wrap gap-2">
+      <form method="post" action="migrar_csv.php" data-no-partial>
+        <input type="hidden" name="action" value="export_players">
+        <button class="btn border border-lime-200/55 bg-lime-100 text-emerald-950 hover:bg-lime-200" type="submit">Exportar CSV</button>
+      </form>
+      <a class="btn border border-lime-200/55 bg-lime-100 text-emerald-950 hover:bg-lime-200" href="migrar_csv.php">Migrar desde CSV</a>
+    </div>
   <?php endif; ?>
 </section>
 

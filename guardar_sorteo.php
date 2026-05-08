@@ -66,8 +66,22 @@ function position_base_rating_legacy(array $player, string $assigned): float
 
     return match ($assigned) {
         'ARQ' => player_effective_stat($player, 'goalkeeper_skill'),
-        'DEF' => player_effective_stat($player, 'defense_physical'),
-        'DEL' => player_effective_stat($player, 'attack'),
+        'DEF' => (
+            player_effective_stat($player, 'defense_physical') * 0.60
+            + player_effective_stat($player, 'rhythm') * 0.12
+            + player_effective_stat($player, 'technique') * 0.08
+            + player_effective_stat($player, 'teamwork') * 0.08
+            + player_effective_stat($player, 'mentality') * 0.08
+            + player_effective_stat($player, 'attack') * 0.04
+        ),
+        'DEL' => (
+            player_effective_stat($player, 'attack') * 0.60
+            + player_effective_stat($player, 'technique') * 0.12
+            + player_effective_stat($player, 'rhythm') * 0.10
+            + player_effective_stat($player, 'mentality') * 0.08
+            + player_effective_stat($player, 'teamwork') * 0.06
+            + player_effective_stat($player, 'defense_physical') * 0.04
+        ),
         'MED' => (
             player_effective_stat($player, 'defense_physical')
             + player_effective_stat($player, 'attack')
@@ -78,11 +92,13 @@ function position_base_rating_legacy(array $player, string $assigned): float
 
 function adjusted_position_rating_legacy(array $player, string $assigned): float
 {
-    $base = position_base_rating_legacy($player, $assigned);
+    $general = player_overall_rating($player);
     $natural = parse_positions_legacy((string) ($player['positions'] ?? ''));
-    $penaltyRate = 0.15;
-    $adjusted = in_array($assigned, $natural, true) ? $base : $base * (1 - $penaltyRate);
-    return max(1.0, min(6.0, $adjusted));
+    if ($assigned === '' || in_array($assigned, $natural, true)) {
+        return max(1.0, min(6.0, $general));
+    }
+    $base = position_base_rating_legacy($player, $assigned);
+    return max(1.0, min(6.0, $base));
 }
 
 function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): bool
@@ -106,7 +122,7 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
             );
             $lineCounts[$assigned] = ($lineCounts[$assigned] ?? 0) + 1;
 
-            $score += adjusted_position_rating_legacy($player, $assigned);
+            $score += player_overall_rating($player);
             if (player_is_low_rhythm($player)) {
                 $slow++;
             }
@@ -287,11 +303,7 @@ foreach ($teams as $team) {
 
 $teamScores = array_map(
     static fn(array $team): float => array_sum(array_map(static function (array $p): float {
-        $assigned = normalize_assigned_position_legacy(
-            isset($p['assigned_position']) ? (string) $p['assigned_position'] : '',
-            $p
-        );
-        return adjusted_position_rating_legacy($p, $assigned);
+        return player_overall_rating($p);
     }, $team)),
     $teams
 );
@@ -334,11 +346,7 @@ try {
         $teamNumber = $idx + 1;
         $totalSkill = 0.0;
         foreach ($team as $p) {
-            $assigned = normalize_assigned_position_legacy(
-                isset($p['assigned_position']) ? (string) $p['assigned_position'] : '',
-                $p
-            );
-            $totalSkill += adjusted_position_rating_legacy($p, $assigned);
+            $totalSkill += player_overall_rating($p);
         }
         $saveTeam->execute([
             'mid' => $matchId,
