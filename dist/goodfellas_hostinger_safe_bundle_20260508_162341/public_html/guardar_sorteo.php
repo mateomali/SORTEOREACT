@@ -104,8 +104,7 @@ function adjusted_position_rating_legacy(array $player, string $assigned): float
 function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): bool
 {
     $scores = [];
-    $fieldPlayers = max(0, $teamSize - 1);
-    $minFieldLine = $fieldPlayers >= 3 ? 1 : 0;
+    $slowCounts = [];
     $maxPerFieldLine = max(0, intdiv($teamSize, 2));
     foreach ($teams as $team) {
         if (count($team) !== $teamSize) {
@@ -113,6 +112,7 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
         }
 
         $lineCounts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        $slow = 0;
         $score = 0.0;
 
         foreach ($team as $player) {
@@ -123,25 +123,28 @@ function validate_teams_legacy(array $teams, int $teamSize, float $maxDiff): boo
             $lineCounts[$assigned] = ($lineCounts[$assigned] ?? 0) + 1;
 
             $score += player_overall_rating($player);
+            if (player_is_low_rhythm($player)) {
+                $slow++;
+            }
         }
 
         if (($lineCounts['ARQ'] ?? 0) !== 1) {
             return false;
         }
         foreach (['DEF', 'MED', 'DEL'] as $line) {
-            $count = $lineCounts[$line] ?? 0;
-            if ($count < $minFieldLine || $count > $maxPerFieldLine) {
+            if (($lineCounts[$line] ?? 0) < 1 || ($lineCounts[$line] ?? 0) > $maxPerFieldLine) {
                 return false;
             }
         }
         $scores[] = $score;
+        $slowCounts[] = $slow;
     }
 
     if ((max($scores) - min($scores)) > $maxDiff) {
         return false;
     }
 
-    return true;
+    return (max($slowCounts) - min($slowCounts)) <= 1;
 }
 
 function normalize_team_color_name_legacy(string $color): string
@@ -201,7 +204,6 @@ $drawMode = (string) ($data['draw_mode'] ?? 'random');
 if (!in_array($drawMode, ['random', 'manual'], true)) {
     $drawMode = 'random';
 }
-$redrawIncrement = max(0, min(20, (int) ($data['redraw_increment'] ?? 0)));
 $postedTeams = $data['teams'] ?? [];
 
 if ($matchId <= 0 || !is_array($postedTeams) || !$postedTeams) {
@@ -220,29 +222,6 @@ if ($match['status'] === 'finalizado') {
     http_response_code(409);
     echo json_encode(['ok' => false, 'message' => 'La fecha ya esta finalizada']);
     exit;
-}
-
-$hasExistingRandomDraw = (string) ($match['status'] ?? '') === 'sorteado' && (string) ($match['draw_mode'] ?? '') === 'random';
-if ($drawMode === 'random' && $hasExistingRandomDraw && $redrawIncrement < 1) {
-    $redrawIncrement = 1;
-}
-if ($drawMode !== 'random') {
-    $redrawIncrement = 0;
-}
-if ($redrawIncrement > 0) {
-    $allowRedraw = (int) ($match['allow_redraw'] ?? 1) === 1;
-    $redrawLimit = max(0, (int) ($match['redraw_limit'] ?? 3));
-    $redrawCount = max(0, (int) ($match['redraw_count'] ?? 0));
-    if (!$allowRedraw) {
-        http_response_code(409);
-        echo json_encode(['ok' => false, 'message' => 'Esta fecha no permite rehacer el sorteo.']);
-        exit;
-    }
-    if ($redrawCount + $redrawIncrement > $redrawLimit) {
-        http_response_code(409);
-        echo json_encode(['ok' => false, 'message' => 'Ya se alcanzo el limite de re-sorteos para esta fecha.']);
-        exit;
-    }
 }
 
 $participants = repo_match_participants_basic($matchId);
@@ -306,41 +285,6 @@ if (count($allIds) !== count($participantsById)) {
     exit;
 }
 
-if ($drawMode === 'random' && $hasExistingRandomDraw) {
-    $newTeamSignatures = [];
-    foreach ($teams as $team) {
-        $ids = array_map(static fn(array $p): string => (string) (int) $p['id'], $team);
-        sort($ids, SORT_STRING);
-        $newTeamSignatures[] = implode(',', $ids);
-    }
-    sort($newTeamSignatures, SORT_STRING);
-    $newSignature = implode('|', $newTeamSignatures);
-
-    $oldStmt = db()->prepare(
-        'SELECT team_number, player_id
-         FROM match_players
-         WHERE match_id = :mid
-           AND team_number IS NOT NULL
-         ORDER BY team_number ASC, player_id ASC'
-    );
-    $oldStmt->execute(['mid' => $matchId]);
-    $oldTeams = [];
-    foreach ($oldStmt->fetchAll() as $row) {
-        $oldTeams[(int) $row['team_number']][] = (string) (int) $row['player_id'];
-    }
-    $oldTeamSignatures = [];
-    foreach ($oldTeams as $ids) {
-        sort($ids, SORT_STRING);
-        $oldTeamSignatures[] = implode(',', $ids);
-    }
-    sort($oldTeamSignatures, SORT_STRING);
-    if ($newSignature !== '' && $newSignature === implode('|', $oldTeamSignatures)) {
-        http_response_code(409);
-        echo json_encode(['ok' => false, 'message' => 'El re-sorteo debe generar equipos diferentes al sorteo guardado.']);
-        exit;
-    }
-}
-
 $teamSize = count($allIds) / $numTeams;
 if ((int) $teamSize !== $teamSize) {
     http_response_code(422);
@@ -367,7 +311,7 @@ $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
 
 if ($drawMode !== 'manual' && !validate_teams_legacy($teams, $teamSize, $maxDiff)) {
     http_response_code(422);
-    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan las reglas de guardado: 1 arquero por equipo y formacion valida para la cantidad de jugadores por equipo.']);
+    echo json_encode(['ok' => false, 'message' => 'Los equipos no respetan las reglas de guardado: 1 arquero por equipo, ritmo repartido de forma pareja, diferencia de puntaje valida y al menos 1 jugador en DEF/MED/DEL.']);
     exit;
 }
 
@@ -440,7 +384,6 @@ try {
         'UPDATE matches
          SET status = :status, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
              draw_mode = :draw_mode, draw_started_at = COALESCE(draw_started_at, NOW()), draw_completed_at = NOW(),
-             redraw_count = redraw_count + :redraw_increment,
              formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
          WHERE id = :id'
     );
@@ -450,7 +393,6 @@ try {
         'players_per_team' => $teamSize,
         'max_diff' => $maxDiff,
         'draw_mode' => $drawMode,
-        'redraw_increment' => $redrawIncrement,
         'id' => $matchId,
     ]);
 

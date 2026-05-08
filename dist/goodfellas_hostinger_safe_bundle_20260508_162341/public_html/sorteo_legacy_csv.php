@@ -27,7 +27,6 @@ $legacyLoadError = '';
 $legacyMatch = null;
 $legacyPlayers = [];
 $legacyPairHistory = [];
-$legacySavedDrawSignature = '';
 
 try {
     $legacyMatch = $legacyMatchId > 0 ? repo_match_by_id($legacyMatchId) : null;
@@ -55,27 +54,6 @@ try {
         }
         if ($participantIds) {
             $in = implode(',', array_fill(0, count($participantIds), '?'));
-            if ((string) ($legacyMatch['status'] ?? '') === 'sorteado' && (string) ($legacyMatch['draw_mode'] ?? '') === 'random') {
-                $currentDrawStmt = db()->prepare(
-                    "SELECT team_number, player_id
-                     FROM match_players
-                     WHERE match_id = ?
-                       AND team_number IS NOT NULL
-                     ORDER BY team_number ASC, player_id ASC"
-                );
-                $currentDrawStmt->execute([$legacyMatchId]);
-                $currentTeams = [];
-                foreach ($currentDrawStmt->fetchAll() as $row) {
-                    $currentTeams[(int) $row['team_number']][] = (string) (int) $row['player_id'];
-                }
-                $teamSignatures = [];
-                foreach ($currentTeams as $teamIds) {
-                    sort($teamIds, SORT_STRING);
-                    $teamSignatures[] = implode(',', $teamIds);
-                }
-                sort($teamSignatures, SORT_STRING);
-                $legacySavedDrawSignature = implode('|', $teamSignatures);
-            }
             $historyStmt = db()->prepare(
                 "SELECT mp.match_id, mp.team_number, mp.player_id
                  FROM match_players mp
@@ -302,11 +280,6 @@ require __DIR__ . '/includes/header.php';
     'players' => $legacyPlayers,
     'pairHistory' => $legacyPairHistory,
     'drawBalanceWeights' => json_decode($legacyDrawWeightsJson ?: '{}', true),
-    'allowRedraw' => $legacyMatch ? ((int) ($legacyMatch['allow_redraw'] ?? 1) === 1) : true,
-    'redrawLimit' => $legacyMatch ? (int) ($legacyMatch['redraw_limit'] ?? 3) : 3,
-    'redrawCount' => $legacyMatch ? (int) ($legacyMatch['redraw_count'] ?? 0) : 0,
-    'hasSavedDraw' => $legacyMatch ? ((string) ($legacyMatch['status'] ?? '') === 'sorteado' && (string) ($legacyMatch['draw_mode'] ?? '') === 'random') : false,
-    'savedDrawSignature' => $legacySavedDrawSignature,
     'maxFieldPlayersPerLine' => 5,
   ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
   <script src="assets/sorteo-legacy.js"></script>

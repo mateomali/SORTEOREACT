@@ -21,16 +21,6 @@ var PRELOADED_JUGADORES = Array.isArray(sorteoLegacyConfig.players) ? sorteoLega
 var HISTORICAL_TEAMMATE_PAIRS = sorteoLegacyConfig.pairHistory || {};
 var DRAW_BALANCE_WEIGHTS = sorteoLegacyConfig.drawBalanceWeights || {};
 var LOCKED_MATCH_MODE = MATCH_ID > 0;
-var ALLOW_REDRAW = sorteoLegacyConfig.allowRedraw !== false;
-var REDRAW_LIMIT = Math.max(0, Number(sorteoLegacyConfig.redrawLimit ?? 3));
-var persistedRedrawCount = Math.max(0, Number(sorteoLegacyConfig.redrawCount || 0));
-var hasSavedDraw = !!sorteoLegacyConfig.hasSavedDraw;
-var redrawsUsedThisSession = 0;
-var generatedOnceThisSession = false;
-var seenDrawSignatures = new Set();
-if (typeof sorteoLegacyConfig.savedDrawSignature === 'string' && sorteoLegacyConfig.savedDrawSignature !== '') {
-  seenDrawSignatures.add(sorteoLegacyConfig.savedDrawSignature);
-}
 var REQUIRED_FIELD_LINES = ['DEF', 'MED', 'DEL'];
 var STRICT_MAX_DIFF = 2.5;
 var FLEXIBLE_MAX_DIFF = 6.0;
@@ -914,9 +904,9 @@ function setGeneratingTeams(isGenerating) {
   const button = document.getElementById('generateTeamsButton');
   const loading = document.getElementById('generateTeamsLoading');
   if (button) {
-    button.disabled = isGenerating || (nextGenerationIsRedraw() && (!ALLOW_REDRAW || redrawsRemaining() <= 0));
+    button.disabled = isGenerating;
     button.classList.toggle('is-loading', isGenerating);
-    button.textContent = isGenerating ? 'Generando...' : generateButtonLabel();
+    button.textContent = isGenerating ? 'Generando...' : '⚽ Generar Equipos';
   }
   if (loading) {
     loading.hidden = !isGenerating;
@@ -973,46 +963,11 @@ async function generarEquipos() {
     return;
   }
 
-  const isRedraw = nextGenerationIsRedraw();
-  if (isRedraw && !ALLOW_REDRAW) {
-    errorDiv.textContent = 'Esta fecha no permite rehacer el sorteo.';
-    errorDiv.classList.remove('hidden');
-    refreshGenerateButtonState();
-    return;
-  }
-  if (isRedraw && redrawsRemaining() <= 0) {
-    errorDiv.textContent = `Ya se usaron los ${REDRAW_LIMIT} re-sorteos permitidos para esta fecha.`;
-    errorDiv.classList.remove('hidden');
-    refreshGenerateButtonState();
-    return;
-  }
-
   setGeneratingTeams(true);
   await waitForPaint();
 
   try {
-  const previousSignatures = new Set(seenDrawSignatures);
-  if (lastEquipos) {
-    previousSignatures.add(drawSignature(lastEquipos));
-  }
-  let resultado = null;
-  const attempts = isRedraw ? 30 : 1;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    const attemptPlayers = isRedraw ? shuffledPlayers(selectedPlayers) : selectedPlayers;
-    const candidate = generarEquiposConDiferenciaAuto(attemptPlayers, numEquipos, maxDiff, isRedraw ? { avoidSignatures: previousSignatures } : {});
-    if (!candidate) continue;
-    const signature = drawSignature(candidate.equipos);
-    if (!isRedraw || !previousSignatures.has(signature)) {
-      resultado = candidate;
-      break;
-    }
-    if (!resultado) {
-      resultado = candidate;
-    }
-  }
-  if (isRedraw && resultado && previousSignatures.has(drawSignature(resultado.equipos))) {
-    resultado = null;
-  }
+  const resultado = generarEquiposConDiferenciaAuto(selectedPlayers, numEquipos, maxDiff);
   if (resultado) {
     applyFlexibleFormationAssignments(resultado);
     const validation = validarEquiposDetalle(resultado.equipos, teamSize, Number(resultado.usedMaxDiff || maxDiff), {
@@ -1025,11 +980,6 @@ async function generarEquipos() {
       return;
     }
     lastEquipos = resultado.equipos;
-    rememberDrawSignature(resultado.equipos);
-    if (isRedraw) {
-      redrawsUsedThisSession += 1;
-    }
-    generatedOnceThisSession = true;
     document.getElementById('diffDisplay').textContent = Number(resultado.usedMaxDiff || maxDiff).toFixed(1);
     mostrarEquipos(resultado.equipos);
     successDiv.textContent = `Equipos generados exitosamente con diferencia máxima de ${maxDiff}`;
@@ -1047,15 +997,9 @@ async function generarEquipos() {
       const emergencyNames = emergencyPreparation.emergencyGoalkeepers.map(p => p.nombre).join(', ');
       successDiv.textContent += ` Arqueros de emergencia: ${emergencyNames}.`;
     }
-    if (isRedraw) {
-      successDiv.textContent += ` Re-sorteo ${persistedRedrawCount + redrawsUsedThisSession}/${REDRAW_LIMIT}.`;
-    }
     successDiv.classList.remove('hidden');
-    refreshGenerateButtonState();
   } else {
-    errorDiv.textContent = isRedraw
-      ? `No se encontro otro equipo diferente que cumpla las reglas. ${explicarBloqueoSorteo(selectedPlayers, numEquipos, FLEXIBLE_MAX_DIFF)}`
-      : `No se encontro una combinacion valida aumentando la diferencia de a 0.5 hasta el maximo de ${FLEXIBLE_MAX_DIFF.toFixed(1)} puntos. ${explicarBloqueoSorteo(selectedPlayers, numEquipos, FLEXIBLE_MAX_DIFF)}`;
+    errorDiv.textContent = `No se encontro una combinacion valida aumentando la diferencia de a 0.5 hasta el maximo de ${FLEXIBLE_MAX_DIFF.toFixed(1)} puntos. ${explicarBloqueoSorteo(selectedPlayers, numEquipos, FLEXIBLE_MAX_DIFF)}`;
     errorDiv.classList.remove('hidden');
   }
   } finally {
@@ -1273,11 +1217,9 @@ function generarDosEquiposOptimos(players, teamSize, maxDiff, options = {}) {
     }
     const equipos = [equipoA, equipoB];
     const evaluacion = evaluarEquipos(equipos, teamSize, maxDiff, options);
-    const avoidPenalty = options.avoidSignatures?.has(drawSignature(equipos)) ? 100000000 : 0;
-    const adjustedEvaluation = { ...evaluacion, penalidad: evaluacion.penalidad + avoidPenalty };
-    if (!mejorEval || adjustedEvaluation.penalidad < mejorEval.penalidad) {
+    if (!mejorEval || evaluacion.penalidad < mejorEval.penalidad) {
       mejor = equipos;
-      mejorEval = adjustedEvaluation;
+      mejorEval = evaluacion;
     }
   }
 
@@ -1319,11 +1261,9 @@ function generarEquiposOptimos(players, numEquipos, maxDiff, options = {}) {
     const candidato = construirCandidato(players, numEquipos, teamSize, intento, options);
     if (!candidato) continue;
     const mejorado = mejorarPorIntercambios(candidato, teamSize, maxDiff, options);
-    const avoidPenalty = options.avoidSignatures?.has(drawSignature(mejorado.equipos)) ? 100000000 : 0;
-    const adjustedEvaluation = { ...mejorado.evaluacion, penalidad: mejorado.evaluacion.penalidad + avoidPenalty };
-    if (!mejorEval || adjustedEvaluation.penalidad < mejorEval.penalidad) {
+    if (!mejorEval || mejorado.evaluacion.penalidad < mejorEval.penalidad) {
       mejor = mejorado.equipos;
-      mejorEval = adjustedEvaluation;
+      mejorEval = mejorado.evaluacion;
       if (mejorEval.perfecto && (mejorEval.repeatPenalty || 0) === 0) break;
     }
   }
@@ -1343,11 +1283,11 @@ function generatedAssignments(equipos, options = {}) {
   });
 }
 
-function generarEquiposConDiferenciaAuto(players, numEquipos, initialDiff = 0.5, options = {}) {
+function generarEquiposConDiferenciaAuto(players, numEquipos, initialDiff = 0.5) {
   const start = Math.min(STRICT_MAX_DIFF, Math.max(0.5, initialDiff || 0.5));
   let mejorResultado = null;
   for (let diff = start; diff <= STRICT_MAX_DIFF; diff += 0.5) {
-    const resultado = generarEquiposOptimos(players, numEquipos, diff, options);
+    const resultado = generarEquiposOptimos(players, numEquipos, diff);
     if (resultado && (!mejorResultado || resultado.metricas.penalidad < mejorResultado.metricas.penalidad)) {
       mejorResultado = resultado;
       mejorResultado.usedMaxDiff = Math.max(diff, resultado.metricas.diffPuntos || diff);
@@ -1360,7 +1300,7 @@ function generarEquiposConDiferenciaAuto(players, numEquipos, initialDiff = 0.5,
 
   let mejorFlexible = null;
   for (let diff = 0.5; diff <= FLEXIBLE_MAX_DIFF; diff += 0.5) {
-    const resultado = generarEquiposOptimos(players, numEquipos, diff, { ...options, allowOutOfPosition: true });
+    const resultado = generarEquiposOptimos(players, numEquipos, diff, { allowOutOfPosition: true });
     if (!resultado) continue;
     resultado.flexiblePositions = true;
     resultado.flexibleAssignments = generatedAssignments(resultado.equipos, { allowOutOfPosition: true });
@@ -1446,60 +1386,6 @@ function validarEquipos(equipos, teamSize, maxDiff) {
 
 function playerKey(jugador) {
   return String(jugador.id || jugador.nombre);
-}
-
-function drawSignature(equipos) {
-  if (!Array.isArray(equipos) || !equipos.length) return '';
-  return equipos
-    .map(equipo => (Array.isArray(equipo) ? equipo : [])
-      .map(jugador => playerKey(jugador))
-      .sort()
-      .join(','))
-    .sort()
-    .join('|');
-}
-
-function rememberDrawSignature(equipos) {
-  const signature = drawSignature(equipos);
-  if (signature) {
-    seenDrawSignatures.add(signature);
-  }
-  return signature;
-}
-
-function shuffledPlayers(players) {
-  const copy = players.slice();
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function redrawPolicyApplies() {
-  return LOCKED_MATCH_MODE;
-}
-
-function nextGenerationIsRedraw() {
-  return redrawPolicyApplies() && (hasSavedDraw || generatedOnceThisSession || !!lastEquipos);
-}
-
-function redrawsRemaining() {
-  return Math.max(0, REDRAW_LIMIT - persistedRedrawCount - redrawsUsedThisSession);
-}
-
-function generateButtonLabel() {
-  if (nextGenerationIsRedraw()) {
-    return `⚽ Rehacer sorteo (${redrawsRemaining()} restantes)`;
-  }
-  return '⚽ Generar Equipos';
-}
-
-function refreshGenerateButtonState() {
-  const button = document.getElementById('generateTeamsButton');
-  if (!button) return;
-  button.textContent = generateButtonLabel();
-  button.disabled = nextGenerationIsRedraw() && (!ALLOW_REDRAW || redrawsRemaining() <= 0);
 }
 
 function getFormationOptions(teamSize) {
@@ -1993,7 +1879,6 @@ function guardarSorteoEnBD() {
   const payload = {
     match_id: MATCH_ID,
     num_teams: parseInt(document.getElementById('teamDisplay').textContent, 10),
-    redraw_increment: redrawsUsedThisSession,
     teams: equiposPayload
   };
 
@@ -2009,11 +1894,6 @@ function guardarSorteoEnBD() {
     }
     const successDiv = document.getElementById('success');
     const errorDiv = document.getElementById('error');
-    persistedRedrawCount += redrawsUsedThisSession;
-    redrawsUsedThisSession = 0;
-    hasSavedDraw = true;
-    generatedOnceThisSession = false;
-    refreshGenerateButtonState();
     errorDiv.classList.add('hidden');
     successDiv.textContent = data.message || 'Sorteo guardado correctamente en la fecha.';
     successDiv.classList.remove('hidden');
@@ -2201,7 +2081,6 @@ if (MATCH_ID > 0) {
 // Inicializar la lista de jugadores
 bindSorteoLegacyEvents();
 actualizarListaJugadores();
-refreshGenerateButtonState();
 if (LOCKED_MATCH_MODE && jugadores.length === 0) {
   const errorDiv = document.getElementById('error');
   errorDiv.textContent = 'Esta fecha no tiene jugadores convocados. Cárgalos desde la pantalla de fechas.';

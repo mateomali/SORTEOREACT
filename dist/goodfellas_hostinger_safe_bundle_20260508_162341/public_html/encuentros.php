@@ -32,7 +32,7 @@ function clear_match_draw_data(PDO $pdo, int $matchId): void
     )->execute(['mid' => $matchId]);
     $pdo->prepare(
         'UPDATE matches
-         SET draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0
+         SET draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
          WHERE id = :mid'
     )->execute(['mid' => $matchId]);
 }
@@ -427,8 +427,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $numTeams = max(2, min(4, (int) ($_POST['num_teams'] ?? 2)));
         $playersPerTeam = max(1, min(12, (int) ($_POST['players_per_team'] ?? 9)));
         $maxDiff = 0.5;
-        $allowRedraw = isset($_POST['allow_redraw']) ? 1 : 0;
-        $redrawLimit = max(0, min(20, (int) ($_POST['redraw_limit'] ?? 3)));
         $notes = '';
         $participants = array_map('intval', $_POST['participants'] ?? []);
         $participants = array_values(array_unique(array_filter($participants, static fn(int $id): bool => $id > 0)));
@@ -464,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $stmt = $pdo->prepare(
                 'UPDATE matches
-                 SET title = :title, match_date = :match_date, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, notes = :notes, status = :status,
+                 SET title = :title, match_date = :match_date, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff, notes = :notes, status = :status,
                      draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = :formation_edit_deadline
                  WHERE id = :id'
             );
@@ -476,8 +474,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'num_teams' => $numTeams,
                 'players_per_team' => $playersPerTeam,
                 'max_diff' => $maxDiff,
-                'allow_redraw' => $allowRedraw,
-                'redraw_limit' => $redrawLimit,
                 'notes' => $notes === '' ? null : $notes,
                 'status' => 'programado',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -489,8 +485,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Fecha actualizada.');
         } else {
             $stmt = $pdo->prepare(
-                'INSERT INTO matches (title, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, status, draw_mode, formation_edit_deadline, notes)
-                 VALUES (:title, :match_date, :num_teams, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :status, :draw_mode, :formation_edit_deadline, :notes)'
+                'INSERT INTO matches (title, match_date, num_teams, players_per_team, max_diff, status, draw_mode, formation_edit_deadline, notes)
+                 VALUES (:title, :match_date, :num_teams, :players_per_team, :max_diff, :status, :draw_mode, :formation_edit_deadline, :notes)'
             );
             $savedMatchDate = date('Y-m-d H:00:00', strtotime($matchDate));
             $stmt->execute([
@@ -499,8 +495,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'num_teams' => $numTeams,
                 'players_per_team' => $playersPerTeam,
                 'max_diff' => $maxDiff,
-                'allow_redraw' => $allowRedraw,
-                'redraw_limit' => $redrawLimit,
                 'status' => 'programado',
                 'draw_mode' => 'none',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -625,9 +619,6 @@ $form = $editing ?: [
     'notes' => '',
 ];
 $form['players_per_team'] = $form['players_per_team'] ?? 9;
-$form['allow_redraw'] = (int) ($form['allow_redraw'] ?? 1);
-$form['redraw_limit'] = max(0, min(20, (int) ($form['redraw_limit'] ?? 3)));
-$form['redraw_count'] = max(0, (int) ($form['redraw_count'] ?? 0));
 $targetSelection = (int) $form['num_teams'] * (int) $form['players_per_team'];
 $nextMatchId = $matches
     ? (max(array_map(static fn(array $match): int => (int) $match['id'], $matches)) + 1)
@@ -894,18 +885,6 @@ require __DIR__ . '/includes/header.php';
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Jugadores por equipo</label>
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team>
-      </div>
-      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
-        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-2 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Rehacer sorteo</label>
-        <label class="<?= $showCreateSection && !$showEditSection ? 'flex min-h-11 items-center gap-3 rounded-xl border border-lime-200/35 bg-emerald-950/92 px-3 py-2 text-sm font-bold text-lime-50' : '' ?>">
-          <input class="<?= $showCreateSection && !$showEditSection ? 'h-4 w-4 accent-lime-200' : '' ?>" type="checkbox" name="allow_redraw" value="1" <?= checked_attr((int) $form['allow_redraw'] === 1) ?>>
-          <span>Permitir rehacer sorteo</span>
-        </label>
-      </div>
-      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
-        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Veces permitidas</label>
-        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="redraw_limit" min="0" max="20" value="<?= h((string) $form['redraw_limit']) ?>">
-        <small class="<?= $showCreateSection && !$showEditSection ? 'mt-1.5 block text-xs font-semibold text-lime-50/72' : '' ?>">Usados: <?= h((string) $form['redraw_count']) ?> / <?= h((string) $form['redraw_limit']) ?>. El primer sorteo no consume cupo.</small>
       </div>
     </div>
 
