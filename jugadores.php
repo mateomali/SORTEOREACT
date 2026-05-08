@@ -478,7 +478,7 @@ function player_mobile_rating_summary(array $player): string
     }
     $full = max(0, min(6, $full));
     $empty = max(0, 6 - $full - ($hasHalf ? 1 : 0));
-    $stars = str_repeat('★', $full) . ($hasHalf ? '½' : '') . str_repeat('☆', $empty);
+    $stars = str_repeat('â˜…', $full) . ($hasHalf ? 'Â½' : '') . str_repeat('â˜†', $empty);
 
     return '<span class="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">' .
         '<span class="truncate">' . h((string) $player['positions']) . '</span>' .
@@ -727,12 +727,21 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 </section>
 
+<nav class="visual-tab-nav players-tab-nav" aria-label="Secciones de jugadores">
+  <?php if ($isAdmin): ?><a href="#player-create">Crear</a><?php endif; ?>
+  <a href="#player-list">Listado</a>
+  <a href="#player-help">Stats</a>
+  <?php if ($isAdmin): ?><a href="jugadores.php<?= $showInactive ? '' : '?show_inactive=1' ?>">Inactivos</a><?php endif; ?>
+</nav>
+
 <div class="players-mobile-help hidden max-[900px]:mb-2.5 max-[900px]:block">
   <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 </div>
 
 <?php if ($isAdmin): ?>
   <div
+    id="player-create"
+    class="scroll-mt-20"
     data-react-root
     data-react-island="player_create"
     data-show-inactive="<?= $showInactive ? '1' : '0' ?>"
@@ -743,7 +752,7 @@ require __DIR__ . '/includes/header.php';
   ></div>
 <?php endif; ?>
 
-<section class="card border-lime-200/55 bg-emerald-950 text-lime-50 shadow-xl shadow-emerald-950/20">
+<section id="player-list" class="card border-lime-200/55 bg-emerald-950 text-lime-50 shadow-xl shadow-emerald-950/20 scroll-mt-20">
   <div class="section-toolbar rounded-xl border border-lime-200/45 bg-emerald-950/85 p-3 shadow-md shadow-emerald-950/10">
     <div>
       <h3 class="m-0 text-lime-50">Listado de jugadores</h3>
@@ -756,10 +765,10 @@ require __DIR__ . '/includes/header.php';
       data-can-filter-active="<?= $isAdmin ? '1' : '0' ?>"
     ></div>
   </div>
-  <div class="players-desktop-help mb-3 max-[900px]:hidden">
+  <div id="player-help" class="players-desktop-help mb-3 max-[900px]:hidden scroll-mt-20">
     <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
   </div>
-  <p class="small-muted player-list-empty text-emerald-100/80" data-player-list-empty hidden>No hay jugadores que coincidan con la busqueda.</p>
+  <p class="empty-state player-list-empty" data-player-list-empty hidden><strong>Sin coincidencias</strong><span>No hay jugadores que coincidan con la busqueda.</span></p>
   <details class="mobile-full-player-list hidden overflow-hidden rounded-xl border border-lime-200/45 bg-emerald-950/80 max-[900px]:block" open>
     <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3">
       <span class="text-sm font-extrabold text-lime-50">Lista completa de jugadores</span>
@@ -830,12 +839,12 @@ require __DIR__ . '/includes/header.php';
     <table class="editable-table table-fixed <?= $isAdmin ? 'min-w-[1160px]' : 'min-w-[1180px]' ?>">
       <thead>
         <tr>
-          <th class="w-44 min-w-44 border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="name" aria-label="Ordenar por nombre">Nombre <span aria-hidden="true">↕</span></button></th>
+          <th class="w-44 min-w-44 border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="name" aria-label="Ordenar por nombre">Nombre <span aria-hidden="true">&#8597;</span></button></th>
           <?php if ($isAdmin): ?>
-            <th class="w-44 min-w-44 border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="positions" aria-label="Ordenar por posiciones">Posiciones <span aria-hidden="true">↕</span></button></th>
+            <th class="w-44 min-w-44 border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="positions" aria-label="Ordenar por posiciones">Posiciones <span aria-hidden="true">&#8597;</span></button></th>
           <?php endif; ?>
-          <th class="<?= $isAdmin ? 'w-60 min-w-60' : 'w-72 min-w-72' ?> border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="general" aria-label="Ordenar por promedio general">General <span aria-hidden="true">↕</span></button></th>
-          <th class="border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="stats" aria-label="Ordenar por promedio de stats">Stats <span aria-hidden="true">↕</span></button></th>
+          <th class="<?= $isAdmin ? 'w-60 min-w-60' : 'w-72 min-w-72' ?> border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="general" aria-label="Ordenar por promedio general">General <span aria-hidden="true">&#8597;</span></button></th>
+          <th class="border-r border-lime-200/20 bg-emerald-950 text-lime-100 last:border-r-0"><button class="player-sort-head inline-flex min-h-0 w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-1.5 py-1 text-left text-inherit shadow-none hover:bg-lime-100/10" type="button" data-player-sort="stats" aria-label="Ordenar por promedio de stats">Stats <span aria-hidden="true">&#8597;</span></button></th>
           <?php if ($isAdmin): ?>
             <th class="w-24 min-w-24 border-r border-lime-200/20 bg-emerald-950 text-center text-lime-100 last:border-r-0">Acc.</th>
           <?php endif; ?>
@@ -1049,3 +1058,4 @@ require __DIR__ . '/includes/header.php';
 <script src="assets/jugadores.js"></script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
+

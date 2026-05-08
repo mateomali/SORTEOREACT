@@ -80,12 +80,14 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
         id="mainNav"
         aria-label="Navegacion principal"
       >
-        <div class="grid grid-cols-2 gap-1.5 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1" aria-label="Opciones publicas">
+        <div class="mobile-nav-group grid grid-cols-2 gap-1.5 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1" aria-label="Opciones publicas">
+          <span class="mobile-nav-label">Publico</span>
           <?php foreach ($publicMenu as $file => $label): ?>
             <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
           <?php endforeach; ?>
         </div>
-        <div class="grid grid-cols-2 gap-1.5 border-t border-lime-200/20 pt-2 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1 min-[761px]:border-l min-[761px]:border-t-0 min-[761px]:pl-2 min-[761px]:pt-0" aria-label="<?= $roleLabel !== '' ? 'Opciones ' . h($roleLabel) : 'Acceso admin' ?>">
+        <div class="mobile-nav-group grid grid-cols-2 gap-1.5 border-t border-lime-200/20 pt-2 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1 min-[761px]:border-l min-[761px]:border-t-0 min-[761px]:pl-2 min-[761px]:pt-0" aria-label="<?= $roleLabel !== '' ? 'Opciones ' . h($roleLabel) : 'Acceso admin' ?>">
+          <span class="mobile-nav-label"><?= $roleLabel !== '' ? h($roleLabel) : 'Acceso' ?></span>
           <?php if ($roleLabel !== ''): ?>
             <span class="col-span-full w-fit rounded-full bg-lime-100/10 px-2 py-0.5 text-[9px] font-black uppercase leading-tight text-lime-50 min-[761px]:px-2.5 min-[761px]:py-1 min-[761px]:text-[10px]"><?= h($roleLabel) ?></span>
           <?php endif; ?>

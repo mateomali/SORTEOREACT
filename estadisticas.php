@@ -264,6 +264,13 @@ require __DIR__ . '/includes/header.php';
   </div>
 </section>
 
+<nav class="visual-tab-nav stats-tab-nav" aria-label="Secciones de estadisticas">
+  <a href="#stats-jugadores">Jugadores</a>
+  <a href="#stats-goleadores">Goleadores</a>
+  <a href="#stats-capitanes">Capitanes</a>
+  <a href="#stats-premios">Premios</a>
+</nav>
+
 <details class="card stats-filter-menu mb-3.5">
   <summary>Filtros</summary>
   <form method="get" class="stats-filter-grid" data-partial-form data-partial-target="main.content">
@@ -341,7 +348,7 @@ require __DIR__ . '/includes/header.php';
   <span>Promedio <?= $summary['promedio_general'] !== null ? h(number_format((float) $summary['promedio_general'], 2)) : '-' ?></span>
 </section>
 
-<details class="card stats-section stats-collapsible" open data-mobile-collapsed>
+<details id="stats-jugadores" class="card stats-section stats-collapsible scroll-mt-20" open data-mobile-collapsed>
   <summary>
     <span>Tabla de jugadores</span>
     <small><?= h((string) count($ratings)) ?> jugadores</small>
@@ -356,7 +363,7 @@ require __DIR__ . '/includes/header.php';
         <span>Detalles</span>
       </div>
       <?php if (!$ratings): ?>
-        <p class="small-muted">No hay datos para este filtro.</p>
+        <p class="empty-state stats-empty-state"><strong>Sin datos</strong><span>No hay jugadores con estadisticas para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($ratings as $row): ?>
           <div class="stats-player-grid-row" data-stats-player-row
@@ -550,7 +557,7 @@ require __DIR__ . '/includes/header.php';
   </div>
 </div>
 
-<details class="card stats-section stats-collapsible" open data-mobile-collapsed>
+<details id="stats-goleadores" class="card stats-section stats-collapsible scroll-mt-20" open data-mobile-collapsed>
   <summary>
     <span>Ranking de goleadores</span>
     <small><?= h((string) count($scorers)) ?> jugadores</small>
@@ -564,7 +571,7 @@ require __DIR__ . '/includes/header.php';
         <span>G/P</span>
       </div>
       <?php if (!$scorers): ?>
-        <p class="small-muted stats-compact-empty">No hay datos para este filtro.</p>
+        <p class="empty-state stats-compact-empty"><strong>Sin goles</strong><span>No hay datos para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($scorers as $row): ?>
           <div class="stats-compact-grid-row" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
@@ -579,7 +586,7 @@ require __DIR__ . '/includes/header.php';
   </div>
 </details>
 
-<details class="card stats-section stats-collapsible" open data-mobile-collapsed>
+<details id="stats-capitanes" class="card stats-section stats-collapsible scroll-mt-20" open data-mobile-collapsed>
   <summary>
     <span>Tabla de capitanes</span>
     <small><?= h((string) count($captains)) ?> capitanes</small>
@@ -599,7 +606,7 @@ require __DIR__ . '/includes/header.php';
         <span>DG</span>
       </div>
       <?php if (!$captains): ?>
-        <p class="small-muted stats-compact-empty">No hay fechas finalizadas en modo capitanes para este filtro.</p>
+        <p class="empty-state stats-compact-empty"><strong>Sin capitanes</strong><span>No hay fechas finalizadas en modo capitanes para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($captains as $row): ?>
           <div class="stats-compact-grid-row" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
@@ -619,7 +626,7 @@ require __DIR__ . '/includes/header.php';
   </div>
 </details>
 
-<section class="card stats-section award-legend-section">
+<section id="stats-premios" class="card stats-section award-legend-section scroll-mt-20">
   <h3>Referencia de premios</h3>
   <div class="award-legend-grid">
     <?php foreach ($awardDefinitions as $code => $award): ?>

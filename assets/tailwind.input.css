@@ -213,6 +213,10 @@
     @apply min-h-8 rounded-lg px-2.5 py-1 text-xs;
   }
 
+  .mobile-nav-label {
+    @apply col-span-full text-[10px] font-black uppercase leading-tight text-lime-100/75 min-[761px]:hidden;
+  }
+
   .badge {
     @apply inline-flex rounded-full bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-emerald-950;
   }
@@ -5815,6 +5819,101 @@ textarea,
   @media (max-width: 760px) {
     .stats-player-search.react-stats-search {
       grid-template-columns: 1fr !important;
+    }
+  }
+}
+
+@layer components {
+  .visual-tab-nav {
+    @apply sticky top-0 z-30 mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-lime-200/28 bg-emerald-950/92 p-2 shadow-lg shadow-emerald-950/18 backdrop-blur-sm sm:flex sm:flex-wrap;
+  }
+
+  .visual-tab-nav a {
+    @apply inline-flex min-h-10 items-center justify-center rounded-xl border border-lime-200/25 bg-emerald-900/70 px-3 py-2 text-center text-xs font-extrabold leading-tight text-lime-50 no-underline transition hover:border-lime-200/65 hover:bg-lime-100 hover:text-emerald-950;
+  }
+
+  .stats-tab-nav {
+    @apply grid-cols-4;
+  }
+
+  .players-tab-nav {
+    @apply grid-cols-3;
+  }
+
+  .empty-state {
+    @apply my-2 grid gap-1 rounded-xl border border-lime-200/28 bg-emerald-950/65 p-3 text-lime-50;
+  }
+
+  .empty-state strong {
+    @apply text-sm font-extrabold leading-tight text-lime-100;
+  }
+
+  .empty-state span {
+    @apply text-xs font-semibold leading-snug text-emerald-100/72;
+  }
+
+  .players-desktop-table thead th,
+  .table-wrap table thead th {
+    @apply sticky top-0 z-10;
+  }
+
+  .player-scout-floating-card,
+  .player-radar-floating-card,
+  .award-floating-card,
+  .player-edit-panel {
+    @apply rounded-2xl border border-lime-200/55 bg-emerald-950 text-lime-50 shadow-2xl shadow-emerald-950/25;
+  }
+
+  .player-scout-floating-head,
+  .player-radar-floating-head,
+  .award-floating-head,
+  .player-edit-head {
+    @apply border-b border-lime-200/28 pb-3;
+  }
+
+  .player-scout-close,
+  .player-radar-close,
+  .award-floating-close,
+  [data-player-edit-close].player-icon-button {
+    @apply inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-lime-200/35 bg-lime-100 px-0 py-0 text-sm font-extrabold leading-none text-emerald-950 transition hover:bg-lime-200;
+  }
+
+  .stats-summary span,
+  .badge,
+  .chip,
+  .mini-chip {
+    @apply leading-none;
+  }
+
+  .badge.warn,
+  .badge.pending {
+    @apply border border-amber-200/55 bg-amber-100 text-amber-900;
+  }
+
+  .badge.done,
+  .badge.ready {
+    @apply border border-green-200/55 bg-green-100 text-green-800;
+  }
+
+  @media (max-width: 760px) {
+    .visual-tab-nav {
+      @apply top-0 grid gap-1.5 rounded-xl p-1.5;
+    }
+
+    .visual-tab-nav a {
+      @apply min-h-9 px-2 py-1.5 text-[11px];
+    }
+
+    .player-scout-floating-panel,
+    .player-radar-floating-panel,
+    .award-floating-panel {
+      @apply items-end p-0;
+    }
+
+    .player-scout-floating-card,
+    .player-radar-floating-card,
+    .award-floating-card {
+      @apply max-h-[88dvh] w-full max-w-none overflow-auto rounded-b-none rounded-t-2xl p-3;
     }
   }
 }
