@@ -5,6 +5,8 @@ CREATE DATABASE IF NOT EXISTS `u552541920_futbol`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
+SET NAMES utf8mb4;
+
 USE `u552541920_futbol`;
 
 CREATE TABLE IF NOT EXISTS players (
@@ -112,6 +114,16 @@ CREATE TABLE IF NOT EXISTS rental_courts (
   INDEX idx_rental_court_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES
+  ('allow_redraw_default', '1'),
+  ('redraw_limit_default', '3'),
+  ('multi_draw_count_default', '3'),
+  ('multi_draw_lock_minutes_default', '60');
+
+INSERT IGNORE INTO rental_courts (court_key, place, weekday, time_value, total_players) VALUES
+  ('cancha1', 'kicker', 1, '21:00:00', 18),
+  ('cancha2', 'kicker', 5, '22:00:00', 12);
+
 CREATE TABLE IF NOT EXISTS match_draw_options (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   match_id INT UNSIGNED NOT NULL,
@@ -214,6 +226,82 @@ CREATE TABLE IF NOT EXISTS match_awards (
   CONSTRAINT fk_match_awards_player
     FOREIGN KEY (player_id) REFERENCES players(id)
     ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS match_director_rating_votes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  match_id INT UNSIGNED NOT NULL,
+  voter_id INT UNSIGNED NOT NULL,
+  player_id INT UNSIGNED NOT NULL,
+  rating DECIMAL(3,1) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_director_rating_vote (match_id, voter_id, player_id),
+  INDEX idx_director_rating_match_player (match_id, player_id),
+  CONSTRAINT fk_director_rating_match
+    FOREIGN KEY (match_id) REFERENCES matches(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_rating_voter
+    FOREIGN KEY (voter_id) REFERENCES directive_members(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_rating_player
+    FOREIGN KEY (player_id) REFERENCES players(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS match_director_award_votes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  match_id INT UNSIGNED NOT NULL,
+  voter_id INT UNSIGNED NOT NULL,
+  award_code VARCHAR(40) NOT NULL,
+  player_id INT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_director_award_vote (match_id, voter_id, award_code),
+  INDEX idx_director_award_match_code (match_id, award_code),
+  CONSTRAINT fk_director_award_match
+    FOREIGN KEY (match_id) REFERENCES matches(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_award_voter
+    FOREIGN KEY (voter_id) REFERENCES directive_members(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_award_player
+    FOREIGN KEY (player_id) REFERENCES players(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS match_director_publications (
+  match_id INT UNSIGNED PRIMARY KEY,
+  published_at DATETIME NOT NULL,
+  reason ENUM('all_voted', 'deadline', 'admin') NOT NULL,
+  eligible_voters SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  submitted_voters SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_director_publication_match
+    FOREIGN KEY (match_id) REFERENCES matches(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS match_director_vote_invites (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  match_id INT UNSIGNED NOT NULL,
+  player_id INT UNSIGNED NOT NULL,
+  voter_member_id INT UNSIGNED NOT NULL,
+  token VARCHAR(5) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_director_vote_invite_match_player (match_id, player_id),
+  UNIQUE KEY uniq_director_vote_invite_token (token),
+  INDEX idx_director_vote_invite_match (match_id),
+  CONSTRAINT fk_director_vote_invite_match
+    FOREIGN KEY (match_id) REFERENCES matches(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_vote_invite_player
+    FOREIGN KEY (player_id) REFERENCES players(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_director_vote_invite_voter
+    FOREIGN KEY (voter_member_id) REFERENCES directive_members(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS match_round_robin_results (

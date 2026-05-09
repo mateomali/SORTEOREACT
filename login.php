@@ -147,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $stmt = db()->prepare(
                     'INSERT INTO site_users (username, password_hash, role, player_id, can_vote)
-                     VALUES (:username, :password_hash, "usuario", :player_id, 0)'
+                     VALUES (:username, :password_hash, "jugador", :player_id, 1)'
                 );
                 $stmt->execute([
                     'username' => $username,
@@ -159,12 +159,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 set_site_user_session([
                     'id' => $userId,
                     'username' => $username,
-                    'role' => 'usuario',
+                    'role' => 'jugador',
                     'player_id' => $playerId,
                     'player_name' => (string) ($player['name'] ?? ''),
                 ]);
-                flash('success', 'Cuenta creada. El admin ahora puede asignarte rol de jugador, directivo o admin.');
-                redirect('index.php');
+                flash('success', 'Cuenta creada. Ingresaste como jugador.');
+                redirect(site_user_redirect(['role' => 'jugador'], $next));
             } catch (PDOException $e) {
                 $message = str_contains($e->getMessage(), 'uniq_site_users_player')
                     ? 'Ese jugador ya tiene una cuenta vinculada.'
@@ -254,7 +254,7 @@ require __DIR__ . '/includes/header.php';
       <div class="mt-3">
         <div class="mb-3">
           <h3 class="mb-1">Vincularme a un jugador</h3>
-          <p class="small-muted">La cuenta queda creada como usuario. El admin despues activa tu rol y permisos.</p>
+          <p class="small-muted">La cuenta queda creada con rol jugador y queda vinculada a tu perfil.</p>
         </div>
         <form method="post" class="grid gap-3">
           <input type="hidden" name="role" value="player_register">

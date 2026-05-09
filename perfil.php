@@ -521,9 +521,6 @@ function profile_render_match_detail_content(array $match, int $currentPlayerId)
                           <span class="player-card-rating"><strong><?= h((string) $formationCardRating) ?></strong><span><?= h($line) ?></span></span>
                           <strong><?= h((string) $teamPlayer['name']) ?></strong>
                           <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> pts</span>
-                          <?php if ($isCurrent): ?>
-                            <span class="profile-current-player-badge">Vos</span>
-                          <?php endif; ?>
                         </div>
                       <?php endforeach; ?>
                     <?php endif; ?>

@@ -81,7 +81,7 @@ require __DIR__ . '/includes/header.php';
     <h1>Sorteo multiple</h1>
     <p class="small-muted"><?= h((string) ($match['title'] ?: ('Fecha #' . $match['id']))) ?> - cierre <?= h(date('d/m/Y H:i', $deadline)) ?></p>
   </div>
-  <a class="btn btn-muted" href="editar_partidos.php">Volver</a>
+  <a class="btn btn-muted multi-draw-back-action" href="editar_partidos.php">Volver</a>
 </section>
 
 <section class="grid cols-3 multi-draw-summary mb-3">
@@ -108,7 +108,7 @@ require __DIR__ . '/includes/header.php';
     <?php if ($options && $winnerId <= 0): ?>
       <form method="post">
         <input type="hidden" name="match_id" value="<?= $matchId ?>">
-        <button class="btn btn-warning" type="submit" name="action" value="generate_options" data-confirm="Regenerar las variantes? Se borraran los votos existentes.">Regenerar variantes</button>
+        <button class="btn btn-warning multi-draw-regenerate-action" type="submit" name="action" value="generate_options" data-confirm="Regenerar las variantes? Se borraran los votos existentes.">Regenerar variantes</button>
       </form>
     <?php endif; ?>
   </div>
@@ -118,10 +118,10 @@ require __DIR__ . '/includes/header.php';
     <?php if ($winnerId <= 0): ?>
       <form method="post" class="mb-3">
         <input type="hidden" name="match_id" value="<?= $matchId ?>">
-        <button class="btn btn-primary w-full" type="submit" name="action" value="apply_current_winner" data-confirm="Finalizar la votacion ahora y aplicar la opcion ganadora actual?">Finalizar votacion y aplicar ganadora</button>
+        <button class="btn btn-primary w-full multi-draw-finalize-action" type="submit" name="action" value="apply_current_winner" data-confirm="Finalizar la votacion ahora y aplicar la opcion ganadora actual?">Finalizar votacion y aplicar ganadora</button>
       </form>
     <?php endif; ?>
-    <div class="grid gap-3 lg:grid-cols-3">
+    <div class="multi-draw-options-grid">
       <?php foreach ($options as $option): ?>
         <?= multiple_draw_render_option($option, $winnerId === (int) $option['id']) ?>
       <?php endforeach; ?>
@@ -135,7 +135,7 @@ require __DIR__ . '/includes/header.php';
     <p class="small-muted mb-3">Al llegar el cierre, gana la opcion con mas votos. Si hay empate, gana la mas equilibrada.</p>
     <form method="post">
       <input type="hidden" name="match_id" value="<?= $matchId ?>">
-      <button class="btn btn-muted" type="submit" name="action" value="finalize_due">Probar cierre automatico ahora</button>
+      <button class="btn btn-muted multi-draw-test-close-action" type="submit" name="action" value="finalize_due">Probar cierre automatico ahora</button>
     </form>
   </section>
 <?php endif; ?>

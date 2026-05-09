@@ -162,10 +162,13 @@ function multiple_draw_generate(int $matchId, int $count, bool $replace = false)
              ON DUPLICATE KEY UPDATE teams_json = VALUES(teams_json), total_diff = VALUES(total_diff), generated_at = CURRENT_TIMESTAMP, selected_at = NULL'
         );
         $created = 0;
-        for ($attempt = 0; $created < $count && $attempt < ($count * 20); $attempt++) {
-            $teams = generate_valid_teams($players, $numTeams, $maxDiff, 25000);
+        $maxGenerationAttempts = $count * 80;
+        for ($attempt = 0; $created < $count && $attempt < $maxGenerationAttempts; $attempt++) {
+            $currentMaxDiff = min(6.0, $maxDiff + (0.5 * intdiv($attempt, max(1, $count * 12))));
+            $targetValidCandidates = 1 + (($attempt + $created) % 18);
+            $teams = generate_valid_teams($players, $numTeams, $currentMaxDiff, 3500, $targetValidCandidates);
             if (!$teams) {
-                throw new RuntimeException('No se pudo generar un sorteo valido con la configuracion actual.');
+                continue;
             }
             $teamSignatures = [];
             foreach ($teams as $team) {
@@ -222,7 +225,7 @@ function multiple_draw_generate(int $matchId, int $count, bool $replace = false)
             $created++;
         }
         if ($created < $count) {
-            throw new RuntimeException('No se pudieron generar suficientes variantes distintas.');
+            throw new RuntimeException('No se pudieron generar suficientes variantes distintas. Revisa arqueros, posiciones o aumenta la diferencia maxima.');
         }
         $pdo->commit();
     } catch (Throwable $e) {
@@ -401,28 +404,26 @@ function multiple_draw_render_option(array $option, bool $selected = false): str
 {
     $currentPlayerId = current_player_id();
     $selectedClasses = $selected
-        ? ' border-lime-200 bg-emerald-900/85 shadow-xl shadow-lime-200/10 ring-4 ring-lime-200/20'
-        : ' border-lime-200/35 bg-emerald-950/85 shadow-md shadow-emerald-950/15';
-    $html = '<article class="multi-draw-option h-full overflow-hidden rounded-2xl border p-3 text-lime-50 transition' . $selectedClasses . '">';
-    $html .= '<button class="mb-3 flex w-full items-start justify-between gap-2 border-b border-lime-200/20 bg-transparent p-0 pb-2 text-left hover:[&_strong]:text-lime-200 focus-visible:[&_strong]:text-lime-200" type="button" data-multi-draw-pitch-toggle><div><strong class="block text-base font-black text-lime-50"><span data-multi-draw-pitch-label>Ver en cancha</span>: Opcion ' . h((string) $option['option_number']) . '</strong><small class="block text-xs font-semibold text-emerald-100/70">Diferencia ' . h(number_format((float) $option['total_diff'], 1)) . '</small></div><span class="inline-flex rounded-full bg-lime-100 px-2.5 py-1 text-xs font-black text-emerald-950">' . h((string) (int) ($option['vote_count'] ?? 0)) . ' votos</span></button>';
-    $html .= '<div class="grid gap-2" data-multi-draw-list-view>';
+        ? ' is-selected'
+        : '';
+    $html = '<article class="multi-draw-option' . $selectedClasses . '">';
+    $html .= '<button class="multi-draw-option-toggle" type="button" data-multi-draw-pitch-toggle><span class="multi-draw-option-copy"><strong class="multi-draw-option-title"><span data-multi-draw-pitch-label>Ver en cancha</span>: Opcion ' . h((string) $option['option_number']) . '</strong><small class="multi-draw-option-meta">Diferencia ' . h(number_format((float) $option['total_diff'], 1)) . '</small></span><span class="multi-draw-vote-pill">' . h((string) (int) ($option['vote_count'] ?? 0)) . ' votos</span></button>';
+    $html .= '<div class="multi-draw-teams" data-multi-draw-list-view>';
     foreach (($option['teams'] ?? []) as $team) {
         $teamTotal = (float) ($team['total_skill'] ?? 0);
-        $html .= '<section class="rounded-xl border border-lime-200/24 bg-emerald-900/45 p-2.5 max-[760px]:p-2">';
-        $html .= '<h4 class="mb-2 flex items-center justify-between gap-2 text-sm leading-tight max-[760px]:mb-1.5 max-[760px]:flex-wrap max-[760px]:text-xs"><span class="min-w-0 flex-1 text-base font-black text-lime-50 max-[760px]:min-w-20 max-[760px]:text-sm">' . h((string) ($team['team_name'] ?? 'Equipo')) . '</span><em class="rounded-lg border border-lime-200/35 bg-emerald-950/70 px-2 py-1 text-[10px] font-black not-italic text-lime-100 max-[760px]:px-1.5 max-[760px]:py-0.5 max-[760px]:text-[9px]">General ' . h(number_format($teamTotal, 1)) . '</em><span class="rounded-lg bg-lime-100 px-2 py-1 text-[10px] font-black text-emerald-950 max-[760px]:rounded-md max-[760px]:px-1.5 max-[760px]:py-0.5 max-[760px]:text-[9px]">' . h((string) ($team['color_name'] ?? '')) . '</span></h4>';
-        $html .= '<div class="grid gap-1">';
+        $html .= '<section class="multi-draw-team">';
+        $html .= '<h4 class="multi-draw-team-head"><span class="multi-draw-team-title">' . h((string) ($team['team_name'] ?? 'Equipo')) . '</span><span class="multi-draw-team-badges"><em>General ' . h(number_format($teamTotal, 1)) . '</em><strong>' . h((string) ($team['color_name'] ?? '')) . '</strong></span></h4>';
+        $html .= '<div class="multi-draw-player-list">';
         foreach (($team['players'] ?? []) as $player) {
             $rating = (float) ($player['rating'] ?? 0);
             $position = (string) ($player['assigned_position'] ?? 'MED');
             $isCurrentPlayer = $currentPlayerId > 0 && (int) ($player['id'] ?? 0) === $currentPlayerId;
             $rowClasses = $isCurrentPlayer
-                ? ' bg-lime-100 text-emerald-950 shadow-md shadow-lime-200/20 ring-2 ring-lime-200/35 [&_small]:text-emerald-950 [&_strong]:text-emerald-950'
-                : ' bg-emerald-950/65 text-emerald-100';
-            $chipClasses = $isCurrentPlayer ? 'bg-emerald-950 text-lime-100' : 'bg-emerald-800 text-lime-100';
-            $html .= '<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold max-[760px]:gap-1 max-[760px]:px-1.5 max-[760px]:py-1' . $rowClasses . '">';
-            $html .= '<span class="inline-flex h-10 w-10 flex-shrink-0 flex-col items-center justify-center rounded-lg border border-lime-200/20 bg-emerald-900 text-lime-100 leading-none max-[760px]:h-8 max-[760px]:w-8"><strong class="text-base font-black leading-none max-[760px]:text-xs">' . h((string) multiple_draw_player_card_rating($rating)) . '</strong><span class="mt-0.5 text-[7px] font-black leading-none max-[760px]:text-[6px]">GEN</span></span>';
-            $html .= '<span class="min-w-0"><strong class="block min-w-0 truncate text-sm font-black text-lime-50 max-[760px]:text-[10px] max-[760px]:leading-tight">' . h((string) ($player['name'] ?? 'Jugador')) . ($isCurrentPlayer ? ' <em class="ml-1 rounded-full bg-emerald-950 px-1.5 py-0.5 text-[9px] font-black not-italic text-lime-100">Vos</em>' : '') . '</strong><small class="block min-w-0 truncate text-[10px] font-bold text-emerald-100/70 max-[760px]:text-[9px] max-[760px]:leading-tight">' . h(number_format($rating, 1)) . ' estrellas promedio</small></span>';
-            $html .= '<strong class="inline-flex min-w-9 justify-center rounded-md px-1.5 py-0.5 text-[10px] font-black max-[760px]:min-w-7 max-[760px]:rounded max-[760px]:px-1 max-[760px]:text-[9px] ' . $chipClasses . '">' . h($position) . '</strong>';
+                ? ' is-current-player'
+                : '';
+            $html .= '<div class="multi-draw-player-row' . $rowClasses . '">';
+            $html .= '<span class="multi-draw-player-main"><strong class="multi-draw-player-name">' . h((string) ($player['name'] ?? 'Jugador')) . ($isCurrentPlayer ? ' <em>Vos</em>' : '') . '</strong><small class="multi-draw-player-sub">' . h(number_format($rating, 1)) . ' &#11088;</small></span>';
+            $html .= '<strong class="multi-draw-position">' . h($position) . '</strong>';
             $html .= '</div>';
         }
         $html .= '</div></section>';

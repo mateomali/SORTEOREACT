@@ -1138,6 +1138,33 @@ function weightedBalancePenalty(stats) {
   }, 0);
 }
 
+function playerBandIds(players, ratio = 0.25) {
+  if (!Array.isArray(players) || players.length < 4) {
+    return { low: new Set(), high: new Set() };
+  }
+  const ordered = players.slice().sort((a, b) => {
+    const ratingA = Number(a.puntuacion || 0);
+    const ratingB = Number(b.puntuacion || 0);
+    if (ratingA !== ratingB) return ratingA - ratingB;
+    return String(a.nombre || '').localeCompare(String(b.nombre || ''));
+  });
+  const bandSize = Math.max(1, Math.floor(ordered.length * ratio));
+  return {
+    low: new Set(ordered.slice(0, bandSize).map(playerKey)),
+    high: new Set(ordered.slice(-bandSize).map(playerKey)),
+  };
+}
+
+function teamBandCounts(equipos, bandIds) {
+  return equipos.map(equipo => equipo.reduce((count, jugador) => (
+    bandIds.has(playerKey(jugador)) ? count + 1 : count
+  ), 0));
+}
+
+function countSpread(values) {
+  return values.length ? Math.max(...values) - Math.min(...values) : 0;
+}
+
 function evaluarEquipos(equipos, teamSize, maxDiff, options = {}) {
   const stats = equipos.map(equipo => teamStats(equipo, options));
   const puntos = stats.map(s => s.total);
@@ -1150,7 +1177,12 @@ function evaluarEquipos(equipos, teamSize, maxDiff, options = {}) {
   const repeatPenalty = historicalRepeatPenalty(equipos);
   const balancePenalty = weightedBalancePenalty(stats);
   const outOfPositionPenalty = stats.reduce((sum, stat) => sum + (stat.fueraDePosicion || 0), 0) * 12;
-  let penalidad = balancePenalty + diffLentos * 25 + diffRapidos * 10 + repeatPenalty + outOfPositionPenalty;
+  const flatPlayers = equipos.flat();
+  const bandIds = options.bandIds || playerBandIds(flatPlayers);
+  const lowBandSpread = countSpread(teamBandCounts(equipos, bandIds.low));
+  const highBandSpread = countSpread(teamBandCounts(equipos, bandIds.high));
+  const bandPenalty = (lowBandSpread * 120) + (highBandSpread * 90);
+  let penalidad = balancePenalty + diffLentos * 25 + diffRapidos * 10 + repeatPenalty + outOfPositionPenalty + bandPenalty;
   let hardOk = true;
 
   const fieldPlayers = Math.max(0, teamSize - 1);
@@ -1172,10 +1204,12 @@ function evaluarEquipos(equipos, teamSize, maxDiff, options = {}) {
   const perfecto = hardOk
     && diffPuntos <= maxDiff
     && diffLentos <= 1
+    && lowBandSpread <= 1
+    && highBandSpread <= 1
     && equipos.every(equipo => equipo.length === teamSize)
     && stats.every(stat => REQUIRED_FIELD_LINES.every(linea => (stat.lineas[linea] || 0) >= minFieldLine && (stat.lineas[linea] || 0) <= maxFieldLine));
 
-  return { penalidad, perfecto, diffPuntos, diffLentos, diffRapidos, repeatPenalty, balancePenalty, outOfPositionPenalty, stats };
+  return { penalidad, perfecto, diffPuntos, diffLentos, diffRapidos, lowBandSpread, highBandSpread, repeatPenalty, balancePenalty, outOfPositionPenalty, bandPenalty, stats };
 }
 
 function construirCandidato(players, numEquipos, teamSize, semilla, options = {}) {
@@ -1300,8 +1334,9 @@ function generarDosEquiposOptimos(players, teamSize, maxDiff, options = {}) {
 
 function generarEquiposOptimos(players, numEquipos, maxDiff, options = {}) {
   const teamSize = players.length / numEquipos;
+  const scopedOptions = { ...options, bandIds: options.bandIds || playerBandIds(players) };
   if (numEquipos === 2 && players.length <= 20) {
-    const exacto = generarDosEquiposOptimos(players, teamSize, maxDiff, options);
+    const exacto = generarDosEquiposOptimos(players, teamSize, maxDiff, scopedOptions);
     if (exacto) {
       return {
         equipos: exacto.equipos,
@@ -1316,10 +1351,10 @@ function generarEquiposOptimos(players, numEquipos, maxDiff, options = {}) {
   const intentos = Math.min(1800, Math.max(500, players.length * players.length * 4));
 
   for (let intento = 0; intento < intentos; intento++) {
-    const candidato = construirCandidato(players, numEquipos, teamSize, intento, options);
+    const candidato = construirCandidato(players, numEquipos, teamSize, intento, scopedOptions);
     if (!candidato) continue;
-    const mejorado = mejorarPorIntercambios(candidato, teamSize, maxDiff, options);
-    const avoidPenalty = options.avoidSignatures?.has(drawSignature(mejorado.equipos)) ? 100000000 : 0;
+    const mejorado = mejorarPorIntercambios(candidato, teamSize, maxDiff, scopedOptions);
+    const avoidPenalty = scopedOptions.avoidSignatures?.has(drawSignature(mejorado.equipos)) ? 100000000 : 0;
     const adjustedEvaluation = { ...mejorado.evaluacion, penalidad: mejorado.evaluacion.penalidad + avoidPenalty };
     if (!mejorEval || adjustedEvaluation.penalidad < mejorEval.penalidad) {
       mejor = mejorado.equipos;
@@ -1876,7 +1911,7 @@ function mostrarEquipos(equipos) {
           <span>Mentalidad ${resumenStats.mentalidad.toFixed(1)}</span>
           <span>Regularidad ${resumenStats.regularidad.toFixed(1)}</span>
         </div>
-        <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5, Juego en equipo 8, Mentalidad 10 y Regularidad 5. La habilidad de arquero tiene prioridad alta y tambien se controlan posiciones, arqueros y ritmo lento.</small>
+        <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5, Juego en equipo 8, Mentalidad 10 y Regularidad 5. Tambien reparte el cuartil de menor puntaje y el cuartil top para evitar concentrar flojos o figuras.</small>
       </div>
     `;
     container.appendChild(equipoDiv);

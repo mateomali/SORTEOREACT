@@ -845,6 +845,19 @@ $pageDescription = $showCreateSection && !$showEditSection
 $title = $pageHeading . ' | ' . APP_NAME;
 $activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchListPage;
 require __DIR__ . '/includes/header.php';
+
+$encounterOverviewStyle = 'background:linear-gradient(180deg,#063d2b,#041a13)!important;background-color:#063d2b!important;background-image:linear-gradient(180deg,#063d2b,#041a13)!important;border-color:rgba(223,255,105,.34)!important;color:#fff!important;';
+$encounterOverviewLabelStyle = 'color:#e7f8ef!important;';
+$encounterOverviewValueStyle = 'color:#dfff69!important;';
+$encounterHistoryPanelStyle = 'background:#f4f8f6!important;background-color:#f4f8f6!important;background-image:none!important;border-color:rgba(6,61,43,.24)!important;color:#041a13!important;';
+$encounterCardStyle = 'background:linear-gradient(180deg,#073324,#052016)!important;background-color:#073324!important;background-image:linear-gradient(180deg,#073324,#052016)!important;border-color:rgba(223,255,105,.28)!important;color:#fff!important;';
+$encounterDateStyle = 'color:#dfff69!important;font-weight:900!important;';
+$encounterTitleStyle = 'color:#fff!important;';
+$encounterBadgeStyle = 'background:#dfff69!important;background-color:#dfff69!important;background-image:none!important;border-color:#dfff69!important;color:#041a13!important;';
+$encounterNoteStyle = 'color:#d8f7ea!important;';
+$encounterActionsStyle = 'background:rgba(2,26,19,.72)!important;background-color:rgba(2,26,19,.72)!important;background-image:none!important;border-color:rgba(223,255,105,.22)!important;color:#fff!important;';
+$encounterLatestStyle = 'background:linear-gradient(135deg,#052016,#063d2b)!important;background-color:#052016!important;background-image:linear-gradient(135deg,#052016,#063d2b)!important;border-color:rgba(223,255,105,.72)!important;color:#fff!important;';
+$encounterMutedTextStyle = 'color:#d8f7ea!important;';
 ?>
 
 <section class="<?= $showCreateSection && !$showEditSection ? 'mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">
@@ -859,17 +872,17 @@ require __DIR__ . '/includes/header.php';
 
 <?php if ($showEditSection): ?>
 <section class="encounters-overview">
-  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="programado" aria-pressed="false">
-    <div class="label">Programados</div>
-    <div class="value"><?= h((string) $scheduledCount) ?></div>
+  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="programado" aria-pressed="false" style="<?= h($encounterOverviewStyle) ?>">
+    <div class="label" style="<?= h($encounterOverviewLabelStyle) ?>">Programados</div>
+    <div class="value" style="<?= h($encounterOverviewValueStyle) ?>"><?= h((string) $scheduledCount) ?></div>
   </article>
-  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="sorteado" aria-pressed="false">
-    <div class="label">Listos para finalizar</div>
-    <div class="value"><?= h((string) $readyCount) ?></div>
+  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="sorteado" aria-pressed="false" style="<?= h($encounterOverviewStyle) ?>">
+    <div class="label" style="<?= h($encounterOverviewLabelStyle) ?>">Listos para finalizar</div>
+    <div class="value" style="<?= h($encounterOverviewValueStyle) ?>"><?= h((string) $readyCount) ?></div>
   </article>
-  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="finalizado" aria-pressed="false">
-    <div class="label">Finalizados</div>
-    <div class="value"><?= h((string) $finishedCount) ?></div>
+  <article class="stat-box encounter-overview-panel" role="button" tabindex="0" data-encounter-status-filter="finalizado" aria-pressed="false" style="<?= h($encounterOverviewStyle) ?>">
+    <div class="label" style="<?= h($encounterOverviewLabelStyle) ?>">Finalizados</div>
+    <div class="value" style="<?= h($encounterOverviewValueStyle) ?>"><?= h((string) $finishedCount) ?></div>
   </article>
 </section>
 <?php endif; ?>
@@ -1217,11 +1230,11 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <?php if ($showEditSection): ?>
-<section class="card encounters-history">
+<section class="card encounters-history" style="<?= h($encounterHistoryPanelStyle) ?>">
   <div class="section-toolbar">
     <div>
       <h3>Historial de fechas</h3>
-      <p class="small-muted">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> fechas cargadas.</p>
+      <p class="small-muted" style="color:#375647!important;">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> fechas cargadas.</p>
     </div>
   </div>
 
@@ -1241,11 +1254,11 @@ require __DIR__ . '/includes/header.php';
         $latestTeams = $historyTeamsByMatch[$latestId] ?? [];
         $latestScoreboard = admin_render_match_scoreboard($latestMatch, $latestTeams, $historyCaptainNames);
       ?>
-      <article class="encounter-latest-card">
+      <article class="encounter-latest-card" style="<?= h($encounterLatestStyle) ?>">
         <div>
-          <span class="encounter-latest-kicker">Ultima fecha cargada</span>
-          <h4><?= h((string) ($latestMatch['title'] ?: ('Fecha #' . $latestMatch['id']))) ?></h4>
-          <p>
+          <span class="encounter-latest-kicker" style="<?= h($encounterBadgeStyle) ?>">Ultima fecha cargada</span>
+          <h4 style="<?= h($encounterTitleStyle) ?>"><?= h((string) ($latestMatch['title'] ?: ('Fecha #' . $latestMatch['id']))) ?></h4>
+          <p style="<?= h($encounterMutedTextStyle) ?>">
             <?= h(date('d/m/Y H:i', strtotime((string) $latestMatch['match_date']))) ?>
             | <?= h((string) $latestParticipantsCount) ?>/<?= h((string) $latestExpectedPlayers) ?> convocados
             | <?= h(admin_match_status_label((string) $latestMatch['status'])) ?>
@@ -1324,11 +1337,12 @@ require __DIR__ . '/includes/header.php';
           data-page="<?= h((string) $cardPage) ?>"
           data-status="<?= h((string) $m['status']) ?>"
           data-search="<?= h(mb_strtolower($historySearchText, 'UTF-8')) ?>"
+          style="<?= h($encounterCardStyle) ?>"
         >
           <div class="encounter-card-head">
             <div>
-              <span class="encounter-date"><?= h(date('d/m/Y H:00', strtotime((string) $m['match_date']))) ?></span>
-              <h4><?= h((string) ($m['title'] ?: ('Fecha #' . $m['id']))) ?></h4>
+              <span class="encounter-date" style="<?= h($encounterDateStyle) ?>"><?= h(date('d/m/Y H:00', strtotime((string) $m['match_date']))) ?></span>
+              <h4 style="<?= h($encounterTitleStyle) ?>"><?= h((string) ($m['title'] ?: ('Fecha #' . $m['id']))) ?></h4>
             </div>
           </div>
 
@@ -1336,17 +1350,17 @@ require __DIR__ . '/includes/header.php';
             <?php if ($historyScoreboard !== ''): ?>
               <?= $historyScoreboard ?>
             <?php else: ?>
-              <span class="encounter-score-empty">Sin resultado</span>
+              <span class="encounter-score-empty" style="<?= h($encounterBadgeStyle) ?>">Sin resultado</span>
             <?php endif; ?>
           </div>
 
           <div class="encounter-card-status-group">
-            <span class="badge encounter-card-status <?= h($statusClass) ?>"><?= h(admin_match_status_label((string) $m['status'])) ?></span>
-            <?php if ($missingAwards): ?><span class="badge pending">Sin premios</span><?php endif; ?>
-            <?php if ($missingRating): ?><span class="badge pending">Sin puntaje</span><?php endif; ?>
+            <span class="badge encounter-card-status <?= h($statusClass) ?>" style="<?= h($encounterBadgeStyle) ?>"><?= h(admin_match_status_label((string) $m['status'])) ?></span>
+            <?php if ($missingAwards): ?><span class="badge pending" style="<?= h($encounterBadgeStyle) ?>">Sin premios</span><?php endif; ?>
+            <?php if ($missingRating): ?><span class="badge pending" style="<?= h($encounterBadgeStyle) ?>">Sin puntaje</span><?php endif; ?>
           </div>
 
-          <div class="encounter-state-note">
+          <div class="encounter-state-note" style="<?= h($encounterNoteStyle) ?>">
             <?php if ($isScheduled): ?>
               Listo para editar, sortear o iniciar modo capitanes.
             <?php elseif ($canFinalize): ?>
@@ -1356,7 +1370,7 @@ require __DIR__ . '/includes/header.php';
             <?php endif; ?>
           </div>
 
-          <div class="encounter-actions">
+          <div class="encounter-actions" style="<?= h($encounterActionsStyle) ?>">
             <?php if ($isScheduled): ?>
               <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar fecha" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>

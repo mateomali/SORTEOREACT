@@ -367,7 +367,7 @@ require __DIR__ . '/includes/header.php';
         <p class="empty-state stats-empty-state"><strong>Sin datos</strong><span>No hay jugadores con estadisticas para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($ratings as $row): ?>
-          <div class="stats-player-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-highlighted' : '' ?>" data-stats-player-row
+          <div class="stats-player-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-current-player-row is-highlighted' : '' ?>" data-stats-player-row
               data-player-name="<?= h((string) $row['name']) ?>"
               data-matches="<?= h((string) $row['partidos']) ?>"
               data-goals="<?= h((string) $row['goles']) ?>"
@@ -575,7 +575,7 @@ require __DIR__ . '/includes/header.php';
         <p class="empty-state stats-compact-empty"><strong>Sin goles</strong><span>No hay datos para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($scorers as $row): ?>
-          <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
+          <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-current-player-row is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
             <span class="stats-compact-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' - Mi perfil' : '' ?></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><strong><?= h((string) $row['goles']) ?></strong></span>
@@ -610,7 +610,7 @@ require __DIR__ . '/includes/header.php';
         <p class="empty-state stats-compact-empty"><strong>Sin capitanes</strong><span>No hay fechas finalizadas en modo capitanes para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($captains as $row): ?>
-          <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
+          <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-current-player-row is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
             <span class="stats-compact-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' - Mi perfil' : '' ?></span>
             <span><strong><?= h((string) $row['puntos']) ?></strong></span>
             <span><?= h((string) $row['partidos']) ?></span>

@@ -1,5 +1,7 @@
 DirectoryIndex index.php
 
+AddType application/vnd.android.package-archive .apk
+
 <FilesMatch "^(config\.php|database\.sql|jugadores\.csv|package(-lock)?\.json|README\.md)$">
   <IfModule mod_authz_core.c>
     Require all denied

@@ -50,7 +50,8 @@ function captureBrowserErrors(page) {
 
 async function adminLogin(page, next = 'index.php') {
   await page.goto(`${BASE_URL}/login.php?next=${encodeURIComponent(next)}`, { waitUntil: 'domcontentloaded' });
-  await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
+  await page.locator('#login-admin').evaluate((node) => { node.open = true; });
+  await page.locator('#adminPassword').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Entrar como admin|Ingresar/i }).click();
   await page.waitForURL((url) => url.href.includes(next.split('?')[0]), { timeout: 10000 });
   await page.waitForSelector('main.content');
