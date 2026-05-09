@@ -1,11 +1,11 @@
 export function StatRating({ name, label, value, onChange }) {
   const rating = Math.max(1, Math.min(6, Number(value) || 1));
   const barColor = rating >= 5.95
-    ? '#67e8f9'
+    ? '#07563d'
     : rating >= 4
-      ? '#bef264'
+      ? '#7f8f3b'
       : rating >= 3
-        ? '#fcd34d'
+        ? '#b8871b'
         : '#f87171';
 
   return (
@@ -13,9 +13,9 @@ export function StatRating({ name, label, value, onChange }) {
       <div
         className="stat-rating flex min-w-0 items-center justify-between gap-3 rounded-xl border border-lime-200/45 bg-emerald-950/70 px-3 py-2"
         style={{
-          background: '#063d2b',
-          borderColor: 'rgba(223,255,105,.28)',
-          color: '#fff',
+          background: '#f8f3e8',
+          borderColor: '#d7c9a9',
+          color: '#241f17',
         }}
         data-stat-rating
       >
@@ -42,15 +42,15 @@ export function StatRating({ name, label, value, onChange }) {
                     : rating + (['ArrowRight', 'ArrowUp'].includes(event.key) ? 1 : -1);
                 onChange(Math.max(1, Math.min(6, next)));
               }}
-              style={{ color: star <= rating ? '#f5b625' : 'rgba(216,247,234,.32)' }}
+              style={{ color: star <= rating ? '#b8871b' : '#9c9279' }}
             >
-              ★
+              â˜…
             </button>
           ))}
         </div>
-        <span className="stat-rating-value shrink-0 rounded-full bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-emerald-950 shadow-sm" style={{ background: '#dfff69', color: '#041a13' }} data-stat-rating-value>{rating}/6</span>
+        <span className="stat-rating-value shrink-0 rounded-full bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-emerald-950 shadow-sm" style={{ background: '#eadfbd', color: '#151711' }} data-stat-rating-value>{rating}/6</span>
       </div>
-      <div className="stat-rating-progress mt-1.5 h-1.5 overflow-hidden rounded-full bg-emerald-950/80" style={{ background: '#041a13' }}>
+      <div className="stat-rating-progress mt-1.5 h-1.5 overflow-hidden rounded-full bg-emerald-950/80" style={{ background: '#e4d8ba' }}>
         <span
           className="block h-full rounded-full"
           data-stat-rating-bar
@@ -60,3 +60,5 @@ export function StatRating({ name, label, value, onChange }) {
     </div>
   );
 }
+
+

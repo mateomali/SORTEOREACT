@@ -41,7 +41,7 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <section class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-  <article class="rounded-2xl border border-lime-200/35 bg-emerald-950/90 p-4 text-lime-50 shadow-xl shadow-emerald-950/20">
+  <article class="settings-panel rounded-2xl border border-lime-200/35 bg-emerald-950/90 p-4 text-lime-50 shadow-xl shadow-emerald-950/20">
     <div class="mb-4">
       <h2 class="mb-1 text-xl font-black text-lime-50">Opciones de sorteo</h2>
       <p class="text-sm font-semibold text-emerald-100/75">Estos valores se aplican automaticamente al crear una fecha nueva.</p>
@@ -73,7 +73,7 @@ require __DIR__ . '/includes/header.php';
     </form>
   </article>
 
-  <article class="rounded-2xl border border-lime-200/35 bg-emerald-950/90 p-4 text-lime-50 shadow-xl shadow-emerald-950/20">
+  <article class="settings-panel rounded-2xl border border-lime-200/35 bg-emerald-950/90 p-4 text-lime-50 shadow-xl shadow-emerald-950/20">
     <div class="mb-4">
       <h2 class="mb-1 text-xl font-black text-lime-50">Canchas alquiladas</h2>
       <p class="text-sm font-semibold text-emerald-100/75">Cada cancha define dia, hora y cupos. Crear fecha calcula el proximo dia del calendario.</p>

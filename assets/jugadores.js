@@ -29,8 +29,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     const statBarColor = (value) => {
       const rating = Number(value) || 1;
       if (rating >= 5.95) return '#67e8f9';
-      if (rating >= 4) return '#bef264';
-      if (rating >= 3) return '#fcd34d';
+      if (rating >= 4) return '#7f8f3b';
+      if (rating >= 3) return '#b8871b';
       return '#f87171';
     };
     const radarLabels = {

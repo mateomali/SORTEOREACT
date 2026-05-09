@@ -5,8 +5,10 @@ require_once __DIR__ . '/../lib/helpers.php';
 
 $title = $title ?? APP_NAME;
 $activePage = $activePage ?? '';
+$bodyClass = trim((string) ($bodyClass ?? ''));
 $flashMessages = consume_flash();
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/../assets/tailwind.css') ?: time());
+$contrastVersion = (string) (@filemtime(__DIR__ . '/../assets/contrast-overrides.css') ?: time());
 $brandLogoPath = __DIR__ . '/../assets/goodfellas-logo.png';
 $publicMenu = [
     'index.php' => 'Inicio',
@@ -73,8 +75,9 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/tailwind.css?v=<?= h($tailwindVersion) ?>">
+  <link rel="stylesheet" href="assets/contrast-overrides.css?v=<?= h($contrastVersion) ?>">
 </head>
-<body>
+<body<?= $bodyClass !== '' ? ' class="' . h($bodyClass) . '"' : '' ?>>
   <div class="app-shell">
     <header class="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 bg-emerald-950 px-2.5 py-2 text-white sm:min-h-24 sm:px-5 sm:py-3 min-[761px]:pl-0 min-[761px]:pr-5">
       <div class="flex min-w-0 items-center min-[761px]:col-start-1 min-[761px]:row-start-1">

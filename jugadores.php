@@ -408,7 +408,7 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
         $html .= '<button type="button" class="' . $starClass . '" data-stat-value="' . $i . '" role="radio" aria-checked="' . $checked . '" aria-label="' . $i . ' de 6"' . $disabledAttr . '>&#9733;</button>';
     }
     $html .= '</div>';
-    $html .= '<span class="stat-rating-value shrink-0 rounded-full bg-lime-100 font-extrabold text-emerald-950 shadow-sm ' . ($compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs') . '" style="background:#dfff69!important;background-color:#dfff69!important;color:#041a13!important;-webkit-text-fill-color:#041a13!important;border-color:rgba(223,255,105,.70)!important;" data-stat-rating-value>' . $rating . '/6</span>';
+    $html .= '<span class="stat-rating-value shrink-0 rounded-full bg-lime-100 font-extrabold text-emerald-950 shadow-sm ' . ($compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs') . '" style="background:#eadfbd!important;background-color:#eadfbd!important;color:#151711!important;-webkit-text-fill-color:#151711!important;border-color:#9f8d62!important;" data-stat-rating-value>' . $rating . '/6</span>';
     $html .= '</div>';
     $barColor = player_mobile_stat_color((float) $rating);
     $barPercent = max(0, min(100, (int) round(($rating / 6) * 100)));
@@ -420,7 +420,7 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
 function player_stats_help_panel(array $statLabels, array $statHelp, array $ratingHelp, array $fieldWeightHelp): string
 {
     $html = '<details class="player-stat-help mt-2 rounded-xl border border-lime-200/55 bg-emerald-950 text-lime-50 shadow-md shadow-emerald-950/15" data-player-stat-help>';
-    $html .= '<summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-extrabold text-lime-50">Como funciona?<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-emerald-950 shadow-sm" style="background:#dfff69!important;background-color:#dfff69!important;color:#041a13!important;-webkit-text-fill-color:#041a13!important;" aria-hidden="true">?</span></summary>';
+    $html .= '<summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-extrabold text-lime-50">Como funciona?<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-emerald-950 shadow-sm" style="background:#eadfbd!important;background-color:#eadfbd!important;color:#151711!important;-webkit-text-fill-color:#151711!important;" aria-hidden="true">?</span></summary>';
     $html .= '<div class="player-stat-help-body grid gap-3 border-t border-lime-200/30 bg-emerald-950/70 p-3 md:grid-cols-2">';
     $html .= '<section><h4 class="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-200">Stats</h4>';
     foreach ($statHelp as $field => $help) {
@@ -445,11 +445,11 @@ function player_stats_radar_panel(bool $compact = false, string $title = 'Perfil
 {
     $class = 'player-radar-card rounded-xl border border-lime-200/45 bg-emerald-950/80 p-3 text-lime-50 shadow-sm shadow-emerald-950/20';
     $class .= $compact ? ' player-radar-card-compact mt-2 p-2' : '';
-    $radarStyle = 'background:#052016!important;background-color:#052016!important;background-image:none!important;border-color:rgba(223,255,105,.28)!important;color:#fff!important;';
+    $radarStyle = 'background:#fffdf7!important;background-color:#fffdf7!important;background-image:none!important;border-color:#d7c9a9!important;color:#241f17!important;';
     return '<aside class="' . $class . '" style="' . h($radarStyle) . '" data-player-radar hidden>
       <div class="player-radar-head mb-2 flex items-center justify-between gap-2">
-        <strong class="text-xs font-extrabold uppercase tracking-wide text-lime-100" style="color:#dfff69!important;">' . h($title) . '</strong>
-        <span class="text-[10px] font-bold text-emerald-100/70" style="color:#d8f7ea!important;" data-player-radar-subtitle>Analisis de stats</span>
+        <strong class="text-xs font-extrabold uppercase tracking-wide text-lime-100" style="color:#053d2d!important;">' . h($title) . '</strong>
+        <span class="text-[10px] font-bold text-emerald-100/70" style="color:#675f4b!important;" data-player-radar-subtitle>Analisis de stats</span>
       </div>
       <div class="player-radar-canvas mx-auto flex w-full justify-center" data-player-radar-canvas></div>
     </aside>';
@@ -479,7 +479,7 @@ function player_mobile_rating_summary(array $player): string
     }
     $full = max(0, min(6, $full));
     $empty = max(0, 6 - $full - ($hasHalf ? 1 : 0));
-    $stars = str_repeat('â˜…', $full) . ($hasHalf ? 'Â½' : '') . str_repeat('â˜†', $empty);
+    $stars = str_repeat('Ã¢Ëœâ€¦', $full) . ($hasHalf ? 'Ã‚Â½' : '') . str_repeat('Ã¢Ëœâ€ ', $empty);
 
     return '<span class="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">' .
         '<span class="truncate">' . h((string) $player['positions']) . '</span>' .
@@ -488,13 +488,13 @@ function player_mobile_rating_summary(array $player): string
 function player_mobile_stat_color(float $value): string
 {
     if ($value >= 5.95) {
-        return '#67e8f9';
+        return '#07563d';
     }
     if ($value >= 4.0) {
-        return '#bef264';
+        return '#7f8f3b';
     }
     if ($value >= 3.0) {
-        return '#fcd34d';
+        return '#b8871b';
     }
     return '#f87171';
 }
@@ -608,17 +608,17 @@ function player_desktop_general_card(array $player): string
     $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
     $overallCard = player_fifa_overall(player_overall_rating($player));
     $positionsLabel = implode(' / ', $positions);
-    $overallStyle = 'background:#052016!important;background-color:#052016!important;background-image:none!important;color:#fff!important;border-color:rgba(223,255,105,.34)!important;';
-    $overallRatingStyle = 'background:#dfff69!important;background-color:#dfff69!important;color:#041a13!important;border-color:rgba(223,255,105,.85)!important;';
+    $overallStyle = 'background:#fffdf7!important;background-color:#fffdf7!important;background-image:none!important;color:#241f17!important;border-color:#d7c9a9!important;';
+    $overallRatingStyle = 'background:#eadfbd!important;background-color:#eadfbd!important;color:#151711!important;border-color:#9f8d62!important;';
 
     return '<div class="desktop-player-card-overall grid items-center gap-2 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-2" style="' . h($overallStyle) . '">' .
         '<div class="mobile-player-card-rating" style="' . h($overallRatingStyle) . '">' .
-        '<strong style="color:#041a13!important">' . h((string) $overallCard) . '</strong>' .
-        '<span style="color:#041a13!important">GEN</span>' .
+        '<strong style="color:#151711!important">' . h((string) $overallCard) . '</strong>' .
+        '<span style="color:#151711!important">GEN</span>' .
         '</div>' .
         '<div class="mobile-player-card-meta">' .
-        '<span style="color:#dfff69!important">GENERAL</span>' .
-        '<strong style="color:#fff!important">' . h($positionsLabel) . '</strong>' .
+        '<span style="color:#053d2d!important">GENERAL</span>' .
+        '<strong style="color:#151711!important">' . h($positionsLabel) . '</strong>' .
         '</div>' .
         '</div>';
 }
@@ -628,23 +628,23 @@ function player_admin_general_editor(array $player): string
     $positionsLabel = implode(' / ', $positions);
     $overallSix = player_overall_rating($player);
     $overallCard = player_fifa_overall($overallSix);
-    $overallStyle = 'background:#052016!important;background-color:#052016!important;background-image:none!important;color:#fff!important;border-color:rgba(223,255,105,.34)!important;';
-    $overallRatingStyle = 'background:#dfff69!important;background-color:#dfff69!important;color:#041a13!important;border-color:rgba(223,255,105,.85)!important;';
-    $generalRatingStyle = 'background:#063d2b!important;background-color:#063d2b!important;color:#fff!important;border:1px solid rgba(223,255,105,.24)!important;padding:.45rem .6rem!important;';
+    $overallStyle = 'background:#fffdf7!important;background-color:#fffdf7!important;background-image:none!important;color:#241f17!important;border-color:#d7c9a9!important;';
+    $overallRatingStyle = 'background:#eadfbd!important;background-color:#eadfbd!important;color:#151711!important;border-color:#9f8d62!important;';
+    $generalRatingStyle = 'background:#eadfbd!important;background-color:#eadfbd!important;color:#151711!important;border:1px solid #9f8d62!important;padding:.45rem .6rem!important;';
 
     return '<div class="desktop-player-admin-general grid gap-2">' .
         '<div class="desktop-player-card-overall grid items-center gap-2 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-2" style="' . h($overallStyle) . '">' .
         '<div class="mobile-player-card-rating" style="' . h($overallRatingStyle) . '">' .
-        '<strong style="color:#041a13!important" data-general-card-value>' . h((string) $overallCard) . '</strong>' .
-        '<span style="color:#041a13!important">GEN</span>' .
+        '<strong style="color:#151711!important" data-general-card-value>' . h((string) $overallCard) . '</strong>' .
+        '<span style="color:#151711!important">GEN</span>' .
         '</div>' .
         '<div class="mobile-player-card-meta">' .
-        '<span style="color:#dfff69!important">GENERAL</span>' .
-        '<strong style="color:#fff!important" data-general-card-position>' . h($positionsLabel) . '</strong>' .
+        '<span style="color:#053d2d!important">GENERAL</span>' .
+        '<strong style="color:#151711!important" data-general-card-position>' . h($positionsLabel) . '</strong>' .
         '</div>' .
         '</div>' .
         '<div class="player-general-rating player-general-rating-compact flex min-h-0 flex-col items-start justify-center gap-1 rounded-xl border-0 bg-transparent px-0 py-0" style="' . h($generalRatingStyle) . '" data-general-rating>' .
-        '<strong class="text-xs font-extrabold text-lime-50" data-general-rating-value>' . h(number_format($overallSix, 1)) . '/6</strong>' .
+        '<strong class="text-xs font-extrabold text-lime-50" style="color:#151711!important" data-general-rating-value>' . h(number_format($overallSix, 1)) . '/6</strong>' .
         '<span class="text-sm leading-none text-amber-300" data-general-rating-stars></span>' .
         '</div>' .
         '</div>';
@@ -700,9 +700,9 @@ function player_position_selects(array $selectedPositions, ?string $formId = nul
     foreach ($labels as $index => $label) {
         $required = $index === 0 ? ' required' : '';
         $value = (string) ($selectedPositions[$index] ?? '');
-        $html .= '<label class="player-position-select grid min-w-0 gap-1 rounded-xl border border-lime-200/20 bg-emerald-950/45 p-1.5" style="background:#063d2b!important;background-color:#063d2b!important;color:#fff!important;border-color:rgba(223,255,105,.24)!important;">';
-        $html .= '<span class="truncate text-[10px] font-black uppercase tracking-wide text-lime-100/85" style="color:#dfff69!important;">' . h($label) . '</span>';
-        $html .= '<select class="min-h-9 w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-1.5 text-xs font-extrabold text-lime-50 focus:border-lime-200 focus:ring-lime-200/30" style="background:#041a13!important;background-color:#041a13!important;color:#fff!important;border-color:rgba(223,255,105,.36)!important;" name="positions[]"' . $formAttr . $required . $disabledAttr . '>';
+        $html .= '<label class="player-position-select grid min-w-0 gap-1 rounded-xl border border-lime-200/20 bg-emerald-950/45 p-1.5" style="background:#f8f3e8!important;background-color:#f8f3e8!important;color:#241f17!important;border-color:#d7c9a9!important;">';
+        $html .= '<span class="truncate text-[10px] font-black uppercase tracking-wide text-lime-100/85" style="color:#053d2d!important;">' . h($label) . '</span>';
+        $html .= '<select class="min-h-9 w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-1.5 text-xs font-extrabold text-lime-50 focus:border-lime-200 focus:ring-lime-200/30" style="background:#fffdf7!important;background-color:#fffdf7!important;color:#241f17!important;border-color:#d7c9a9!important;" name="positions[]"' . $formAttr . $required . $disabledAttr . '>';
         if ($index > 0) {
             $html .= '<option value="">Sin posicion</option>';
         }
@@ -741,7 +741,7 @@ require __DIR__ . '/includes/header.php';
     <div class="flex flex-wrap gap-2">
       <form method="post" action="migrar_csv.php" data-no-partial>
         <input type="hidden" name="action" value="export_players">
-        <button class="btn border border-lime-200/55 bg-lime-100 text-emerald-950 hover:bg-lime-200" type="submit">Exportar CSV</button>
+        <button class="btn btn-primary" type="submit">Exportar CSV</button>
       </form>
       <a class="btn border border-lime-200/55 bg-lime-100 text-emerald-950 hover:bg-lime-200" href="migrar_csv.php">Migrar desde CSV</a>
     </div>
@@ -831,7 +831,7 @@ require __DIR__ . '/includes/header.php';
             <details id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item mobile-player-view-card scroll-mt-20 rounded-lg border border-lime-200/25 bg-emerald-950/70 text-lime-50 transition target:border-amber-200 target:bg-amber-950/70 target:shadow-sm target:ring-4 target:ring-amber-100/40" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
               <summary class="mobile-player-view-summary flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2">
                 <span class="min-w-0">
-                  <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?><?= (int) $player['id'] === $currentPlayerId ? ' · Mi perfil' : '' ?></strong>
+                  <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?><?= (int) $player['id'] === $currentPlayerId ? ' Â· Mi perfil' : '' ?></strong>
                   <small class="block text-xs text-emerald-100/75"><?= player_mobile_rating_summary($player) ?></small>
                 </span>
                 <span class="mobile-player-view-actions shrink-0 inline-flex items-center gap-1.5">
@@ -850,10 +850,10 @@ require __DIR__ . '/includes/header.php';
     </div>
   </details>
   <?php
-    $desktopTableStyle = 'background:#041a13!important;background-color:#041a13!important;background-image:none!important;color:#fff!important;border-color:rgba(183,241,61,.30)!important;';
-    $desktopHeadStyle = 'background:#052016!important;background-color:#052016!important;color:#dfff69!important;border-color:rgba(183,241,61,.24)!important;';
-    $desktopCellStyle = 'background:#08251c!important;background-color:#08251c!important;color:#fff!important;border-color:rgba(183,241,61,.16)!important;';
-    $desktopPanelStyle = 'background:rgba(255,255,255,.08)!important;background-color:rgba(255,255,255,.08)!important;color:#fff!important;border-color:rgba(223,255,105,.24)!important;';
+    $desktopTableStyle = 'background:#fffdf7!important;background-color:#fffdf7!important;background-image:none!important;color:#241f17!important;border-color:#d7c9a9!important;';
+    $desktopHeadStyle = 'background:#f8f3e8!important;background-color:#f8f3e8!important;color:#151711!important;border-color:#d7c9a9!important;';
+    $desktopCellStyle = 'background:#fffdf7!important;background-color:#fffdf7!important;color:#241f17!important;border-color:#eee4cd!important;';
+    $desktopPanelStyle = 'background:#f8f3e8!important;background-color:#f8f3e8!important;color:#241f17!important;border-color:#d7c9a9!important;';
   ?>
   <div class="table-wrap players-desktop-table <?= $isAdmin ? 'players-admin-table' : 'players-user-table' ?> block overflow-x-auto rounded-2xl border border-lime-200/45 bg-emerald-950/70 shadow-lg shadow-emerald-950/20 max-[900px]:hidden" style="<?= h($desktopTableStyle) ?>">
     <table class="editable-table table-fixed <?= $isAdmin ? 'min-w-[1160px]' : 'min-w-[1180px]' ?>" style="<?= h($desktopTableStyle) ?>">
@@ -899,7 +899,7 @@ require __DIR__ . '/includes/header.php';
               <?php if ($isAdmin): ?>
                 <input class="table-input w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-2 text-lime-50 focus:border-lime-200 focus:ring-lime-200/30" type="text" name="name" required value="<?= h((string) $player['name']) ?>" form="<?= h($rowFormId) ?>">
               <?php else: ?>
-                <strong class="player-readonly-name block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?><?= (int) $player['id'] === $currentPlayerId ? ' · Mi perfil' : '' ?></strong>
+                <strong class="player-readonly-name block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?><?= (int) $player['id'] === $currentPlayerId ? ' Â· Mi perfil' : '' ?></strong>
               <?php endif; ?>
               <button class="btn player-scout-row-button mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-lime-200/35 bg-emerald-900 px-2.5 py-1.5 text-xs font-extrabold text-lime-50 hover:bg-emerald-800" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato del jugador">
                 <?= player_action_icon('story') ?>
@@ -927,12 +927,12 @@ require __DIR__ . '/includes/header.php';
                 <div class="player-table-stat-grid grid min-w-[440px] grid-cols-3 gap-1.5">
                   <?php foreach (player_field_stat_fields() as $field): ?>
                     <div class="player-table-stat grid min-w-[140px] gap-1 rounded-xl border border-lime-200/35 bg-emerald-950/80 px-2 py-1.5 shadow-sm" style="<?= h($desktopPanelStyle) ?>" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
-                      <span class="text-[10px] font-extrabold uppercase tracking-wide text-lime-100/75"><?= h($statLabels[$field]) ?></span>
+                      <span class="text-[10px] font-extrabold uppercase tracking-wide text-lime-100/75" style="color:#241f17!important;"><?= h($statLabels[$field]) ?></span>
                       <?= stat_rating_control($field, player_effective_stat($player, $field), $rowFormId, true, false) ?>
                     </div>
                   <?php endforeach; ?>
                   <div class="player-table-stat grid min-w-[140px] gap-1 rounded-xl border border-lime-200/35 bg-emerald-950/80 px-2 py-1.5 shadow-sm" style="<?= h($desktopPanelStyle) ?>" data-goalkeeper-stat-row>
-                    <span class="text-[10px] font-extrabold uppercase tracking-wide text-lime-100/75"><?= h($statLabels['goalkeeper_skill']) ?></span>
+                    <span class="text-[10px] font-extrabold uppercase tracking-wide text-lime-100/75" style="color:#241f17!important;"><?= h($statLabels['goalkeeper_skill']) ?></span>
                     <?= stat_rating_control('goalkeeper_skill', player_effective_stat($player, 'goalkeeper_skill'), $rowFormId, true, false) ?>
                   </div>
                 </div>
@@ -1078,4 +1078,7 @@ require __DIR__ . '/includes/header.php';
 <script src="assets/jugadores.js"></script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
+
+
+
 

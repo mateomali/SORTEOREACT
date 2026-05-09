@@ -64,10 +64,10 @@ function profile_stat_color(float $value): string
         return '#67e8f9';
     }
     if ($value >= 4.0) {
-        return '#bef264';
+        return '#7f8f3b';
     }
     if ($value >= 3.0) {
-        return '#fcd34d';
+        return '#b8871b';
     }
     return '#f87171';
 }

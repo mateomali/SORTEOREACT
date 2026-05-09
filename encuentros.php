@@ -69,7 +69,7 @@ function normalize_import_player_name(string $value): string
     $value = trim($value);
     $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
     $value = mb_strtolower($value, 'UTF-8');
-    $from = ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'];
+    $from = ['Ã¡', 'Ã©', 'Ã­', 'Ã³', 'Ãº', 'Ã¼', 'Ã±'];
     $to = ['a', 'e', 'i', 'o', 'u', 'u', 'n'];
     return str_replace($from, $to, $value);
 }
@@ -701,11 +701,11 @@ function admin_history_team_label(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => '💗',
-        'AZUL' => '💙',
-        'VERDE' => '💚',
-        'NEGRO' => '🖤',
-        'NARANJA' => '🧡',
+        'ROSA' => 'ðŸ’—',
+        'AZUL' => 'ðŸ’™',
+        'VERDE' => 'ðŸ’š',
+        'NEGRO' => 'ðŸ–¤',
+        'NARANJA' => 'ðŸ§¡',
     ];
     $normalizedColor = mb_strtoupper($color, 'UTF-8');
     if (isset($heartByColor[$normalizedColor])) {
@@ -811,6 +811,15 @@ function admin_render_match_scoreboard(array $match, array $teams, array $captai
         return '';
     }
 
+    $scoreboardStyle = 'background:#0a5b0a!important;background-color:#0a5b0a!important;background-image:none!important;border-color:#094b0a!important;color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
+    $scoreboardTeamStyle = 'background:#0a5b0a!important;background-color:#0a5b0a!important;background-image:none!important;border-color:#094b0a!important;color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
+    $scoreboardTeamTextStyle = 'color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
+    $scoreboardScoreStyle = 'background:#b6f0aa!important;background-color:#b6f0aa!important;background-image:none!important;border-color:#0e900b!important;color:#021703!important;-webkit-text-fill-color:#021703!important;';
+    $renderScoreboardTeam = static function (string $label) use ($scoreboardTeamStyle, $scoreboardTeamTextStyle): string {
+        $html = admin_render_team_label($label);
+        $html = str_replace('class="team-label-with-heart"', 'class="team-label-with-heart" style="' . h($scoreboardTeamStyle) . '"', $html);
+        return str_replace('<span>', '<span style="' . h($scoreboardTeamTextStyle) . '">', $html);
+    };
     $items = [];
     foreach ($teams as $team) {
         $items[] = [
@@ -822,15 +831,15 @@ function admin_render_match_scoreboard(array $match, array $teams, array $captai
     if (count($items) !== 2) {
         $parts = [];
         foreach ($items as $item) {
-            $parts[] = '<span class="scoreboard-team">' . admin_render_team_label((string) $item['label']) . '</span>';
+            $parts[] = '<span class="scoreboard-team" style="' . h($scoreboardTeamStyle) . '">' . $renderScoreboardTeam((string) $item['label']) . '</span>';
         }
-        return '<span class="match-scoreboard match-scoreboard-multi">' . implode('<span class="scoreboard-vs">vs</span>', $parts) . '</span>';
+        return '<span class="match-scoreboard match-scoreboard-multi" style="' . h($scoreboardStyle) . '">' . implode('<span class="scoreboard-vs" style="' . h($scoreboardTeamStyle) . '">vs</span>', $parts) . '</span>';
     }
 
-    return '<span class="match-scoreboard">' .
-        '<span class="scoreboard-team">' . admin_render_team_label($items[0]['label']) . '</span>' .
-        '<strong class="scoreboard-score">' . h((string) $items[0]['goals']) . ' - ' . h((string) $items[1]['goals']) . '</strong>' .
-        '<span class="scoreboard-team scoreboard-team-away">' . admin_render_team_label($items[1]['label']) . '</span>' .
+    return '<span class="match-scoreboard" style="' . h($scoreboardStyle) . '">' .
+        '<span class="scoreboard-team" style="' . h($scoreboardTeamStyle) . '">' . $renderScoreboardTeam((string) $items[0]['label']) . '</span>' .
+        '<strong class="scoreboard-score" style="' . h($scoreboardScoreStyle) . '">' . h((string) $items[0]['goals']) . ' - ' . h((string) $items[1]['goals']) . '</strong>' .
+        '<span class="scoreboard-team scoreboard-team-away" style="' . h($scoreboardTeamStyle) . '">' . $renderScoreboardTeam((string) $items[1]['label']) . '</span>' .
         '</span>';
 }
 
@@ -844,20 +853,22 @@ $pageDescription = $showCreateSection && !$showEditSection
     : 'Administra fechas cargadas, acciones disponibles, sorteo, capitanes y resultados.';
 $title = $pageHeading . ' | ' . APP_NAME;
 $activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchListPage;
+$bodyClass = $showEditSection ? 'colorway-black-bean page-editar-partidos' : '';
 require __DIR__ . '/includes/header.php';
 
-$encounterOverviewStyle = 'background:linear-gradient(180deg,#063d2b,#041a13)!important;background-color:#063d2b!important;background-image:linear-gradient(180deg,#063d2b,#041a13)!important;border-color:rgba(223,255,105,.34)!important;color:#fff!important;';
-$encounterOverviewLabelStyle = 'color:#e7f8ef!important;';
-$encounterOverviewValueStyle = 'color:#dfff69!important;';
-$encounterHistoryPanelStyle = 'background:#f4f8f6!important;background-color:#f4f8f6!important;background-image:none!important;border-color:rgba(6,61,43,.24)!important;color:#041a13!important;';
-$encounterCardStyle = 'background:linear-gradient(180deg,#073324,#052016)!important;background-color:#073324!important;background-image:linear-gradient(180deg,#073324,#052016)!important;border-color:rgba(223,255,105,.28)!important;color:#fff!important;';
-$encounterDateStyle = 'color:#dfff69!important;font-weight:900!important;';
-$encounterTitleStyle = 'color:#fff!important;';
-$encounterBadgeStyle = 'background:#dfff69!important;background-color:#dfff69!important;background-image:none!important;border-color:#dfff69!important;color:#041a13!important;';
-$encounterNoteStyle = 'color:#d8f7ea!important;';
-$encounterActionsStyle = 'background:rgba(2,26,19,.72)!important;background-color:rgba(2,26,19,.72)!important;background-image:none!important;border-color:rgba(223,255,105,.22)!important;color:#fff!important;';
-$encounterLatestStyle = 'background:linear-gradient(135deg,#052016,#063d2b)!important;background-color:#052016!important;background-image:linear-gradient(135deg,#052016,#063d2b)!important;border-color:rgba(223,255,105,.72)!important;color:#fff!important;';
-$encounterMutedTextStyle = 'color:#d8f7ea!important;';
+$encounterOverviewStyle = 'background:#f0fced!important;background-color:#f0fced!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
+$encounterOverviewLabelStyle = 'color:#094b0a!important;';
+$encounterOverviewValueStyle = 'color:#021703!important;';
+$encounterHistoryPanelStyle = 'background:#dbf8d3!important;background-color:#dbf8d3!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
+$encounterCardStyle = 'background:#f0fced!important;background-color:#f0fced!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
+$encounterDateStyle = 'color:#097309!important;font-weight:900!important;';
+$encounterTitleStyle = 'color:#021703!important;';
+$encounterBadgeStyle = 'background:#dbf8d3!important;background-color:#dbf8d3!important;background-image:none!important;border-color:#46cd3a!important;color:#021703!important;';
+$encounterNoteStyle = 'color:#094b0a!important;';
+$encounterActionsStyle = 'background:#dbf8d3!important;background-color:#dbf8d3!important;background-image:none!important;border-color:#b6f0aa!important;color:#021703!important;';
+$encounterLatestStyle = 'background:#f0fced!important;background-color:#f0fced!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
+$encounterMutedTextStyle = 'color:#094b0a!important;';
+$encounterPrimaryActionStyle = 'background:#094b0a!important;background-color:#094b0a!important;background-image:none!important;border-color:#021703!important;color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
 ?>
 
 <section class="<?= $showCreateSection && !$showEditSection ? 'mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">
@@ -1271,13 +1282,13 @@ $encounterMutedTextStyle = 'color:#d8f7ea!important;';
           <?php if ($latestIsScheduled): ?>
             <a class="btn btn-muted" href="<?= h($matchFormPage) ?>?edit=<?= $latestId ?>">Editar</a>
             <a class="btn btn-warning" href="sorteo_legacy_csv.php?match_id=<?= $latestId ?>">Sortear</a>
-            <a class="btn btn-primary" href="capitanes.php?match_id=<?= $latestId ?>">Capitanes</a>
+            <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="capitanes.php?match_id=<?= $latestId ?>">Capitanes</a>
             <a class="btn btn-muted" href="equipos_manual.php?match_id=<?= $latestId ?>">Manual</a>
           <?php elseif ($latestCanFinalize): ?>
             <?php if ($latestCanEditCaptainFormation): ?>
               <a class="btn btn-muted" href="capitanes.php?match_id=<?= $latestId ?>#formacion">Formaciones</a>
             <?php endif; ?>
-            <a class="btn btn-primary" href="finalizar_partido.php?match_id=<?= $latestId ?>">Cargar resultado</a>
+            <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="finalizar_partido.php?match_id=<?= $latestId ?>">Cargar resultado</a>
           <?php elseif ($latestIsFinalized): ?>
             <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>">Ver resultado</a>
           <?php endif; ?>
@@ -1375,7 +1386,7 @@ $encounterMutedTextStyle = 'color:#d8f7ea!important;';
               <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar fecha" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_multiple.php?match_id=<?= $matchId ?>">Multiple</a>
-              <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
+              <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
               <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Manual</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
@@ -1388,7 +1399,7 @@ $encounterMutedTextStyle = 'color:#d8f7ea!important;';
             <?php endif; ?>
 
             <?php if ($canFinalize): ?>
-              <a class="btn btn-primary icon-finish" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar</a>
+              <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar</a>
             <?php elseif ($isFinalized): ?>
               <a class="btn btn-muted" data-short="V" href="finalizar_partido.php?match_id=<?= $matchId ?>" title="Ver resultado">Ver</a>
             <?php else: ?>
@@ -1417,14 +1428,14 @@ $encounterMutedTextStyle = 'color:#d8f7ea!important;';
                 <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar fecha</a>
                 <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear equipos</a>
                 <a class="btn btn-warning icon-dice" data-short="" href="sorteo_multiple.php?match_id=<?= $matchId ?>">Sorteo multiple</a>
-                <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
+                <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
                 <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Equipos manuales</a>
               <?php elseif ($canEditCaptainFormation): ?>
                 <a class="btn btn-muted icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>#formacion">Editar formaciones</a>
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>
-                <a class="btn btn-primary icon-finish" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar fecha</a>
+                <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar fecha</a>
               <?php elseif ($isFinalized): ?>
                 <a class="btn btn-muted" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
               <?php endif; ?>
@@ -1468,3 +1479,4 @@ $encounterMutedTextStyle = 'color:#d8f7ea!important;';
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
+

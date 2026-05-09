@@ -24,7 +24,7 @@ $awardDescriptions = [
     'putita' => 'Jugador no comprometido o problematico.',
     'ghost' => 'Jugador que erro mucho o participo poco.',
     'keeper' => 'Mejor arquero de la fecha.',
-    'goodfellas' => 'Mejor actitud y buen compañero.',
+    'goodfellas' => 'Mejor actitud y buen compaÃ±ero.',
 ];
 
 $dateFrom = trim((string) ($_GET['date_from'] ?? ''));
@@ -375,7 +375,7 @@ require __DIR__ . '/includes/header.php';
               data-pg="<?= h((string) ((int) ($row['pg'] ?? 0))) ?>"
               data-pe="<?= h((string) ((int) ($row['pe'] ?? 0))) ?>"
               data-pp="<?= h((string) ((int) ($row['pp'] ?? 0))) ?>">
-            <span class="stats-player-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' · Mi perfil' : '' ?></span>
+            <span class="stats-player-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' Â· Mi perfil' : '' ?></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><?= h((string) $row['goles']) ?></span>
             <span><?= $row['rating_promedio'] !== null ? h(number_format((float) $row['rating_promedio'], 2)) : '-' ?></span>
@@ -632,3 +632,4 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
+

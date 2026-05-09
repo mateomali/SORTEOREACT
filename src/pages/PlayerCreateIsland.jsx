@@ -21,33 +21,33 @@ const defaults = {
 };
 
 const darkPanelStyle = {
-  background: '#052016',
-  borderColor: 'rgba(223,255,105,.30)',
-  color: '#fff',
+  background: '#fffdf7',
+  borderColor: '#d7c9a9',
+  color: '#241f17',
 };
 
 const darkControlStyle = {
-  background: '#063d2b',
-  borderColor: 'rgba(223,255,105,.24)',
-  color: '#fff',
+  background: '#f8f3e8',
+  borderColor: '#d7c9a9',
+  color: '#241f17',
 };
 
 const darkInputStyle = {
-  background: '#041a13',
-  borderColor: 'rgba(223,255,105,.36)',
-  color: '#fff',
+  background: '#fffdf7',
+  borderColor: '#d7c9a9',
+  color: '#241f17',
 };
 
 const limeBadgeStyle = {
-  background: '#dfff69',
-  borderColor: 'rgba(223,255,105,.85)',
-  color: '#041a13',
+  background: '#eadfbd',
+  borderColor: '#9f8d62',
+  color: '#151711',
 };
 
 function stars(value) {
   const full = Math.floor(value);
   const half = value % 1 !== 0;
-  return `${'★'.repeat(full)}${half ? '½' : ''}${'☆'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)))}`;
+  return `${'â˜…'.repeat(full)}${half ? 'Â½' : ''}${'â˜†'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)))}`;
 }
 
 function formatRating(value) {
@@ -126,7 +126,7 @@ function PlayerRadar({ stats, labels, hasGoalkeeper }) {
   return (
     <aside className="player-radar-card rounded-2xl border border-lime-200/45 bg-emerald-950/80 p-3 text-lime-50 shadow-sm shadow-emerald-950/20" style={darkPanelStyle} data-player-radar>
       <div className="player-radar-head mb-2 flex items-end justify-between gap-2">
-        <strong className="text-sm font-extrabold text-lime-100" style={{ color: '#dfff69' }}>Perfil del jugador</strong>
+        <strong className="text-sm font-extrabold text-lime-100" style={{ color: '#053d2d' }}>Perfil del jugador</strong>
         <span className="text-xs font-bold text-emerald-100/70" style={{ color: '#d8f7ea' }}>Analisis de stats</span>
       </div>
       <div className="player-radar-canvas mx-auto w-full max-w-[260px]" data-player-radar-canvas>
@@ -198,42 +198,42 @@ export function PlayerCreateIsland({ root }) {
     };
 
     applyImportant('.desktop-player-card-overall, .player-radar-card, .stat-form-row', {
-      background: '#052016',
-      'background-color': '#052016',
+      background: '#fffdf7',
+      'background-color': '#fffdf7',
       'background-image': 'none',
-      'border-color': 'rgba(223,255,105,.30)',
-      color: '#ffffff',
+      'border-color': '#d7c9a9',
+      color: '#241f17',
     });
     applyImportant('.player-general-rating, .player-position-select, .stat-rating', {
-      background: '#063d2b',
-      'background-color': '#063d2b',
+      background: '#f8f3e8',
+      'background-color': '#f8f3e8',
       'background-image': 'none',
-      'border-color': 'rgba(223,255,105,.24)',
-      color: '#ffffff',
+      'border-color': '#d7c9a9',
+      color: '#241f17',
     });
     applyImportant('select, input[type="text"], textarea', {
-      background: '#041a13',
-      'background-color': '#041a13',
+      background: '#fffdf7',
+      'background-color': '#fffdf7',
       'background-image': 'none',
-      'border-color': 'rgba(223,255,105,.36)',
-      color: '#ffffff',
+      'border-color': '#d7c9a9',
+      color: '#241f17',
     });
     applyImportant('.mobile-player-card-rating, .mobile-player-card-rating *, .stat-rating-value, [data-stat-rating-value]', {
-      background: '#dfff69',
-      'background-color': '#dfff69',
+      background: '#eadfbd',
+      'background-color': '#eadfbd',
       'background-image': 'none',
-      'border-color': 'rgba(223,255,105,.85)',
-      color: '#041a13',
+      'border-color': '#9f8d62',
+      color: '#151711',
     });
     applyImportant('.mobile-player-card-meta span, .player-radar-head strong, .stat-form-row > label, .player-position-select > span', {
-      color: '#dfff69',
+      color: '#053d2d',
     });
     applyImportant('.mobile-player-card-meta strong, .player-radar-head span', {
-      color: '#d8f7ea',
+      color: '#151711',
     });
     applyImportant('.stat-rating-progress', {
-      background: '#041a13',
-      'background-color': '#041a13',
+      background: '#e4d8ba',
+      'background-color': '#e4d8ba',
     });
   }, [root, selectedPositions.length]);
 
@@ -279,16 +279,16 @@ export function PlayerCreateIsland({ root }) {
             <div className="desktop-player-admin-general grid gap-2">
               <div className="desktop-player-card-overall grid items-center gap-2 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-2" style={darkPanelStyle}>
                 <div className="mobile-player-card-rating" style={limeBadgeStyle}>
-                  <strong style={{ color: '#041a13' }} data-general-card-value>{generalCard}</strong>
-                  <span style={{ color: '#041a13' }}>GEN</span>
+                  <strong style={{ color: '#151711' }} data-general-card-value>{generalCard}</strong>
+                  <span style={{ color: '#151711' }}>GEN</span>
                 </div>
                 <div className="mobile-player-card-meta">
-                  <span style={{ color: '#dfff69' }}>GENERAL</span>
-                  <strong style={{ color: '#fff' }} data-general-card-position>{positionLabel}</strong>
+                  <span style={{ color: '#053d2d' }}>GENERAL</span>
+                  <strong style={{ color: '#151711' }} data-general-card-position>{positionLabel}</strong>
                 </div>
               </div>
               <div className="player-general-rating player-general-rating-compact flex min-h-0 flex-col items-start justify-center gap-1 rounded-xl border-0 bg-transparent px-0 py-0" style={{ ...darkControlStyle, padding: '.45rem .6rem' }} data-general-rating>
-                <strong className="text-xs font-extrabold text-lime-50" style={{ color: '#fff' }} data-general-rating-value>{formatRating(general)}/6</strong>
+                <strong className="text-xs font-extrabold text-lime-50" style={{ color: '#151711' }} data-general-rating-value>{formatRating(general)}/6</strong>
                 <span className="text-sm leading-none text-amber-300" data-general-rating-stars>{stars(general)}</span>
               </div>
             </div>
@@ -313,7 +313,7 @@ export function PlayerCreateIsland({ root }) {
           <div className="player-position-selects grid grid-cols-1 gap-1.5" data-player-position-selects>
             {['Primaria', 'Secundaria'].map((label, index) => (
               <label className="player-position-select grid min-w-0 gap-1 rounded-xl border border-lime-200/20 bg-emerald-950/45 p-1.5" style={darkControlStyle} key={label}>
-                <span className="truncate text-[10px] font-black uppercase tracking-wide text-lime-100/85" style={{ color: '#dfff69' }}>{label}</span>
+                <span className="truncate text-[10px] font-black uppercase tracking-wide text-lime-100/85" style={{ color: '#053d2d' }}>{label}</span>
                 <select
                   className="min-h-9 w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-1.5 text-xs font-extrabold text-lime-50 focus:border-lime-200 focus:ring-lime-200/30"
                   style={darkInputStyle}
@@ -343,7 +343,7 @@ export function PlayerCreateIsland({ root }) {
             {fieldOrder.map((field) => {
               return (
                 <div className="form-row stat-form-row rounded-xl border border-lime-200/35 bg-emerald-950/75 p-3 shadow-sm" style={darkPanelStyle} data-attack-stat-row={field === 'attack' ? '' : undefined} key={field}>
-                  <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100" style={{ color: '#dfff69' }}>{labels[field] || field}</label>
+                  <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100" style={{ color: '#053d2d' }}>{labels[field] || field}</label>
                   <StatRating
                     name={field}
                     label={labels[field] || field}
@@ -355,7 +355,7 @@ export function PlayerCreateIsland({ root }) {
             })}
             {hasGoalkeeper ? (
               <div className="form-row stat-form-row rounded-xl border border-lime-200/35 bg-emerald-950/75 p-3 shadow-sm" style={darkPanelStyle} data-goalkeeper-stat-row>
-                <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100" style={{ color: '#dfff69' }}>{labels.goalkeeper_skill || 'Habilidad de arquero'}</label>
+                <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100" style={{ color: '#053d2d' }}>{labels.goalkeeper_skill || 'Habilidad de arquero'}</label>
                 <StatRating
                   name="goalkeeper_skill"
                   label={labels.goalkeeper_skill || 'Habilidad de arquero'}
@@ -401,3 +401,5 @@ export function PlayerCreateIsland({ root }) {
     </details>
   );
 }
+
+
