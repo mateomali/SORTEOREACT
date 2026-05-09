@@ -6,8 +6,10 @@ require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/directivos.php';
+require_once __DIR__ . '/lib/sorteo_multiple.php';
 
 ensure_control_schema();
+ensure_multiple_draw_schema();
 directive_publish_due_results();
 
 $showHistoryPage = defined('SHOW_HISTORY_PAGE') && SHOW_HISTORY_PAGE;
@@ -304,15 +306,6 @@ if ($selectedMatch && (string) $selectedMatch['status'] === 'finalizado' && $par
             'value' => (string) $savedMatchAwards[$code]['name'],
         ];
     }
-}
-
-function match_status_label(string $status): string
-{
-    return match ($status) {
-        'finalizado' => 'Finalizado',
-        'sorteado' => 'Equipos formados',
-        default => 'Programado',
-    };
 }
 
 function team_score_line(array $teamGoals, array $teamLabels = []): string
@@ -963,9 +956,14 @@ require __DIR__ . '/includes/header.php';
     <h1><?= $showHistoryPage ? 'Historial de fechas' : 'GOODFELLAS' ?></h1>
     <p class="small-muted"><?= $showHistoryPage ? 'Consulta fechas por dia, capitan o resultado.' : 'Gestion de fechas, equipos, jugadores y rendimiento del grupo.' ?></p>
   </div>
-  <?php if (is_admin()): ?>
-    <a class="btn btn-primary" href="editar_partidos.php">Panel admin</a>
-  <?php endif; ?>
+  <div class="home-page-actions">
+    <?php if (!$showHistoryPage): ?>
+      <a class="btn btn-primary home-app-download" href="goodfellas.apk" download>Descarga la app</a>
+    <?php endif; ?>
+    <?php if (is_admin()): ?>
+      <a class="btn btn-primary" href="editar_partidos.php">Panel admin</a>
+    <?php endif; ?>
+  </div>
 </section>
 
 <?php if (!$showHistoryPage && $matches): ?>
@@ -1009,6 +1007,17 @@ require __DIR__ . '/includes/header.php';
     $headerHasDetailPanel = !$showHistoryPage
         && $selectedMatch
         && !($headerShowCaptainLive && (int) $selectedMatchId === (int) $headerMatch['id']);
+    multiple_draw_finalize_if_due($headerMatch);
+    $headerMatch = repo_match_by_id((int) $headerMatch['id']) ?: $headerMatch;
+    $headerMultiDrawOptions = multiple_draw_options((int) $headerMatch['id']);
+    $headerMultiDrawWinnerId = (int) ($headerMatch['multi_draw_winner_option_id'] ?? 0);
+    $headerShowMultiDrawVote = $headerMultiDrawOptions
+        && $headerMultiDrawWinnerId <= 0
+        && (string) ($headerMatch['status'] ?? '') === 'programado';
+    $headerMultiDrawCanVote = $headerShowMultiDrawVote && multiple_draw_user_can_vote($headerMatch);
+    $headerMultiDrawSelectedOptionId = current_user_id() > 0 ? multiple_draw_vote_for_user((int) $headerMatch['id'], current_user_id()) : 0;
+    $headerMultiDrawDeadline = multiple_draw_deadline($headerMatch);
+    $headerMultiDrawParticipantCount = count(multiple_draw_participant_ids((int) $headerMatch['id']));
   ?>
   <section class="card home-next-card <?= (string) $headerMatch['status'] === 'finalizado' ? 'home-next-card-with-result' : ($headerHasCaptains ? 'home-next-card-with-captain' : '') ?>">
     <div class="home-next-main">
@@ -1047,6 +1056,42 @@ require __DIR__ . '/includes/header.php';
       </button>
     <?php endif; ?>
   </section>
+
+  <?php if ($headerShowMultiDrawVote): ?>
+    <section class="card home-multi-draw-card">
+      <div class="section-toolbar home-multi-draw-head">
+        <div>
+          <span class="home-kicker">Votacion abierta</span>
+          <h3>Elegir sorteo de la fecha</h3>
+          <p class="small-muted">
+            <?= h((string) count($headerMultiDrawOptions)) ?> variantes publicadas.
+            Votan solo los <?= h((string) $headerMultiDrawParticipantCount) ?> jugadores convocados hasta <?= h(date('d/m/Y H:i', $headerMultiDrawDeadline)) ?>.
+          </p>
+        </div>
+        <?php if ($headerMultiDrawCanVote): ?>
+          <a class="btn btn-primary" href="votar_sorteo.php?match_id=<?= (int) $headerMatch['id'] ?>">
+            <?= $headerMultiDrawSelectedOptionId > 0 ? 'Cambiar mi voto' : 'Votar ahora' ?>
+          </a>
+        <?php elseif (!is_player_user()): ?>
+          <a class="btn btn-muted" href="login.php?next=<?= h(rawurlencode('votar_sorteo.php?match_id=' . (int) $headerMatch['id'])) ?>">Ingresar para votar</a>
+        <?php else: ?>
+          <span class="badge pending">Solo convocados</span>
+        <?php endif; ?>
+      </div>
+
+      <?php if ($headerMultiDrawSelectedOptionId > 0): ?>
+        <p class="small-muted home-multi-draw-vote-status">Tu voto esta guardado. Podes cambiarlo mientras la votacion siga abierta.</p>
+      <?php else: ?>
+        <p class="small-muted home-multi-draw-vote-status">Esperando votos de los jugadores logueados convocados para completar la eleccion.</p>
+      <?php endif; ?>
+
+      <div class="grid gap-3 lg:grid-cols-3">
+        <?php foreach ($headerMultiDrawOptions as $option): ?>
+          <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id']) ?>
+        <?php endforeach; ?>
+      </div>
+    </section>
+  <?php endif; ?>
 <?php endif; ?>
 
 <?php if (!$showHistoryPage && !empty($headerShowCaptainLive) && !empty($headerMatch)): ?>

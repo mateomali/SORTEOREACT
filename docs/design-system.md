@@ -2,6 +2,30 @@
 
 Esta guia resume las reglas visuales que deben mantenerse para que el sitio GOODFELLAS siga consistente en desktop y mobile.
 
+## Regla obligatoria: Tailwind puro
+
+Desde ahora, todo contenido visual nuevo debe hacerse con **Tailwind CSS puro, directamente en el markup**.
+
+- No crear nuevas reglas CSS heredadas para componentes visuales.
+- No usar clases custom como fuente de estilos nuevos. Las clases propias solo pueden quedar como hooks JS, anchors, identificadores semanticos o compatibilidad temporal.
+- No usar `style=""` para layout, color, spacing, tipografia, sombras, bordes o responsive.
+- No agregar bloques `<style>` en paginas PHP.
+- No ampliar `assets/tailwind.input.css` para componentes nuevos, salvo tokens/base globales realmente compartidos o migraciones temporales justificadas.
+- Si una vista se repite en varias partes del sitio, crear un render/componente compartido y aplicar ahi las clases Tailwind.
+- Las reglas CSS antiguas se consideran deuda tecnica: pueden seguir funcionando, pero todo trabajo nuevo debe evitar depender de ellas.
+
+Ejemplo esperado:
+
+```php
+<article class="rounded-2xl border border-lime-200/35 bg-emerald-950/85 p-3 shadow-md shadow-emerald-950/15">
+```
+
+Ejemplo a evitar:
+
+```php
+<article class="nueva-card-custom">
+```
+
 ## Principios
 
 - Mobile primero en el rango 360px a 430px, con prueba adicional entre 320px y 480px.
@@ -74,7 +98,8 @@ Esta guia resume las reglas visuales que deben mantenerse para que el sitio GOOD
 ## Checklist antes de cerrar cambios UI
 
 - Ejecutar `npm run build:css`.
-- Revisar que no haya `style=`, `<style>`, `!important` ni reglas viejas fuera de Tailwind.
+- Revisar que no haya nuevos `style=`, `<style>`, `!important` ni reglas visuales custom fuera de Tailwind.
+- Confirmar que los componentes nuevos usan Tailwind directo en el markup.
 - Probar mobile 360px y desktop.
 - Verificar que no haya scroll horizontal.
 - Verificar PHP con `php -l` en paginas modificadas o en todas las paginas raiz.

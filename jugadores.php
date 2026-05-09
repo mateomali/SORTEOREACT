@@ -710,7 +710,16 @@ function player_position_selects(array $selectedPositions, ?string $formId = nul
     return $html;
 }
 
+$currentPlayerId = current_player_id();
 $players = repo_all_players($isAdmin ? false : true);
+if ($currentPlayerId > 0) {
+    usort($players, static function (array $a, array $b) use ($currentPlayerId): int {
+        $aIsCurrent = (int) $a['id'] === $currentPlayerId ? 1 : 0;
+        $bIsCurrent = (int) $b['id'] === $currentPlayerId ? 1 : 0;
+        return ($bIsCurrent <=> $aIsCurrent)
+            ?: strcmp((string) $a['name'], (string) $b['name']);
+    });
+}
 $editDialogPlayerId = $isAdmin ? max(0, (int) ($_GET['edit_player'] ?? 0)) : 0;
 $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores.php';
@@ -816,7 +825,7 @@ require __DIR__ . '/includes/header.php';
             <details id="player-<?= (int) $player['id'] ?>" class="mobile-player-list-item mobile-player-view-card scroll-mt-20 rounded-lg border border-lime-200/25 bg-emerald-950/70 text-lime-50 transition target:border-amber-200 target:bg-amber-950/70 target:shadow-sm target:ring-4 target:ring-amber-100/40" data-player-table-row data-player-id="<?= (int) $player['id'] ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
               <summary class="mobile-player-view-summary flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2">
                 <span class="min-w-0">
-                  <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?></strong>
+                  <strong class="block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?><?= (int) $player['id'] === $currentPlayerId ? ' · Mi perfil' : '' ?></strong>
                   <small class="block text-xs text-emerald-100/75"><?= player_mobile_rating_summary($player) ?></small>
                 </span>
                 <span class="mobile-player-view-actions shrink-0 inline-flex items-center gap-1.5">
@@ -878,7 +887,7 @@ require __DIR__ . '/includes/header.php';
               <?php if ($isAdmin): ?>
                 <input class="table-input w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-2 text-lime-50 focus:border-lime-200 focus:ring-lime-200/30" type="text" name="name" required value="<?= h((string) $player['name']) ?>" form="<?= h($rowFormId) ?>">
               <?php else: ?>
-                <strong class="player-readonly-name block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?></strong>
+                <strong class="player-readonly-name block text-sm font-extrabold text-lime-50"><?= h((string) $player['name']) ?><?= (int) $player['id'] === $currentPlayerId ? ' · Mi perfil' : '' ?></strong>
               <?php endif; ?>
               <button class="btn player-scout-row-button mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-lime-200/35 bg-emerald-900 px-2.5 py-1.5 text-xs font-extrabold text-lime-50 hover:bg-emerald-800" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato del jugador">
                 <?= player_action_icon('story') ?>

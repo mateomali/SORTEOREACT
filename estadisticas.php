@@ -30,6 +30,7 @@ $awardDescriptions = [
 $dateFrom = trim((string) ($_GET['date_from'] ?? ''));
 $dateTo = trim((string) ($_GET['date_to'] ?? ''));
 $minMatches = 1;
+$currentPlayerId = current_player_id();
 
 $where = ["m.status = 'finalizado'"];
 $params = [];
@@ -151,11 +152,11 @@ LEFT JOIN (
 ) ac ON ac.player_id = p.id
 GROUP BY p.id, p.name, p.positions
 HAVING COUNT(DISTINCT mp.match_id) >= :min_matches
-ORDER BY partidos DESC, rating_promedio DESC, indice_rendimiento DESC, p.name ASC
+ORDER BY CASE WHEN p.id = :current_player_id THEN 0 ELSE 1 END, partidos DESC, rating_promedio DESC, indice_rendimiento DESC, p.name ASC
 LIMIT 100";
 
 $stmtRatings = $pdo->prepare($ratingSql);
-$stmtRatings->execute($params + $awardParams + ['min_matches' => $minMatches]);
+$stmtRatings->execute($params + $awardParams + ['min_matches' => $minMatches, 'current_player_id' => $currentPlayerId]);
 $ratings = $stmtRatings->fetchAll();
 
 $playerMatchDetails = [];
@@ -366,7 +367,7 @@ require __DIR__ . '/includes/header.php';
         <p class="empty-state stats-empty-state"><strong>Sin datos</strong><span>No hay jugadores con estadisticas para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($ratings as $row): ?>
-          <div class="stats-player-grid-row" data-stats-player-row
+          <div class="stats-player-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-highlighted' : '' ?>" data-stats-player-row
               data-player-name="<?= h((string) $row['name']) ?>"
               data-matches="<?= h((string) $row['partidos']) ?>"
               data-goals="<?= h((string) $row['goles']) ?>"
@@ -374,7 +375,7 @@ require __DIR__ . '/includes/header.php';
               data-pg="<?= h((string) ((int) ($row['pg'] ?? 0))) ?>"
               data-pe="<?= h((string) ((int) ($row['pe'] ?? 0))) ?>"
               data-pp="<?= h((string) ((int) ($row['pp'] ?? 0))) ?>">
-            <span class="stats-player-name"><?= h((string) $row['name']) ?></span>
+            <span class="stats-player-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' · Mi perfil' : '' ?></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><?= h((string) $row['goles']) ?></span>
             <span><?= $row['rating_promedio'] !== null ? h(number_format((float) $row['rating_promedio'], 2)) : '-' ?></span>
@@ -574,8 +575,8 @@ require __DIR__ . '/includes/header.php';
         <p class="empty-state stats-compact-empty"><strong>Sin goles</strong><span>No hay datos para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($scorers as $row): ?>
-          <div class="stats-compact-grid-row" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
-            <span class="stats-compact-name"><?= h((string) $row['name']) ?></span>
+          <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
+            <span class="stats-compact-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' - Mi perfil' : '' ?></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><strong><?= h((string) $row['goles']) ?></strong></span>
             <span><?= h(number_format((float) $row['gol_por_partido'], 2)) ?></span>
@@ -609,8 +610,8 @@ require __DIR__ . '/includes/header.php';
         <p class="empty-state stats-compact-empty"><strong>Sin capitanes</strong><span>No hay fechas finalizadas en modo capitanes para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($captains as $row): ?>
-          <div class="stats-compact-grid-row" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
-            <span class="stats-compact-name"><?= h((string) $row['name']) ?></span>
+          <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
+            <span class="stats-compact-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' - Mi perfil' : '' ?></span>
             <span><strong><?= h((string) $row['puntos']) ?></strong></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><?= h((string) $row['ganados']) ?></span>

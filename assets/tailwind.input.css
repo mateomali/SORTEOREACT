@@ -110,6 +110,14 @@
     @apply mb-4 flex flex-wrap items-center justify-between gap-3;
   }
 
+  .home-page-actions {
+    @apply flex flex-wrap items-center justify-end gap-2;
+  }
+
+  .home-app-download {
+    @apply border border-lime-200/45 bg-lime-200 text-emerald-950 shadow-md shadow-lime-200/12 hover:border-lime-100 hover:bg-lime-100 hover:text-emerald-950;
+  }
+
   .card {
     @apply rounded-2xl border border-lime-200/35 bg-emerald-950/95 p-4 shadow-sm shadow-emerald-950/30;
   }
@@ -455,6 +463,12 @@
     @apply bg-amber-50;
   }
 
+  .stats-player-grid-row.is-highlighted > span,
+  .stats-player-grid-row.is-highlighted .stats-player-name,
+  .stats-player-grid-row.is-highlighted strong {
+    @apply text-emerald-950;
+  }
+
   .stats-player-name {
     @apply font-extrabold text-lime-50;
   }
@@ -496,6 +510,12 @@
 
   .stats-compact-grid-row.is-highlighted > span {
     @apply bg-amber-50;
+  }
+
+  .stats-compact-grid-row.is-highlighted > span,
+  .stats-compact-grid-row.is-highlighted .stats-compact-name,
+  .stats-compact-grid-row.is-highlighted strong {
+    @apply text-emerald-950;
   }
 
   .stats-compact-name {
@@ -694,6 +714,27 @@
 
   .home-next-card .match-detail-toggle-btn {
     @apply min-h-10 justify-center border-lime-200/45 bg-emerald-950 px-4 py-2 text-lime-50 shadow-md shadow-emerald-950/18 hover:border-lime-200/70 hover:bg-lime-100/15 hover:text-lime-100;
+  }
+
+  .home-multi-draw-card {
+    @apply mb-3 border-lime-200/45 bg-emerald-950/90 shadow-lg shadow-emerald-950/18;
+  }
+
+  .home-multi-draw-head {
+    @apply mb-3 items-start gap-3;
+  }
+
+  .home-multi-draw-head h3 {
+    @apply mb-1;
+  }
+
+  .home-multi-draw-head .btn,
+  .home-multi-draw-head .badge {
+    @apply shrink-0;
+  }
+
+  .home-multi-draw-vote-status {
+    @apply mb-3 rounded-xl border border-lime-200/25 bg-lime-100/10 px-3 py-2 font-semibold text-lime-50;
   }
 
   .home-kicker {
@@ -2510,8 +2551,18 @@
     @apply min-w-32 cursor-grab rounded-2xl border border-white/25 bg-emerald-950/82 px-2.5 py-2.5 text-white shadow-lg shadow-emerald-950/30 ring-1 ring-white/10 backdrop-blur-[2px] transition;
   }
 
+  .captain-formation-player.is-readonly,
+  .captain-formation-readonly .captain-formation-player {
+    @apply cursor-default;
+  }
+
   .captain-formation-player:active {
     @apply cursor-grabbing;
+  }
+
+  .captain-formation-player.is-readonly:active,
+  .captain-formation-readonly .captain-formation-player:active {
+    @apply cursor-default;
   }
 
   .captain-formation-player.is-dragging {
@@ -3275,6 +3326,10 @@
       @apply mb-3 gap-2;
     }
 
+    .home-page-actions {
+      @apply grid w-full grid-cols-1 gap-2;
+    }
+
     .page-head .btn {
       justify-self: stretch;
     }
@@ -3330,6 +3385,16 @@
 
     .home-captain-live-status {
       @apply text-center;
+    }
+
+    .home-multi-draw-head {
+      @apply grid gap-2;
+      grid-template-columns: 1fr;
+    }
+
+    .home-multi-draw-head .btn,
+    .home-multi-draw-head .badge {
+      @apply w-full justify-center text-center;
     }
 
     .btn-row {
@@ -5467,6 +5532,393 @@ textarea,
 
   .mobile-player-stat-help {
     @apply rounded-b-xl;
+  }
+
+  .profile-page-head {
+    @apply items-start;
+  }
+
+  .profile-card-panel {
+    @apply mx-0 mb-0;
+  }
+
+  .profile-description-card {
+    @apply min-w-0;
+  }
+
+  .profile-next-match-head {
+    @apply mb-2 flex flex-wrap items-center justify-between gap-2;
+  }
+
+  .profile-next-match-head h3 {
+    @apply mb-0;
+  }
+
+  .profile-next-vote-pill {
+    @apply inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-xs font-black uppercase leading-none shadow-sm;
+  }
+
+  .profile-next-vote-pill.is-open {
+    @apply border-lime-200/70 bg-lime-200 text-emerald-950 shadow-lime-200/15;
+  }
+
+  .profile-next-vote-pill.is-closed {
+    @apply border-emerald-200/25 bg-emerald-950/75 text-emerald-100/80 shadow-emerald-950/10;
+  }
+
+  .profile-home-next-card {
+    @apply mb-3;
+  }
+
+  .profile-next-card-actions {
+    @apply flex flex-wrap items-center justify-end gap-2;
+  }
+
+  .profile-next-match-detail {
+    @apply mb-3;
+  }
+
+  .profile-current-participant {
+    @apply border-lime-100 bg-lime-100 text-emerald-950 shadow-md shadow-lime-200/20;
+  }
+
+  .profile-current-participant strong,
+  .profile-current-participant small {
+    @apply text-emerald-950;
+  }
+
+  @media (max-width: 760px) {
+    .profile-page-head {
+      @apply mb-3 gap-2;
+    }
+
+    .profile-page-head > div {
+      @apply min-w-0;
+    }
+
+    .profile-page-head h1 {
+      @apply text-2xl leading-tight;
+    }
+
+    .profile-page-head .small-muted {
+      @apply text-xs leading-snug;
+    }
+
+    .profile-page-head .btn {
+      @apply w-full min-h-10 rounded-xl px-3 py-2 text-xs;
+    }
+
+    .profile-identity-grid.grid.cols-3 {
+      @apply gap-2;
+      grid-template-columns: 1fr !important;
+    }
+
+    .profile-identity-grid .stat-box {
+      @apply grid items-center gap-2 rounded-xl px-3 py-2.5;
+      grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+    }
+
+    .profile-identity-grid .stat-box .label {
+      @apply text-[10px] font-black uppercase leading-tight text-lime-100/75;
+    }
+
+    .profile-identity-grid .stat-box .value {
+      @apply min-w-0 truncate text-right text-sm leading-tight text-lime-100;
+    }
+
+    .profile-summary-grid.grid.cols-3 {
+      @apply gap-2;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .profile-summary-grid .stat-box {
+      @apply rounded-xl px-2.5 py-2 text-center;
+    }
+
+    .profile-summary-grid .stat-box .label {
+      @apply text-[10px] font-black uppercase leading-tight;
+    }
+
+    .profile-summary-grid .stat-box .value {
+      @apply mt-0.5 text-xl leading-none;
+    }
+
+    .profile-player-card-section.card,
+    .profile-functions-section.card {
+      @apply rounded-2xl p-3;
+    }
+
+    .profile-section-toolbar {
+      @apply mb-3 grid gap-2;
+      grid-template-columns: 1fr !important;
+    }
+
+    .profile-section-toolbar h3 {
+      @apply mb-1 text-base leading-tight;
+    }
+
+    .profile-section-toolbar .small-muted {
+      @apply text-xs leading-snug;
+    }
+
+    .profile-section-toolbar .btn {
+      @apply w-full min-h-10 rounded-xl px-3 py-2 text-xs;
+    }
+
+    .profile-detail-layout {
+      @apply gap-2;
+    }
+
+    .profile-card-panel.mobile-player-profile-panel {
+      @apply rounded-xl border-lime-200/35 bg-emerald-950/70 p-2.5 shadow-md;
+    }
+
+    .profile-card-inner {
+      @apply gap-2;
+    }
+
+    .profile-card-panel .desktop-player-card-overall {
+      @apply rounded-xl px-2.5 py-2;
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .profile-card-panel .desktop-player-card-overall .mobile-player-card-rating {
+      @apply h-14 w-14 rounded-lg;
+    }
+
+    .profile-card-panel .desktop-player-card-overall .mobile-player-card-rating strong {
+      @apply text-2xl;
+    }
+
+    .profile-card-panel .desktop-player-card-overall .mobile-player-card-meta span {
+      @apply text-[9px] leading-none;
+    }
+
+    .profile-card-panel .desktop-player-card-overall .mobile-player-card-meta strong {
+      @apply truncate text-lg leading-tight whitespace-normal;
+    }
+
+    .profile-card-panel .player-radar-card {
+      @apply mt-0 rounded-xl p-2;
+    }
+
+    .profile-card-panel .player-radar-head {
+      @apply mb-1;
+    }
+
+    .profile-card-panel .player-radar-head strong,
+    .profile-card-panel .player-radar-head span {
+      @apply text-[9px] leading-tight;
+    }
+
+    .profile-card-panel .player-radar-canvas svg {
+      max-width: min(100%, 190px) !important;
+    }
+
+    .profile-card-panel .mobile-player-stat-explainer {
+      @apply rounded-lg;
+    }
+
+    .profile-card-panel .mobile-player-stat-explainer summary {
+      @apply p-2;
+    }
+
+    .profile-card-panel .mobile-player-stat-explainer summary span {
+      @apply text-[11px] leading-tight;
+    }
+
+    .profile-card-panel .mobile-player-stat-explainer summary strong {
+      @apply px-1.5 py-0.5 text-[10px];
+    }
+
+    .profile-card-panel .mobile-player-stat-help {
+      @apply px-2 pb-2 pt-1.5 text-[11px];
+    }
+
+    .profile-description-card.stat-box {
+      @apply rounded-xl p-3;
+    }
+
+    .profile-description-card .label {
+      @apply text-[10px] font-black uppercase text-lime-100/75;
+    }
+
+    .profile-description-card p {
+      @apply text-xs leading-relaxed;
+    }
+
+    .profile-description-card .chip {
+      @apply px-2 py-1 text-[10px];
+    }
+
+    .profile-feature-grid.grid.cols-3 {
+      @apply gap-2;
+      grid-template-columns: 1fr !important;
+    }
+
+    .profile-feature-grid .stat-box {
+      @apply rounded-xl p-3;
+    }
+
+    .profile-feature-grid .stat-box .value {
+      @apply text-base leading-tight;
+    }
+
+    .profile-feature-grid .stat-box .small-muted {
+      @apply mt-1 text-xs leading-snug;
+    }
+
+    .profile-next-match-head {
+      @apply mb-2 grid gap-2;
+      grid-template-columns: 1fr;
+    }
+
+    .profile-next-match-head h3 {
+      @apply text-base leading-tight;
+    }
+
+    .profile-next-vote-pill {
+      @apply w-fit min-h-7 px-2.5 py-1 text-[10px] leading-none;
+    }
+
+    .profile-next-card-actions {
+      @apply grid w-full grid-cols-1 gap-2;
+    }
+
+    .profile-next-card-actions .profile-next-vote-pill,
+    .profile-next-card-actions .btn {
+      @apply w-full justify-center;
+    }
+  }
+
+  .multi-draw-page-head {
+    @apply items-start;
+  }
+
+  .multi-draw-summary .stat-box {
+    @apply shadow-md shadow-emerald-950/15;
+  }
+
+  .multi-draw-variants-card,
+  .multi-draw-close-card,
+  .multi-draw-empty-card {
+    @apply border-lime-200/45 bg-emerald-950/88 shadow-lg shadow-emerald-950/18;
+  }
+
+  .multi-draw-section-toolbar {
+    @apply gap-3;
+  }
+
+  @media (max-width: 760px) {
+    .multi-draw-page-head {
+      @apply mb-3 gap-2;
+    }
+
+    .multi-draw-page-head > div {
+      @apply min-w-0;
+    }
+
+    .multi-draw-page-head h1 {
+      @apply text-2xl leading-tight;
+    }
+
+    .multi-draw-page-head .small-muted {
+      @apply text-xs leading-snug;
+    }
+
+    .multi-draw-page-head .btn {
+      @apply w-full min-h-10 rounded-xl px-3 py-2 text-xs;
+    }
+
+    .multi-draw-summary.grid.cols-3 {
+      @apply gap-2;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    .multi-draw-summary .stat-box {
+      @apply rounded-xl px-2 py-2 text-center;
+    }
+
+    .multi-draw-summary .stat-box .label {
+      @apply text-[9px] font-black uppercase leading-tight text-lime-100/75;
+    }
+
+    .multi-draw-summary .stat-box .value {
+      @apply mt-1 text-lg leading-none text-lime-100;
+    }
+
+    .multi-draw-variants-card.card,
+    .multi-draw-close-card.card,
+    .multi-draw-empty-card.card {
+      @apply rounded-2xl p-3;
+    }
+
+    .multi-draw-section-toolbar {
+      @apply mb-3 grid gap-2;
+      grid-template-columns: 1fr !important;
+    }
+
+    .multi-draw-section-toolbar h3,
+    .multi-draw-close-card h3 {
+      @apply mb-1 text-base leading-tight;
+    }
+
+    .multi-draw-section-toolbar .small-muted,
+    .multi-draw-close-card .small-muted,
+    .multi-draw-empty-card .small-muted {
+      @apply text-xs leading-snug;
+    }
+
+    .multi-draw-section-toolbar form,
+    .multi-draw-section-toolbar .btn,
+    .multi-draw-close-card form,
+    .multi-draw-close-card .btn {
+      @apply w-full;
+    }
+
+    .multi-draw-section-toolbar .btn,
+    .multi-draw-close-card .btn,
+    .multi-draw-variants-card > form .btn {
+      @apply min-h-10 rounded-xl px-3 py-2 text-xs;
+    }
+  }
+
+  .profile-next-formations {
+    @apply grid gap-3 lg:grid-cols-2;
+  }
+
+  .profile-next-team-card {
+    @apply !border-lime-200/45 !bg-emerald-950/80;
+  }
+
+  .profile-next-team-formation {
+    @apply !min-h-0 !rounded-2xl;
+  }
+
+  .profile-next-player-card {
+    @apply relative;
+  }
+
+  .profile-next-player-card.is-current-player {
+    @apply !border-lime-100 !bg-lime-100 !text-emerald-950 !shadow-xl !shadow-lime-200/20 !ring-4 !ring-lime-200/40;
+  }
+
+  .profile-next-player-card.is-current-player strong,
+  .profile-next-player-card.is-current-player span {
+    @apply !text-emerald-950;
+  }
+
+  .profile-next-player-card.is-current-player .player-card-rating {
+    @apply !border-emerald-950/35 !bg-emerald-950 !text-lime-100;
+  }
+
+  .profile-next-player-card.is-current-player .player-card-rating strong,
+  .profile-next-player-card.is-current-player .player-card-rating span {
+    @apply !text-lime-100;
+  }
+
+  .profile-current-player-badge {
+    @apply mt-1 inline-flex w-fit rounded-full bg-emerald-950 px-2 py-0.5 text-[10px] font-black uppercase text-lime-100;
   }
 
   .players-desktop-table thead th {

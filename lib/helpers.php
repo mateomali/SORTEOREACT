@@ -5,6 +5,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/schema.php';
+
 function h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -36,12 +39,69 @@ function is_admin(): bool
     return !empty($_SESSION['is_admin']);
 }
 
+function ensure_auth_schema(): void
+{
+    $pdo = db();
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS site_users (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(80) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            password_needs_reset TINYINT(1) NOT NULL DEFAULT 0,
+            role ENUM('usuario', 'jugador', 'directivo', 'admin') NOT NULL DEFAULT 'usuario',
+            player_id INT UNSIGNED NULL,
+            can_vote TINYINT(1) NOT NULL DEFAULT 0,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_site_users_username (username),
+            UNIQUE KEY uniq_site_users_player (player_id),
+            INDEX idx_site_users_role (role),
+            CONSTRAINT fk_site_users_player
+              FOREIGN KEY (player_id) REFERENCES players(id)
+              ON DELETE SET NULL ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    try {
+        $pdo->exec("ALTER TABLE site_users MODIFY role ENUM('usuario', 'jugador', 'directivo', 'admin') NOT NULL DEFAULT 'usuario'");
+    } catch (Throwable) {
+        // Some local engines or older MySQL versions may not need this migration.
+    }
+    if (!schema_column_exists($pdo, 'site_users', 'can_vote')) {
+        $pdo->exec("ALTER TABLE site_users ADD COLUMN can_vote TINYINT(1) NOT NULL DEFAULT 0 AFTER player_id");
+    }
+    if (!schema_column_exists($pdo, 'site_users', 'password_needs_reset')) {
+        $pdo->exec("ALTER TABLE site_users ADD COLUMN password_needs_reset TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash");
+    }
+}
+
+function current_user_id(): int
+{
+    return (int) ($_SESSION['user_id'] ?? 0);
+}
+
+function current_player_id(): int
+{
+    return (int) ($_SESSION['player_id'] ?? 0);
+}
+
+function is_player_user(): bool
+{
+    return current_role() === 'jugador' && current_player_id() > 0;
+}
+
 function current_role(): string
 {
     if (is_admin()) {
         return 'admin';
     }
-    return !empty($_SESSION['directivo_id']) ? 'directivo' : 'usuario';
+    if (!empty($_SESSION['directivo_id'])) {
+        return 'directivo';
+    }
+    if (!empty($_SESSION['user_id'])) {
+        return (string) ($_SESSION['user_role'] ?? 'usuario');
+    }
+    return 'usuario';
 }
 
 function is_directivo(): bool
@@ -52,6 +112,17 @@ function is_directivo(): bool
 function current_directivo_id(): int
 {
     return (int) ($_SESSION['directivo_id'] ?? 0);
+}
+
+function require_player_user(): void
+{
+    if (is_player_user()) {
+        return;
+    }
+
+    $next = $_SERVER['REQUEST_URI'] ?? 'perfil.php';
+    flash('error', 'Debes ingresar como jugador para acceder a esa seccion.');
+    redirect('login.php?next=' . rawurlencode((string) $next));
 }
 
 function require_admin(): void
@@ -98,6 +169,15 @@ function skill_label(float $skill): string
     $formatted = number_format($skill, 1, '.', '');
     $formatted = rtrim(rtrim($formatted, '0'), '.');
     return $formatted . ' estrellas';
+}
+
+function match_status_label(string $status): string
+{
+    return match ($status) {
+        'finalizado' => 'Finalizado',
+        'sorteado' => 'Equipos formados',
+        default => 'Programado',
+    };
 }
 
 function player_stat_fields(): array

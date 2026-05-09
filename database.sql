@@ -28,9 +28,42 @@ CREATE TABLE IF NOT EXISTS players (
   INDEX idx_players_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS site_users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(80) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  password_needs_reset TINYINT(1) NOT NULL DEFAULT 0,
+  role ENUM('usuario', 'jugador', 'directivo', 'admin') NOT NULL DEFAULT 'usuario',
+  player_id INT UNSIGNED NULL,
+  can_vote TINYINT(1) NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_site_users_username (username),
+  UNIQUE KEY uniq_site_users_player (player_id),
+  INDEX idx_site_users_role (role),
+  CONSTRAINT fk_site_users_player
+    FOREIGN KEY (player_id) REFERENCES players(id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS directive_members (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  site_user_id INT UNSIGNED NULL,
+  name VARCHAR(120) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  password_needs_setup TINYINT(1) NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_directive_member_site_user (site_user_id),
+  UNIQUE KEY uniq_directive_member_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS matches (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(120) NULL,
+  rental_court_id INT UNSIGNED NULL,
   match_date DATETIME NOT NULL,
   num_teams TINYINT UNSIGNED NOT NULL DEFAULT 2,
   players_per_team TINYINT UNSIGNED NOT NULL DEFAULT 9,
@@ -38,6 +71,9 @@ CREATE TABLE IF NOT EXISTS matches (
   allow_redraw TINYINT(1) NOT NULL DEFAULT 1,
   redraw_limit TINYINT UNSIGNED NOT NULL DEFAULT 3,
   redraw_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  multi_draw_count TINYINT UNSIGNED NOT NULL DEFAULT 3,
+  multi_draw_lock_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 60,
+  multi_draw_winner_option_id INT UNSIGNED NULL,
   status ENUM('programado', 'sorteado', 'finalizado') NOT NULL DEFAULT 'programado',
   draw_mode ENUM('none', 'random', 'captains', 'manual') NOT NULL DEFAULT 'none',
   draw_started_at DATETIME NULL,
@@ -54,6 +90,65 @@ CREATE TABLE IF NOT EXISTS matches (
   INDEX idx_matches_status (status),
   INDEX idx_matches_draw_mode (draw_mode),
   UNIQUE KEY idx_matches_public_token (public_token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key VARCHAR(80) PRIMARY KEY,
+  setting_value VARCHAR(255) NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS rental_courts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  court_key VARCHAR(40) NOT NULL,
+  place VARCHAR(120) NOT NULL,
+  weekday TINYINT UNSIGNED NOT NULL,
+  time_value TIME NOT NULL,
+  total_players TINYINT UNSIGNED NOT NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_rental_court_key (court_key),
+  INDEX idx_rental_court_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS match_draw_options (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  match_id INT UNSIGNED NOT NULL,
+  option_number TINYINT UNSIGNED NOT NULL,
+  teams_json MEDIUMTEXT NOT NULL,
+  total_diff DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  selected_at DATETIME NULL,
+  UNIQUE KEY uniq_match_draw_option (match_id, option_number),
+  INDEX idx_match_draw_option_match (match_id),
+  CONSTRAINT fk_match_draw_options_match
+    FOREIGN KEY (match_id) REFERENCES matches(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS match_draw_option_votes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  match_id INT UNSIGNED NOT NULL,
+  option_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  player_id INT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_match_draw_vote_user (match_id, user_id),
+  INDEX idx_match_draw_vote_option (option_id),
+  CONSTRAINT fk_match_draw_votes_match
+    FOREIGN KEY (match_id) REFERENCES matches(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_match_draw_votes_option
+    FOREIGN KEY (option_id) REFERENCES match_draw_options(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_match_draw_votes_user
+    FOREIGN KEY (user_id) REFERENCES site_users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_match_draw_votes_player
+    FOREIGN KEY (player_id) REFERENCES players(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS match_players (

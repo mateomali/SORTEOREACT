@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
+require_once __DIR__ . '/lib/sorteo_multiple.php';
+require_once __DIR__ . '/lib/admin_config.php';
 
 require_admin();
 
@@ -13,6 +15,10 @@ if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'encuentros.php' && !
 
 $pdo = db();
 ensure_control_schema();
+ensure_multiple_draw_schema();
+ensure_admin_config_schema();
+$adminSettings = admin_config_settings();
+$activeRentalCourts = rental_courts(true);
 
 $matchAdminView = defined('MATCH_ADMIN_VIEW') ? (string) MATCH_ADMIN_VIEW : 'edit';
 $showCreateSection = in_array($matchAdminView, ['create', 'all'], true);
@@ -22,6 +28,7 @@ $matchListPage = 'editar_partidos.php';
 
 function clear_match_draw_data(PDO $pdo, int $matchId): void
 {
+    $pdo->prepare('DELETE FROM match_draw_options WHERE match_id = :mid')->execute(['mid' => $matchId]);
     $pdo->prepare('DELETE FROM captain_picks WHERE match_id = :mid')->execute(['mid' => $matchId]);
     $pdo->prepare('DELETE FROM captain_drafts WHERE match_id = :mid')->execute(['mid' => $matchId]);
     $pdo->prepare('DELETE FROM match_teams WHERE match_id = :mid')->execute(['mid' => $matchId]);
@@ -32,7 +39,7 @@ function clear_match_draw_data(PDO $pdo, int $matchId): void
     )->execute(['mid' => $matchId]);
     $pdo->prepare(
         'UPDATE matches
-         SET draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0
+         SET draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
          WHERE id = :mid'
     )->execute(['mid' => $matchId]);
 }
@@ -423,15 +430,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_match') {
         $id = (int) ($_POST['id'] ?? 0);
         $titleTxt = trim((string) ($_POST['title'] ?? ''));
+        $selectedCourtId = max(0, (int) ($_POST['rental_court_id'] ?? 0));
+        $selectedCourt = $selectedCourtId > 0 ? rental_court_by_id($selectedCourtId) : null;
         $matchDate = trim((string) ($_POST['match_date'] ?? ''));
         $numTeams = max(2, min(4, (int) ($_POST['num_teams'] ?? 2)));
         $playersPerTeam = max(1, min(12, (int) ($_POST['players_per_team'] ?? 9)));
         $maxDiff = 0.5;
-        $allowRedraw = isset($_POST['allow_redraw']) ? 1 : 0;
-        $redrawLimit = max(0, min(20, (int) ($_POST['redraw_limit'] ?? 3)));
+        $allowRedraw = (int) ($_POST['allow_redraw'] ?? ($adminSettings['allow_redraw_default'] ?? 1)) === 1 ? 1 : 0;
+        $redrawLimit = max(0, min(20, (int) ($_POST['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 3))));
+        $multiDrawCount = max(1, min(10, (int) ($_POST['multi_draw_count'] ?? ($adminSettings['multi_draw_count_default'] ?? 3))));
+        $multiDrawLockMinutes = max(0, min(1440, (int) ($_POST['multi_draw_lock_minutes'] ?? ($adminSettings['multi_draw_lock_minutes_default'] ?? 60))));
         $notes = '';
         $participants = array_map('intval', $_POST['participants'] ?? []);
         $participants = array_values(array_unique(array_filter($participants, static fn(int $id): bool => $id > 0)));
+
+        if ($selectedCourt) {
+            $matchDate = rental_court_next_datetime($selectedCourt)->format('Y-m-d\TH:i');
+            $numTeams = 2;
+            $playersPerTeam = max(1, min(12, (int) ((int) $selectedCourt['total_players'] / 2)));
+            $titleTxt = $titleTxt === '' ? (string) $selectedCourt['court_key'] . ' - ' . (string) $selectedCourt['place'] : $titleTxt;
+        }
         $targetPlayers = $numTeams * $playersPerTeam;
 
         if ($matchDate === '') {
@@ -464,7 +482,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $stmt = $pdo->prepare(
                 'UPDATE matches
-                 SET title = :title, match_date = :match_date, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, notes = :notes, status = :status,
+                 SET title = :title, rental_court_id = :rental_court_id, match_date = :match_date, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, multi_draw_count = :multi_draw_count, multi_draw_lock_minutes = :multi_draw_lock_minutes, notes = :notes, status = :status,
                      draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = :formation_edit_deadline
                  WHERE id = :id'
             );
@@ -472,12 +490,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 'id' => $id,
                 'title' => $titleTxt === '' ? null : $titleTxt,
+                'rental_court_id' => $selectedCourt ? (int) $selectedCourt['id'] : null,
                 'match_date' => $savedMatchDate,
                 'num_teams' => $numTeams,
                 'players_per_team' => $playersPerTeam,
                 'max_diff' => $maxDiff,
                 'allow_redraw' => $allowRedraw,
                 'redraw_limit' => $redrawLimit,
+                'multi_draw_count' => $multiDrawCount,
+                'multi_draw_lock_minutes' => $multiDrawLockMinutes,
                 'notes' => $notes === '' ? null : $notes,
                 'status' => 'programado',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -489,18 +510,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Fecha actualizada.');
         } else {
             $stmt = $pdo->prepare(
-                'INSERT INTO matches (title, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, status, draw_mode, formation_edit_deadline, notes)
-                 VALUES (:title, :match_date, :num_teams, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :status, :draw_mode, :formation_edit_deadline, :notes)'
+                'INSERT INTO matches (title, rental_court_id, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, multi_draw_count, multi_draw_lock_minutes, status, draw_mode, formation_edit_deadline, notes)
+                 VALUES (:title, :rental_court_id, :match_date, :num_teams, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :multi_draw_count, :multi_draw_lock_minutes, :status, :draw_mode, :formation_edit_deadline, :notes)'
             );
             $savedMatchDate = date('Y-m-d H:00:00', strtotime($matchDate));
             $stmt->execute([
                 'title' => $titleTxt === '' ? null : $titleTxt,
+                'rental_court_id' => $selectedCourt ? (int) $selectedCourt['id'] : null,
                 'match_date' => $savedMatchDate,
                 'num_teams' => $numTeams,
                 'players_per_team' => $playersPerTeam,
                 'max_diff' => $maxDiff,
                 'allow_redraw' => $allowRedraw,
                 'redraw_limit' => $redrawLimit,
+                'multi_draw_count' => $multiDrawCount,
+                'multi_draw_lock_minutes' => $multiDrawLockMinutes,
                 'status' => 'programado',
                 'draw_mode' => 'none',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -617,6 +641,7 @@ if ($editing) {
 $form = $editing ?: [
     'id' => 0,
     'title' => '',
+    'rental_court_id' => 0,
     'match_date' => date('Y-m-d H:i'),
     'num_teams' => 2,
     'players_per_team' => 9,
@@ -625,9 +650,23 @@ $form = $editing ?: [
     'notes' => '',
 ];
 $form['players_per_team'] = $form['players_per_team'] ?? 9;
-$form['allow_redraw'] = (int) ($form['allow_redraw'] ?? 1);
-$form['redraw_limit'] = max(0, min(20, (int) ($form['redraw_limit'] ?? 3)));
+$form['allow_redraw'] = (int) ($form['allow_redraw'] ?? ($adminSettings['allow_redraw_default'] ?? 1));
+$form['redraw_limit'] = max(0, min(20, (int) ($form['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 3))));
 $form['redraw_count'] = max(0, (int) ($form['redraw_count'] ?? 0));
+$form['multi_draw_count'] = max(1, min(10, (int) ($form['multi_draw_count'] ?? ($adminSettings['multi_draw_count_default'] ?? 3))));
+$form['multi_draw_lock_minutes'] = max(0, min(1440, (int) ($form['multi_draw_lock_minutes'] ?? ($adminSettings['multi_draw_lock_minutes_default'] ?? 60))));
+$courtFormOptions = [];
+foreach ($activeRentalCourts as $court) {
+    $nextDate = rental_court_next_datetime($court);
+    $courtFormOptions[] = [
+        'id' => (int) $court['id'],
+        'label' => (string) $court['court_key'] . ' - ' . (string) $court['place'] . ' - ' . rental_weekday_label((int) $court['weekday']) . ' ' . substr((string) $court['time_value'], 0, 5) . ' - ' . (int) $court['total_players'] . ' jugadores',
+        'date' => $nextDate->format('Y-m-d\TH:i'),
+        'dateLabel' => $nextDate->format('d/m/Y H:i'),
+        'numTeams' => 2,
+        'playersPerTeam' => max(1, min(12, (int) ((int) $court['total_players'] / 2))),
+    ];
+}
 $targetSelection = (int) $form['num_teams'] * (int) $form['players_per_team'];
 $nextMatchId = $matches
     ? (max(array_map(static fn(array $match): int => (int) $match['id'], $matches)) + 1)
@@ -877,6 +916,11 @@ require __DIR__ . '/includes/header.php';
   <form method="post" class="<?= $showCreateSection && !$showEditSection ? 'grid gap-4' : '' ?>">
     <input type="hidden" name="action" value="save_match">
     <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
+    <input type="hidden" name="allow_redraw" value="<?= (int) $form['allow_redraw'] ?>">
+    <input type="hidden" name="redraw_limit" value="<?= (int) $form['redraw_limit'] ?>">
+    <input type="hidden" name="multi_draw_count" value="<?= (int) $form['multi_draw_count'] ?>">
+    <input type="hidden" name="multi_draw_lock_minutes" value="<?= (int) $form['multi_draw_lock_minutes'] ?>">
+    <script type="application/json" data-rental-court-options><?= json_encode($courtFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 
     <div class="<?= $showCreateSection && !$showEditSection ? 'grid grid-cols-1 gap-3 md:grid-cols-2' : 'form-grid' ?>">
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
@@ -884,28 +928,35 @@ require __DIR__ . '/includes/header.php';
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="text" name="title" value="<?= h((string) ($form['title'] ?? '')) ?>" placeholder="<?= h($titlePlaceholder) ?>">
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Cancha alquilada</label>
+        <select class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" name="rental_court_id" data-rental-court-select>
+          <option value="0">Personalizado</option>
+          <?php foreach ($courtFormOptions as $courtOption): ?>
+            <option value="<?= (int) $courtOption['id'] ?>" <?= selected_attr((int) ($form['rental_court_id'] ?? 0) === (int) $courtOption['id']) ?>><?= h((string) $courtOption['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <small class="<?= $showCreateSection && !$showEditSection ? 'mt-1.5 block text-xs font-semibold text-lime-50/72' : '' ?>">Al elegir una cancha se autocompleta fecha, equipos y jugadores por equipo.</small>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/30 bg-emerald-950/75 px-2.5 py-1 text-xs font-black text-lime-100' : 'hidden' ?>" data-rental-court-next-preview></span>
+      </div>
+      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Fecha y hora</label>
-        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="datetime-local" name="match_date" step="3600" required value="<?= h(date('Y-m-d\TH:00', strtotime((string) $form['match_date']))) ?>">
+        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="datetime-local" name="match_date" step="3600" required value="<?= h(date('Y-m-d\TH:00', strtotime((string) $form['match_date']))) ?>" data-rental-court-date-input>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-emerald-950 shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-date-changed>Fecha actualizada por cancha</span>
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Numero de equipos</label>
-        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams>
+        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams data-rental-court-field-input>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-emerald-950 shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Jugadores por equipo</label>
-        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team>
+        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team data-rental-court-field-input>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-emerald-950 shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
-      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
-        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-2 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Rehacer sorteo</label>
-        <label class="<?= $showCreateSection && !$showEditSection ? 'flex min-h-11 items-center gap-3 rounded-xl border border-lime-200/35 bg-emerald-950/92 px-3 py-2 text-sm font-bold text-lime-50' : '' ?>">
-          <input class="<?= $showCreateSection && !$showEditSection ? 'h-4 w-4 accent-lime-200' : '' ?>" type="checkbox" name="allow_redraw" value="1" <?= checked_attr((int) $form['allow_redraw'] === 1) ?>>
-          <span>Permitir rehacer sorteo</span>
-        </label>
-      </div>
-      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
-        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Veces permitidas</label>
-        <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="redraw_limit" min="0" max="20" value="<?= h((string) $form['redraw_limit']) ?>">
-        <small class="<?= $showCreateSection && !$showEditSection ? 'mt-1.5 block text-xs font-semibold text-lime-50/72' : '' ?>">Usados: <?= h((string) $form['redraw_count']) ?> / <?= h((string) $form['redraw_limit']) ?>. El primer sorteo no consume cupo.</small>
+      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 text-sm font-semibold text-emerald-100/85 shadow-sm shadow-emerald-950/15 md:col-span-2' : 'form-row' ?>">
+        <strong class="block text-xs font-black uppercase text-lime-100/85">Configuracion aplicada</strong>
+        <span>Rehacer sorteo: <?= (int) $form['allow_redraw'] === 1 ? 'si' : 'no' ?> | Veces permitidas: <?= h((string) $form['redraw_limit']) ?> | Sorteo multiple: <?= h((string) $form['multi_draw_count']) ?> opciones | Cierre: <?= h((string) $form['multi_draw_lock_minutes']) ?> min antes.</span>
+        <a class="mt-2 inline-flex w-fit rounded-lg border border-lime-200/35 bg-emerald-950/70 px-2.5 py-1 text-xs font-black text-lime-100 no-underline" href="configuracion.php">Editar configuracion</a>
       </div>
     </div>
 
@@ -1309,6 +1360,7 @@ require __DIR__ . '/includes/header.php';
             <?php if ($isScheduled): ?>
               <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar fecha" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
+              <a class="btn btn-warning icon-dice" data-short="" href="sorteo_multiple.php?match_id=<?= $matchId ?>">Multiple</a>
               <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
               <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Manual</a>
             <?php else: ?>
@@ -1350,6 +1402,7 @@ require __DIR__ . '/includes/header.php';
               <?php if ($isScheduled): ?>
                 <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar fecha</a>
                 <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear equipos</a>
+                <a class="btn btn-warning icon-dice" data-short="" href="sorteo_multiple.php?match_id=<?= $matchId ?>">Sorteo multiple</a>
                 <a class="btn btn-primary icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
                 <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Equipos manuales</a>
               <?php elseif ($canEditCaptainFormation): ?>

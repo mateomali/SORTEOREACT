@@ -21,6 +21,8 @@ if (is_admin()) {
     $roleMenu = [
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
+        'configuracion.php' => 'Configuracion',
+        'usuarios.php' => 'Usuarios',
         'directivos.php' => 'Directivos',
         'backup.php' => 'Backup',
         'logout.php' => 'Salir',
@@ -31,6 +33,18 @@ if (is_admin()) {
         'junta_votaciones.php' => 'Votaciones',
         'logout.php' => 'Salir',
     ];
+} elseif (is_player_user()) {
+    $roleLabel = 'Jugador';
+    $roleMenu = [
+        'perfil.php' => 'Mi perfil',
+        'estadisticas.php' => 'Mis stats',
+        'logout.php' => 'Salir',
+    ];
+} elseif (current_user_id() > 0) {
+    $roleLabel = 'Usuario';
+    $roleMenu = [
+        'logout.php' => 'Salir',
+    ];
 } elseif (!empty($_SESSION['guest_vote_invite_id'])) {
     $roleLabel = 'Invitado';
     $roleMenu = [
@@ -39,11 +53,12 @@ if (is_admin()) {
     ];
 } else {
     $roleMenu = [
-        'login.php' => 'Admin',
+        'login.php' => 'Ingresar',
     ];
 }
-$roleShortcutHref = is_admin() ? 'editar_partidos.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : 'login.php');
-$roleShortcutLabel = is_admin() ? 'Panel admin' : (is_directivo() ? 'Junta' : (!empty($_SESSION['guest_vote_invite_id']) ? 'Votacion' : 'Panel admin'));
+$showRoleShortcut = !is_admin();
+$roleShortcutHref = is_player_user() ? 'perfil.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : (current_user_id() > 0 ? 'logout.php' : 'login.php'));
+$roleShortcutLabel = is_player_user() ? 'Mi perfil' : (is_directivo() ? 'Junta' : (!empty($_SESSION['guest_vote_invite_id']) ? 'Votacion' : (current_user_id() > 0 ? 'Salir' : 'Ingresar')));
 $navLinkBase = 'block rounded-xl border border-transparent px-3 py-2 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/35 hover:bg-lime-100/10 hover:text-lime-100 max-[760px]:w-full max-[760px]:border-lime-200/25 max-[760px]:bg-emerald-900/45 max-[760px]:px-2.5 max-[760px]:py-2 max-[760px]:text-xs max-[760px]:leading-tight max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
 $navLinkActive = 'border-lime-200/60 bg-lime-200 text-emerald-950 hover:bg-lime-100 hover:text-emerald-950';
 $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:text-red-50';
@@ -97,7 +112,9 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
         </div>
       </nav>
       <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-2 min-[761px]:col-start-3 min-[761px]:row-start-1">
-        <a class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 no-underline shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" href="<?= h($roleShortcutHref) ?>"><?= h($roleShortcutLabel) ?></a>
+        <?php if ($showRoleShortcut): ?>
+          <a class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 no-underline shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" href="<?= h($roleShortcutHref) ?>"><?= h($roleShortcutLabel) ?></a>
+        <?php endif; ?>
         <button class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">Menu</button>
       </div>
     </header>

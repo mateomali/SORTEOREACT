@@ -682,6 +682,8 @@
     bindPlayerListSearch(root);
     bindMatchDetailToggles(root);
     bindDismissibleAlerts(root);
+    bindMultiDrawPitchToggles(root);
+    bindRentalCourtSelect(root);
     bindTeamCountControls(root);
     bindRoundRobinControls(root);
     initFinishPlayerSwap(root);
@@ -1750,6 +1752,26 @@
     });
   };
 
+  const bindMultiDrawPitchToggles = (root = document) => {
+    root.querySelectorAll?.('[data-multi-draw-pitch-toggle]:not([data-multi-draw-pitch-bound="1"])').forEach((trigger) => {
+      trigger.dataset.multiDrawPitchBound = '1';
+      trigger.addEventListener('click', () => {
+        const option = trigger.closest('.multi-draw-option');
+        const listView = option?.querySelector('[data-multi-draw-list-view]');
+        const pitchView = option?.querySelector('[data-multi-draw-pitch-view]');
+        const label = trigger.querySelector('[data-multi-draw-pitch-label]');
+        if (!option || !listView || !pitchView) return;
+        const showPitch = pitchView.hidden;
+        pitchView.hidden = !showPitch;
+        listView.hidden = showPitch;
+        option.classList.toggle('lg:col-span-full', showPitch);
+        if (label) {
+          label.textContent = showPitch ? 'Ver lista' : 'Ver en cancha';
+        }
+      });
+    });
+  };
+
   document.addEventListener('click', (event) => {
     const awardsTrigger = event.target.closest('[data-awards-trigger]');
     if (awardsTrigger) {
@@ -1784,6 +1806,77 @@
         updateSelectionCount('participants');
       });
     });
+  };
+
+  const bindRentalCourtSelect = (root = document) => {
+    const script = root.querySelector?.('[data-rental-court-options]') || document.querySelector('[data-rental-court-options]');
+    const select = root.querySelector?.('[data-rental-court-select]') || document.querySelector('[data-rental-court-select]');
+    if (!script || !select || select.dataset.rentalCourtBound === '1') return;
+    let options = [];
+    try {
+      options = JSON.parse(script.textContent || '[]');
+    } catch {
+      options = [];
+    }
+    const highlightInput = (input, enabled) => {
+      if (!input) return;
+      input.classList.toggle('border-lime-200', enabled);
+      input.classList.toggle('bg-lime-100', enabled);
+      input.classList.toggle('text-emerald-950', enabled);
+      input.classList.toggle('ring-4', enabled);
+      input.classList.toggle('ring-lime-200/30', enabled);
+      input.classList.toggle('shadow-lg', enabled);
+      input.classList.toggle('shadow-lime-200/15', enabled);
+      input.classList.toggle('border-lime-200/40', !enabled);
+      input.classList.toggle('bg-emerald-950/92', !enabled);
+      input.classList.toggle('text-lime-50', !enabled);
+    };
+    const toggleBadge = (badge, enabled) => {
+      if (!badge) return;
+      badge.hidden = !enabled;
+      badge.classList.toggle('hidden', !enabled);
+    };
+    const applySelectedCourt = () => {
+      const selected = options.find((option) => String(option.id) === String(select.value));
+      const preview = select.form?.querySelector('[data-rental-court-next-preview]');
+      const dateInput = select.form?.querySelector('[data-rental-court-date-input]');
+      const dateChanged = select.form?.querySelector('[data-rental-court-date-changed]');
+      const autoInputs = Array.from(select.form?.querySelectorAll('[data-rental-court-field-input]') || []);
+      const autoBadges = Array.from(select.form?.querySelectorAll('[data-rental-court-field-changed]') || []);
+      if (!selected) {
+        if (preview) {
+          preview.hidden = true;
+          preview.textContent = '';
+          preview.classList.add('hidden');
+        }
+        highlightInput(dateInput, false);
+        toggleBadge(dateChanged, false);
+        autoInputs.forEach((input) => highlightInput(input, false));
+        autoBadges.forEach((badge) => toggleBadge(badge, false));
+        return;
+      }
+      const teamsInput = select.form?.querySelector('[data-num-teams]');
+      const playersInput = select.form?.querySelector('[data-players-per-team]');
+      if (dateInput) dateInput.value = selected.date || dateInput.value;
+      if (teamsInput) teamsInput.value = String(selected.numTeams || 2);
+      if (playersInput) playersInput.value = String(selected.playersPerTeam || 9);
+      highlightInput(dateInput, true);
+      toggleBadge(dateChanged, true);
+      autoInputs.forEach((input) => highlightInput(input, true));
+      autoBadges.forEach((badge) => toggleBadge(badge, true));
+      if (preview) {
+        preview.hidden = false;
+        preview.classList.remove('hidden');
+        preview.textContent = `Proxima fecha calculada: ${selected.dateLabel || selected.date} | ${selected.numTeams || 2} equipos | ${selected.playersPerTeam || 9} jugadores por equipo`;
+      }
+      updateImportPlayerLimit();
+      updateSelectionCount('participants');
+    };
+    select.dataset.rentalCourtBound = '1';
+    select.addEventListener('change', applySelectedCourt);
+    if (String(select.value) !== '0') {
+      applySelectedCourt();
+    }
   };
 
   const updateRoundRobinLegRows = (form) => {

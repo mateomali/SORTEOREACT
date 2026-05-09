@@ -989,17 +989,18 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         return true;
       };
 
-      const renderFormationLines = (container, players) => {
+      const renderFormationLines = (container, players, options = {}) => {
         const field = container.querySelector('.captain-formation-field');
         if (!field) return;
+        const readOnly = options.readOnly === true;
         const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
         ensureFormationState(teamNumber, players);
         field.dataset.dropTeam = String(teamNumber);
         const presetSelect = container.querySelector('[data-formation-preset]');
-        const showLineControls = !presetSelect || presetSelect.value === '';
+        const showLineControls = !readOnly && (!presetSelect || presetSelect.value === '');
         const totalTitle = container.querySelector('[data-formation-total-title]');
         if (totalTitle) {
-          totalTitle.innerHTML = `<span>Ajustada</span><strong>${formationTotalSkill(teamNumber, players).toFixed(1)} pts</strong>`;
+          totalTitle.innerHTML = `<span>${readOnly ? 'Base' : 'Ajustada'}</span><strong>${(readOnly ? teamTotalSkill(teamNumber) : formationTotalSkill(teamNumber, players)).toFixed(1)} pts</strong>`;
         }
         field.innerHTML = positions.map(pos => {
           const linePlayers = orderedFormationPlayers(teamNumber, players, pos);
@@ -1022,7 +1023,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
                   const penaltyPercent = positionPenaltyPercent(player, pos);
                   const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${pos} ${formatSkill(adjustedRating)}`;
                   return `
-                  <div class="formation-player captain-formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
+                  <div class="formation-player captain-formation-player ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
                     ${playerCardRatingHtml(adjustedRating, pos)}
                     <strong>${escapeHtml(player.name)}</strong>
                     ${playerPositionIconsHtml(player)}
@@ -1034,6 +1035,9 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
             </div>
           `;
         }).join('');
+        if (readOnly) {
+          return;
+        }
         field.insertAdjacentHTML('afterbegin', `
           <button class="formation-undo-button" type="button" title="Deshacer ultimo cambio" aria-label="Deshacer ultimo cambio" data-captain-formation-undo="${teamNumber}" ${(formationUndoStacks[teamNumber] || []).length ? '' : 'disabled'}>↶</button>
         `);
@@ -1167,6 +1171,12 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar cambios</button>
       `;
 
+      const renderReadonlyFormation = (teamNumber, players) => `
+        <div class="captain-formation-title" data-formation-total-title="${teamNumber}"><span>Base</span><strong>${teamTotalSkill(teamNumber).toFixed(1)} pts</strong></div>
+        <div class="team-formation captain-formation-field captain-formation-readonly" data-drop-team="${teamNumber}" aria-label="Formacion del equipo ${teamNumber}"></div>
+        ${teamCharacteristicsHtml(teamNumber, players)}
+      `;
+
       const renderReadonlyTeam = (players) => players.map(p => `
         <div class="captain-player picked">
           <strong>${escapeHtml(p.name)}</strong>
@@ -1187,7 +1197,9 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           && state.draft.status === 'completed'
           && state.match.can_edit_formations;
         const canEditThisFormation = canEditFormation || canAdminEditFormation;
-        container.innerHTML = canEditThisFormation ? renderFormationEditor(teamNumber, players) : renderReadonlyTeam(players);
+        container.innerHTML = canEditThisFormation
+          ? renderFormationEditor(teamNumber, players)
+          : (players.length ? renderReadonlyFormation(teamNumber, players) : renderReadonlyTeam(players));
         if (canEditThisFormation) {
           renderFormationLines(container, players);
           renderCustomFormationControls(container, players);
@@ -1235,6 +1247,8 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
               renderCustomFormationControls(container, players);
             }
           });
+        } else if (players.length) {
+          renderFormationLines(container, players, { readOnly: true });
         }
       };
 

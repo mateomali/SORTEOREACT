@@ -48,7 +48,19 @@ Si Windows Firewall pregunta, permiti el acceso para redes privadas. Si no apare
 4. Finalizar partido (goles y calificaciones) en `finalizar_partido.php`.
 5. Analizar ranking en `estadisticas.php`.
 
-## 4) Reglas implementadas en sorteo
+## 4) Regla obligatoria de UI
+
+Todo contenido visual nuevo del sitio debe construirse con **Tailwind CSS puro en el markup**.
+
+- No crear nuevas reglas CSS heredadas para componentes visuales.
+- No agregar estilos nuevos basados en clases custom tipo `.mi-componente` salvo que sean solo hooks de JS o identificadores semanticos sin estilos.
+- No usar `style=""` inline para resolver layout, colores, spacing o responsive.
+- No usar `<style>` embebido en paginas PHP.
+- Si un bloque se reutiliza en varias pantallas, debe ser un componente/render PHP compartido con clases Tailwind directas.
+- Las clases CSS existentes se pueden mantener solo mientras se migran pantallas viejas; no deben ser el patron para trabajo nuevo.
+- Cada cambio UI debe correr `npm run build:css`.
+
+## 5) Reglas implementadas en sorteo
 - 1 solo arquero por equipo.
 - Si un arquero tiene doble posicion y sobra en ARQ, pasa a su otra posicion.
 - Maximo 3 jugadores por linea (`ARQ/DEF/MED/DEL`).

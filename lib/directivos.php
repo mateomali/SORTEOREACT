@@ -12,15 +12,27 @@ function ensure_directivos_schema(): void
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS directive_members (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            site_user_id INT UNSIGNED NULL,
             name VARCHAR(120) NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             password_needs_setup TINYINT(1) NOT NULL DEFAULT 0,
             active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_directive_member_site_user (site_user_id),
             UNIQUE KEY uniq_directive_member_name (name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+    try {
+        $pdo->exec("ALTER TABLE directive_members ADD COLUMN site_user_id INT UNSIGNED NULL AFTER id");
+    } catch (Throwable) {
+        // Column already exists.
+    }
+    try {
+        $pdo->exec("ALTER TABLE directive_members ADD UNIQUE KEY uniq_directive_member_site_user (site_user_id)");
+    } catch (Throwable) {
+        // Index already exists.
+    }
     try {
         $pdo->exec("ALTER TABLE directive_members ADD COLUMN password_needs_setup TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash");
     } catch (Throwable) {
@@ -122,6 +134,47 @@ function directive_member_by_id(int $id): ?array
     $stmt->execute(['id' => $id]);
     $row = $stmt->fetch();
     return $row ?: null;
+}
+
+function directive_member_for_site_user(int $siteUserId, string $username, ?string $playerName = null): array
+{
+    ensure_directivos_schema();
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT * FROM directive_members WHERE site_user_id = :site_user_id LIMIT 1');
+    $stmt->execute(['site_user_id' => $siteUserId]);
+    $existing = $stmt->fetch();
+    if ($existing) {
+        if ((int) $existing['active'] !== 1) {
+            $update = $pdo->prepare('UPDATE directive_members SET active = 1 WHERE id = :id');
+            $update->execute(['id' => (int) $existing['id']]);
+            $existing['active'] = 1;
+        }
+        return $existing;
+    }
+
+    $baseName = trim($playerName ?: $username);
+    $name = substr('Usuario ' . ($baseName !== '' ? $baseName : (string) $siteUserId), 0, 120);
+    $passwordHash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+    $insert = $pdo->prepare(
+        'INSERT INTO directive_members (site_user_id, name, password_hash, password_needs_setup, active)
+         VALUES (:site_user_id, :name, :password_hash, 0, 1)'
+    );
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        try {
+            $insert->execute([
+                'site_user_id' => $siteUserId,
+                'name' => $attempt === 0 ? $name : substr($name . ' #' . ($attempt + 1), 0, 120),
+                'password_hash' => $passwordHash,
+            ]);
+            return directive_member_by_id((int) $pdo->lastInsertId()) ?: [];
+        } catch (PDOException $e) {
+            if (!str_contains($e->getMessage(), 'uniq_directive_member_name')) {
+                throw $e;
+            }
+        }
+    }
+
+    throw new RuntimeException('No se pudo crear el permiso de votacion directiva.');
 }
 
 function directive_voting_deadline(array $match): ?int
