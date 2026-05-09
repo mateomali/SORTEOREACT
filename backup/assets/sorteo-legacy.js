@@ -1,0 +1,1995 @@
+function navigateSorteoLegacy(url) {
+  if (window.goodfellasPartialNavigate) {
+    window.goodfellasPartialNavigate(url);
+    return;
+  }
+  window.location.href = url;
+}
+
+var sorteoLegacyConfig = JSON.parse(document.querySelector('[data-sorteo-legacy-config]')?.textContent || '{}');
+var jugadores = [];
+var editIndex = -1;
+var currentSort = 'nombre';
+var sortDirection = 1;
+var lastEquipos = null;
+var teamFormations = {};
+var customFormations = {};
+var manualAssignments = {};
+var teamFormationUndoStack = {};
+var MATCH_ID = Number(sorteoLegacyConfig.matchId || 0);
+var PRELOADED_JUGADORES = Array.isArray(sorteoLegacyConfig.players) ? sorteoLegacyConfig.players : [];
+var HISTORICAL_TEAMMATE_PAIRS = sorteoLegacyConfig.pairHistory || {};
+var DRAW_BALANCE_WEIGHTS = sorteoLegacyConfig.drawBalanceWeights || {};
+var LOCKED_MATCH_MODE = MATCH_ID > 0;
+var REQUIRED_FIELD_LINES = ['DEF', 'MED', 'DEL'];
+var OUT_OF_POSITION_PENALTY_RATE = Number(sorteoLegacyConfig.outOfPositionPenaltyRate || 0.15);
+var STRICT_MAX_DIFF = 2.5;
+var FLEXIBLE_MAX_DIFF = 6.0;
+
+function maxFieldPlayersPerLine(teamSize) {
+  return Math.max(0, Math.floor(Number(teamSize || 0) / 2));
+}
+
+function normalizarPosiciones(rawPosiciones) {
+  return String(rawPosiciones || '')
+    .split('/')
+    .map(pos => pos.trim().toUpperCase())
+    .filter(Boolean)
+    .join('/');
+}
+
+function normalizarRitmo(rawRitmo) {
+  return String(rawRitmo || '').toLowerCase() === 'lento' ? 'lento' : 'rápido';
+}
+
+// Configuración inicial de colores
+var TEAM_COLOR_OPTIONS = [
+  { name: "ROSA", class: "team-rosa" },
+  { name: "AZUL", class: "team-azul" },
+  { name: "NARANJA", class: "team-naranja" },
+  { name: "NEGRO", class: "team-negro" },
+  { name: "VERDE", class: "team-verde" }
+];
+var teamColorMapping = TEAM_COLOR_OPTIONS.map(option => ({ ...option }));
+
+function setTeamColor(equipoIndex, colorName, className) {
+  teamColorMapping[equipoIndex] = { name: colorName, class: className };
+}
+function getTeamColor(equipoIndex) {
+  return teamColorMapping[equipoIndex];
+}
+
+function isTeamColorTaken(selectedClass, ownIndex) {
+  return teamColorMapping.some((teamColor, index) => (
+    index !== ownIndex && teamColor && teamColor.class === selectedClass
+  ));
+}
+
+function teamColorsAreUnique(teamCount) {
+  const used = new Set();
+  for (let index = 0; index < teamCount; index++) {
+    const teamColor = getTeamColor(index);
+    if (!teamColor || !teamColor.name) return false;
+    const colorName = String(teamColor.name).trim().toUpperCase();
+    if (used.has(colorName)) return false;
+    used.add(colorName);
+  }
+  return true;
+}
+
+function getTeamColorHeart(colorName) {
+  const hearts = {
+    ROSA: '💗',
+    AZUL: '💙',
+    VERDE: '💚',
+    NEGRO: '🖤',
+    NARANJA: '🧡'
+  };
+  return hearts[String(colorName || '').trim().toUpperCase()] || '';
+}
+
+function getTeamDisplayName(equipoIndex) {
+  const teamColor = getTeamColor(equipoIndex);
+  const heart = getTeamColorHeart(teamColor?.name);
+  return heart ? `EQUIPO ${heart}` : `EQUIPO ${equipoIndex + 1}`;
+}
+
+function getMatchupDisplayName(teamCount) {
+  return Array.from({ length: teamCount }, (_, index) => getTeamDisplayName(index)).join(' VS ');
+}
+
+function toggleSortDropdown() {
+  const dropdown = document.getElementById('sortDropdown');
+  dropdown.classList.toggle('active');
+}
+
+function selectSortOption(criteria) {
+  const dropdown = document.getElementById('sortDropdown');
+  dropdown.classList.remove('active');
+  sortPlayers(criteria);
+}
+
+function actualizarTeamColorSettings() {
+  const numEquipos = parseInt(document.getElementById('teamDisplay').textContent, 10);
+  for (let i = 0; i < numEquipos; i++) {
+    if (!teamColorMapping[i]) {
+      const option = TEAM_COLOR_OPTIONS[i % TEAM_COLOR_OPTIONS.length];
+      setTeamColor(i, option.name, option.class);
+    }
+  }
+}
+
+function teamColorOptionsHtml(teamIndex) {
+  const teamColor = getTeamColor(teamIndex) || TEAM_COLOR_OPTIONS[teamIndex % TEAM_COLOR_OPTIONS.length];
+  return TEAM_COLOR_OPTIONS.map(option => (
+    `<option value="${option.class}" ${teamColor.class === option.class ? 'selected' : ''} ${isTeamColorTaken(option.class, teamIndex) ? 'disabled' : ''}>${option.name}</option>`
+  )).join('');
+}
+
+function refreshTeamColorControls() {
+  document.querySelectorAll('[data-sorteo-action="team-color-change"][data-team-index]').forEach(control => {
+    const teamIndex = Number(control.dataset.teamIndex);
+    control.innerHTML = teamColorOptionsHtml(teamIndex);
+  });
+}
+
+function onTeamColorChange(teamIndex, selectedClass) {
+  const selected = TEAM_COLOR_OPTIONS.find(option => option.class === selectedClass);
+  if (!selected) return;
+  if (isTeamColorTaken(selected.class, teamIndex)) {
+    const errorDiv = document.getElementById('error');
+    if (errorDiv) {
+      errorDiv.textContent = 'Cada equipo necesita un color de camiseta distinto.';
+      errorDiv.classList.remove('hidden');
+    } else {
+      alert('Cada equipo necesita un color de camiseta distinto.');
+    }
+    const control = document.querySelector(`[data-sorteo-action="team-color-change"][data-team-index="${teamIndex}"]`);
+    const current = getTeamColor(teamIndex);
+    if (control && current) control.value = current.class;
+    refreshTeamColorControls();
+    return;
+  }
+
+  setTeamColor(teamIndex, selected.name, selected.class);
+  const errorDiv = document.getElementById('error');
+  if (errorDiv) {
+    errorDiv.textContent = '';
+    errorDiv.classList.add('hidden');
+  }
+  refreshTeamColorControls();
+
+  const teamCard = document.querySelector(`#equipos-generados .team[data-team-index="${teamIndex}"]`);
+  if (teamCard) {
+    TEAM_COLOR_OPTIONS.forEach(option => teamCard.classList.remove(option.class));
+    teamCard.classList.add(selected.class);
+    const title = teamCard.querySelector('.team-title');
+    if (title) title.textContent = getTeamDisplayName(teamIndex);
+  }
+
+  const matchupTitle = document.querySelector('#equipos-generados .sorteo-matchup-title');
+  if (matchupTitle && lastEquipos) {
+    matchupTitle.textContent = getMatchupDisplayName(lastEquipos.length);
+  }
+}
+
+function incrementTeam() {
+  const teamDisplay = document.getElementById('teamDisplay');
+  let value = parseInt(teamDisplay.textContent);
+  if (value < 4) {
+    value += 1;
+    teamDisplay.textContent = value;
+    actualizarTeamColorSettings();
+    document.getElementById('download-controls').classList.add('hidden');
+  }
+}
+function decrementTeam() {
+  const teamDisplay = document.getElementById('teamDisplay');
+  let value = parseInt(teamDisplay.textContent);
+  if (value > 2) {
+    value -= 1;
+    teamDisplay.textContent = value;
+    actualizarTeamColorSettings();
+    document.getElementById('download-controls').classList.add('hidden');
+  }
+}
+
+function incrementDiff() {
+  const diffDisplay = document.getElementById('diffDisplay');
+  let value = parseFloat(diffDisplay.textContent);
+  if (value < 3) {
+    value += 0.5;
+    diffDisplay.textContent = value.toFixed(1);
+  }
+}
+function decrementDiff() {
+  const diffDisplay = document.getElementById('diffDisplay');
+  let value = parseFloat(diffDisplay.textContent);
+  if (value > 0.5) {
+    value -= 0.5;
+    diffDisplay.textContent = value.toFixed(1);
+  }
+}
+
+actualizarTeamColorSettings();
+
+function toggleAccordion(header) {
+  const accordion = header.parentElement;
+  accordion.classList.toggle('active');
+}
+
+function toggleSelectAll(checkbox) {
+  if (LOCKED_MATCH_MODE) {
+    jugadores.forEach(j => j.selected = true);
+    checkbox.checked = true;
+    actualizarListaJugadores();
+    return;
+  }
+  jugadores.forEach(j => j.selected = checkbox.checked);
+  actualizarListaJugadores();
+}
+
+function sortPlayers(criteria) {
+  const sortButton = document.querySelector('.sort-dropdown-btn span:first-child');
+  if (currentSort === criteria) {
+    sortDirection *= -1;
+  } else {
+    currentSort = criteria;
+    sortDirection = 1;
+  }
+  
+  // Actualizar texto del botón
+  let sortText = '🔽 Ordenar por: ';
+  if (criteria === 'nombre') sortText += 'Nombre';
+  else if (criteria === 'puntuacion') sortText += 'Puntuación';
+  else if (criteria === 'ritmo') sortText += 'Ritmo';
+  sortButton.textContent = sortText;
+  
+  jugadores.sort((a, b) => {
+    if (criteria === 'nombre') return a.nombre.localeCompare(b.nombre) * sortDirection;
+    if (criteria === 'puntuacion') return (a.puntuacion - b.puntuacion) * sortDirection;
+    if (criteria === 'ritmo') return (isLowRhythmPlayer(a) === isLowRhythmPlayer(b) ? 0 : isLowRhythmPlayer(a) ? 1 : -1) * sortDirection;
+    return 0;
+  });
+  actualizarListaJugadores();
+}
+
+function exportarJugadoresCSV() {
+  if (LOCKED_MATCH_MODE) {
+    alert('En modo fecha los jugadores se administran desde la base de datos.');
+    return;
+  }
+  const csvContent = [
+    ['Nombre', 'Posicion', 'Ritmo', 'Puntuacion'].join(','),
+    ...jugadores.map(j => [
+      `"${j.nombre.replace(/"/g, '""')}"`,
+      j.posicion,
+      j.ritmo,
+      j.puntuacion
+    ].join(','))
+  ].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'jugadores_goodfellas.csv');
+  link.classList.add('hidden');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function importarJugadoresCSV(event) {
+  if (LOCKED_MATCH_MODE) {
+    alert('En modo fecha los jugadores se administran desde la base de datos.');
+    event.target.value = '';
+    return;
+  }
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const csvData = e.target.result;
+    const rows = csvData.split('\n').slice(1);
+    const nuevosJugadores = rows
+      .filter(row => row.trim() !== '')
+      .map(row => {
+        const [nombre, posicion, ritmo, puntuacion] = row.split(',').map(f => f.trim().replace(/^"(.*)"$/, '$1'));
+        return {
+          nombre: nombre.replace(/""/g, '"'),
+          posicion,
+          ritmo: normalizarRitmo(ritmo),
+          puntuacion: parseFloat(puntuacion),
+          selected: true
+        };
+      })
+      .filter(j => j.nombre && j.posicion && !isNaN(j.puntuacion));
+      
+    jugadores = nuevosJugadores;
+    actualizarListaJugadores();
+    sortPlayers(currentSort);
+    alert(`${nuevosJugadores.length} jugadores importados correctamente`);
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+var posicionEmojis = { ARQ: '🥅', DEF: '🛡️', MED: '🎯', DEL: '⚽' };
+
+function convertirPuntuacionAEstrellas(puntuacion) {
+  const estrellasLlenas = Math.floor(puntuacion);
+  const tieneMedia = (puntuacion % 1) >= 0.5;
+  return '<span class="stars">' + '★'.repeat(estrellasLlenas) + (tieneMedia ? '½' : '') + '</span>';
+}
+
+function obtenerEmojisDePosiciones(posiciones) {
+  return posiciones.split('/').map(pos => posicionEmojis[pos] || '').join('');
+}
+
+function statValue(jugador, campo) {
+  const fallback = campo === 'regularidad' ? 3.5 : (campo === 'mentalidad' ? 3.0 : Number(jugador.puntuacion || 0));
+  const value = Number(jugador[campo]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function isLowRhythmPlayer(jugador) {
+  const rhythm = Number(jugador.ritmo_stat);
+  if (Number.isFinite(rhythm) && rhythm > 0) {
+    return rhythm <= 3;
+  }
+  return jugador.ritmo === 'lento';
+}
+
+function teamAverage(equipo, campo) {
+  if (!equipo.length) return 0;
+  return equipo.reduce((sum, jugador) => sum + statValue(jugador, campo), 0) / equipo.length;
+}
+
+function teamTotalsSummary(equipo) {
+  return {
+    general: equipo.reduce((sum, jugador) => sum + Number(jugador.puntuacion || 0), 0),
+    tecnica: teamAverage(equipo, 'tecnica'),
+    ritmo: teamAverage(equipo, 'ritmo_stat'),
+    solidez: teamAverage(equipo, 'solidez'),
+    ataque: teamAverage(equipo, 'ataque'),
+    compromiso: teamAverage(equipo, 'compromiso'),
+    mentalidad: teamAverage(equipo, 'mentalidad'),
+    regularidad: teamAverage(equipo, 'regularidad'),
+    arquero: equipo.reduce((max, jugador) => {
+      if (!getOrderedPlayerPositions(jugador).includes('ARQ')) return max;
+      return Math.max(max, statValue(jugador, 'habilidad_arquero'));
+    }, 0)
+  };
+}
+
+function positionBaseRating(jugador, assignedPosition) {
+  const position = String(assignedPosition || '').toUpperCase();
+  if (position === 'ARQ') {
+    if (!getOrderedPlayerPositions(jugador).includes('ARQ')) {
+      return 2.0;
+    }
+    return statValue(jugador, 'habilidad_arquero');
+  }
+  if (position === 'DEF') {
+    return statValue(jugador, 'solidez');
+  }
+  if (position === 'DEL') {
+    return statValue(jugador, 'ataque');
+  }
+  if (position === 'MED') {
+    return (statValue(jugador, 'solidez') + statValue(jugador, 'ataque')) / 2;
+  }
+  return Number(jugador.puntuacion || 0);
+}
+
+function adjustedPositionRating(jugador, assignedPosition) {
+  const position = String(assignedPosition || '').toUpperCase();
+  const naturalPositions = getOrderedPlayerPositions(jugador);
+  const baseRating = positionBaseRating(jugador, position);
+  const isNatural = naturalPositions.includes(position);
+  const adjusted = isNatural ? baseRating : baseRating * (1 - OUT_OF_POSITION_PENALTY_RATE);
+  return Math.max(1, Math.min(6, adjusted));
+}
+
+function formatRating(value) {
+  return Number(value || 0).toFixed(1);
+}
+
+function getPlayerOrder(player) {
+  const orderMapping = { ARQ: 1, DEF: 2, MED: 3, DEL: 4 };
+  const posArray = player.posicion.split('/');
+  const orders = posArray.map(pos => orderMapping[pos] || 99);
+  return Math.min(...orders);
+}
+
+function getOrderedPlayerPositions(player) {
+  const posicionesValidas = ['ARQ', 'DEF', 'MED', 'DEL'];
+  const posiciones = String(player.posicion || '').split('/').map(p => p.trim().toUpperCase()).filter(Boolean);
+  const limpias = [];
+  posiciones.forEach(pos => {
+    if (posicionesValidas.includes(pos) && !limpias.includes(pos)) {
+      limpias.push(pos);
+    }
+  });
+  return limpias.length ? limpias.slice(0, 2) : ['MED'];
+}
+
+function getPrimaryPlayerPosition(player) {
+  return getOrderedPlayerPositions(player)[0] || 'MED';
+}
+
+function isPureGoalkeeper(player) {
+  const posiciones = getOrderedPlayerPositions(player);
+  return posiciones.length === 1 && posiciones[0] === 'ARQ';
+}
+
+function isEmergencyGoalkeeper(player) {
+  return player && player.emergencyGoalkeeper === true;
+}
+
+function hasSecondaryPlayerPosition(player, position) {
+  return getOrderedPlayerPositions(player).slice(1).includes(position);
+}
+
+function prepareEmergencyGoalkeepers(players, numEquipos) {
+  const arqueros = players.filter(p => getPrimaryPlayerPosition(p) === 'ARQ');
+  const missing = Math.max(0, numEquipos - arqueros.length);
+  if (missing === 0) {
+    return { players, emergencyGoalkeepers: [] };
+  }
+
+  const emergencyIds = new Set(
+    players
+      .filter(p => getPrimaryPlayerPosition(p) !== 'ARQ')
+      .slice()
+      .sort((a, b) => {
+        const secondaryA = hasSecondaryPlayerPosition(a, 'ARQ') ? 0 : 1;
+        const secondaryB = hasSecondaryPlayerPosition(b, 'ARQ') ? 0 : 1;
+        if (secondaryA !== secondaryB) return secondaryA - secondaryB;
+        return (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre));
+      })
+      .slice(0, missing)
+      .map(playerKey)
+  );
+
+  const prepared = players.map(player => {
+    if (!emergencyIds.has(playerKey(player))) {
+      return player;
+    }
+    const fieldPositions = getOrderedPlayerPositions(player).filter(position => position !== 'ARQ');
+    return {
+      ...player,
+      posicion: ['ARQ', ...fieldPositions].slice(0, 2).join('/'),
+      habilidad_arquero: 2.0,
+      emergencyGoalkeeper: true,
+    };
+  });
+
+  return {
+    players: prepared,
+    emergencyGoalkeepers: prepared.filter(player => emergencyIds.has(playerKey(player))),
+  };
+}
+
+function buildTeamPositionAssignment(equipo) {
+  const lineasCampo = ['DEF', 'MED', 'DEL'];
+  const maxPorLinea = maxFieldPlayersPerLine(equipo.length);
+  const candidatosArq = equipo
+    .filter(jugador => getPrimaryPlayerPosition(jugador) === 'ARQ' || isEmergencyGoalkeeper(jugador))
+    .sort((a, b) => {
+      const emergencyA = isEmergencyGoalkeeper(a) ? 1 : 0;
+      const emergencyB = isEmergencyGoalkeeper(b) ? 1 : 0;
+      if (emergencyA !== emergencyB) return emergencyA - emergencyB;
+      const pureA = isPureGoalkeeper(a) ? 0 : 1;
+      const pureB = isPureGoalkeeper(b) ? 0 : 1;
+      if (pureA !== pureB) return pureA - pureB;
+      if (b.puntuacion !== a.puntuacion) return b.puntuacion - a.puntuacion;
+      return a.nombre.localeCompare(b.nombre);
+    });
+
+  const arqueroTitular = candidatosArq[0]
+    || equipo.slice().sort((a, b) => (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre)))[0]
+    || null;
+  const asignacion = new Map();
+  const preferenciasPorJugador = new Map();
+
+  equipo.forEach(jugador => {
+    const posiciones = getOrderedPlayerPositions(jugador);
+    let preferencias = posiciones.slice();
+
+    if (jugador === arqueroTitular) {
+      // El arquero titular queda fijo en el arco.
+      preferencias = ['ARQ'];
+    } else if (posiciones.includes('ARQ')) {
+      // Si no es el arquero titular, debe usar otra posición de campo.
+      preferencias = posiciones.filter(pos => pos !== 'ARQ');
+      if (!preferencias.length) {
+        preferencias = ['ARQ'];
+      }
+    }
+
+    preferenciasPorJugador.set(jugador, preferencias);
+    asignacion.set(jugador, preferencias[0] || 'MED');
+  });
+
+  const contarLineas = () => {
+    const conteo = { ARQ: 0, DEF: 0, MED: 0, DEL: 0 };
+    asignacion.forEach(pos => {
+      if (conteo[pos] === undefined) {
+        conteo.MED++;
+        return;
+      }
+      conteo[pos]++;
+    });
+    return conteo;
+  };
+
+  // Reubica jugadores multi-posicion si una linea supera el maximo permitido.
+  let huboCambios = true;
+  while (huboCambios) {
+    huboCambios = false;
+    const conteoActual = contarLineas();
+    const lineasExcedidas = lineasCampo
+      .filter(linea => conteoActual[linea] > maxPorLinea)
+      .sort((a, b) => conteoActual[b] - conteoActual[a]);
+
+    if (!lineasExcedidas.length) break;
+
+    for (const lineaOrigen of lineasExcedidas) {
+      const candidatosMover = equipo
+        .filter(jugador => asignacion.get(jugador) === lineaOrigen)
+        .filter(jugador => (preferenciasPorJugador.get(jugador) || []).some(pos => pos !== lineaOrigen))
+        .sort((a, b) => {
+          const altA = (preferenciasPorJugador.get(a) || []).length;
+          const altB = (preferenciasPorJugador.get(b) || []).length;
+          if (altA !== altB) return altB - altA;
+          return a.nombre.localeCompare(b.nombre);
+        });
+
+      let movioDesdeLinea = false;
+      for (const jugador of candidatosMover) {
+        const preferencias = preferenciasPorJugador.get(jugador) || [];
+        const conteo = contarLineas();
+        const destinos = preferencias.filter(pos => pos !== lineaOrigen && lineasCampo.includes(pos) && conteo[pos] < maxPorLinea);
+        if (!destinos.length) continue;
+
+        destinos.sort((a, b) => {
+          const faltaA = conteo[a] === 0 ? 1 : 0;
+          const faltaB = conteo[b] === 0 ? 1 : 0;
+          if (faltaA !== faltaB) return faltaB - faltaA;
+          if (conteo[a] !== conteo[b]) return conteo[a] - conteo[b];
+          return preferencias.indexOf(a) - preferencias.indexOf(b);
+        });
+
+        asignacion.set(jugador, destinos[0]);
+        huboCambios = true;
+        movioDesdeLinea = true;
+        break;
+      }
+
+      if (movioDesdeLinea) break;
+    }
+  }
+
+  const conteoFinal = contarLineas();
+  const arquerosAsignados = conteoFinal.ARQ;
+  const lineaMaximaValida = lineasCampo.every(linea => conteoFinal[linea] <= maxPorLinea);
+
+  return { asignacion, arquerosAsignados, conteoFinal, lineaMaximaValida };
+}
+
+function countAssignmentLines(assignment) {
+  const counts = { ARQ: 0, DEF: 0, MED: 0, DEL: 0 };
+  assignment.forEach(pos => {
+    if (counts[pos] === undefined) {
+      counts.MED++;
+      return;
+    }
+    counts[pos]++;
+  });
+  return counts;
+}
+
+function buildFlexibleTeamPositionAssignment(equipo) {
+  const base = buildTeamPositionAssignment(equipo);
+  if (base.arquerosAsignados === 1 && base.lineaMaximaValida) {
+    return { ...base, flexible: false };
+  }
+
+  const maxPerLine = maxFieldPlayersPerLine(equipo.length);
+  const goalkeeper = equipo.find(jugador => base.asignacion.get(jugador) === 'ARQ')
+    || equipo.find(jugador => getPrimaryPlayerPosition(jugador) === 'ARQ' || isEmergencyGoalkeeper(jugador))
+    || equipo.slice().sort((a, b) => (a.puntuacion - b.puntuacion) || String(a.nombre).localeCompare(String(b.nombre)))[0]
+    || null;
+  const fieldPlayers = equipo.filter(jugador => jugador !== goalkeeper);
+  const formationOptions = getFormationOptions(equipo.length).filter(option => (
+    option.DEF + option.MED + option.DEL === fieldPlayers.length
+    && Math.max(option.DEF, option.MED, option.DEL) <= maxPerLine
+  ));
+  const options = formationOptions.length
+    ? formationOptions
+    : [{ DEF: 1, MED: Math.max(0, fieldPlayers.length - 2), DEL: 1, value: 'fallback' }];
+
+  let bestAssignment = null;
+  let bestScore = -Infinity;
+
+  for (const counts of options) {
+    const assignment = new Map();
+    const remaining = new Set(fieldPlayers);
+    let score = 0;
+    if (goalkeeper) {
+      assignment.set(goalkeeper, 'ARQ');
+      score += adjustedPositionRating(goalkeeper, 'ARQ');
+    }
+
+    const linesByNeed = ['DEF', 'MED', 'DEL'].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+    for (const line of linesByNeed) {
+      for (let slot = 0; slot < (counts[line] || 0); slot++) {
+        const candidates = Array.from(remaining).sort((a, b) => {
+          const naturalA = getOrderedPlayerPositions(a).includes(line) ? 1 : 0;
+          const naturalB = getOrderedPlayerPositions(b).includes(line) ? 1 : 0;
+          if (naturalA !== naturalB) return naturalB - naturalA;
+          const ratingDiff = adjustedPositionRating(b, line) - adjustedPositionRating(a, line);
+          if (Math.abs(ratingDiff) > 0.0001) return ratingDiff;
+          return String(a.nombre).localeCompare(String(b.nombre));
+        });
+        const chosen = candidates[0];
+        if (!chosen) break;
+        assignment.set(chosen, line);
+        remaining.delete(chosen);
+        score += adjustedPositionRating(chosen, line);
+        if (!getOrderedPlayerPositions(chosen).includes(line)) {
+          score -= OUT_OF_POSITION_PENALTY_RATE * 2;
+        }
+      }
+    }
+
+    remaining.forEach(jugador => {
+      const fallback = ['DEF', 'MED', 'DEL']
+        .filter(line => (countAssignmentLines(assignment)[line] || 0) < maxPerLine)
+        .sort((a, b) => adjustedPositionRating(jugador, b) - adjustedPositionRating(jugador, a))[0] || 'MED';
+      assignment.set(jugador, fallback);
+      score += adjustedPositionRating(jugador, fallback);
+    });
+
+    const countsFinal = countAssignmentLines(assignment);
+    const valid = countsFinal.ARQ === 1
+      && REQUIRED_FIELD_LINES.every(line => countsFinal[line] >= 1 && countsFinal[line] <= maxPerLine);
+    if (valid && score > bestScore) {
+      bestScore = score;
+      bestAssignment = assignment;
+    }
+  }
+
+  if (!bestAssignment) {
+    return { ...base, flexible: false };
+  }
+
+  const conteoFinal = countAssignmentLines(bestAssignment);
+  return {
+    asignacion: bestAssignment,
+    arquerosAsignados: conteoFinal.ARQ,
+    conteoFinal,
+    lineaMaximaValida: REQUIRED_FIELD_LINES.every(line => conteoFinal[line] <= maxPerLine),
+    flexible: true,
+  };
+}
+
+function buildPositionAssignment(equipo, { allowOutOfPosition = false } = {}) {
+  return allowOutOfPosition ? buildFlexibleTeamPositionAssignment(equipo) : buildTeamPositionAssignment(equipo);
+}
+
+function getPrimaryPosition(player, asignacionEquipo = null) {
+  if (asignacionEquipo && asignacionEquipo.has(player)) {
+    return asignacionEquipo.get(player);
+  }
+  return getPrimaryPlayerPosition(player);
+}
+
+function actualizarListaJugadores() {
+  const container = document.getElementById('jugadores-container');
+  container.innerHTML = '';
+  jugadores.forEach((jugador, index) => {
+    const div = document.createElement('div');
+    div.className = 'player-item';
+    div.innerHTML = `
+      <input type="checkbox" id="jugador-${index}" ${jugador.selected ? 'checked' : ''} ${LOCKED_MATCH_MODE ? 'disabled' : ''} data-sorteo-action="toggle-player" data-player-index="${index}">
+      <div class="player-info">
+        <span class="player-name">${jugador.nombre} ${isLowRhythmPlayer(jugador) ? '🐢' : ''}</span>
+        <span class="player-details">
+          <span class="position-emoji">${obtenerEmojisDePosiciones(jugador.posicion)}</span> - ${convertirPuntuacionAEstrellas(jugador.puntuacion)}
+        </span>
+      </div>
+      <div class="action-buttons">
+        <button type="button" data-sorteo-action="edit-player" data-player-index="${index}" class="btn-edit">✏️</button>
+        <button type="button" data-sorteo-action="delete-player" data-player-index="${index}" class="btn-delete">🗑️</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function abrirModalAgregar() {
+  if (LOCKED_MATCH_MODE) {
+    alert('En modo fecha no se pueden agregar jugadores desde esta pantalla.');
+    return;
+  }
+  document.getElementById('addNombre').value = '';
+  document.querySelectorAll('.addPosicion').forEach(cb => cb.checked = false);
+  document.getElementById('addEdad').value = 'rápido';
+  document.getElementById('addScoreDisplay').textContent = "1.0";
+  document.getElementById('addModal').classList.remove('hidden');
+}
+
+function incrementScore(modalType) {
+  let display = modalType === 'add' ? document.getElementById('addScoreDisplay') : document.getElementById('editScoreDisplay');
+  let current = parseFloat(display.textContent);
+  if (current < 6) {
+    current = Math.min(6, current + 0.5);
+    display.textContent = current.toFixed(1);
+  }
+}
+function decrementScore(modalType) {
+  let display = modalType === 'add' ? document.getElementById('addScoreDisplay') : document.getElementById('editScoreDisplay');
+  let current = parseFloat(display.textContent);
+  if (current > 1) {
+    current = Math.max(1, current - 0.5);
+    display.textContent = current.toFixed(1);
+  }
+}
+
+function guardarJugador() {
+  if (LOCKED_MATCH_MODE) {
+    alert('En modo fecha no se pueden agregar jugadores desde esta pantalla.');
+    return;
+  }
+  const nombre = document.getElementById('addNombre').value.trim();
+  const posiciones = Array.from(document.querySelectorAll('.addPosicion:checked')).map(cb => cb.value).join('/');
+  const ritmo = document.getElementById('addEdad').value;
+  const puntuacion = parseFloat(document.getElementById('addScoreDisplay').textContent);
+  if (!nombre || posiciones === '' || isNaN(puntuacion)) {
+    alert('Completa todos los campos requeridos');
+    return;
+  }
+  jugadores.push({ nombre, posicion: posiciones, ritmo, puntuacion, selected: true });
+  actualizarListaJugadores();
+  cerrarModal('addModal');
+  const newIndex = jugadores.length - 1;
+  const newPlayerElement = document.getElementById('jugador-' + newIndex);
+  if (newPlayerElement) {
+    newPlayerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function editarJugador(index) {
+  const jugador = jugadores[index];
+  document.getElementById('editNombre').value = jugador.nombre;
+  document.querySelectorAll('.editPosicion').forEach(cb => {
+    cb.checked = jugador.posicion.split('/').includes(cb.value);
+  });
+  document.getElementById('editEdad').value = jugador.ritmo;
+  document.getElementById('editScoreDisplay').textContent = jugador.puntuacion.toFixed(1);
+  editIndex = index;
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+function guardarEdicion() {
+  const nombre = document.getElementById('editNombre').value.trim();
+  const posiciones = Array.from(document.querySelectorAll('.editPosicion:checked')).map(cb => cb.value).join('/');
+  const ritmo = document.getElementById('editEdad').value;
+  const puntuacion = parseFloat(document.getElementById('editScoreDisplay').textContent);
+  if (!nombre || posiciones === '' || isNaN(puntuacion)) {
+    alert('Completa todos los campos requeridos');
+    return;
+  }
+  jugadores[editIndex] = { nombre, posicion: posiciones, ritmo, puntuacion, selected: jugadores[editIndex].selected };
+  actualizarListaJugadores();
+  cerrarModal('editModal');
+  const editedElement = document.getElementById('jugador-' + editIndex);
+  if (editedElement) {
+    editedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function cerrarModal(modalId) {
+  document.getElementById(modalId).classList.add('hidden');
+  editIndex = -1;
+}
+
+function eliminarJugador(index) {
+  if (LOCKED_MATCH_MODE) {
+    alert('En modo fecha no se pueden eliminar jugadores desde esta pantalla.');
+    return;
+  }
+  if (confirm('¿Estás seguro de eliminar este jugador?')) {
+    jugadores.splice(index, 1);
+    actualizarListaJugadores();
+  }
+}
+
+function explicarBloqueoSorteo(players, numEquipos, maxDiff) {
+  if (players.length === 0) return 'No hay jugadores seleccionados.';
+  if (players.length % numEquipos !== 0) {
+    return `Hay ${players.length} jugadores seleccionados y no se pueden dividir en ${numEquipos} equipos iguales.`;
+  }
+  const teamSize = players.length / numEquipos;
+  const maxPerLine = maxFieldPlayersPerLine(teamSize);
+  const maxTeamSizeByFormation = 1 + (maxPerLine * REQUIRED_FIELD_LINES.length);
+  if (teamSize > maxTeamSizeByFormation) {
+    return `Cada equipo tendria ${teamSize} jugadores. La regla actual permite maximo 1 arquero y ${maxPerLine} por linea de campo (${maxTeamSizeByFormation} por equipo).`;
+  }
+  const arqueros = players.filter(p => getPrimaryPlayerPosition(p) === 'ARQ');
+  if (arqueros.length < numEquipos) {
+    return `Hay ${arqueros.length} arqueros naturales para ${numEquipos} equipos. Se completaran los arqueros faltantes con los jugadores de menor puntaje.`;
+  }
+  const arquerosPuros = arqueros.filter(isPureGoalkeeper);
+  if (arquerosPuros.length > numEquipos) {
+    return `Hay ${arquerosPuros.length} arqueros puros para ${numEquipos} equipos. Como el arquero es una sola plaza, sobra al menos un arquero puro.`;
+  }
+  const missingLines = REQUIRED_FIELD_LINES.filter(linea => players.filter(p => getOrderedPlayerPositions(p).includes(linea)).length < numEquipos);
+  if (missingLines.length) {
+    return `Faltan jugadores para cubrir todas las lineas en cada equipo. Lineas con menos de ${numEquipos} opciones: ${missingLines.join(', ')}.`;
+  }
+  return `No se encontro una combinacion que cumpla todas las reglas: diferencia maxima ${maxDiff.toFixed(1)}, 1 arquero por equipo, ritmo equilibrado, al menos DEF/MED/DEL y maximo ${maxPerLine} por linea.`;
+}
+
+function setGeneratingTeams(isGenerating) {
+  const button = document.getElementById('generateTeamsButton');
+  const loading = document.getElementById('generateTeamsLoading');
+  if (button) {
+    button.disabled = isGenerating;
+    button.classList.toggle('is-loading', isGenerating);
+    button.textContent = isGenerating ? 'Generando...' : '⚽ Generar Equipos';
+  }
+  if (loading) {
+    loading.hidden = !isGenerating;
+  }
+}
+
+function waitForPaint() {
+  return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 20)));
+}
+
+async function generarEquipos() {
+  const errorDiv = document.getElementById('error');
+  const successDiv = document.getElementById('success');
+  errorDiv.textContent = '';
+  errorDiv.classList.add('hidden');
+  successDiv.classList.add('hidden');
+  
+  const numEquipos = parseInt(document.getElementById('teamDisplay').textContent);
+  const maxDiff = parseFloat(document.getElementById('diffDisplay').textContent);
+  const rawSelectedPlayers = LOCKED_MATCH_MODE ? jugadores.slice() : jugadores.filter(j => j.selected);
+  const emergencyPreparation = prepareEmergencyGoalkeepers(rawSelectedPlayers, numEquipos);
+  const selectedPlayers = emergencyPreparation.players;
+  
+  if (isNaN(maxDiff) || maxDiff < 0) {
+    errorDiv.textContent = 'La diferencia máxima debe ser un número positivo';
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+  if (selectedPlayers.length === 0) {
+    errorDiv.textContent = 'Selecciona al menos un jugador';
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+  if (selectedPlayers.length % numEquipos !== 0) {
+    errorDiv.textContent = `Jugadores seleccionados (${selectedPlayers.length}) no es divisible por ${numEquipos}`;
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+
+  const teamSize = selectedPlayers.length / numEquipos;
+  const maxPerLine = maxFieldPlayersPerLine(teamSize);
+  const maxTeamSizeByFormation = 1 + (maxPerLine * REQUIRED_FIELD_LINES.length);
+  if (teamSize > maxTeamSizeByFormation) {
+    errorDiv.textContent = `Con ${teamSize} jugadores por equipo no se puede respetar la formacion: maximo 1 arquero y ${maxPerLine} por linea de campo (maximo ${maxTeamSizeByFormation} por equipo).`;
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+  
+  const arqueros = selectedPlayers.filter(p => getPrimaryPlayerPosition(p) === 'ARQ');
+  const arquerosPuros = arqueros.filter(isPureGoalkeeper);
+  if (arquerosPuros.length > numEquipos) {
+    errorDiv.textContent = `Hay ${arquerosPuros.length} arqueros puros para ${numEquipos} equipos. Debe haber como maximo 1 arquero puro por equipo.`;
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+
+  setGeneratingTeams(true);
+  await waitForPaint();
+
+  try {
+  const resultado = generarEquiposConDiferenciaAuto(selectedPlayers, numEquipos, maxDiff);
+  if (resultado) {
+    applyFlexibleFormationAssignments(resultado);
+    const validation = validarEquiposDetalle(resultado.equipos, teamSize, Number(resultado.usedMaxDiff || maxDiff), {
+      strictBalance: resultado.perfecto,
+      allowOutOfPosition: !!resultado.flexiblePositions,
+    });
+    if (!validation.ok) {
+      errorDiv.textContent = validation.reason;
+      errorDiv.classList.remove('hidden');
+      return;
+    }
+    lastEquipos = resultado.equipos;
+    document.getElementById('diffDisplay').textContent = Number(resultado.usedMaxDiff || maxDiff).toFixed(1);
+    mostrarEquipos(resultado.equipos);
+    successDiv.textContent = `Equipos generados exitosamente con diferencia máxima de ${maxDiff}`;
+    if (resultado.perfecto) {
+      successDiv.textContent = `Equipos generados con diferencia maxima ${Number(resultado.usedMaxDiff || maxDiff).toFixed(1)}.`;
+    }
+    if (!resultado.perfecto) {
+      successDiv.textContent = `Se genero el mejor equilibrio encontrado. Diferencia de puntos: ${resultado.metricas.diffPuntos.toFixed(1)}.`;
+    }
+    if (resultado.flexiblePositions) {
+      const outOfPosition = (resultado.metricas.stats || []).reduce((sum, stat) => sum + Number(stat.fueraDePosicion || 0), 0);
+      successDiv.textContent += ` Se usaron ${outOfPosition} cambios de posicion con penalidad.`;
+    }
+    if (emergencyPreparation.emergencyGoalkeepers.length) {
+      const emergencyNames = emergencyPreparation.emergencyGoalkeepers.map(p => p.nombre).join(', ');
+      successDiv.textContent += ` Arqueros de emergencia: ${emergencyNames}.`;
+    }
+    successDiv.classList.remove('hidden');
+  } else {
+    errorDiv.textContent = `No se encontro una combinacion valida aumentando la diferencia de a 0.5 hasta el maximo de ${FLEXIBLE_MAX_DIFF.toFixed(1)} puntos. ${explicarBloqueoSorteo(selectedPlayers, numEquipos, FLEXIBLE_MAX_DIFF)}`;
+    errorDiv.classList.remove('hidden');
+  }
+  } finally {
+    setGeneratingTeams(false);
+  }
+}
+
+function clonarEquipos(equipos) {
+  return equipos.map(equipo => equipo.slice());
+}
+
+function teamStats(equipo, { allowOutOfPosition = false } = {}) {
+  const assignment = buildPositionAssignment(equipo, { allowOutOfPosition });
+  const total = equipo.reduce((sum, j) => {
+    const assignedPosition = getPrimaryPosition(j, assignment.asignacion);
+    return sum + (allowOutOfPosition ? adjustedPositionRating(j, assignedPosition) : j.puntuacion);
+  }, 0);
+  const lentos = equipo.filter(isLowRhythmPlayer).length;
+  const rapidos = equipo.length - lentos;
+  const balance = {
+    general: total,
+    ataque: equipo.reduce((sum, j) => sum + statValue(j, 'ataque'), 0),
+    solidez: equipo.reduce((sum, j) => sum + statValue(j, 'solidez'), 0),
+    ritmo: equipo.reduce((sum, j) => sum + statValue(j, 'ritmo_stat'), 0),
+    tecnica: equipo.reduce((sum, j) => sum + statValue(j, 'tecnica'), 0),
+    compromiso: equipo.reduce((sum, j) => sum + statValue(j, 'compromiso'), 0),
+    mentalidad: equipo.reduce((sum, j) => sum + statValue(j, 'mentalidad'), 0),
+    regularidad: equipo.reduce((sum, j) => sum + statValue(j, 'regularidad'), 0),
+    arquero: equipo.reduce((max, j) => {
+      if (!getOrderedPlayerPositions(j).includes('ARQ')) return max;
+      return Math.max(max, statValue(j, 'habilidad_arquero'));
+    }, 0)
+  };
+  const lineas = assignment.conteoFinal || { ARQ: 0, DEF: 0, MED: 0, DEL: 0 };
+  const fueraDePosicion = equipo.filter(jugador => {
+    const assignedPosition = getPrimaryPosition(jugador, assignment.asignacion);
+    return !getOrderedPlayerPositions(jugador).includes(assignedPosition);
+  }).length;
+  return {
+    total,
+    lentos,
+    rapidos,
+    balance,
+    lineas,
+    arqueros: assignment.arquerosAsignados || 0,
+    lineaMaximaValida: !!assignment.lineaMaximaValida,
+    fueraDePosicion,
+  };
+}
+
+function teammatePairKey(a, b) {
+  const idA = parseInt(a.id || 0, 10);
+  const idB = parseInt(b.id || 0, 10);
+  if (!idA || !idB) return '';
+  return idA < idB ? `${idA}-${idB}` : `${idB}-${idA}`;
+}
+
+function historicalRepeatPenalty(equipos) {
+  let penalty = 0;
+  for (const equipo of equipos) {
+    for (let i = 0; i < equipo.length; i++) {
+      for (let j = i + 1; j < equipo.length; j++) {
+        const key = teammatePairKey(equipo[i], equipo[j]);
+        if (!key) continue;
+        const repeats = Number(HISTORICAL_TEAMMATE_PAIRS[key] || 0);
+        if (repeats > 0) {
+          penalty += repeats * repeats * 35;
+        }
+      }
+    }
+  }
+  return penalty;
+}
+
+function statSpread(values) {
+  return Math.max(...values) - Math.min(...values);
+}
+
+function weightedBalancePenalty(stats) {
+  return Object.entries(DRAW_BALANCE_WEIGHTS).reduce((total, [campo, peso]) => {
+    const values = stats.map(s => Number(s.balance?.[campo] || 0));
+    return total + (statSpread(values) * Number(peso || 0));
+  }, 0);
+}
+
+function evaluarEquipos(equipos, teamSize, maxDiff, options = {}) {
+  const stats = equipos.map(equipo => teamStats(equipo, options));
+  const puntos = stats.map(s => s.total);
+  const lentos = stats.map(s => s.lentos);
+  const rapidos = stats.map(s => s.rapidos);
+  const diffPuntos = Math.max(...puntos) - Math.min(...puntos);
+  const diffLentos = Math.max(...lentos) - Math.min(...lentos);
+  const diffRapidos = Math.max(...rapidos) - Math.min(...rapidos);
+
+  const repeatPenalty = historicalRepeatPenalty(equipos);
+  const balancePenalty = weightedBalancePenalty(stats);
+  const outOfPositionPenalty = stats.reduce((sum, stat) => sum + (stat.fueraDePosicion || 0), 0) * 12;
+  let penalidad = balancePenalty + diffLentos * 25 + diffRapidos * 10 + repeatPenalty + outOfPositionPenalty;
+  let hardOk = true;
+
+  const fieldPlayers = Math.max(0, teamSize - 1);
+  const minFieldLine = fieldPlayers >= 3 ? 1 : 0;
+  const maxFieldLine = maxFieldPlayersPerLine(teamSize);
+
+  for (const stat of stats) {
+    if (stat.arqueros !== 1) {
+      penalidad += Math.abs(stat.arqueros - 1) * 100000;
+      hardOk = false;
+    }
+    for (const linea of REQUIRED_FIELD_LINES) {
+      const cantidad = stat.lineas[linea] || 0;
+      if (cantidad < minFieldLine) penalidad += (minFieldLine - cantidad) * 25000;
+      if (cantidad > maxFieldLine) penalidad += (cantidad - maxFieldLine) * 25000;
+    }
+  }
+
+  const perfecto = hardOk
+    && diffPuntos <= maxDiff
+    && diffLentos <= 1
+    && equipos.every(equipo => equipo.length === teamSize)
+    && stats.every(stat => REQUIRED_FIELD_LINES.every(linea => (stat.lineas[linea] || 0) >= minFieldLine && (stat.lineas[linea] || 0) <= maxFieldLine));
+
+  return { penalidad, perfecto, diffPuntos, diffLentos, diffRapidos, repeatPenalty, balancePenalty, outOfPositionPenalty, stats };
+}
+
+function construirCandidato(players, numEquipos, teamSize, semilla, options = {}) {
+  const arqueros = players.filter(p => getPrimaryPlayerPosition(p) === 'ARQ' || isEmergencyGoalkeeper(p)).sort(() => Math.random() - 0.5);
+  const arquerosPuros = arqueros.filter(isPureGoalkeeper);
+  const arquerosMixtos = arqueros.filter(p => !isPureGoalkeeper(p));
+  const arquerosTitulares = [...arquerosPuros, ...arquerosMixtos]
+    .sort((a, b) => {
+      if (semilla % 3 === 0) return b.puntuacion - a.puntuacion;
+      if (semilla % 3 === 1) return a.puntuacion - b.puntuacion;
+      return Math.random() - 0.5;
+    })
+    .slice(0, numEquipos);
+
+  if (arquerosTitulares.length < numEquipos) return null;
+
+  const equipos = Array.from({ length: numEquipos }, () => []);
+  const titulares = new Set(arquerosTitulares);
+  arquerosTitulares.forEach((jugador, index) => equipos[index].push(jugador));
+
+  const restantes = players
+    .filter(p => !titulares.has(p))
+    .sort((a, b) => {
+      const ritmoA = isLowRhythmPlayer(a) ? 1 : 0;
+      const ritmoB = isLowRhythmPlayer(b) ? 1 : 0;
+      if (semilla % 4 === 0 && ritmoA !== ritmoB) return ritmoB - ritmoA;
+      if (semilla % 4 === 1 && ritmoA !== ritmoB) return ritmoA - ritmoB;
+      if (b.puntuacion !== a.puntuacion) return b.puntuacion - a.puntuacion;
+      return Math.random() - 0.5;
+    });
+
+  for (const jugador of restantes) {
+    let mejorEquipo = null;
+    let mejorScore = Infinity;
+    for (let idx = 0; idx < numEquipos; idx++) {
+      if (equipos[idx].length >= teamSize) continue;
+      const candidato = clonarEquipos(equipos);
+      candidato[idx].push(jugador);
+      const score = evaluarEquipos(candidato, teamSize, 999, options).penalidad;
+      if (score < mejorScore) {
+        mejorScore = score;
+        mejorEquipo = idx;
+      }
+    }
+    if (mejorEquipo === null) return null;
+    equipos[mejorEquipo].push(jugador);
+  }
+
+  return equipos.every(equipo => equipo.length === teamSize) ? equipos : null;
+}
+
+function mejorarPorIntercambios(equipos, teamSize, maxDiff, options = {}) {
+  let mejor = clonarEquipos(equipos);
+  let mejorEval = evaluarEquipos(mejor, teamSize, maxDiff, options);
+  let cambio = true;
+
+  while (cambio) {
+    cambio = false;
+    for (let a = 0; a < mejor.length; a++) {
+      for (let b = a + 1; b < mejor.length; b++) {
+        for (let i = 0; i < mejor[a].length; i++) {
+          for (let j = 0; j < mejor[b].length; j++) {
+            const candidato = clonarEquipos(mejor);
+            const tmp = candidato[a][i];
+            candidato[a][i] = candidato[b][j];
+            candidato[b][j] = tmp;
+            const evaluacion = evaluarEquipos(candidato, teamSize, maxDiff, options);
+            if (evaluacion.penalidad + 0.0001 < mejorEval.penalidad) {
+              mejor = candidato;
+              mejorEval = evaluacion;
+              cambio = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { equipos: mejor, evaluacion: mejorEval };
+}
+
+function generarDosEquiposOptimos(players, teamSize, maxDiff, options = {}) {
+  const total = players.length;
+  const indices = [0];
+  let mejor = null;
+  let mejorEval = null;
+
+  function evaluarSeleccion() {
+    const elegidos = new Set(indices);
+    const equipoA = [];
+    const equipoB = [];
+    for (let i = 0; i < total; i++) {
+      if (elegidos.has(i)) equipoA.push(players[i]);
+      else equipoB.push(players[i]);
+    }
+    const equipos = [equipoA, equipoB];
+    const evaluacion = evaluarEquipos(equipos, teamSize, maxDiff, options);
+    if (!mejorEval || evaluacion.penalidad < mejorEval.penalidad) {
+      mejor = equipos;
+      mejorEval = evaluacion;
+    }
+  }
+
+  function backtrack(start) {
+    if (indices.length === teamSize) {
+      evaluarSeleccion();
+      return;
+    }
+    const faltan = teamSize - indices.length;
+    for (let i = start; i <= total - faltan; i++) {
+      indices.push(i);
+      backtrack(i + 1);
+      indices.pop();
+    }
+  }
+
+  backtrack(1);
+  return mejor ? { equipos: mejor, evaluacion: mejorEval } : null;
+}
+
+function generarEquiposOptimos(players, numEquipos, maxDiff, options = {}) {
+  const teamSize = players.length / numEquipos;
+  if (numEquipos === 2 && players.length <= 20) {
+    const exacto = generarDosEquiposOptimos(players, teamSize, maxDiff, options);
+    if (exacto) {
+      return {
+        equipos: exacto.equipos,
+        perfecto: exacto.evaluacion.perfecto,
+        metricas: exacto.evaluacion
+      };
+    }
+  }
+
+  let mejor = null;
+  let mejorEval = null;
+  const intentos = Math.min(1800, Math.max(500, players.length * players.length * 4));
+
+  for (let intento = 0; intento < intentos; intento++) {
+    const candidato = construirCandidato(players, numEquipos, teamSize, intento, options);
+    if (!candidato) continue;
+    const mejorado = mejorarPorIntercambios(candidato, teamSize, maxDiff, options);
+    if (!mejorEval || mejorado.evaluacion.penalidad < mejorEval.penalidad) {
+      mejor = mejorado.equipos;
+      mejorEval = mejorado.evaluacion;
+      if (mejorEval.perfecto && (mejorEval.repeatPenalty || 0) === 0) break;
+    }
+  }
+
+  if (!mejor) return null;
+  return { equipos: mejor, perfecto: mejorEval.perfecto, metricas: mejorEval };
+}
+
+function generatedAssignments(equipos, options = {}) {
+  return equipos.map(equipo => {
+    const assignment = buildPositionAssignment(equipo, options).asignacion;
+    const out = {};
+    equipo.forEach(jugador => {
+      out[playerKey(jugador)] = getPrimaryPosition(jugador, assignment);
+    });
+    return out;
+  });
+}
+
+function generarEquiposConDiferenciaAuto(players, numEquipos, initialDiff = 0.5) {
+  const start = Math.min(STRICT_MAX_DIFF, Math.max(0.5, initialDiff || 0.5));
+  let mejorResultado = null;
+  for (let diff = start; diff <= STRICT_MAX_DIFF; diff += 0.5) {
+    const resultado = generarEquiposOptimos(players, numEquipos, diff);
+    if (resultado && (!mejorResultado || resultado.metricas.penalidad < mejorResultado.metricas.penalidad)) {
+      mejorResultado = resultado;
+      mejorResultado.usedMaxDiff = Math.max(diff, resultado.metricas.diffPuntos || diff);
+    }
+    if (resultado && resultado.perfecto) {
+      resultado.usedMaxDiff = diff;
+      return resultado;
+    }
+  }
+
+  let mejorFlexible = null;
+  for (let diff = 0.5; diff <= FLEXIBLE_MAX_DIFF; diff += 0.5) {
+    const resultado = generarEquiposOptimos(players, numEquipos, diff, { allowOutOfPosition: true });
+    if (!resultado) continue;
+    resultado.flexiblePositions = true;
+    resultado.flexibleAssignments = generatedAssignments(resultado.equipos, { allowOutOfPosition: true });
+    if (!mejorFlexible || resultado.metricas.penalidad < mejorFlexible.metricas.penalidad) {
+      mejorFlexible = resultado;
+      mejorFlexible.usedMaxDiff = Math.max(diff, resultado.metricas.diffPuntos || diff);
+    }
+    if (resultado.perfecto) {
+      resultado.usedMaxDiff = diff;
+      return resultado;
+    }
+  }
+
+  return mejorFlexible || mejorResultado;
+}
+
+function applyFlexibleFormationAssignments(resultado) {
+  if (!resultado?.flexiblePositions || !Array.isArray(resultado.flexibleAssignments)) return;
+  teamFormations = {};
+  customFormations = {};
+  manualAssignments = {};
+  resultado.equipos.forEach((equipo, teamIndex) => {
+    const assignments = resultado.flexibleAssignments[teamIndex] || {};
+    const counts = { DEF: 0, MED: 0, DEL: 0 };
+    equipo.forEach(jugador => {
+      const assigned = assignments[playerKey(jugador)] || '';
+      if (['ARQ', 'DEF', 'MED', 'DEL'].includes(assigned)) {
+        manualAssignments[playerKey(jugador)] = assigned;
+        if (counts[assigned] !== undefined) counts[assigned]++;
+      }
+    });
+    teamFormations[teamIndex] = 'custom';
+    customFormations[teamIndex] = counts;
+  });
+}
+
+function validarEquiposDetalle(equipos, teamSize, maxDiff, { strictBalance = true, allowOutOfPosition = false } = {}) {
+  let puntuaciones = [];
+
+  for (let equipoIndex = 0; equipoIndex < equipos.length; equipoIndex++) {
+    const equipo = equipos[equipoIndex];
+    const nombreEquipo = getTeamDisplayName(equipoIndex);
+    if (equipo.length !== teamSize) {
+      return { ok: false, reason: `${nombreEquipo} tiene ${equipo.length} jugadores y debe tener ${teamSize}.` };
+    }
+
+    const { asignacion, arquerosAsignados, lineaMaximaValida } = buildPositionAssignment(equipo, { allowOutOfPosition });
+    if (arquerosAsignados !== 1) {
+      return { ok: false, reason: `${nombreEquipo} queda con ${arquerosAsignados} arqueros asignados. Cada equipo debe tener exactamente 1 arquero.` };
+    }
+    if (!lineaMaximaValida) {
+      return { ok: false, reason: `${nombreEquipo} supera el limite de ${maxFieldPlayersPerLine(teamSize)} jugadores en una linea de campo.` };
+    }
+    const posiciones = new Set(asignacion.values());
+    const posicionesRequeridas = ['ARQ', 'DEF', 'MED', 'DEL'];
+    if (!posicionesRequeridas.every(p => posiciones.has(p))) {
+      const faltantes = posicionesRequeridas.filter(p => !posiciones.has(p)).join(', ');
+      return { ok: false, reason: `${nombreEquipo} no cubre todas las lineas requeridas. Falta: ${faltantes}.` };
+    }
+
+    const puntuacion = equipo.reduce((sum, j) => {
+      const assignedPosition = getPrimaryPosition(j, asignacion);
+      return sum + (allowOutOfPosition ? adjustedPositionRating(j, assignedPosition) : j.puntuacion);
+    }, 0);
+    puntuaciones.push(puntuacion);
+
+  }
+
+  const max = Math.max(...puntuaciones);
+  const min = Math.min(...puntuaciones);
+  const diff = max - min;
+  if (strictBalance && diff > maxDiff) {
+    return { ok: false, reason: `La diferencia de puntaje entre equipos es ${diff.toFixed(1)} y el maximo permitido es ${maxDiff.toFixed(1)}.` };
+  }
+  const lentosPorEquipo = equipos.map(equipo => equipo.filter(isLowRhythmPlayer).length);
+  const diffLentos = Math.max(...lentosPorEquipo) - Math.min(...lentosPorEquipo);
+  if (strictBalance && diffLentos > 1) {
+    return { ok: false, reason: `Los equipos no reparten el ritmo de forma pareja: lentos por equipo ${lentosPorEquipo.join(' / ')}.` };
+  }
+  return { ok: true, reason: '' };
+}
+
+function validarEquipos(equipos, teamSize, maxDiff) {
+  return validarEquiposDetalle(equipos, teamSize, maxDiff).ok;
+}
+
+function playerKey(jugador) {
+  return String(jugador.id || jugador.nombre);
+}
+
+function getFormationOptions(teamSize) {
+  const fieldPlayers = Math.max(0, teamSize - 1);
+  const maxPerLine = maxFieldPlayersPerLine(teamSize);
+  const candidates = [];
+  for (let def = 0; def <= fieldPlayers; def++) {
+    for (let med = 0; med <= fieldPlayers - def; med++) {
+      const del = fieldPlayers - def - med;
+      if (fieldPlayers >= 3 && (def < 1 || med < 1 || del < 1)) continue;
+      if (Math.max(def, med, del) > maxPerLine) continue;
+      const values = [def, med, del];
+      const balance = Math.max(...values) - Math.min(...values);
+      candidates.push({ DEF: def, MED: med, DEL: del, value: `${def}-${med}-${del}`, balance });
+    }
+  }
+
+  const preferred = [];
+  const addBest = (sorter) => {
+    const option = candidates.slice().sort(sorter).find(item => !preferred.some(p => p.value === item.value));
+    if (option) preferred.push(option);
+  };
+
+  addBest((a, b) => a.balance - b.balance || b.MED - a.MED || b.DEF - a.DEF);
+  addBest((a, b) => b.DEF - a.DEF || a.balance - b.balance);
+  addBest((a, b) => b.MED - a.MED || a.balance - b.balance);
+  addBest((a, b) => b.DEL - a.DEL || a.balance - b.balance);
+
+  return preferred.slice(0, 4);
+}
+
+function formationOptionsHtml(teamIndex, teamSize) {
+  const options = getFormationOptions(teamSize);
+  const selected = teamFormations[teamIndex] || 'auto';
+  return `
+    <option value="auto" ${selected === 'auto' ? 'selected' : ''}>Automatica</option>
+    ${options.map(option => `<option value="${option.value}" ${selected === option.value ? 'selected' : ''}>${option.value}</option>`).join('')}
+    <option value="custom" ${selected === 'custom' ? 'selected' : ''}>Personalizada</option>
+  `;
+}
+
+function selectedFormationCounts(teamIndex, teamSize) {
+  const selectedFormation = teamFormations[teamIndex] || 'auto';
+  if (selectedFormation === 'auto') return null;
+  if (selectedFormation === 'custom') {
+    const custom = customFormations[teamIndex] || defaultFormationCounts(teamSize);
+    const maxPerLine = maxFieldPlayersPerLine(teamSize);
+    return {
+      DEF: Math.min(maxPerLine, Math.max(0, parseInt(custom.DEF || 0, 10))),
+      MED: Math.min(maxPerLine, Math.max(0, parseInt(custom.MED || 0, 10))),
+      DEL: Math.min(maxPerLine, Math.max(0, parseInt(custom.DEL || 0, 10)))
+    };
+  }
+  const parts = selectedFormation.split('-').map(value => parseInt(value, 10));
+  return { DEF: parts[0] || 0, MED: parts[1] || 0, DEL: parts[2] || 0 };
+}
+
+function clonePlainObject(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
+function pushTeamFormationUndo(teamIndex) {
+  const key = String(teamIndex);
+  teamFormationUndoStack[key] = teamFormationUndoStack[key] || [];
+  teamFormationUndoStack[key].push({
+    teamFormations: clonePlainObject(teamFormations),
+    customFormations: clonePlainObject(customFormations),
+    manualAssignments: clonePlainObject(manualAssignments),
+  });
+}
+
+function undoTeamFormationChange(teamIndex) {
+  const key = String(teamIndex);
+  const snapshot = (teamFormationUndoStack[key] || []).pop();
+  if (!snapshot) return;
+  teamFormations = snapshot.teamFormations || {};
+  customFormations = snapshot.customFormations || {};
+  manualAssignments = snapshot.manualAssignments || {};
+  if (lastEquipos) mostrarEquipos(lastEquipos);
+}
+
+function defaultFormationCounts(teamSize) {
+  const first = getFormationOptions(teamSize)[0] || { DEF: 0, MED: 0, DEL: Math.max(0, teamSize - 1) };
+  return { DEF: first.DEF, MED: first.MED, DEL: first.DEL };
+}
+
+function onTeamFormationChange(teamIndex, value) {
+  pushTeamFormationUndo(teamIndex);
+  teamFormations[teamIndex] = value;
+  if (value === 'custom' && !customFormations[teamIndex] && lastEquipos && lastEquipos[teamIndex]) {
+    customFormations[teamIndex] = defaultFormationCounts(lastEquipos[teamIndex].length);
+  }
+  if (lastEquipos) mostrarEquipos(lastEquipos);
+}
+
+function onTeamCustomFormationChange(teamIndex, line, value) {
+  pushTeamFormationUndo(teamIndex);
+  if (!customFormations[teamIndex] && lastEquipos && lastEquipos[teamIndex]) {
+    customFormations[teamIndex] = defaultFormationCounts(lastEquipos[teamIndex].length);
+  }
+  const teamSize = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex].length : 0;
+  customFormations[teamIndex][line] = Math.min(maxFieldPlayersPerLine(teamSize), Math.max(0, parseInt(value || '0', 10)));
+  teamFormations[teamIndex] = 'custom';
+  if (lastEquipos) mostrarEquipos(lastEquipos);
+}
+
+function onManualPositionChange(teamIndex, playerId, position) {
+  const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
+  const player = team.find(jugador => playerKey(jugador) === String(playerId));
+  if (player) {
+    const currentAssignment = buildFormationAssignment(team, teamIndex);
+    const proposedAssignment = new Map(currentAssignment);
+    proposedAssignment.set(player, position);
+    if (assignmentGoalkeeperCount(team, proposedAssignment) > 1) {
+      alert('Cada equipo puede tener como maximo un arquero.');
+      if (lastEquipos) mostrarEquipos(lastEquipos);
+      return;
+    }
+  }
+  pushTeamFormationUndo(teamIndex);
+  if (!customFormations[teamIndex] && lastEquipos && lastEquipos[teamIndex]) {
+    customFormations[teamIndex] = defaultFormationCounts(lastEquipos[teamIndex].length);
+  }
+  teamFormations[teamIndex] = 'custom';
+  manualAssignments[String(playerId)] = position;
+  if (lastEquipos) mostrarEquipos(lastEquipos);
+}
+
+function assignmentGoalkeeperCount(team, assignment) {
+  return team.reduce((count, jugador) => (
+    count + (getPrimaryPosition(jugador, assignment) === 'ARQ' ? 1 : 0)
+  ), 0);
+}
+
+function onFormationPlayerDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex, targetPlayerKey) {
+  if (!lastEquipos || sourceTeamIndex !== targetTeamIndex || sourcePlayerKey === targetPlayerKey) return;
+  const team = lastEquipos[targetTeamIndex];
+  if (!team) return;
+
+  const assignment = buildFormationAssignment(team, targetTeamIndex);
+  const sourcePlayer = team.find(jugador => playerKey(jugador) === sourcePlayerKey);
+  const targetPlayer = team.find(jugador => playerKey(jugador) === targetPlayerKey);
+  if (!sourcePlayer || !targetPlayer) return;
+
+  const sourcePosition = getPrimaryPosition(sourcePlayer, assignment);
+  const targetPosition = getPrimaryPosition(targetPlayer, assignment);
+  const proposedAssignment = new Map(assignment);
+  proposedAssignment.set(sourcePlayer, targetPosition);
+  proposedAssignment.set(targetPlayer, sourcePosition);
+
+  if (assignmentGoalkeeperCount(team, proposedAssignment) > 1) {
+    alert('Cada equipo puede tener como maximo un arquero.');
+    return;
+  }
+
+  pushTeamFormationUndo(targetTeamIndex);
+  if (!customFormations[targetTeamIndex]) {
+    customFormations[targetTeamIndex] = defaultFormationCounts(team.length);
+  }
+  teamFormations[targetTeamIndex] = 'custom';
+  manualAssignments[playerKey(sourcePlayer)] = targetPosition;
+  manualAssignments[playerKey(targetPlayer)] = sourcePosition;
+  mostrarEquipos(lastEquipos);
+}
+
+function buildFormationAssignment(equipo, teamIndex = 0) {
+  const base = buildTeamPositionAssignment(equipo);
+  const selectedFormation = teamFormations[teamIndex] || 'auto';
+  if (selectedFormation === 'auto') {
+    return base.asignacion;
+  }
+
+  const counts = selectedFormationCounts(teamIndex, equipo.length);
+  const remaining = { DEF: counts.DEF, MED: counts.MED, DEL: counts.DEL };
+  const assignment = new Map();
+  const assigned = new Set();
+  const baseGoalkeeper = equipo.find(jugador => base.asignacion.get(jugador) === 'ARQ')
+    || equipo.find(jugador => getPrimaryPlayerPosition(jugador) === 'ARQ' || isEmergencyGoalkeeper(jugador));
+  const manualGoalkeeper = equipo.find(jugador => manualAssignments[playerKey(jugador)] === 'ARQ');
+  const selectedGoalkeeper = manualGoalkeeper || baseGoalkeeper;
+
+  if (selectedGoalkeeper) {
+    assignment.set(selectedGoalkeeper, 'ARQ');
+    assigned.add(selectedGoalkeeper);
+  }
+
+  for (const jugador of equipo) {
+    if (assigned.has(jugador)) continue;
+    const manual = manualAssignments[playerKey(jugador)];
+    if (['DEF', 'MED', 'DEL'].includes(manual)) {
+      assignment.set(jugador, manual);
+      assigned.add(jugador);
+      if (remaining[manual] !== undefined && remaining[manual] > 0) {
+        remaining[manual]--;
+      }
+    }
+  }
+
+  for (const line of ['DEF', 'MED', 'DEL']) {
+    while (remaining[line] > 0) {
+      const candidates = equipo
+        .filter(jugador => !assigned.has(jugador))
+        .sort((a, b) => {
+          const prefA = getOrderedPlayerPositions(a).includes(line) ? 0 : 1;
+          const prefB = getOrderedPlayerPositions(b).includes(line) ? 0 : 1;
+          if (prefA !== prefB) return prefA - prefB;
+          if (b.puntuacion !== a.puntuacion) return b.puntuacion - a.puntuacion;
+          return a.nombre.localeCompare(b.nombre);
+        });
+      if (!candidates.length) break;
+      const chosen = candidates[0];
+      assignment.set(chosen, line);
+      assigned.add(chosen);
+      remaining[line]--;
+    }
+  }
+
+  for (const jugador of equipo) {
+    if (assigned.has(jugador)) continue;
+    const lineCounts = { DEF: 0, MED: 0, DEL: 0 };
+    assignment.forEach(pos => {
+      if (lineCounts[pos] !== undefined) lineCounts[pos]++;
+    });
+    const fallback = ['DEF', 'MED', 'DEL'].sort((a, b) => lineCounts[a] - lineCounts[b])[0];
+    assignment.set(jugador, fallback);
+    assigned.add(jugador);
+  }
+
+  return assignment;
+}
+
+function mostrarEquipos(equipos) {
+  const container = document.getElementById('equipos-generados');
+  container.innerHTML = '';
+  const matchupTitle = document.createElement('div');
+  matchupTitle.className = 'sorteo-matchup-title';
+  matchupTitle.textContent = getMatchupDisplayName(equipos.length);
+  container.appendChild(matchupTitle);
+  
+  equipos.forEach((equipo, index) => {
+    const equipoDiv = document.createElement('div');
+    equipoDiv.className = 'team';
+    equipoDiv.dataset.teamIndex = String(index);
+    const teamColor = getTeamColor(index);
+    let headerText = getTeamDisplayName(index);
+    if (teamColor) {
+      equipoDiv.classList.add(teamColor.class);
+    }
+    
+    const jugadoresOrdenados = equipo.slice().sort((a, b) => {
+      const orderA = getPlayerOrder(a);
+      const orderB = getPlayerOrder(b);
+      if (orderA !== orderB) return orderA - orderB;
+      return a.nombre.localeCompare(b.nombre);
+    });
+    
+    const resumenStats = teamTotalsSummary(jugadoresOrdenados);
+    const asignacionPosiciones = buildFormationAssignment(jugadoresOrdenados, index);
+    const totalPuntos = jugadoresOrdenados.reduce((sum, jugador) => {
+      const assignedPosition = getPrimaryPosition(jugador, asignacionPosiciones);
+      return sum + adjustedPositionRating(jugador, assignedPosition);
+    }, 0);
+    const custom = selectedFormationCounts(index, jugadoresOrdenados.length) || defaultFormationCounts(jugadoresOrdenados.length);
+    const maxCustomLine = maxFieldPlayersPerLine(jugadoresOrdenados.length);
+    const customVisible = (teamFormations[index] || 'auto') === 'custom';
+
+    const ordenCancha = ['ARQ', 'DEF', 'MED', 'DEL'];
+    const etiquetasPosicion = {
+      ARQ: 'ARQ',
+      DEF: 'DEF',
+      MED: 'MED',
+      DEL: 'DEL'
+    };
+    const jugadoresPorLinea = { ARQ: [], DEF: [], MED: [], DEL: [] };
+
+    jugadoresOrdenados.forEach(jugador => {
+      const posicionPrincipal = getPrimaryPosition(jugador, asignacionPosiciones);
+      if (!jugadoresPorLinea[posicionPrincipal]) {
+        jugadoresPorLinea.MED.push(jugador);
+        return;
+      }
+      jugadoresPorLinea[posicionPrincipal].push(jugador);
+    });
+
+    ordenCancha.forEach(pos => {
+      jugadoresPorLinea[pos].sort((a, b) => {
+        if (b.puntuacion !== a.puntuacion) return b.puntuacion - a.puntuacion;
+        return a.nombre.localeCompare(b.nombre);
+      });
+    });
+
+    const resumenFormacion = ordenCancha.map(pos => jugadoresPorLinea[pos].length).join('-');
+    
+    equipoDiv.innerHTML = `
+      <div class="team-header">
+        <div class="team-title">${headerText}</div>
+        <div class="team-stats">${totalPuntos.toFixed(1)} ⭐</div>
+      </div>
+      <div class="team-formation-controls">
+        <div class="team-control-group">
+          <label>Camiseta</label>
+          <select data-sorteo-action="team-color-change" data-team-index="${index}">
+            ${teamColorOptionsHtml(index)}
+          </select>
+        </div>
+        <div class="team-control-group">
+          <label>Formacion</label>
+          <select data-sorteo-action="team-formation-change" data-team-index="${index}">
+            ${formationOptionsHtml(index, jugadoresOrdenados.length)}
+          </select>
+        </div>
+        <div class="team-custom-formation ${customVisible ? '' : 'hidden'}">
+          <span>DEF</span>
+          <input type="number" min="0" max="${maxCustomLine}" value="${custom.DEF}" data-sorteo-action="team-custom-formation-change" data-team-index="${index}" data-line="DEF">
+          <span>MED</span>
+          <input type="number" min="0" max="${maxCustomLine}" value="${custom.MED}" data-sorteo-action="team-custom-formation-change" data-team-index="${index}" data-line="MED">
+          <span>DEL</span>
+          <input type="number" min="0" max="${maxCustomLine}" value="${custom.DEL}" data-sorteo-action="team-custom-formation-change" data-team-index="${index}" data-line="DEL">
+        </div>
+      </div>
+      <div class="team-formation">
+        <button class="formation-undo-button" type="button" title="Deshacer ultimo cambio" aria-label="Deshacer ultimo cambio" data-sorteo-action="formation-undo" data-team-index="${index}" ${(teamFormationUndoStack[String(index)] || []).length ? '' : 'disabled'}>↶</button>
+        <div class="formation-total-badge" aria-live="polite">TOTAL: ${totalPuntos.toFixed(1)} pts</div>
+        ${ordenCancha.map(pos => `
+          <div class="formation-line">
+            <div class="line-label">${etiquetasPosicion[pos]}</div>
+            <div class="line-players">
+              ${jugadoresPorLinea[pos].map(j => {
+                const adjustedRating = adjustedPositionRating(j, pos);
+                const outOfPosition = !getOrderedPlayerPositions(j).includes(pos);
+                return `
+                <div class="formation-player ${outOfPosition ? 'is-out-of-position' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${pos}">
+                  <span class="formation-player-name">${j.nombre} ${isLowRhythmPlayer(j) ? '🐢' : ''}</span>
+                  <span class="formation-player-meta">${obtenerEmojisDePosiciones(j.posicion)} ${convertirPuntuacionAEstrellas(adjustedRating)}${outOfPosition ? ` <em>-${Math.round(OUT_OF_POSITION_PENALTY_RATE * 100)}%</em>` : ''}</span>
+                  <select class="formation-manual-select" data-sorteo-action="manual-position-change" data-team-index="${index}" data-player-key="${playerKey(j)}">
+                    ${ordenCancha.map(linea => `<option value="${linea}" ${pos === linea ? 'selected' : ''}>${linea}</option>`).join('')}
+                  </select>
+                </div>
+              `}).join('')}
+            </div>
+          </div>
+        `).join('')}
+        <div class="formation-resumen">Formación: ${resumenFormacion}</div>
+      </div>
+      <div class="totals">
+        <div class="totals-breakdown" aria-label="Criterios considerados por el sorteo">
+          ${resumenStats.arquero > 0 ? `<span>Arquero ${resumenStats.arquero.toFixed(1)}</span>` : `<span>Ataque ${resumenStats.ataque.toFixed(1)}</span>`}
+          <span>Solidez ${resumenStats.solidez.toFixed(1)}</span>
+          <span>Ritmo ${resumenStats.ritmo.toFixed(1)}</span>
+          <span>Tecnica ${resumenStats.tecnica.toFixed(1)}</span>
+          <span>Juego en equipo ${resumenStats.compromiso.toFixed(1)}</span>
+          <span>Mentalidad ${resumenStats.mentalidad.toFixed(1)}</span>
+          <span>Regularidad ${resumenStats.regularidad.toFixed(1)}</span>
+        </div>
+        <small>El sorteo pondera General 50, Ataque 15, Solidez 15, Ritmo 10, Tecnica 5, Juego en equipo 8, Mentalidad 10 y Regularidad 5. La habilidad de arquero tiene prioridad alta y tambien se controlan posiciones, arqueros y ritmo lento.</small>
+      </div>
+    `;
+    container.appendChild(equipoDiv);
+  });
+  
+  document.getElementById('download-controls').classList.remove('hidden');
+}
+
+function descargarEquiposJPG() {
+  const equiposContainer = document.getElementById('equipos-generados');
+  html2canvas(equiposContainer, {
+    backgroundColor: null,
+    scale: 2
+  }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'equipos_goodfellas.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 1.0);
+    link.click();
+  }).catch(err => {
+    console.error('Error al generar la imagen:', err);
+    alert('Hubo un error al generar la imagen');
+  });
+}
+
+function descargarEquiposTexto() {
+  const equipos = lastEquipos;
+  if (!equipos) {
+    alert('Primero genera los equipos');
+    return;
+  }
+  let texto = 'EQUIPOS GOODFELLAS\n\n';
+  texto += `${getMatchupDisplayName(equipos.length)}\n\n`;
+  equipos.forEach((equipo, index) => {
+    texto += `${getTeamDisplayName(index)}\n`;
+    equipo.forEach(j => {
+      texto += `${j.nombre} ${isLowRhythmPlayer(j) ? '🐢' : ''} - ${j.posicion} - ${j.puntuacion} pts\n`;
+    });
+    const totalPuntos = equipo.reduce((sum, j) => sum + j.puntuacion, 0);
+    const totalLentos = equipo.filter(isLowRhythmPlayer).length;
+    texto += `Total: ${totalPuntos.toFixed(1)} pts | Lentos: ${totalLentos}\n\n`;
+  });
+  const blob = new Blob([texto], { type: 'text/plain;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'equipos_goodfellas.txt';
+  link.click();
+}
+
+function copiarEquiposClipboard() {
+  const equipos = lastEquipos;
+  if (!equipos) {
+    alert('Primero genera los equipos');
+    return;
+  }
+  let texto = '';
+  texto += `${getMatchupDisplayName(equipos.length)}\n`;
+  equipos.forEach((equipo, index) => {
+    texto += `\n${getTeamDisplayName(index)}:\n`;
+    equipo.forEach(j => {
+      texto += `${j.nombre.toUpperCase()} ${isLowRhythmPlayer(j) ? '🐢' : ''}\n`;
+    });
+  });
+  navigator.clipboard.writeText(texto)
+    .then(() => {
+      alert('¡Nombres de los equipos copiados al portapapeles! Puedes pegarlos en un chat.');
+    })
+    .catch(err => {
+      console.error('Error al copiar al portapapeles:', err);
+      alert('Hubo un error al copiar al portapapeles');
+    });
+}
+
+function guardarSorteoEnBD() {
+  if (!MATCH_ID) {
+    alert('Esta pantalla no está vinculada a una fecha.');
+    return;
+  }
+  if (!lastEquipos) {
+    alert('Primero genera los equipos');
+    return;
+  }
+  if (!teamColorsAreUnique(lastEquipos.length)) {
+    const errorDiv = document.getElementById('error');
+    if (errorDiv) {
+      errorDiv.textContent = 'Cada equipo necesita un color de camiseta distinto.';
+      errorDiv.classList.remove('hidden');
+    } else {
+      alert('Cada equipo necesita un color de camiseta distinto.');
+    }
+    return;
+  }
+
+  const equiposPayload = [];
+  for (const equipo of lastEquipos) {
+    const ids = [];
+    const asignacionPosiciones = buildFormationAssignment(equipo, equiposPayload.length);
+    for (const jugador of equipo) {
+      if (!jugador.id) {
+        alert(`El jugador "${jugador.nombre}" no tiene ID de base de datos y no puede guardarse.`);
+        return;
+      }
+      ids.push({
+        id: jugador.id,
+        assigned_position: getPrimaryPosition(jugador, asignacionPosiciones),
+      });
+    }
+    const teamColor = getTeamColor(equiposPayload.length);
+    equiposPayload.push({
+      color_name: teamColor ? teamColor.name : '',
+      players: ids
+    });
+  }
+
+  const payload = {
+    match_id: MATCH_ID,
+    num_teams: parseInt(document.getElementById('teamDisplay').textContent, 10),
+    teams: equiposPayload
+  };
+
+  fetch('guardar_sorteo.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(async res => {
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      throw new Error(data.message || 'No se pudo guardar el sorteo');
+    }
+    const successDiv = document.getElementById('success');
+    const errorDiv = document.getElementById('error');
+    errorDiv.classList.add('hidden');
+    successDiv.textContent = data.message || 'Sorteo guardado correctamente en la fecha.';
+    successDiv.classList.remove('hidden');
+    window.setTimeout(() => {
+      navigateSorteoLegacy('editar_partidos.php');
+    }, 700);
+  })
+  .catch(err => {
+    const errorDiv = document.getElementById('error');
+    const successDiv = document.getElementById('success');
+    successDiv.classList.add('hidden');
+    errorDiv.textContent = err.message;
+    errorDiv.classList.remove('hidden');
+  });
+}
+
+
+function bindSorteoLegacyEvents() {
+  const root = document.querySelector('.sorteo-page');
+  if (!root || root.dataset.sorteoLegacyBound === '1') return;
+  root.dataset.sorteoLegacyBound = '1';
+
+  root.addEventListener('click', (event) => {
+    const control = event.target.closest('[data-sorteo-action]');
+    if (!control || !root.contains(control)) return;
+    const action = control.dataset.sorteoAction;
+
+    if (control.matches('a[href="#"]')) event.preventDefault();
+    if (action === 'toggle-sort-dropdown') event.stopPropagation();
+
+    switch (action) {
+      case 'navigate': navigateSorteoLegacy(control.dataset.url || 'editar_partidos.php'); break;
+      case 'open-add-player': abrirModalAgregar(); break;
+      case 'toggle-accordion': toggleAccordion(control); break;
+      case 'export-players-csv': exportarJugadoresCSV(); break;
+      case 'toggle-sort-dropdown': toggleSortDropdown(); break;
+      case 'select-sort': selectSortOption(control.dataset.sortKey || 'nombre'); break;
+      case 'generate-teams': generarEquipos(); break;
+      case 'copy-teams': copiarEquiposClipboard(); break;
+      case 'download-teams-jpg': descargarEquiposJPG(); break;
+      case 'download-teams-text': descargarEquiposTexto(); break;
+      case 'save-draw': guardarSorteoEnBD(); break;
+      case 'close-modal': cerrarModal(control.dataset.modalId || ''); break;
+      case 'score-down': decrementScore(control.dataset.scoreMode || ''); break;
+      case 'score-up': incrementScore(control.dataset.scoreMode || ''); break;
+      case 'save-new-player': guardarJugador(); break;
+      case 'save-player-edit': guardarEdicion(); break;
+      case 'edit-player': editarJugador(Number(control.dataset.playerIndex)); break;
+      case 'delete-player': eliminarJugador(Number(control.dataset.playerIndex)); break;
+      case 'formation-undo': undoTeamFormationChange(Number(control.dataset.teamIndex)); break;
+      default: break;
+    }
+  });
+
+  root.addEventListener('change', (event) => {
+    const control = event.target.closest('[data-sorteo-action]');
+    if (!control || !root.contains(control)) return;
+
+    switch (control.dataset.sorteoAction) {
+      case 'import-players-csv': importarJugadoresCSV(event); break;
+      case 'toggle-select-all': toggleSelectAll(control); break;
+      case 'toggle-player': jugadores[Number(control.dataset.playerIndex)].selected = control.checked; break;
+      case 'team-color-change': onTeamColorChange(Number(control.dataset.teamIndex), control.value); break;
+      case 'team-formation-change': onTeamFormationChange(Number(control.dataset.teamIndex), control.value); break;
+      case 'team-custom-formation-change': onTeamCustomFormationChange(Number(control.dataset.teamIndex), control.dataset.line || '', control.value); break;
+      case 'manual-position-change': onManualPositionChange(Number(control.dataset.teamIndex), control.dataset.playerKey || '', control.value); break;
+      default: break;
+    }
+  });
+
+  root.addEventListener('dragstart', (event) => {
+    const playerCard = event.target.closest('[data-sorteo-drag-player]');
+    if (!playerCard || !root.contains(playerCard)) return;
+    if (event.target.closest('select')) {
+      event.preventDefault();
+      return;
+    }
+    playerCard.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('application/json', JSON.stringify({
+      teamIndex: Number(playerCard.dataset.teamIndex),
+      playerKey: playerCard.dataset.playerKey || ''
+    }));
+  });
+
+  root.addEventListener('dragend', (event) => {
+    const playerCard = event.target.closest('[data-sorteo-drag-player]');
+    if (playerCard) playerCard.classList.remove('is-dragging');
+    root.querySelectorAll('.formation-player.is-drag-over').forEach(card => card.classList.remove('is-drag-over'));
+  });
+
+  root.addEventListener('dragover', (event) => {
+    const targetCard = event.target.closest('[data-sorteo-drag-player]');
+    if (!targetCard || !root.contains(targetCard)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    targetCard.classList.add('is-drag-over');
+  });
+
+  root.addEventListener('dragleave', (event) => {
+    const targetCard = event.target.closest('[data-sorteo-drag-player]');
+    if (targetCard) targetCard.classList.remove('is-drag-over');
+  });
+
+  root.addEventListener('drop', (event) => {
+    const targetCard = event.target.closest('[data-sorteo-drag-player]');
+    if (!targetCard || !root.contains(targetCard)) return;
+    event.preventDefault();
+    targetCard.classList.remove('is-drag-over');
+    let source = null;
+    try {
+      source = JSON.parse(event.dataTransfer.getData('application/json') || 'null');
+    } catch (error) {
+      source = null;
+    }
+    if (!source) return;
+    onFormationPlayerDrop(
+      Number(source.teamIndex),
+      String(source.playerKey || ''),
+      Number(targetCard.dataset.teamIndex),
+      String(targetCard.dataset.playerKey || '')
+    );
+  });
+}
+// Lista inicial de jugadores según lo solicitado
+if (MATCH_ID > 0) {
+  jugadores = PRELOADED_JUGADORES.map(j => ({
+    id: j.id,
+    nombre: j.nombre,
+    posicion: normalizarPosiciones(j.posicion),
+    ritmo: normalizarRitmo(j.ritmo),
+    puntuacion: parseFloat(j.puntuacion),
+    tecnica: parseFloat(j.tecnica),
+    ritmo_stat: parseFloat(j.ritmo_stat),
+    solidez: parseFloat(j.solidez),
+    ataque: parseFloat(j.ataque),
+    compromiso: parseFloat(j.compromiso),
+    mentalidad: parseFloat(j.mentalidad),
+    regularidad: parseFloat(j.regularidad),
+    habilidad_arquero: parseFloat(j.habilidad_arquero),
+    selected: true
+  }));
+} else {
+  jugadores = [
+    { nombre: "VIKINGO", posicion: "DEF/MED", ritmo: "rápido", puntuacion: 4.5, selected: true },
+    { nombre: "FRANCO K", posicion: "ARQ/DEF", ritmo: "rápido", puntuacion: 3.5, selected: true },
+    { nombre: "MARCELO", posicion: "MED", ritmo: "lento", puntuacion: 1, selected: true },
+    { nombre: "MARIANO PLANAS", posicion: "DEF", ritmo: "lento", puntuacion: 3.5, selected: true },
+    { nombre: "FACU", posicion: "DEF", ritmo: "lento", puntuacion: 2.5, selected: true },
+    { nombre: "CUERVO", posicion: "DEF/MED", ritmo: "lento", puntuacion: 5, selected: true },
+    { nombre: "PABLO K", posicion: "MED", ritmo: "rápido", puntuacion: 3, selected: true },
+    { nombre: "MANU", posicion: "DEF/MED", ritmo: "rápido", puntuacion: 5, selected: true },
+    { nombre: "PABLO", posicion: "DEF", ritmo: "rápido", puntuacion: 5, selected: true },
+    { nombre: "JAVI", posicion: "ARQ/DEF", ritmo: "rápido", puntuacion: 3.5, selected: true },
+    { nombre: "CESAR", posicion: "DEF", ritmo: "lento", puntuacion: 4, selected: true },
+    { nombre: "PELA", posicion: "DEL", ritmo: "rápido", puntuacion: 4, selected: true },
+    { nombre: "BRIAN", posicion: "DEF/DEL", ritmo: "lento", puntuacion: 5, selected: true },
+    { nombre: "AUGUSTO", posicion: "MED", ritmo: "rápido", puntuacion: 4, selected: true },
+    { nombre: "NICO", posicion: "MED", ritmo: "rápido", puntuacion: 3.5, selected: true },
+    { nombre: "MARIAN", posicion: "DEL", ritmo: "lento", puntuacion: 2.5, selected: true },
+    { nombre: "GUILLE", posicion: "ARQ/DEF", ritmo: "lento", puntuacion: 1, selected: true },
+    { nombre: "MAURI", posicion: "DEL", ritmo: "rápido", puntuacion: 3, selected: true }
+  ];
+}
+
+// Inicializar la lista de jugadores
+bindSorteoLegacyEvents();
+actualizarListaJugadores();
+if (LOCKED_MATCH_MODE && jugadores.length === 0) {
+  const errorDiv = document.getElementById('error');
+  errorDiv.textContent = 'Esta fecha no tiene jugadores convocados. Cárgalos desde la pantalla de fechas.';
+  errorDiv.classList.remove('hidden');
+}
+
+Object.assign(window, {
+  navigateSorteoLegacy,
+  generarEquipos,
+  copiarEquiposClipboard,
+  descargarEquiposJPG,
+  descargarEquiposTexto,
+  guardarSorteoEnBD,
+});

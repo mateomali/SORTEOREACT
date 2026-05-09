@@ -21,33 +21,33 @@ const defaults = {
 };
 
 const darkPanelStyle = {
-  background: '#fffdf7',
-  borderColor: '#d7c9a9',
-  color: '#241f17',
+  background: '#ffffff',
+  borderColor: '#d1fae5',
+  color: '#022c22',
 };
 
 const darkControlStyle = {
-  background: '#f8f3e8',
-  borderColor: '#d7c9a9',
-  color: '#241f17',
+  background: '#ecfdf5',
+  borderColor: '#a7f3d0',
+  color: '#022c22',
 };
 
 const darkInputStyle = {
-  background: '#fffdf7',
-  borderColor: '#d7c9a9',
-  color: '#241f17',
+  background: '#ffffff',
+  borderColor: '#d1fae5',
+  color: '#0f172a',
 };
 
 const limeBadgeStyle = {
-  background: '#eadfbd',
-  borderColor: '#9f8d62',
-  color: '#151711',
+  background: '#022c22',
+  borderColor: '#022c22',
+  color: '#ffffff',
 };
 
 function stars(value) {
   const full = Math.floor(value);
   const half = value % 1 !== 0;
-  return `${'â˜…'.repeat(full)}${half ? 'Â½' : ''}${'â˜†'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)))}`;
+  return `${'\u2605'.repeat(full)}${half ? '\u00bd' : ''}${'\u2606'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)))}`;
 }
 
 function formatRating(value) {
@@ -124,13 +124,13 @@ function PlayerRadar({ stats, labels, hasGoalkeeper }) {
   }).join(' ');
 
   return (
-    <aside className="player-radar-card rounded-2xl border border-lime-200/45 bg-emerald-950/80 p-3 text-lime-50 shadow-sm shadow-emerald-950/20" style={darkPanelStyle} data-player-radar>
+    <aside className="player-radar-card rounded-lg border p-3" style={darkPanelStyle} data-player-radar>
       <div className="player-radar-head mb-2 flex items-end justify-between gap-2">
-        <strong className="text-sm font-extrabold text-lime-100" style={{ color: '#053d2d' }}>Perfil del jugador</strong>
-        <span className="text-xs font-bold text-emerald-100/70" style={{ color: '#d8f7ea' }}>Analisis de stats</span>
+        <strong className="text-sm font-extrabold" style={{ color: '#022c22' }}>Perfil del jugador</strong>
+        <span className="text-xs font-bold" style={{ color: '#64748b' }}>Analisis de stats</span>
       </div>
       <div className="player-radar-canvas mx-auto w-full max-w-[260px]" data-player-radar-canvas>
-        <svg className="player-radar-svg h-auto w-full overflow-visible" viewBox={`0 0 ${size} ${viewBoxHeight}`} role="img" aria-label="Diagrama de estrella de stats">
+        <svg className="player-radar-svg h-auto w-full overflow-visible" viewBox={`0 0 ${size} ${viewBoxHeight}`} role="img" aria-label="Diagrama de stats">
           <g className="radar-grid">
             {levels.map((level) => {
               const radius = maxRadius * (level / 6);
@@ -166,7 +166,7 @@ function PlayerRadar({ stats, labels, hasGoalkeeper }) {
               );
             })}
           </g>
-          <text className="radar-scale" x={centerX} y={viewBoxHeight - 14} textAnchor="middle">Escala 1 a 6 estrellas</text>
+          <text className="radar-scale" x={centerX} y={viewBoxHeight - 14} textAnchor="middle">Escala 1 a 6 puntos</text>
         </svg>
       </div>
     </aside>
@@ -198,42 +198,42 @@ export function PlayerCreateIsland({ root }) {
     };
 
     applyImportant('.desktop-player-card-overall, .player-radar-card, .stat-form-row', {
-      background: '#fffdf7',
-      'background-color': '#fffdf7',
+      background: '#ffffff',
+      'background-color': '#ffffff',
       'background-image': 'none',
-      'border-color': '#d7c9a9',
-      color: '#241f17',
+      'border-color': '#d1fae5',
+      color: '#022c22',
     });
     applyImportant('.player-general-rating, .player-position-select, .stat-rating', {
-      background: '#f8f3e8',
-      'background-color': '#f8f3e8',
+      background: '#ecfdf5',
+      'background-color': '#ecfdf5',
       'background-image': 'none',
-      'border-color': '#d7c9a9',
-      color: '#241f17',
+      'border-color': '#a7f3d0',
+      color: '#022c22',
     });
     applyImportant('select, input[type="text"], textarea', {
-      background: '#fffdf7',
-      'background-color': '#fffdf7',
+      background: '#ffffff',
+      'background-color': '#ffffff',
       'background-image': 'none',
-      'border-color': '#d7c9a9',
-      color: '#241f17',
+      'border-color': '#d1fae5',
+      color: '#0f172a',
     });
     applyImportant('.mobile-player-card-rating, .mobile-player-card-rating *, .stat-rating-value, [data-stat-rating-value]', {
-      background: '#eadfbd',
-      'background-color': '#eadfbd',
+      background: '#022c22',
+      'background-color': '#022c22',
       'background-image': 'none',
-      'border-color': '#9f8d62',
-      color: '#151711',
+      'border-color': '#022c22',
+      color: '#ffffff',
     });
     applyImportant('.mobile-player-card-meta span, .player-radar-head strong, .stat-form-row > label, .player-position-select > span', {
-      color: '#053d2d',
+      color: '#047857',
     });
     applyImportant('.mobile-player-card-meta strong, .player-radar-head span', {
-      color: '#151711',
+      color: '#022c22',
     });
     applyImportant('.stat-rating-progress', {
-      background: '#e4d8ba',
-      'background-color': '#e4d8ba',
+      background: '#d1fae5',
+      'background-color': '#d1fae5',
     });
   }, [root, selectedPositions.length]);
 
@@ -251,10 +251,10 @@ export function PlayerCreateIsland({ root }) {
   };
 
   return (
-    <details className="card mb-3.5 player-create-drawer players-admin-create border-lime-200/55 bg-emerald-950 p-0 text-lime-50 shadow-xl shadow-emerald-950/20">
+    <details className="mb-3.5 player-create-drawer players-admin-create rounded-lg border p-0">
       <summary className="player-create-summary flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <span className="text-lg font-extrabold text-lime-50">Agregar jugador</span>
-        <small className="rounded-full bg-lime-100 px-2 py-1 text-xs font-extrabold text-emerald-950">Cargar nuevo jugador</small>
+        <span className="text-lg font-extrabold">Agregar jugador</span>
+        <small className="rounded-md px-2 py-1 text-xs font-extrabold">Cargar nuevo jugador</small>
       </summary>
       <form method="post" className="player-create-body react-player-create-form border-t border-lime-200/30 p-4">
         <input type="hidden" name="action" value="save" />
@@ -265,7 +265,7 @@ export function PlayerCreateIsland({ root }) {
           <div className="form-row">
             <label className="text-lime-100" htmlFor="reactPlayerName">Nombre</label>
             <input
-              className="rounded-xl border-lime-200/40 bg-emerald-950 text-lime-50 placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-lime-200/30"
+              className="rounded-lg border px-3 py-2.5 text-sm"
               id="reactPlayerName"
               type="text"
               name="name"
@@ -277,25 +277,25 @@ export function PlayerCreateIsland({ root }) {
           <div className="form-row">
             <label className="text-lime-100">General</label>
             <div className="desktop-player-admin-general grid gap-2">
-              <div className="desktop-player-card-overall grid items-center gap-2 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-2" style={darkPanelStyle}>
+              <div className="desktop-player-card-overall grid items-center gap-2 rounded-lg border p-2" style={darkPanelStyle}>
                 <div className="mobile-player-card-rating" style={limeBadgeStyle}>
-                  <strong style={{ color: '#151711' }} data-general-card-value>{generalCard}</strong>
-                  <span style={{ color: '#151711' }}>GEN</span>
+                  <strong style={{ color: '#ffffff' }} data-general-card-value>{generalCard}</strong>
+                  <span style={{ color: '#ffffff' }}>GEN</span>
                 </div>
                 <div className="mobile-player-card-meta">
-                  <span style={{ color: '#053d2d' }}>GENERAL</span>
-                  <strong style={{ color: '#151711' }} data-general-card-position>{positionLabel}</strong>
+                  <span style={{ color: '#047857' }}>GENERAL</span>
+                  <strong style={{ color: '#022c22' }} data-general-card-position>{positionLabel}</strong>
                 </div>
               </div>
-              <div className="player-general-rating player-general-rating-compact flex min-h-0 flex-col items-start justify-center gap-1 rounded-xl border-0 bg-transparent px-0 py-0" style={{ ...darkControlStyle, padding: '.45rem .6rem' }} data-general-rating>
-                <strong className="text-xs font-extrabold text-lime-50" style={{ color: '#151711' }} data-general-rating-value>{formatRating(general)}/6</strong>
+              <div className="player-general-rating player-general-rating-compact flex min-h-0 flex-col items-start justify-center gap-1 rounded-lg border-0 px-0 py-0" style={{ ...darkControlStyle, padding: '.45rem .6rem' }} data-general-rating>
+                <strong className="text-xs font-extrabold" style={{ color: '#022c22' }} data-general-rating-value>{formatRating(general)}/6</strong>
                 <span className="text-sm leading-none text-amber-300" data-general-rating-stars>{stars(general)}</span>
               </div>
             </div>
           </div>
           <div className="form-row">
             <label className="text-lime-100">Estado</label>
-            <label className="chip inline-flex items-center gap-2 rounded-xl border border-lime-200/35 bg-emerald-900 px-3 py-2 text-sm font-extrabold text-lime-50">
+            <label className="chip inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-extrabold">
               <input
                 type="checkbox"
                 name="active"
@@ -312,10 +312,10 @@ export function PlayerCreateIsland({ root }) {
           <label className="text-lime-100">Posiciones</label>
           <div className="player-position-selects grid grid-cols-1 gap-1.5" data-player-position-selects>
             {['Primaria', 'Secundaria'].map((label, index) => (
-              <label className="player-position-select grid min-w-0 gap-1 rounded-xl border border-lime-200/20 bg-emerald-950/45 p-1.5" style={darkControlStyle} key={label}>
-                <span className="truncate text-[10px] font-black uppercase tracking-wide text-lime-100/85" style={{ color: '#053d2d' }}>{label}</span>
+              <label className="player-position-select grid min-w-0 gap-1 rounded-lg border p-1.5" style={darkControlStyle} key={label}>
+                <span className="truncate text-[10px] font-black" style={{ color: '#047857' }}>{label}</span>
                 <select
-                  className="min-h-9 w-full min-w-0 rounded-lg border-lime-200/40 bg-emerald-950 px-2 py-1.5 text-xs font-extrabold text-lime-50 focus:border-lime-200 focus:ring-lime-200/30"
+                  className="min-h-9 w-full min-w-0 rounded-lg border px-2 py-1.5 text-xs font-extrabold"
                   style={darkInputStyle}
                   name="positions[]"
                   required={index === 0}
@@ -342,8 +342,8 @@ export function PlayerCreateIsland({ root }) {
           <div className="form-grid">
             {fieldOrder.map((field) => {
               return (
-                <div className="form-row stat-form-row rounded-xl border border-lime-200/35 bg-emerald-950/75 p-3 shadow-sm" style={darkPanelStyle} data-attack-stat-row={field === 'attack' ? '' : undefined} key={field}>
-                  <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100" style={{ color: '#053d2d' }}>{labels[field] || field}</label>
+                <div className="form-row stat-form-row rounded-lg border p-3" style={darkPanelStyle} data-attack-stat-row={field === 'attack' ? '' : undefined} key={field}>
+                  <label className="mb-2 text-xs font-extrabold" style={{ color: '#047857' }}>{labels[field] || field}</label>
                   <StatRating
                     name={field}
                     label={labels[field] || field}
@@ -354,8 +354,8 @@ export function PlayerCreateIsland({ root }) {
               );
             })}
             {hasGoalkeeper ? (
-              <div className="form-row stat-form-row rounded-xl border border-lime-200/35 bg-emerald-950/75 p-3 shadow-sm" style={darkPanelStyle} data-goalkeeper-stat-row>
-                <label className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-100" style={{ color: '#053d2d' }}>{labels.goalkeeper_skill || 'Habilidad de arquero'}</label>
+              <div className="form-row stat-form-row rounded-lg border p-3" style={darkPanelStyle} data-goalkeeper-stat-row>
+                <label className="mb-2 text-xs font-extrabold" style={{ color: '#047857' }}>{labels.goalkeeper_skill || 'Habilidad de arquero'}</label>
                 <StatRating
                   name="goalkeeper_skill"
                   label={labels.goalkeeper_skill || 'Habilidad de arquero'}

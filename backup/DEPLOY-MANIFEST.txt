@@ -1,0 +1,36 @@
+﻿Hostinger safe bundle for /sorteo
+Generated: 2026-05-04 01:41:25
+Commit: bb60019
+
+Upload target:
+- Extract the contents of this ZIP inside public_html/sorteo
+- Do not extract it in public_html root
+
+Included:
+- Runtime PHP files
+- includes/
+- lib/
+- assets/app.js
+- assets/tailwind.css
+- .htaccess
+- jugadores.csv for admin CSV migration, blocked from direct web access by .htaccess
+
+Excluded intentionally:
+- .git/
+- node_modules/
+- .tmp/
+- .tools/
+- android-goodfellas/
+- deploy/
+- docs/
+- backup/ SQL dumps
+- database.sql
+- package.json / package-lock.json
+- Tailwind source file assets/tailwind.input.css
+- old ZIP files
+
+Post-upload checklist:
+1. Configure Hostinger environment variables or edit config.php safely:
+   GOODFELLAS_DB_HOST, GOODFELLAS_DB_NAME, GOODFELLAS_DB_USER, GOODFELLAS_DB_PASS, GOODFELLAS_ADMIN_PASSWORD.
+2. Confirm the database schema is installed before first production use.
+3. Open https://www.sudokumerlo.com/sorteo/

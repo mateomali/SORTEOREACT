@@ -33,8 +33,7 @@ function syncSortHeaders(sort) {
   document.querySelectorAll('[data-player-sort]').forEach((button) => {
     const active = button.dataset.playerSort === sort.key;
     button.classList.toggle('is-active', active);
-    button.classList.toggle('bg-lime-100/15', active);
-    button.classList.toggle('text-lime-50', active);
+    button.classList.remove('bg-lime-100/15', 'text-lime-50');
     button.dataset.sortDirection = active ? sort.direction : '';
     button.setAttribute('aria-sort', active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
     const icon = button.querySelector('span[aria-hidden="true"]');
@@ -123,11 +122,11 @@ export function PlayerListControlsIsland({ root }) {
   }, []);
 
   return (
-    <div className="player-list-react-controls grid gap-2 rounded-xl border border-lime-200/45 bg-emerald-950/85 p-3 shadow-md shadow-emerald-950/10 sm:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="player-list-react-controls grid gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 shadow-sm shadow-emerald-950/5 sm:grid-cols-[minmax(0,1fr)_auto]">
       <div className="player-list-search-shell grid gap-1">
-        <label className="mb-0 text-xs font-extrabold uppercase tracking-wide text-lime-100" htmlFor="playerListSearchReact">Buscar jugador</label>
+        <label className="mb-0 text-xs font-extrabold uppercase tracking-wide text-emerald-800" htmlFor="playerListSearchReact">Buscar jugador</label>
         <input
-          className="player-list-search-input w-full rounded-xl border border-lime-200/40 bg-emerald-950 px-3 py-2.5 text-sm text-lime-50 shadow-sm placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/20"
+          className="player-list-search-input w-full rounded-xl border border-emerald-100 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
           id="playerListSearchReact"
           type="search"
           placeholder="Nombre, posicion o stats"
@@ -137,7 +136,7 @@ export function PlayerListControlsIsland({ root }) {
         />
       </div>
       <div className="player-list-react-side flex items-end">
-        <span className="player-count-filter inline-flex flex-wrap items-center gap-2 rounded-xl border border-lime-200/45 bg-lime-100 px-3 py-2 text-xs font-extrabold text-emerald-950" aria-live="polite">
+        <span className="player-count-filter inline-flex flex-wrap items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-xs font-extrabold text-emerald-950" aria-live="polite">
           <strong>{helperText}</strong>
           {canFilterActive ? (
             <label className="mb-0 inline-flex items-center gap-1.5 text-emerald-950">

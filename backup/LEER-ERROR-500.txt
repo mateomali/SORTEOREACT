@@ -1,0 +1,8 @@
+﻿DIAGNOSTICO ERROR 500 HOSTINGER
+
+Subir estos archivos a public_html/sorteo reemplazando .htaccess y config.php.
+Luego abrir:
+https://sudokumerlo.com/sorteo/hostinger_diag.php
+
+El diagnostico no muestra la password, solo si esta configurada o vacia.
+IMPORTANTE: borrar hostinger_diag.php despues de diagnosticar.

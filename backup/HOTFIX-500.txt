@@ -1,0 +1,9 @@
+﻿Hotfix para error 500 en Hostinger /sorteo
+Generado: 2026-05-04 01:49:41
+
+Incluye solo:
+- .htaccess sin Options -Indexes
+- config.php con DB_USER de produccion no vacio
+
+Subir y reemplazar estos dos archivos dentro de public_html/sorteo.
+Si sigue el 500, revisar la clave DB_PASS en config.php o variables de entorno Hostinger.

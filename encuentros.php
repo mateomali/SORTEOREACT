@@ -68,10 +68,32 @@ function normalize_import_player_name(string $value): string
 {
     $value = trim($value);
     $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
-    $value = mb_strtolower($value, 'UTF-8');
-    $from = ['Ã¡', 'Ã©', 'Ã­', 'Ã³', 'Ãº', 'Ã¼', 'Ã±'];
-    $to = ['a', 'e', 'i', 'o', 'u', 'u', 'n'];
-    return str_replace($from, $to, $value);
+    $candidates = [$value];
+    $repaired = @mb_convert_encoding($value, 'UTF-8', 'Windows-1252');
+    if (is_string($repaired) && $repaired !== $value) {
+        $candidates[] = $repaired;
+    }
+
+    $best = '';
+    $bestScore = PHP_INT_MAX;
+    foreach ($candidates as $candidate) {
+        $candidate = mb_strtolower($candidate, 'UTF-8');
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $candidate);
+        if (!is_string($ascii)) {
+            $ascii = $candidate;
+        }
+        $ascii = strtolower($ascii);
+        $ascii = preg_replace('/[^a-z0-9 ]+/', '', $ascii) ?? $ascii;
+        $ascii = trim(preg_replace('/\s+/', ' ', $ascii) ?? $ascii);
+        $score = preg_match('/[\x{00C2}\x{00C3}\x{FFFD}]/u', $candidate) === 1 ? 10 : 0;
+        $score += substr_count($ascii, '?');
+        if ($ascii !== '' && $score < $bestScore) {
+            $best = $ascii;
+            $bestScore = $score;
+        }
+    }
+
+    return $best;
 }
 
 function parse_import_player_list(string $text, int $maxPlayers = 0): array
@@ -853,22 +875,22 @@ $pageDescription = $showCreateSection && !$showEditSection
     : 'Administra fechas cargadas, acciones disponibles, sorteo, capitanes y resultados.';
 $title = $pageHeading . ' | ' . APP_NAME;
 $activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchListPage;
-$bodyClass = $showEditSection ? 'colorway-black-bean page-editar-partidos' : '';
+$bodyClass = $showEditSection ? 'page-editar-partidos' : 'page-crear-partido';
 require __DIR__ . '/includes/header.php';
 
-$encounterOverviewStyle = 'background:#f0fced!important;background-color:#f0fced!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
-$encounterOverviewLabelStyle = 'color:#094b0a!important;';
-$encounterOverviewValueStyle = 'color:#021703!important;';
-$encounterHistoryPanelStyle = 'background:#dbf8d3!important;background-color:#dbf8d3!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
-$encounterCardStyle = 'background:#f0fced!important;background-color:#f0fced!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
-$encounterDateStyle = 'color:#097309!important;font-weight:900!important;';
-$encounterTitleStyle = 'color:#021703!important;';
-$encounterBadgeStyle = 'background:#dbf8d3!important;background-color:#dbf8d3!important;background-image:none!important;border-color:#46cd3a!important;color:#021703!important;';
-$encounterNoteStyle = 'color:#094b0a!important;';
-$encounterActionsStyle = 'background:#dbf8d3!important;background-color:#dbf8d3!important;background-image:none!important;border-color:#b6f0aa!important;color:#021703!important;';
-$encounterLatestStyle = 'background:#f0fced!important;background-color:#f0fced!important;background-image:none!important;border-color:#7fe273!important;color:#021703!important;';
-$encounterMutedTextStyle = 'color:#094b0a!important;';
-$encounterPrimaryActionStyle = 'background:#094b0a!important;background-color:#094b0a!important;background-image:none!important;border-color:#021703!important;color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
+$encounterOverviewStyle = 'background:#fbfdfc!important;background-color:#fbfdfc!important;background-image:none!important;border-color:#cfe0d9!important;color:#10231d!important;';
+$encounterOverviewLabelStyle = 'color:#315247!important;';
+$encounterOverviewValueStyle = 'color:#082017!important;';
+$encounterHistoryPanelStyle = 'background:#ffffff!important;background-color:#ffffff!important;background-image:none!important;border-color:#cfe0d9!important;color:#10231d!important;';
+$encounterCardStyle = 'background:#fbfdfc!important;background-color:#fbfdfc!important;background-image:none!important;border-color:#dbe7e2!important;color:#10231d!important;';
+$encounterDateStyle = 'color:#047857!important;font-weight:900!important;';
+$encounterTitleStyle = 'color:#082017!important;';
+$encounterBadgeStyle = 'background:#ecfdf5!important;background-color:#ecfdf5!important;background-image:none!important;border-color:#b9dfcd!important;color:#063d2b!important;';
+$encounterNoteStyle = 'color:#315247!important;';
+$encounterActionsStyle = 'background:#f3f8f6!important;background-color:#f3f8f6!important;background-image:none!important;border-color:#dbe7e2!important;color:#10231d!important;';
+$encounterLatestStyle = 'background:#f2fbf6!important;background-color:#f2fbf6!important;background-image:none!important;border-color:#b9dfcd!important;color:#10231d!important;';
+$encounterMutedTextStyle = 'color:#315247!important;';
+$encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#063d2b!important;background-image:none!important;border-color:#022c22!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;';
 ?>
 
 <section class="<?= $showCreateSection && !$showEditSection ? 'mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">

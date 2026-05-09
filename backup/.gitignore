@@ -1,0 +1,5 @@
+.tools/
+.tmp/
+deploy/
+node_modules/
+test-results/

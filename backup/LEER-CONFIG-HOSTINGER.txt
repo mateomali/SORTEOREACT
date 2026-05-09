@@ -1,0 +1,15 @@
+﻿CONFIG HOSTINGER GOODFELLAS
+
+Datos configurados:
+DB_NAME: u552541920_futbol
+DB_USER: u552541920_goodfellas
+DB_PASS: configurado
+
+Subir estos archivos a public_html/sorteo reemplazando los existentes.
+Luego abrir:
+https://sudokumerlo.com/sorteo/hostinger_diag.php
+
+Si dice Conexion DB: OK, abrir:
+https://sudokumerlo.com/sorteo/
+
+Despues borrar hostinger_diag.php del servidor.

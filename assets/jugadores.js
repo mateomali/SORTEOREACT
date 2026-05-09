@@ -6,12 +6,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     window.goodfellasPlayersCleanup = () => playerPageAbortController.abort();
     document.addEventListener('goodfellas:before-partial-render', window.goodfellasPlayersCleanup, { once: true });
     const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
-    const fullStars = (rating) => {
-      const full = Math.floor(rating);
-      const half = rating % 1 !== 0;
-      return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(Math.max(0, 6 - full - (half ? 1 : 0)));
-    };
-
     const formatRating = (rating) => Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
     const cardOverallFromSix = (value) => {
       const clamped = Math.max(1, Math.min(6, Number(value) || 1));
@@ -28,10 +22,10 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     };
     const statBarColor = (value) => {
       const rating = Number(value) || 1;
-      if (rating >= 5.95) return '#67e8f9';
-      if (rating >= 4) return '#7f8f3b';
-      if (rating >= 3) return '#b8871b';
-      return '#f87171';
+      if (rating >= 5.95) return '#16a34a';
+      if (rating >= 4) return '#84cc16';
+      if (rating >= 3) return '#f59e0b';
+      return '#ef4444';
     };
     const radarLabels = {
       technique: 'Tecnica',
@@ -1330,7 +1324,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
       const fields = hasGoalkeeper ? statNames.map((field) => field === 'attack' ? 'goalkeeper_skill' : field) : statNames;
       const isCompact = card.classList.contains('player-radar-card-compact');
-      const useShortLabels = isCompact || window.matchMedia('(max-width: 760px)').matches;
+      const isProfileCard = Boolean(card.closest('.profile-player-panel'));
+      const useShortLabels = isCompact || isProfileCard || window.matchMedia('(max-width: 760px)').matches;
       const labels = useShortLabels ? radarShortLabels : radarLabels;
       const size = isCompact ? 200 : 240;
       const viewBoxHeight = isCompact ? 212 : 278;
@@ -1347,7 +1342,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       }).join(' ');
 
       canvas.innerHTML = `
-        <svg class="player-radar-svg" viewBox="0 0 ${size} ${viewBoxHeight}" role="img" aria-label="Diagrama de estrella de stats">
+        <svg class="player-radar-svg" viewBox="0 0 ${size} ${viewBoxHeight}" role="img" aria-label="Diagrama de stats">
           <g class="radar-grid">
             ${levels.map((level) => {
               const radius = maxRadius * (level / 6);
@@ -1377,10 +1372,16 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
               return `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="4"><title>${radarLabels[field]} ${value}/6</title></circle>`;
             }).join('')}
           </g>
-          <text class="radar-scale" x="${centerX}" y="${scaleY}" text-anchor="middle">Escala 1 a 6 estrellas</text>
+          <text class="radar-scale" x="${centerX}" y="${scaleY}" text-anchor="middle">Escala 1 a 6 puntos</text>
         </svg>
       `;
       card.hidden = false;
+    };
+
+    const ratingStars = (value) => {
+      const rounded = Math.max(1, Math.min(6, Number(value) || 1));
+      const filled = Math.round(rounded);
+      return `${'\u2605'.repeat(filled)}${'\u2606'.repeat(Math.max(0, 6 - filled))}`;
     };
 
     const updateGeneralRating = (scope) => {
@@ -1411,7 +1412,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const value = general.querySelector('[data-general-rating-value]');
       const stars = general.querySelector('[data-general-rating-stars]');
       if (value) value.textContent = `${formatRating(rounded)}/6`;
-      if (stars) stars.textContent = fullStars(rounded);
+      if (stars) stars.textContent = ratingStars(rounded);
       const cardValue = scope.querySelector('[data-general-card-value]');
       if (cardValue) cardValue.textContent = String(cardOverallFromSix(rounded));
       renderPlayerRadar(scope);
@@ -1430,7 +1431,9 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         }
       }
       if (label) label.textContent = `${rating}/6`;
-      const bar = root.parentElement?.querySelector?.('[data-stat-rating-bar]');
+      const range = root.querySelector('[data-stat-rating-range]');
+      if (range) range.value = String(rating);
+      const bar = root.querySelector('[data-stat-rating-bar]');
       if (bar) {
         bar.style.width = `${Math.max(0, Math.min(100, Math.round((rating / 6) * 100)))}%`;
         bar.style.backgroundColor = statBarColor(rating);
@@ -1443,6 +1446,9 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         button.classList.toggle('text-emerald-200/35', !active);
         button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
       });
+      root.querySelectorAll('[data-stat-rating-range]').forEach((range) => {
+        range.setAttribute('aria-valuenow', String(rating));
+      });
     };
 
     document.querySelectorAll('[data-stat-rating]').forEach((root) => {
@@ -1451,6 +1457,10 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (root.hasAttribute('data-stat-rating-readonly')) {
         return;
       }
+      root.querySelectorAll('[data-stat-rating-range]').forEach((range) => {
+        range.addEventListener('input', () => setRating(root, range.value));
+        range.addEventListener('change', () => setRating(root, range.value));
+      });
       root.querySelectorAll('[data-stat-value]').forEach((button) => {
         button.addEventListener('click', () => setRating(root, button.getAttribute('data-stat-value')));
         button.addEventListener('keydown', (event) => {

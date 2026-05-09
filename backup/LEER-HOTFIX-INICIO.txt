@@ -1,0 +1,4 @@
+﻿HOTFIX INICIO SORTEO EN VIVO
+
+Corrige formaciones duplicadas en la pagina de inicio cuando hay sorteo por capitanes activo.
+Subir index.php a public_html/sorteo reemplazando el existente.

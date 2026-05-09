@@ -147,13 +147,43 @@ function require_directivo_or_admin(): void
     redirect('login.php?next=' . rawurlencode((string) $next));
 }
 
+function normalize_ascii_token(string $value): string
+{
+    $value = trim($value);
+    $candidates = [$value];
+    $repaired = @mb_convert_encoding($value, 'UTF-8', 'Windows-1252');
+    if (is_string($repaired) && $repaired !== $value) {
+        $candidates[] = $repaired;
+    }
+
+    $best = '';
+    $bestScore = PHP_INT_MAX;
+    foreach ($candidates as $candidate) {
+        $candidate = mb_strtolower($candidate, 'UTF-8');
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $candidate);
+        if (!is_string($ascii)) {
+            $ascii = $candidate;
+        }
+        $ascii = strtolower($ascii);
+        $ascii = preg_replace('/[^a-z0-9]+/', '', $ascii) ?? $ascii;
+        $score = preg_match('/[\x{00C2}\x{00C3}\x{FFFD}]/u', $candidate) === 1 ? 10 : 0;
+        $score += substr_count($ascii, '?');
+        if ($ascii !== '' && $score < $bestScore) {
+            $best = $ascii;
+            $bestScore = $score;
+        }
+    }
+
+    return $best;
+}
+
 function normalize_pace(string $pace): string
 {
-    $value = strtolower(trim($pace));
+    $value = normalize_ascii_token($pace);
     if ($value === 'lento') {
         return 'lento';
     }
-    if (in_array($value, ['rápido', 'rÃ¡pido', 'rapido'], true)) {
+    if ($value === 'rapido') {
         return 'rapido';
     }
     return 'rapido';

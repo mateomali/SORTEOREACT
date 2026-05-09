@@ -608,6 +608,7 @@ if ($nextMatch) {
 
 $title = 'Mi perfil | ' . APP_NAME;
 $activePage = 'perfil.php';
+$bodyClass = 'page-perfil';
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -718,7 +719,7 @@ require __DIR__ . '/includes/header.php';
     <?= profile_player_card($player, $statLabels, $statHelp) ?>
     <article class="stat-box profile-description-card">
       <div class="label">Descripcion</div>
-      <p class="mt-2 text-sm font-semibold leading-relaxed text-emerald-100/85"><?= h(profile_player_description($player, $statLabels)) ?></p>
+      <p class="profile-description-text mt-2 text-sm font-semibold leading-relaxed"><?= h(profile_player_description($player, $statLabels)) ?></p>
       <div class="mt-3 flex flex-wrap gap-2">
         <?php foreach (parse_positions_csv((string) $player['positions']) as $position): ?>
           <span class="chip"><?= h($position) ?></span>
