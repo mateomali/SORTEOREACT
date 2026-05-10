@@ -577,11 +577,8 @@ require __DIR__ . '/includes/header.php';
                   <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar">X</button>
                 </form>
               <?php else: ?>
-                <span class="player-status-pill <?= (int) $player['active'] === 1 ? 'is-active' : 'is-inactive' ?>">
-                  <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
-                </span>
                 <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato"></button>
-                <button class="btn btn-muted" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">Ver</button>
+                <button class="btn btn-muted player-icon-button player-info-icon" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats"></button>
               <?php endif; ?>
             </span>
           </article>
@@ -701,11 +698,11 @@ require __DIR__ . '/includes/header.php';
     $playerId = (int) $player['id'];
     $rowPositions = parse_positions_csv((string) $player['positions']);
   ?>
-  <dialog class="player-edit-dialog" data-player-edit-dialog="<?= $playerId ?>">
-    <form method="post" class="player-edit-panel" <?= $isAdmin ? '' : 'data-player-readonly-form' ?>>
+  <dialog class="player-edit-dialog <?= $isAdmin ? '' : 'player-info-dialog' ?>" data-player-edit-dialog="<?= $playerId ?>">
+    <form method="post" class="player-edit-panel <?= $isAdmin ? '' : 'player-info-panel' ?>" <?= $isAdmin ? '' : 'data-player-readonly-form' ?>>
       <div class="player-edit-head">
         <div>
-          <h3><?= $isAdmin ? 'Editar jugador' : 'Ver jugador' ?></h3>
+          <h3><?= $isAdmin ? 'Editar jugador' : 'Ficha de jugador' ?></h3>
           <p class="small-muted"><?= h((string) $player['name']) ?></p>
         </div>
         <button class="btn btn-muted player-icon-button" type="button" data-player-edit-close aria-label="Cerrar">X</button>
@@ -718,31 +715,54 @@ require __DIR__ . '/includes/header.php';
         <input type="hidden" name="return_anchor" value="player-<?= $playerId ?>">
       <?php endif; ?>
 
-      <div class="form-grid">
-        <div class="form-row">
-          <label>Nombre</label>
-          <input type="text" name="name" required value="<?= h((string) $player['name']) ?>" <?= $isAdmin ? '' : 'readonly' ?>>
-        </div>
-        <div class="form-row">
-          <label>General</label>
-          <div class="player-general-rating" data-general-rating>
-            <strong data-general-rating-value><?= h(number_format(player_overall_rating($player), 1)) ?>/6</strong>
-            <span data-general-rating-stars></span>
+      <?php if ($isAdmin): ?>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Nombre</label>
+            <input type="text" name="name" required value="<?= h((string) $player['name']) ?>">
+          </div>
+          <div class="form-row">
+            <label>General</label>
+            <div class="player-general-rating" data-general-rating>
+              <strong data-general-rating-value><?= h(number_format(player_overall_rating($player), 1)) ?>/6</strong>
+              <span data-general-rating-stars></span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Estado</label>
+            <label class="chip">
+              <input type="checkbox" name="active" value="1" <?= checked_attr((int) $player['active'] === 1) ?>>
+              Jugador activo
+            </label>
           </div>
         </div>
-        <div class="form-row">
-          <label>Estado</label>
-          <label class="chip">
-            <input type="checkbox" name="active" value="1" <?= checked_attr((int) $player['active'] === 1) ?> <?= $isAdmin ? '' : 'disabled' ?>>
-            Jugador activo
-          </label>
-        </div>
-      </div>
 
-      <div class="form-row">
-        <label>Posiciones</label>
-        <?= player_position_selects($rowPositions, null, !$isAdmin) ?>
-      </div>
+        <div class="form-row">
+          <label>Posiciones</label>
+          <?= player_position_selects($rowPositions, null, false) ?>
+        </div>
+      <?php else: ?>
+        <section class="player-info-overview" aria-label="Ficha compacta de <?= h((string) $player['name']) ?>">
+          <article class="player-info-main-card">
+            <span>Jugador</span>
+            <strong><?= h((string) $player['name']) ?></strong>
+            <div class="player-info-position-chips">
+              <?php foreach ($rowPositions as $position): ?>
+                <span><?= h($position) ?></span>
+              <?php endforeach; ?>
+            </div>
+          </article>
+          <article class="player-info-score-card">
+            <span>Puntaje</span>
+            <strong><?= h(number_format(player_overall_rating($player), 1)) ?></strong>
+            <small>General / 6</small>
+            <div class="player-general-rating player-info-stars" data-general-rating>
+              <strong data-general-rating-value><?= h(number_format(player_overall_rating($player), 1)) ?>/6</strong>
+              <span data-general-rating-stars></span>
+            </div>
+          </article>
+        </section>
+      <?php endif; ?>
 
       <div class="form-grid">
         <?php foreach (player_field_stat_fields() as $field): ?>

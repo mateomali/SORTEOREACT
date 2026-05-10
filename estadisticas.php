@@ -46,25 +46,12 @@ if (!in_array(2026, $availableYears, true)) {
     $availableYears[] = 2026;
     rsort($availableYears, SORT_NUMERIC);
 }
-$selectedYearRaw = array_key_exists('year', $_GET) ? trim((string) ($_GET['year'] ?? '2026')) : '2026';
+$selectedYearRaw = array_key_exists('year', $_GET) ? trim((string) ($_GET['year'] ?? 'all')) : 'all';
 $selectedYear = $selectedYearRaw === 'all' ? 'all' : (string) max(1900, min(2100, (int) $selectedYearRaw));
 $hasCourtRequest = array_key_exists('court_id', $_GET);
 $courtId = $hasCourtRequest ? max(0, (int) ($_GET['court_id'] ?? 0)) : 0;
 $currentUserId = current_user_id();
 $courts = rental_courts(false);
-if (!$hasCourtRequest && $currentUserId > 0) {
-    $preferredCourtStmt = $pdo->prepare('SELECT preferred_stats_court_id FROM site_users WHERE id = :id LIMIT 1');
-    $preferredCourtStmt->execute(['id' => $currentUserId]);
-    $courtId = max(0, (int) ($preferredCourtStmt->fetchColumn() ?: 0));
-}
-if (!$hasCourtRequest && $courtId === 0) {
-    foreach ($courts as $court) {
-        if (strtolower(trim((string) $court['court_key'])) === 'cancha1') {
-            $courtId = (int) $court['id'];
-            break;
-        }
-    }
-}
 $selectedCourt = null;
 foreach ($courts as $court) {
     if ((int) $court['id'] === $courtId) {
@@ -407,35 +394,23 @@ require __DIR__ . '/includes/header.php';
 <section class="page-head">
   <div>
     <h1>Estadisticas</h1>
-    <p class="small-muted">Rendimiento por jugador, capitanes y goleadores de fechas finalizadas. Vista: <?= h($selectedCourtLabel) ?> | <?= $selectedYear === 'all' ? 'Todos los años' : h($selectedYear) ?>.</p>
+    <p class="small-muted">Rendimiento por jugador, capitanes y goleadores de fechas finalizadas. Vista: <?= h($selectedCourtLabel) ?> | <?= $selectedYear === 'all' ? 'Todos los aÃ±os' : h($selectedYear) ?>.</p>
+    <div class="stats-head-summary" aria-label="Resumen de estadisticas">
+      <span><?= h($selectedCourtLabel) ?></span>
+      <span><?= h((string) ((int) $summary['partidos'])) ?> fechas</span>
+      <span><?= h((string) ((int) $summary['jugadores'])) ?> jugadores</span>
+      <span><?= h((string) ((int) $summary['goles_totales'])) ?> goles</span>
+    </div>
   </div>
 </section>
 
-<details class="card stats-control-bar stats-filter-hub mb-3.5">
-  <summary class="stats-filter-hub-summary">
-    <span>
-      <strong>Filtros</strong>
-      <small><?= h($selectedCourtLabel) ?> | <?= $selectedYear === 'all' ? 'Todos los aÃ±os' : h($selectedYear) ?><?= $dateFrom !== '' || $dateTo !== '' ? ' | Rango activo' : '' ?></small>
-    </span>
-    <span class="stats-filter-hub-icon" aria-hidden="true"></span>
-  </summary>
-
+<section class="card stats-control-bar stats-filter-hub mb-3.5">
   <div class="stats-filter-hub-body">
-  <div class="stats-control-line stats-control-line-tabs">
-    <span class="stats-control-label">Vista</span>
-    <nav class="visual-tab-nav stats-tab-nav" aria-label="Secciones de estadisticas">
-      <a href="#stats-jugadores">Jugadores</a>
-      <a href="#stats-goleadores">Goleadores</a>
-      <a href="#stats-capitanes">Capitanes</a>
-      <a href="#stats-premios">Premios</a>
-    </nav>
-  </div>
-
   <div class="stats-court-switcher">
   <div class="stats-year-switcher">
     <div class="stats-court-switcher-head">
       <div>
-        <h3>Año</h3>
+        <h3>AÃ±o</h3>
         <p class="small-muted">Filtrar tabla por temporada calendario.</p>
       </div>
     </div>
@@ -546,7 +521,7 @@ require __DIR__ . '/includes/header.php';
   </datalist>
 </div>
   </div>
-</details>
+</section>
 
 <section class="stats-player-result" data-stats-player-result hidden>
   <article class="stat-box">
@@ -615,14 +590,6 @@ require __DIR__ . '/includes/header.php';
     </div>
   <?php endforeach; ?>
 </div>
-
-<section class="stats-summary">
-  <span><?= h($selectedCourtLabel) ?></span>
-  <span><?= h((string) ((int) $summary['partidos'])) ?> fechas</span>
-  <span><?= h((string) ((int) $summary['jugadores'])) ?> jugadores</span>
-  <span><?= h((string) ((int) $summary['goles_totales'])) ?> goles</span>
-  <span>Promedio <?= $summary['promedio_general'] !== null ? h(number_format((float) $summary['promedio_general'], 2)) : '-' ?></span>
-</section>
 
 <details id="stats-jugadores" class="card stats-section stats-collapsible scroll-mt-20" open data-mobile-collapsed>
   <summary>
@@ -1028,4 +995,5 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
+
 

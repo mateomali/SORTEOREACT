@@ -1215,6 +1215,158 @@
     background: #fbfdfc;
   }
 
+  .page-jugadores .player-info-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 138px;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .page-jugadores .player-info-main-card,
+  .page-jugadores .player-info-score-card {
+    min-width: 0;
+    border: 1px solid #dbe7e2;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 12px;
+    box-shadow: 0 8px 18px rgba(7, 19, 15, 0.06);
+  }
+
+  .page-jugadores .player-info-main-card > span,
+  .page-jugadores .player-info-score-card > span {
+    display: block;
+    color: #536a62;
+    font-size: 0.66rem;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .page-jugadores .player-info-main-card > strong {
+    display: block;
+    margin-top: 6px;
+    overflow: hidden;
+    color: #07130f;
+    font-size: 1.2rem;
+    font-weight: 900;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .page-jugadores .player-info-position-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .page-jugadores .player-info-position-chips span {
+    border: 1px solid rgba(0, 163, 108, 0.22);
+    border-radius: 999px;
+    background: #ecfdf5;
+    padding: 5px 8px;
+    color: #063d2b;
+    font-size: 0.68rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .page-jugadores .player-info-score-card {
+    border-color: rgba(183, 241, 61, 0.45);
+    background: linear-gradient(135deg, #063d2b, #0b5a40);
+    color: #f7ffe8;
+  }
+
+  .page-jugadores .player-info-score-card > span {
+    color: #c8f3d9;
+  }
+
+  .page-jugadores .player-info-score-card > strong {
+    display: block;
+    margin-top: 5px;
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 0.95;
+  }
+
+  .page-jugadores .player-info-score-card > small {
+    display: block;
+    margin-top: 2px;
+    color: #d9f99d;
+    font-size: 0.64rem;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .page-jugadores .player-info-stars {
+    margin-top: 9px;
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    padding: 6px !important;
+    box-shadow: none !important;
+  }
+
+  .page-jugadores .player-info-stars strong {
+    display: none;
+  }
+
+  .page-jugadores .player-info-stars span {
+    color: #d9f99d;
+  }
+
+  .page-jugadores .player-info-panel {
+    display: grid;
+    gap: 10px;
+  }
+
+  .page-jugadores .player-info-panel .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .page-jugadores .player-info-panel .stat-form-row {
+    margin: 0;
+    border: 1px solid #dbe7e2;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 9px;
+    box-shadow: 0 6px 14px rgba(7, 19, 15, 0.045);
+  }
+
+  .page-jugadores .player-info-panel .stat-form-row > label {
+    margin-bottom: 6px;
+    color: #536a62;
+    font-size: 0.66rem;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .page-jugadores .player-info-panel .stat-rating {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .page-jugadores .player-info-panel .stat-rating-bar-shell {
+    min-height: 8px;
+  }
+
+  .page-jugadores .player-info-panel .stat-rating-stars {
+    display: none;
+  }
+
+  .page-jugadores .player-info-panel .stat-rating-value {
+    border: 1px solid rgba(183, 241, 61, 0.45) !important;
+    background: #063d2b !important;
+    color: #f7ffe8 !important;
+  }
+
   .stats-summary {
     @apply mb-4 flex flex-wrap gap-2;
   }
@@ -10091,6 +10243,133 @@
       gap: 8px;
     }
 
+    .page-jugadores .player-info-overview {
+      grid-template-columns: minmax(0, 1fr) 96px;
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+
+    .page-jugadores .player-info-main-card,
+    .page-jugadores .player-info-score-card {
+      padding: 8px;
+      border-radius: 11px;
+    }
+
+    .page-jugadores .player-info-main-card > span,
+    .page-jugadores .player-info-score-card > span {
+      font-size: 0.56rem;
+    }
+
+    .page-jugadores .player-info-main-card > strong {
+      margin-top: 4px;
+      font-size: 0.95rem;
+    }
+
+    .page-jugadores .player-info-position-chips {
+      gap: 4px;
+      margin-top: 7px;
+    }
+
+    .page-jugadores .player-info-position-chips span {
+      padding: 4px 6px;
+      font-size: 0.58rem;
+    }
+
+    .page-jugadores .player-info-score-card > strong {
+      font-size: 1.45rem;
+    }
+
+    .page-jugadores .player-info-score-card > small {
+      font-size: 0.52rem;
+    }
+
+    .page-jugadores .player-info-stars {
+      margin-top: 6px;
+      padding: 4px !important;
+    }
+
+    .page-jugadores .player-info-dialog {
+      width: calc(100vw - 16px);
+      max-width: 390px;
+    }
+
+    .page-jugadores .player-info-panel {
+      max-height: calc(100dvh - 20px);
+      overflow: auto;
+      gap: 7px;
+      border-radius: 14px;
+      padding: 8px;
+    }
+
+    .page-jugadores .player-info-panel .player-edit-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      margin: -8px -8px 0;
+      padding: 8px;
+      border-bottom: 1px solid #dbe7e2;
+      background: #fbfdfc;
+    }
+
+    .page-jugadores .player-info-panel .player-edit-head h3 {
+      font-size: 0.98rem;
+      line-height: 1.05;
+    }
+
+    .page-jugadores .player-info-panel .player-edit-head .small-muted {
+      font-size: 0.64rem;
+      line-height: 1.1;
+    }
+
+    .page-jugadores .player-info-panel .player-edit-head .player-icon-button {
+      width: 30px;
+      height: 30px;
+      min-height: 30px;
+    }
+
+    .page-jugadores .player-info-panel .form-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .page-jugadores .player-info-panel .stat-form-row {
+      border-radius: 10px;
+      padding: 7px;
+    }
+
+    .page-jugadores .player-info-panel .stat-form-row > label {
+      margin-bottom: 5px;
+      font-size: 0.58rem;
+      line-height: 1;
+    }
+
+    .page-jugadores .player-info-panel .stat-rating {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 5px;
+    }
+
+    .page-jugadores .player-info-panel .stat-rating-value {
+      padding: 4px 6px;
+      font-size: 0.6rem;
+    }
+
+    .page-jugadores .player-info-panel .player-radar-card {
+      display: none;
+    }
+
+    .page-jugadores .player-info-panel .player-stat-help {
+      display: none;
+    }
+
+    .page-jugadores .player-info-panel > .btn-row {
+      margin-top: 0;
+    }
+
+    .page-jugadores .player-info-panel > .btn-row .btn {
+      min-height: 34px;
+      font-size: 0.68rem;
+    }
+
     .page-jugadores .stat-form-row {
       padding: 7px;
       border-radius: 10px;
@@ -10258,10 +10537,25 @@
       border-radius: 9px;
     }
 
-    .page-jugadores .player-status-pill {
-      padding: 5px 6px;
-      font-size: 0.58rem;
-    }
+  .page-jugadores .player-status-pill {
+    padding: 5px 6px;
+    font-size: 0.58rem;
+  }
+
+  .page-jugadores .player-info-icon::before {
+    content: "i";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    font-style: normal;
+    line-height: 1;
+  }
 
     .round-robin-winner-panel .team-label-with-heart {
       justify-content: center;
@@ -10817,8 +11111,31 @@
 .page-estadisticas .stats-filter-hub-body {
   display: grid;
   gap: 10px;
-  border-top: 1px solid rgba(0, 163, 108, 0.16);
+  border-top: 0;
   padding: 10px 12px 12px;
+}
+
+.page-estadisticas .stats-head-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.page-estadisticas .stats-head-summary span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border: 1px solid rgba(0, 163, 108, 0.20);
+  border-radius: 999px;
+  background: #f7fcf9;
+  padding: 6px 10px;
+  color: #063d2b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 5px 14px rgba(7, 19, 15, 0.045);
 }
 
 @media (min-width: 761px) {
@@ -10862,6 +11179,17 @@
   .page-estadisticas .stats-filter-hub-body {
     gap: 7px;
     padding: 8px;
+  }
+
+  .page-estadisticas .stats-head-summary {
+    gap: 5px;
+    margin-top: 6px;
+  }
+
+  .page-estadisticas .stats-head-summary span {
+    min-height: 24px;
+    padding: 5px 7px;
+    font-size: 0.6rem;
   }
 }
 
