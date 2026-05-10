@@ -21,27 +21,27 @@ const defaults = {
 };
 
 const darkPanelStyle = {
-  background: '#ffffff',
-  borderColor: '#d1fae5',
-  color: '#022c22',
+  background: '#fbfdfc',
+  borderColor: '#bfd7ce',
+  color: '#07130f',
 };
 
 const darkControlStyle = {
-  background: '#ecfdf5',
-  borderColor: '#a7f3d0',
-  color: '#022c22',
+  background: '#ffffff',
+  borderColor: '#dbe7e2',
+  color: '#07130f',
 };
 
 const darkInputStyle = {
   background: '#ffffff',
-  borderColor: '#d1fae5',
-  color: '#0f172a',
+  borderColor: '#c9ddd4',
+  color: '#07130f',
 };
 
 const limeBadgeStyle = {
-  background: '#022c22',
-  borderColor: '#022c22',
-  color: '#ffffff',
+  background: '#063d2b',
+  borderColor: '#b7f13d',
+  color: '#f7ffe8',
 };
 
 function stars(value) {
@@ -205,11 +205,11 @@ export function PlayerCreateIsland({ root }) {
       color: '#022c22',
     });
     applyImportant('.player-general-rating, .player-position-select, .stat-rating', {
-      background: '#ecfdf5',
-      'background-color': '#ecfdf5',
+      background: '#ffffff',
+      'background-color': '#ffffff',
       'background-image': 'none',
-      'border-color': '#a7f3d0',
-      color: '#022c22',
+      'border-color': '#dbe7e2',
+      color: '#07130f',
     });
     applyImportant('select, input[type="text"], textarea', {
       background: '#ffffff',
@@ -219,11 +219,11 @@ export function PlayerCreateIsland({ root }) {
       color: '#0f172a',
     });
     applyImportant('.mobile-player-card-rating, .mobile-player-card-rating *, .stat-rating-value, [data-stat-rating-value]', {
-      background: '#022c22',
-      'background-color': '#022c22',
+      background: '#063d2b',
+      'background-color': '#063d2b',
       'background-image': 'none',
-      'border-color': '#022c22',
-      color: '#ffffff',
+      'border-color': '#b7f13d',
+      color: '#f7ffe8',
     });
     applyImportant('.mobile-player-card-meta span, .player-radar-head strong, .stat-form-row > label, .player-position-select > span', {
       color: '#047857',
@@ -253,17 +253,17 @@ export function PlayerCreateIsland({ root }) {
   return (
     <details className="mb-3.5 player-create-drawer players-admin-create rounded-lg border p-0">
       <summary className="player-create-summary flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <span className="text-lg font-extrabold">Agregar jugador</span>
-        <small className="rounded-md px-2 py-1 text-xs font-extrabold">Cargar nuevo jugador</small>
+        <span className="text-lg font-extrabold">Crear jugador</span>
+        <small className="rounded-md px-2 py-1 text-xs font-extrabold">Nuevo perfil</small>
       </summary>
       <form method="post" className="player-create-body react-player-create-form border-t border-lime-200/30 p-4">
         <input type="hidden" name="action" value="save" />
         <input type="hidden" name="id" value="0" />
         <input type="hidden" name="show_inactive" value={showInactive} />
 
-        <div className="form-grid">
+        <div className="player-create-topline form-grid">
           <div className="form-row">
-            <label className="text-lime-100" htmlFor="reactPlayerName">Nombre</label>
+            <label htmlFor="reactPlayerName">Nombre</label>
             <input
               className="rounded-lg border px-3 py-2.5 text-sm"
               id="reactPlayerName"
@@ -275,7 +275,7 @@ export function PlayerCreateIsland({ root }) {
             />
           </div>
           <div className="form-row">
-            <label className="text-lime-100">General</label>
+            <label>General</label>
             <div className="desktop-player-admin-general grid gap-2">
               <div className="desktop-player-card-overall grid items-center gap-2 rounded-lg border p-2" style={darkPanelStyle}>
                 <div className="mobile-player-card-rating" style={limeBadgeStyle}>
@@ -294,7 +294,7 @@ export function PlayerCreateIsland({ root }) {
             </div>
           </div>
           <div className="form-row">
-            <label className="text-lime-100">Estado</label>
+            <label>Estado</label>
             <label className="chip inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-extrabold">
               <input
                 type="checkbox"
@@ -308,12 +308,12 @@ export function PlayerCreateIsland({ root }) {
           </div>
         </div>
 
-        <div className="form-row">
-          <label className="text-lime-100">Posiciones</label>
-          <div className="player-position-selects grid grid-cols-1 gap-1.5" data-player-position-selects>
+        <div className="form-row player-create-positions-row">
+          <label>Posiciones</label>
+          <div className="player-position-selects" data-player-position-selects>
             {['Primaria', 'Secundaria'].map((label, index) => (
               <label className="player-position-select grid min-w-0 gap-1 rounded-lg border p-1.5" style={darkControlStyle} key={label}>
-                <span className="truncate text-[10px] font-black" style={{ color: '#047857' }}>{label}</span>
+                <span className="truncate text-[10px] font-black" style={{ color: '#36554a' }}>{label}</span>
                 <select
                   className="min-h-9 w-full min-w-0 rounded-lg border px-2 py-1.5 text-xs font-extrabold"
                   style={darkInputStyle}

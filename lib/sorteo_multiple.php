@@ -392,7 +392,8 @@ function multiple_draw_player_card_rating(float $value): int
 
 function multiple_draw_render_pitch_view(array $option): string
 {
-    $html = '<div data-multi-draw-pitch-view hidden>';
+    $html = '<div class="multi-draw-pitch-view" data-multi-draw-pitch-view hidden>';
+    $html .= '<button class="multi-draw-pitch-close" type="button" data-multi-draw-pitch-close aria-label="Volver a vista lista">x</button>';
     $html .= formation_view_render_pitch((array) ($option['teams'] ?? []), [
         'highlight_player_id' => current_player_id(),
     ]);

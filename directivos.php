@@ -83,10 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $members = directive_members(false);
 $activeCount = count(array_filter($members, static fn(array $member): bool => (int) $member['active'] === 1));
 $pendingPasswordCount = count(array_filter($members, static fn(array $member): bool => (int) ($member['password_needs_setup'] ?? 0) === 1));
-$voteInviteMatches = array_values(array_filter(
-    repo_matches("m.status = 'finalizado'"),
-    static fn(array $match): bool => directive_voting_is_open($match)
-));
+$finalizedMatches = repo_matches("m.status = 'finalizado'");
+$latestFinalizedMatch = $finalizedMatches[0] ?? null;
+$voteInviteMatches = ($latestFinalizedMatch && directive_voting_is_open($latestFinalizedMatch))
+    ? [$latestFinalizedMatch]
+    : [];
 $voteInvitePlayers = repo_all_players(true);
 $voteInviteRowsByMatch = [];
 foreach ($voteInviteMatches as $match) {
@@ -111,6 +112,7 @@ function directivos_match_label(array $match): string
 
 $title = 'Directivos | ' . APP_NAME;
 $activePage = 'directivos.php';
+$bodyClass = 'page-directivos';
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -160,7 +162,7 @@ require __DIR__ . '/includes/header.php';
   <div class="directivos-list-head">
     <div>
       <h3>Invitar jugadores a votar</h3>
-      <p class="small-muted">Genera tokens numericos de 5 cifras para una votacion abierta. Cada token sirve solo para ese partido.</p>
+      <p class="small-muted">Genera tokens numericos de 5 cifras solo para la ultima fecha finalizada con votacion abierta.</p>
     </div>
   </div>
   <?php if (!$voteInviteMatches): ?>

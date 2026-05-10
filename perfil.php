@@ -4,19 +4,41 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
+require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/sorteo_multiple.php';
+require_once __DIR__ . '/lib/admin_config.php';
 
 ensure_auth_schema();
 ensure_control_schema();
 ensure_multiple_draw_schema();
+ensure_match_awards_schema();
+ensure_admin_config_schema();
 require_player_user();
 
 $playerId = current_player_id();
+$currentUserId = current_user_id();
 $player = repo_player_by_id($playerId);
 if (!$player) {
     flash('error', 'Tu cuenta ya no esta vinculada a un jugador valido.');
     redirect('logout.php');
 }
+
+$profileRankingCourtId = 0;
+$profileRankingCourt = null;
+if ($currentUserId > 0) {
+    $preferredCourtStmt = db()->prepare('SELECT preferred_stats_court_id FROM site_users WHERE id = :id LIMIT 1');
+    $preferredCourtStmt->execute(['id' => $currentUserId]);
+    $profileRankingCourtId = max(0, (int) ($preferredCourtStmt->fetchColumn() ?: 0));
+    if ($profileRankingCourtId > 0) {
+        $profileRankingCourt = rental_court_by_id($profileRankingCourtId);
+        if (!$profileRankingCourt) {
+            $profileRankingCourtId = 0;
+        }
+    }
+}
+$profileRankingCourtLabel = $profileRankingCourt
+    ? ((string) $profileRankingCourt['place'] . ' - ' . (string) $profileRankingCourt['court_key'])
+    : 'General';
 
 $statLabels = [
     'technique' => 'Tecnica',
@@ -63,13 +85,49 @@ function profile_stat_color(float $value): string
     if ($value >= 5.95) {
         return '#67e8f9';
     }
+    if ($value >= 5.0) {
+        return '#22c55e';
+    }
     if ($value >= 4.0) {
-        return '#7f8f3b';
+        return '#84cc16';
     }
     if ($value >= 3.0) {
-        return '#b8871b';
+        return '#f59e0b';
     }
     return '#f87171';
+}
+
+function profile_ranking_position(array $rows, int $playerId): ?int
+{
+    foreach ($rows as $index => $row) {
+        if ((int) ($row['id'] ?? 0) === $playerId) {
+            return $index + 1;
+        }
+    }
+    return null;
+}
+
+function profile_ranking_item(string $label, array $rows, int $playerId, string $valueKey, string $suffix = ''): array
+{
+    $position = profile_ranking_position($rows, $playerId);
+    $value = null;
+    foreach ($rows as $row) {
+        if ((int) ($row['id'] ?? 0) === $playerId) {
+            $rawValue = $row[$valueKey] ?? null;
+            $value = is_numeric($rawValue)
+                ? (strpos((string) $rawValue, '.') !== false ? number_format((float) $rawValue, 2) : (string) (int) $rawValue)
+                : (string) $rawValue;
+            break;
+        }
+    }
+
+    return [
+        'label' => $label,
+        'position' => $position,
+        'total' => count($rows),
+        'value' => $value,
+        'suffix' => $suffix,
+    ];
 }
 
 function profile_scout_data_attrs(array $player): string
@@ -563,6 +621,200 @@ $stmt = db()->prepare(
 $stmt->execute(['player_id' => $playerId]);
 $summary = $stmt->fetch() ?: ['partidos' => 0, 'goles' => 0, 'promedio' => null, 'pg' => 0, 'pe' => 0, 'pp' => 0];
 
+$rankingCourtJoinFilter = $profileRankingCourtId > 0 ? ' AND m.rental_court_id = :court_id' : '';
+$rankingParams = $profileRankingCourtId > 0 ? ['court_id' => $profileRankingCourtId] : [];
+
+$rankingStmt = db()->prepare(
+    "SELECT
+        p.id,
+        p.name,
+        COUNT(DISTINCT mp.match_id) AS partidos,
+        COALESCE(SUM(mp.goals), 0) AS goles,
+        ROUND(AVG(mp.rating), 2) AS promedio,
+        COALESCE(SUM(CASE
+          WHEN mt.goals IS NOT NULL
+            AND mt.goals > COALESCE((SELECT MAX(mt2.goals) FROM match_teams mt2 WHERE mt2.match_id = mp.match_id AND mt2.team_number <> mp.team_number), mt.goals)
+          THEN 1 ELSE 0 END), 0) AS pg,
+        COALESCE(SUM(CASE
+          WHEN mt.goals IS NOT NULL
+            AND mt.goals < COALESCE((SELECT MAX(mt2.goals) FROM match_teams mt2 WHERE mt2.match_id = mp.match_id AND mt2.team_number <> mp.team_number), mt.goals)
+          THEN 1 ELSE 0 END), 0) AS pp
+     FROM match_players mp
+     INNER JOIN players p ON p.id = mp.player_id
+     INNER JOIN matches m ON m.id = mp.match_id AND m.status = 'finalizado'{$rankingCourtJoinFilter}
+     LEFT JOIN match_teams mt ON mt.match_id = mp.match_id AND mt.team_number = mp.team_number
+     GROUP BY p.id, p.name
+     HAVING COUNT(DISTINCT mp.match_id) > 0"
+);
+$rankingStmt->execute($rankingParams);
+$rankingRows = $rankingStmt->fetchAll();
+
+$sortRankingRows = static function (array $rows, string $metric, string $direction = 'desc', array $tieBreakers = []): array {
+    usort($rows, static function (array $a, array $b) use ($metric, $direction, $tieBreakers): int {
+        $left = (float) ($a[$metric] ?? 0);
+        $right = (float) ($b[$metric] ?? 0);
+        $comparison = $left <=> $right;
+        if ($direction === 'desc') {
+            $comparison *= -1;
+        }
+        if ($comparison !== 0) {
+            return $comparison;
+        }
+        foreach ($tieBreakers as $tieMetric => $tieDirection) {
+            $tieLeft = (float) ($a[$tieMetric] ?? 0);
+            $tieRight = (float) ($b[$tieMetric] ?? 0);
+            $tieComparison = $tieLeft <=> $tieRight;
+            if ($tieDirection === 'desc') {
+                $tieComparison *= -1;
+            }
+            if ($tieComparison !== 0) {
+                return $tieComparison;
+            }
+        }
+        return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+    });
+    return $rows;
+};
+
+$captainCourtWhere = $profileRankingCourtId > 0 ? ' AND m.rental_court_id = :court_id' : '';
+$captainRankingStmt = db()->prepare(
+    "SELECT
+        p.id,
+        p.name,
+        COUNT(*) AS partidos,
+        SUM(
+          CASE
+            WHEN c.team_number = 1 AND scores.g1 > scores.g2 THEN 3
+            WHEN c.team_number = 2 AND scores.g2 > scores.g1 THEN 3
+            WHEN scores.g1 = scores.g2 THEN 1
+            ELSE 0
+          END
+        ) AS puntos,
+        SUM(CASE WHEN c.team_number = 1 THEN scores.g1 - scores.g2 ELSE scores.g2 - scores.g1 END) AS diferencia_gol,
+        SUM(CASE WHEN c.team_number = 1 THEN scores.g1 ELSE scores.g2 END) AS goles_favor
+     FROM matches m
+     INNER JOIN captain_drafts d ON d.match_id = m.id AND d.status = 'completed'
+     INNER JOIN (
+       SELECT 1 AS team_number
+       UNION ALL
+       SELECT 2 AS team_number
+     ) c
+     INNER JOIN players p ON p.id = CASE WHEN c.team_number = 1 THEN d.captain1_player_id ELSE d.captain2_player_id END
+     INNER JOIN (
+       SELECT
+         match_id,
+         COALESCE(SUM(CASE WHEN team_number = 1 THEN goals ELSE 0 END), 0) AS g1,
+         COALESCE(SUM(CASE WHEN team_number = 2 THEN goals ELSE 0 END), 0) AS g2
+       FROM match_players
+       GROUP BY match_id
+     ) scores ON scores.match_id = m.id
+     WHERE m.status = 'finalizado'{$captainCourtWhere}
+     GROUP BY p.id, p.name
+     HAVING COUNT(*) > 0
+     ORDER BY puntos DESC, diferencia_gol DESC, goles_favor DESC, p.name ASC"
+);
+$captainRankingStmt->execute($rankingParams);
+$captainRankingRows = $captainRankingStmt->fetchAll();
+
+$profileRankingItems = [
+    profile_ranking_item('Maximo goleador', $sortRankingRows($rankingRows, 'goles', 'desc', ['partidos' => 'asc', 'promedio' => 'desc']), $playerId, 'goles', 'goles'),
+    profile_ranking_item('Partidos ganados', $sortRankingRows($rankingRows, 'pg', 'desc', ['partidos' => 'asc', 'promedio' => 'desc']), $playerId, 'pg', 'PG'),
+    profile_ranking_item('Menos perdidos', $sortRankingRows($rankingRows, 'pp', 'asc', ['partidos' => 'desc', 'promedio' => 'desc']), $playerId, 'pp', 'PP'),
+    profile_ranking_item('Partidos jugados', $sortRankingRows($rankingRows, 'partidos', 'desc', ['promedio' => 'desc']), $playerId, 'partidos', 'PJ'),
+    profile_ranking_item('Capitanes', $captainRankingRows, $playerId, 'puntos', 'pts'),
+    profile_ranking_item('Promedio general', $sortRankingRows($rankingRows, 'promedio', 'desc', ['partidos' => 'desc', 'goles' => 'desc']), $playerId, 'promedio', 'prom'),
+];
+
+$detailStmt = db()->prepare(
+    "SELECT
+        m.id,
+        m.title,
+        m.match_date,
+        mp.goals AS player_goals,
+        mp.rating,
+        COALESCE(mt.goals, 0) AS team_goals,
+        (SELECT MAX(mt2.goals) FROM match_teams mt2 WHERE mt2.match_id = mp.match_id AND mt2.team_number <> mp.team_number) AS opponent_goals
+     FROM match_players mp
+     INNER JOIN matches m ON m.id = mp.match_id AND m.status = 'finalizado'
+     LEFT JOIN match_teams mt ON mt.match_id = mp.match_id AND mt.team_number = mp.team_number
+     WHERE mp.player_id = :player_id
+     ORDER BY m.match_date DESC, m.id DESC"
+);
+$detailStmt->execute(['player_id' => $playerId]);
+$profileMatchDetails = [];
+$profileGoalDetails = [];
+$profileRatingDetails = [];
+foreach ($detailStmt->fetchAll() as $detailRow) {
+    $teamGoals = (int) ($detailRow['team_goals'] ?? 0);
+    $opponentGoals = $detailRow['opponent_goals'] !== null ? (int) $detailRow['opponent_goals'] : null;
+    $resultCode = 'N/D';
+    $resultLabel = 'Sin resultado';
+    if ($opponentGoals !== null) {
+        if ($teamGoals > $opponentGoals) {
+            $resultCode = 'PG';
+            $resultLabel = 'Ganado';
+        } elseif ($teamGoals === $opponentGoals) {
+            $resultCode = 'PE';
+            $resultLabel = 'Empatado';
+        } else {
+            $resultCode = 'PP';
+            $resultLabel = 'Perdido';
+        }
+    }
+    $dateLabel = date('d/m/Y', strtotime((string) $detailRow['match_date']));
+    $matchTitle = (string) ($detailRow['title'] ?: ('Fecha #' . $detailRow['id']));
+    $detail = [
+        'title' => $matchTitle,
+        'date' => $dateLabel,
+        'result_code' => $resultCode,
+        'result_class' => strtolower(str_replace('/', '-', $resultCode)),
+        'result_label' => $resultLabel,
+        'score' => $opponentGoals !== null ? $teamGoals . '-' . $opponentGoals : '-',
+        'goals' => (int) ($detailRow['player_goals'] ?? 0),
+        'rating' => $detailRow['rating'] !== null ? (float) $detailRow['rating'] : null,
+    ];
+    $profileMatchDetails[] = $detail;
+    if ($detail['goals'] > 0) {
+        $profileGoalDetails[] = $detail;
+    }
+    if ($detail['rating'] !== null) {
+        $profileRatingDetails[] = $detail;
+    }
+}
+
+$awardDefinitions = award_definitions();
+$awardDescriptions = award_descriptions();
+$monthlyAwardDefinition = monthly_player_award_definition();
+$playerMonthlyAwards = monthly_player_awards_for_player($playerId);
+$awardStmt = db()->prepare(
+    "SELECT ma.award_code, COUNT(*) AS total
+     FROM match_awards ma
+     INNER JOIN matches m ON m.id = ma.match_id AND m.status = 'finalizado'
+     WHERE ma.player_id = :player_id
+     GROUP BY ma.award_code"
+);
+$awardStmt->execute(['player_id' => $playerId]);
+$playerAwardCounts = [];
+$playerAwardTotal = 0;
+$playerGoodAwardTotal = 0;
+$playerBadAwardTotal = 0;
+foreach ($awardStmt->fetchAll() as $awardRow) {
+    $code = (string) ($awardRow['award_code'] ?? '');
+    $count = (int) ($awardRow['total'] ?? 0);
+    if ($code === '' || $count <= 0 || !isset($awardDefinitions[$code])) {
+        continue;
+    }
+    $playerAwardCounts[$code] = $count;
+    $playerAwardTotal += $count;
+    if (($awardDefinitions[$code]['type'] ?? 'good') === 'bad') {
+        $playerBadAwardTotal += $count;
+    } else {
+        $playerGoodAwardTotal += $count;
+    }
+}
+$playerAwardTotal += count($playerMonthlyAwards);
+$playerGoodAwardTotal += count($playerMonthlyAwards);
+
 $nextMatchStmt = db()->prepare(
     "SELECT m.id, m.title, m.match_date, mp.availability_status
      FROM match_players mp
@@ -662,7 +914,7 @@ require __DIR__ . '/includes/header.php';
     <h1>Mi perfil</h1>
     <p class="small-muted">Cuenta vinculada a <?= h((string) $player['name']) ?>.</p>
   </div>
-  <a class="btn btn-muted" href="estadisticas.php#stats-jugadores">Ver mis stats</a>
+  <a class="btn btn-muted" href="estadisticas.php">Ver mis stats</a>
 </section>
 
 <section class="grid cols-3 profile-identity-grid mb-3">
@@ -680,31 +932,134 @@ require __DIR__ . '/includes/header.php';
   </article>
 </section>
 
-<section class="grid cols-3 profile-summary-grid mb-3">
-  <article class="stat-box">
-    <div class="label">Partidos</div>
-    <div class="value"><?= h((string) ((int) $summary['partidos'])) ?></div>
+<section class="grid cols-3 profile-summary-grid profile-summary-accordion mb-3">
+  <details class="stat-box profile-summary-panel">
+    <summary>
+      <span class="label">Partidos</span>
+      <span class="value"><?= h((string) ((int) $summary['partidos'])) ?></span>
+    </summary>
+    <div class="profile-summary-panel-body">
+      <div class="profile-record-row" data-profile-result-filters>
+        <button type="button" data-profile-result-filter="PG" aria-pressed="false"><strong><?= h((string) ((int) $summary['pg'])) ?></strong><small>Ganados</small></button>
+        <button type="button" data-profile-result-filter="PE" aria-pressed="false"><strong><?= h((string) ((int) $summary['pe'])) ?></strong><small>Empatados</small></button>
+        <button type="button" data-profile-result-filter="PP" aria-pressed="false"><strong><?= h((string) ((int) $summary['pp'])) ?></strong><small>Perdidos</small></button>
+      </div>
+      <?php if ($profileMatchDetails): ?>
+        <div class="profile-detail-list" data-profile-result-list>
+          <?php foreach ($profileMatchDetails as $detail): ?>
+            <div class="profile-detail-item" data-profile-result-item="<?= h($detail['result_code']) ?>">
+              <span>
+                <strong><?= h($detail['title']) ?></strong>
+                <small><?= h($detail['date']) ?> | <?= h($detail['score']) ?></small>
+              </span>
+              <em class="profile-result-pill profile-result-<?= h($detail['result_class']) ?>"><?= h($detail['result_code']) ?></em>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <p class="small-muted">Sin partidos finalizados todavia.</p>
+      <?php endif; ?>
+    </div>
+  </details>
+  <details class="stat-box profile-summary-panel">
+    <summary>
+      <span class="label">Goles</span>
+      <span class="value"><?= h((string) ((int) $summary['goles'])) ?></span>
+    </summary>
+    <div class="profile-summary-panel-body">
+      <?php if ($profileGoalDetails): ?>
+        <div class="profile-detail-list">
+          <?php foreach ($profileGoalDetails as $detail): ?>
+            <div class="profile-detail-item">
+              <span>
+                <strong><?= h($detail['title']) ?></strong>
+                <small><?= h($detail['date']) ?> | <?= h($detail['score']) ?></small>
+              </span>
+              <em class="profile-goal-pill"><?= h((string) $detail['goals']) ?> gol<?= (int) $detail['goals'] === 1 ? '' : 'es' ?></em>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <p class="small-muted">Todavia no tenes goles cargados.</p>
+      <?php endif; ?>
+    </div>
+  </details>
+  <details class="stat-box profile-summary-panel">
+    <summary>
+      <span class="label">Promedio</span>
+      <span class="value"><?= $summary['promedio'] !== null ? h(number_format((float) $summary['promedio'], 2)) : '-' ?></span>
+    </summary>
+    <div class="profile-summary-panel-body">
+      <?php if ($profileRatingDetails): ?>
+        <div class="profile-detail-list">
+          <?php foreach ($profileRatingDetails as $detail): ?>
+            <div class="profile-detail-item">
+              <span>
+                <strong><?= h($detail['title']) ?></strong>
+                <small><?= h($detail['date']) ?> | <?= h($detail['score']) ?></small>
+              </span>
+              <em class="profile-rating-pill"><?= h(number_format((float) $detail['rating'], 1)) ?></em>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <p class="small-muted">Todavia no tenes puntajes cargados.</p>
+      <?php endif; ?>
+    </div>
+  </details>
+  <article class="stat-box profile-award-breakdown">
+    <div class="label">Premios obtenidos</div>
+    <?php if ($playerAwardCounts || $playerMonthlyAwards): ?>
+      <div class="profile-award-chip-list">
+        <?php foreach ($playerAwardCounts as $code => $count): ?>
+          <?php $award = $awardDefinitions[$code]; ?>
+          <span class="profile-award-chip <?= (($award['type'] ?? 'good') === 'bad') ? 'is-bad' : 'is-good' ?>" title="<?= h((string) ($awardDescriptions[$code] ?? $award['label'])) ?>">
+            <span><?= h((string) $award['icon']) ?></span>
+            <strong><?= h((string) $award['label']) ?></strong>
+            <em>x<?= h((string) $count) ?></em>
+          </span>
+        <?php endforeach; ?>
+        <?php foreach ($playerMonthlyAwards as $monthlyAward): ?>
+          <span class="profile-award-chip is-good is-monthly" title="<?= h((string) ($monthlyAward['tooltip'] ?? $monthlyAward['month_label'])) ?>">
+            <span><?= h((string) $monthlyAwardDefinition['icon']) ?></span>
+            <strong><?= h((string) ($monthlyAward['label'] ?? $monthlyAwardDefinition['label'])) ?></strong>
+            <em><?= h((string) $monthlyAward['month_label']) ?></em>
+          </span>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <p class="small-muted">Todavia no tenes premios cargados.</p>
+    <?php endif; ?>
   </article>
-  <article class="stat-box">
-    <div class="label">Goles</div>
-    <div class="value"><?= h((string) ((int) $summary['goles'])) ?></div>
-  </article>
-  <article class="stat-box">
-    <div class="label">Promedio</div>
-    <div class="value"><?= $summary['promedio'] !== null ? h(number_format((float) $summary['promedio'], 2)) : '-' ?></div>
-  </article>
-  <article class="stat-box">
-    <div class="label">PG</div>
-    <div class="value"><?= h((string) ((int) $summary['pg'])) ?></div>
-  </article>
-  <article class="stat-box">
-    <div class="label">PE</div>
-    <div class="value"><?= h((string) ((int) $summary['pe'])) ?></div>
-  </article>
-  <article class="stat-box">
-    <div class="label">PP</div>
-    <div class="value"><?= h((string) ((int) $summary['pp'])) ?></div>
-  </article>
+</section>
+
+<section class="card profile-ranking-card mb-3">
+  <div class="profile-ranking-head">
+    <div>
+      <h3>Tu posicion en rankings</h3>
+      <p class="small-muted">Comparacion en <?= h($profileRankingCourtLabel) ?>. Cambia la cancha desde Estadisticas.</p>
+    </div>
+    <a class="btn btn-muted" href="estadisticas.php">Tabla completa</a>
+  </div>
+  <div class="profile-ranking-grid">
+    <?php foreach ($profileRankingItems as $rankingItem): ?>
+      <?php
+        $position = $rankingItem['position'];
+        $total = (int) $rankingItem['total'];
+        $isTop = $position !== null && $position <= 3;
+      ?>
+      <article class="profile-ranking-item<?= $isTop ? ' is-top' : '' ?>">
+        <span class="profile-ranking-label"><?= h((string) $rankingItem['label']) ?></span>
+        <strong class="profile-ranking-position"><?= $position !== null ? '#' . h((string) $position) : '-' ?></strong>
+        <small>
+          <?= $position !== null ? 'de ' . h((string) $total) : 'sin datos' ?>
+          <?php if ($rankingItem['value'] !== null): ?>
+            | <?= h((string) $rankingItem['value']) ?> <?= h((string) $rankingItem['suffix']) ?>
+          <?php endif; ?>
+        </small>
+      </article>
+    <?php endforeach; ?>
+  </div>
 </section>
 
 <section class="card profile-player-card-section mb-3">
@@ -713,13 +1068,13 @@ require __DIR__ . '/includes/header.php';
       <h3>Ficha de jugador</h3>
       <p class="small-muted">Stats actuales, radar y lectura del perfil.</p>
     </div>
-    <button class="btn btn-primary" type="button" data-player-scout-open<?= profile_scout_data_attrs($player) ?>>Ver relato completo</button>
   </div>
   <div class="profile-detail-layout grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,.65fr)]">
     <?= profile_player_card($player, $statLabels, $statHelp) ?>
     <article class="stat-box profile-description-card">
       <div class="label">Descripcion</div>
       <p class="profile-description-text mt-2 text-sm font-semibold leading-relaxed"><?= h(profile_player_description($player, $statLabels)) ?></p>
+      <button class="btn btn-primary profile-description-action" type="button" data-player-scout-open<?= profile_scout_data_attrs($player) ?>>Ver relato completo</button>
       <div class="mt-3 flex flex-wrap gap-2">
         <?php foreach (parse_positions_csv((string) $player['positions']) as $position): ?>
           <span class="chip"><?= h($position) ?></span>
@@ -733,21 +1088,21 @@ require __DIR__ . '/includes/header.php';
 <section class="card profile-functions-section mb-3">
   <h3>Funciones de jugador</h3>
   <div class="grid cols-3 profile-feature-grid">
-    <article class="stat-box">
+    <a class="stat-box profile-feature-card" href="estadisticas.php">
       <div class="label">Estadisticas</div>
       <div class="value">Activo</div>
       <p class="small-muted">Tu jugador aparece primero en listados y estadisticas cuando estas logueado.</p>
-    </article>
-    <article class="stat-box">
+    </a>
+    <a class="stat-box profile-feature-card" href="<?= $nextMatchFull ? 'votar_sorteo.php?match_id=' . (int) $nextMatchFull['id'] : 'perfil.php' ?>">
       <div class="label">Votar equipo a jugar</div>
-      <div class="value">Pendiente</div>
-      <p class="small-muted">Permiso reservado para la proxima pantalla de convocatoria/votacion.</p>
-    </article>
-    <article class="stat-box">
+      <div class="value"><?= $multiDrawMatch ? 'Disponible' : 'Votar' ?></div>
+      <p class="small-muted">Entra a la votacion de sorteo cuando haya opciones publicadas para tu fecha.</p>
+    </a>
+    <a class="stat-box profile-feature-card" href="estadisticas.php#stats-premios">
       <div class="label">Premios y puntajes</div>
-      <div class="value">Opcional</div>
-      <p class="small-muted">El rol ya identifica al jugador; falta decidir si reemplaza o convive con tokens.</p>
-    </article>
+      <div class="value"><?= h((string) $playerAwardTotal) ?></div>
+      <p class="small-muted">Consulta premios acumulados, rendimiento y tablas generales.</p>
+    </a>
   </div>
 </section>
 

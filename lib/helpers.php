@@ -70,6 +70,9 @@ function ensure_auth_schema(): void
     if (!schema_column_exists($pdo, 'site_users', 'can_vote')) {
         $pdo->exec("ALTER TABLE site_users ADD COLUMN can_vote TINYINT(1) NOT NULL DEFAULT 0 AFTER player_id");
     }
+    if (!schema_column_exists($pdo, 'site_users', 'preferred_stats_court_id')) {
+        $pdo->exec("ALTER TABLE site_users ADD COLUMN preferred_stats_court_id INT UNSIGNED NULL AFTER can_vote");
+    }
     if (!schema_column_exists($pdo, 'site_users', 'password_needs_reset')) {
         $pdo->exec("ALTER TABLE site_users ADD COLUMN password_needs_reset TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash");
     }

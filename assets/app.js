@@ -51,6 +51,24 @@
     });
   };
 
+  const scrollExpandedPanelIntoView = (panel, { delay = 80 } = {}) => {
+    if (!(panel instanceof HTMLElement)) return;
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    window.setTimeout(() => {
+      panel.scrollIntoView({ behavior, block: 'start', inline: 'nearest' });
+    }, delay);
+  };
+
+  const bindExpandablePanelScroll = (root = document) => {
+    root.querySelectorAll?.('details:not([data-expand-scroll-bound="1"])').forEach((details) => {
+      details.dataset.expandScrollBound = '1';
+      details.addEventListener('toggle', () => {
+        if (!details.open || details.dataset.disableExpandScroll === '1') return;
+        scrollExpandedPanelIntoView(details);
+      });
+    });
+  };
+
   const focusHashTarget = () => {
     if (!window.location.hash) return;
     let targetId = window.location.hash.slice(1);
@@ -394,7 +412,15 @@
       return;
     }
     if (fallbackTop) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const restoreTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      restoreTop();
+      window.requestAnimationFrame(() => {
+        restoreTop();
+        window.requestAnimationFrame(restoreTop);
+      });
+      [40, 120, 240, 480].forEach((delay) => {
+        window.setTimeout(restoreTop, delay);
+      });
     }
   };
 
@@ -442,6 +468,10 @@
 
     if (query === '') {
       statsPlayerResult.hidden = true;
+      const selectedProfileCard = document.querySelector('[data-stats-selected-profile-card]');
+      const selectedProfile = document.querySelector('[data-stats-selected-profile]');
+      if (selectedProfileCard) selectedProfileCard.hidden = true;
+      if (selectedProfile) selectedProfile.innerHTML = '';
       [...statsPlayerRows, ...statsFilterRows].forEach((row) => {
         row.classList.remove('hidden');
       });
@@ -465,6 +495,10 @@
 
     if (!selected) {
       statsPlayerResult.hidden = true;
+      const selectedProfileCard = document.querySelector('[data-stats-selected-profile-card]');
+      const selectedProfile = document.querySelector('[data-stats-selected-profile]');
+      if (selectedProfileCard) selectedProfileCard.hidden = true;
+      if (selectedProfile) selectedProfile.innerHTML = '';
       return;
     }
 
@@ -477,6 +511,108 @@
     document.querySelector('[data-stats-player-pg]').textContent = selected.dataset.pg || '0';
     document.querySelector('[data-stats-player-pe]').textContent = selected.dataset.pe || '0';
     document.querySelector('[data-stats-player-pp]').textContent = selected.dataset.pp || '0';
+    const selectedProfileCard = document.querySelector('[data-stats-selected-profile-card]');
+    const selectedProfile = document.querySelector('[data-stats-selected-profile]');
+    const profileId = selected.dataset.profileId || '';
+    const profileSource = profileId ? document.getElementById(profileId) : null;
+    if (selectedProfileCard && selectedProfile) {
+      if (profileSource) {
+        selectedProfile.innerHTML = profileSource.innerHTML;
+        selectedProfileCard.hidden = false;
+        hydrateDynamicContent(selectedProfile);
+      } else {
+        selectedProfile.innerHTML = '';
+        selectedProfileCard.hidden = true;
+      }
+    }
+  };
+
+  const bindSortableStatsPlayerGrids = (root = document) => {
+    root.querySelectorAll?.('[data-stats-sortable-grid]:not([data-stats-sortable-bound="1"])').forEach((grid) => {
+      grid.dataset.statsSortableBound = '1';
+      const buttons = Array.from(grid.querySelectorAll('[data-stats-sort]'));
+      const rows = () => Array.from(grid.querySelectorAll('[data-stats-player-row]'));
+      const normalizeNumber = (value) => {
+        const normalized = Number(String(value ?? '').replace(',', '.'));
+        return Number.isFinite(normalized) ? normalized : null;
+      };
+      const valueFor = (row, key, type) => {
+        if (type === 'number') {
+          return normalizeNumber(key === 'rating' ? row.dataset.ratingSort : row.dataset[key]);
+        }
+        return String(key === 'name' ? row.dataset.playerName : row.dataset[key] || '').trim().toLowerCase();
+      };
+      const resetButtons = (activeButton, direction) => {
+        buttons.forEach((button) => {
+          const active = button === activeButton;
+          button.classList.toggle('is-active', active);
+          button.dataset.sortDirection = active ? direction : '';
+          button.setAttribute('aria-sort', active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none');
+        });
+      };
+
+      buttons.forEach((button) => {
+        button.setAttribute('aria-sort', 'none');
+        button.addEventListener('click', () => {
+          grid.querySelectorAll('[data-stats-row-detail-panel]').forEach((panel) => panel.remove());
+          grid.querySelectorAll('[data-stats-row-detail-trigger][aria-expanded="true"]').forEach((trigger) => {
+            trigger.setAttribute('aria-expanded', 'false');
+            trigger.classList.remove('is-active');
+          });
+          const key = button.dataset.statsSort || '';
+          const type = button.dataset.sortType || 'text';
+          const previousDirection = button.dataset.sortDirection || '';
+          const direction = previousDirection === 'desc' ? 'asc' : (previousDirection === 'asc' ? 'desc' : (type === 'number' ? 'desc' : 'asc'));
+          const directionMultiplier = direction === 'asc' ? 1 : -1;
+          const sortedRows = rows().sort((leftRow, rightRow) => {
+            const leftValue = valueFor(leftRow, key, type);
+            const rightValue = valueFor(rightRow, key, type);
+            if (type === 'number') {
+              if (leftValue === null && rightValue === null) return Number(leftRow.dataset.sortIndex || 0) - Number(rightRow.dataset.sortIndex || 0);
+              if (leftValue === null) return 1;
+              if (rightValue === null) return -1;
+              if (leftValue !== rightValue) return (leftValue - rightValue) * directionMultiplier;
+            } else {
+              const comparison = leftValue.localeCompare(rightValue, 'es', { sensitivity: 'base', numeric: true });
+              if (comparison !== 0) return comparison * directionMultiplier;
+            }
+            return Number(leftRow.dataset.sortIndex || 0) - Number(rightRow.dataset.sortIndex || 0);
+          });
+
+          resetButtons(button, direction);
+          sortedRows.forEach((row) => grid.appendChild(row));
+        });
+      });
+    });
+  };
+
+  const bindStatsRowDetailToggles = (root = document) => {
+    root.querySelectorAll?.('[data-stats-row-detail-trigger]:not([data-stats-row-detail-bound="1"])').forEach((trigger) => {
+      trigger.dataset.statsRowDetailBound = '1';
+      trigger.addEventListener('click', () => {
+        const row = trigger.closest('[data-stats-player-row]');
+        const grid = row?.closest('[data-stats-sortable-grid]');
+        const sourceId = trigger.dataset.detailTarget || '';
+        const source = sourceId ? document.getElementById(sourceId) : null;
+        if (!row || !grid || !source) return;
+
+        const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+        grid.querySelectorAll('[data-stats-row-detail-panel]').forEach((panel) => panel.remove());
+        grid.querySelectorAll('[data-stats-row-detail-trigger][aria-expanded="true"]').forEach((candidate) => {
+          candidate.setAttribute('aria-expanded', 'false');
+          candidate.classList.remove('is-active');
+        });
+        if (isOpen) return;
+
+        const panel = document.createElement('div');
+        panel.className = 'stats-player-row-detail';
+        panel.dataset.statsRowDetailPanel = '1';
+        panel.innerHTML = source.innerHTML;
+        row.after(panel);
+        trigger.setAttribute('aria-expanded', 'true');
+        trigger.classList.add('is-active');
+      });
+    });
   };
 
   const openAwardsPopover = (button) => {
@@ -671,6 +807,38 @@
     }
   };
 
+  const bindProfileSummaryFilters = (root = document) => {
+    root.querySelectorAll?.('[data-profile-result-filters]:not([data-profile-result-bound="1"])').forEach((filterGroup) => {
+      filterGroup.dataset.profileResultBound = '1';
+      const panel = filterGroup.closest('.profile-summary-panel');
+      const list = panel?.querySelector('[data-profile-result-list]');
+      const buttons = Array.from(filterGroup.querySelectorAll('[data-profile-result-filter]'));
+      const items = Array.from(list?.querySelectorAll('[data-profile-result-item]') || []);
+      if (!list || !buttons.length || !items.length) return;
+
+      const applyFilter = (activeResult) => {
+        buttons.forEach((button) => {
+          const active = button.dataset.profileResultFilter === activeResult;
+          button.classList.toggle('is-active', active);
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        items.forEach((item) => {
+          const visible = !activeResult || item.dataset.profileResultItem === activeResult;
+          item.hidden = !visible;
+        });
+      };
+
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const next = button.getAttribute('aria-pressed') === 'true'
+            ? ''
+            : (button.dataset.profileResultFilter || '');
+          applyFilter(next);
+        });
+      });
+    });
+  };
+
   const hydrateDynamicContent = (root = document) => {
     mountReactIslands(root);
     collapseMobileDetails(root);
@@ -680,16 +848,22 @@
     bindPlayerEditRows(root);
     bindPlayerEditDialogs(root);
     bindPlayerListSearch(root);
+    bindSortableStatsPlayerGrids(root);
+    bindStatsRowDetailToggles(root);
+    bindExpandablePanelScroll(root);
     bindMatchDetailToggles(root);
     bindDismissibleAlerts(root);
     bindMultiDrawPitchToggles(root);
+    bindProfileSummaryFilters(root);
     bindRentalCourtSelect(root);
     bindTeamCountControls(root);
     bindRoundRobinControls(root);
     initFinishPlayerSwap(root);
     initManualTeams();
-    updateStatsPlayerSearch(root.querySelector?.('[data-stats-player-search]') || undefined);
+    const statsSearch = root.querySelector?.('[data-stats-player-search]');
+    if (statsSearch) updateStatsPlayerSearch(statsSearch);
   };
+  window.goodfellasHydrateDynamicContent = hydrateDynamicContent;
 
   const partialNavigate = async (url, { replace = false, source = null, scroll = true } = {}) => {
     const content = getMainContent();
@@ -697,6 +871,17 @@
       window.location.href = url;
       return;
     }
+    const previousScroll = {
+      left: window.scrollX,
+      top: window.scrollY,
+    };
+    const restoreScrollPosition = () => {
+      window.scrollTo({
+        left: previousScroll.left,
+        top: previousScroll.top,
+        behavior: 'auto',
+      });
+    };
 
     setBusy(content, true);
     if (source) source.classList.add('is-loading');
@@ -724,7 +909,18 @@
       } else {
         window.history.pushState({ partial: true }, '', nextUrl);
       }
-      if (scroll) scrollToUrlTarget(nextUrl);
+      if (scroll) {
+        scrollToUrlTarget(nextUrl);
+      } else {
+        restoreScrollPosition();
+        window.requestAnimationFrame(() => {
+          restoreScrollPosition();
+          window.requestAnimationFrame(restoreScrollPosition);
+        });
+        [40, 120, 240, 480].forEach((delay) => {
+          window.setTimeout(restoreScrollPosition, delay);
+        });
+      }
     } catch (error) {
       showToast('No se pudo actualizar sin recargar. Abriendo la pagina completa.', 'error');
       window.location.href = url;
@@ -1337,16 +1533,18 @@
     const rating = Math.max(1, Math.min(6, Number(value) || 1));
     const input = root.querySelector('[data-stat-rating-input]');
     const label = root.querySelector('[data-stat-rating-value]');
+    const range = root.querySelector('[data-stat-rating-range]');
+    const bar = root.querySelector('[data-stat-rating-bar]');
     if (input) input.value = String(rating);
     if (label) label.textContent = `${rating}/6`;
-      root.querySelectorAll('[data-stat-value]').forEach((button) => {
-        const current = Number(button.getAttribute('data-stat-value') || '0');
-        const active = current <= rating;
-        button.classList.toggle('is-active', active);
-        button.classList.toggle('text-amber-300', active);
-        button.classList.toggle('text-emerald-200/35', !active);
-        button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
-      });
+    if (range) range.value = String(rating);
+    if (bar) bar.style.width = `${Math.max(0, Math.min(100, Math.round((rating / 6) * 100)))}%`;
+    root.querySelectorAll('[data-stat-value]').forEach((button) => {
+      const current = Number(button.getAttribute('data-stat-value') || '0');
+      const active = current <= rating;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
+    });
   };
   const applyPlayerSavePayload = (payload, sourceForm) => {
     const player = payload?.player || {};
@@ -1645,6 +1843,16 @@
   };
 
   document.addEventListener('click', async (event) => {
+    const statButton = event.target.closest('[data-stat-value]');
+    if (statButton) {
+      const root = statButton.closest('[data-stat-rating]');
+      if (!root || root.hasAttribute('data-stat-rating-readonly')) return;
+      event.preventDefault();
+      syncPlayerStatControl(root, statButton.getAttribute('data-stat-value'));
+      root.querySelector('[data-stat-rating-input]')?.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
+
     const button = event.target.closest('[data-player-status-toggle]');
     if (!button) return;
 
@@ -1698,6 +1906,12 @@
   });
 
   document.addEventListener('input', (event) => {
+    const ratingRange = event.target.closest('[data-stat-rating-range]');
+    if (ratingRange) {
+      syncPlayerStatControl(ratingRange.closest('[data-stat-rating]'), ratingRange.value);
+      return;
+    }
+
     const input = event.target.closest('[data-stats-player-search]');
     if (input) updateStatsPlayerSearch(input);
   });
@@ -1740,6 +1954,9 @@
       matchDetailPanel.hidden = collapsed;
       matchDetailToggles.forEach((toggle) => toggle.classList.toggle('details-collapsed', collapsed));
       updateMatchDetailLabels(collapsed);
+      if (!collapsed) {
+        scrollExpandedPanelIntoView(matchDetailPanel);
+      }
     }));
   };
 
@@ -1753,21 +1970,38 @@
   };
 
   const bindMultiDrawPitchToggles = (root = document) => {
+    const setMultiDrawPitchState = (option, showPitch) => {
+      const listView = option?.querySelector('[data-multi-draw-list-view]');
+      const pitchView = option?.querySelector('[data-multi-draw-pitch-view]');
+      const label = option?.querySelector('[data-multi-draw-pitch-label]');
+      if (!option || !listView || !pitchView) return;
+      pitchView.hidden = !showPitch;
+      listView.hidden = showPitch;
+      option.classList.toggle('lg:col-span-full', showPitch);
+      if (label) {
+        label.textContent = showPitch ? 'Ver lista' : 'Ver en cancha';
+      }
+      if (showPitch) {
+        scrollExpandedPanelIntoView(option);
+      }
+    };
+
     root.querySelectorAll?.('[data-multi-draw-pitch-toggle]:not([data-multi-draw-pitch-bound="1"])').forEach((trigger) => {
       trigger.dataset.multiDrawPitchBound = '1';
       trigger.addEventListener('click', () => {
         const option = trigger.closest('.multi-draw-option');
-        const listView = option?.querySelector('[data-multi-draw-list-view]');
         const pitchView = option?.querySelector('[data-multi-draw-pitch-view]');
-        const label = trigger.querySelector('[data-multi-draw-pitch-label]');
-        if (!option || !listView || !pitchView) return;
-        const showPitch = pitchView.hidden;
-        pitchView.hidden = !showPitch;
-        listView.hidden = showPitch;
-        option.classList.toggle('lg:col-span-full', showPitch);
-        if (label) {
-          label.textContent = showPitch ? 'Ver lista' : 'Ver en cancha';
-        }
+        if (!option || !pitchView) return;
+        setMultiDrawPitchState(option, pitchView.hidden);
+      });
+    });
+
+    root.querySelectorAll?.('[data-multi-draw-pitch-close]:not([data-multi-draw-pitch-close-bound="1"])').forEach((trigger) => {
+      trigger.dataset.multiDrawPitchCloseBound = '1';
+      trigger.addEventListener('click', () => {
+        const option = trigger.closest('.multi-draw-option');
+        if (!option) return;
+        setMultiDrawPitchState(option, false);
       });
     });
   };
@@ -2231,7 +2465,10 @@
         url.searchParams.append(key, value);
       }
     });
-    partialNavigate(url.toString(), { source: form });
+    partialNavigate(url.toString(), {
+      source: form,
+      scroll: form.dataset.partialScroll !== 'none',
+    });
   });
 
   document.addEventListener('change', (event) => {
@@ -2303,7 +2540,10 @@
     if (!shouldNavigatePartially(link)) return;
     const url = new URL(link.href, window.location.href);
     event.preventDefault();
-    partialNavigate(url.toString(), { source: link });
+    partialNavigate(url.toString(), {
+      source: link,
+      scroll: link.dataset.partialScroll !== 'none',
+    });
   });
 
   window.addEventListener('popstate', () => {

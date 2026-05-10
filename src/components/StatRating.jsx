@@ -12,6 +12,22 @@ export function StatRating({ name, label, value, onChange }) {
   return (
     <div className="stat-rating" data-stat-rating>
       <input type="hidden" name={name} value={rating} data-stat-rating-input readOnly />
+      <div className="stat-rating-stars" role="radiogroup" aria-label={label || name}>
+        {[1, 2, 3, 4, 5, 6].map((star) => (
+          <button
+            className={`stat-rating-star${star <= rating ? ' is-active' : ''}`}
+            type="button"
+            data-stat-value={star}
+            role="radio"
+            aria-checked={star === rating ? 'true' : 'false'}
+            aria-label={`${star} de 6`}
+            key={star}
+            onClick={() => onChange(star)}
+          >
+            {'\u2605'}
+          </button>
+        ))}
+      </div>
       <div className="stat-rating-bar-shell">
         <div className="stat-rating-bar" aria-hidden="true">
           <span data-stat-rating-bar style={{ width, backgroundColor: barColor }} />

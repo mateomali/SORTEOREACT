@@ -720,7 +720,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     $playerAwardIcons = match_player_award_icons($savedMatchAwards, $awardDefinitions);
     $matchAwards = [];
 
-    if ((string) $match['status'] === 'finalizado' && $participants) {
+    if ((string) $match['status'] === 'finalizado') {
         $ratedPlayers = array_values(array_filter($participants, static fn(array $p): bool => $p['rating'] !== null));
         usort($ratedPlayers, static fn(array $a, array $b): int => ((float) $b['rating'] <=> (float) $a['rating']) ?: strcasecmp((string) $a['name'], (string) $b['name']));
         if (!$savedMatchAwards && $ratedPlayers) {
@@ -768,6 +768,35 @@ function render_public_match_detail_content(array $match, array $awardDefinition
             </div>
           <?php endforeach; ?>
         </div>
+      <?php endif; ?>
+      <?php if ((string) $match['status'] === 'finalizado' && $matchAwards): ?>
+        <section class="match-results">
+          <h3>Resumen de la fecha</h3>
+          <h4 class="match-awards-title">Premios</h4>
+          <div class="grid cols-3 match-awards">
+            <?php foreach ($matchAwards as $award): ?>
+              <article class="stat-box">
+                <div class="label"><?= h($award['label']) ?></div>
+                <div class="value"><?= h($award['value']) ?></div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+
+          <section class="award-legend-section match-award-legend">
+            <h4>Referencia de premios</h4>
+            <div class="award-legend-grid">
+              <?php foreach ($awardDefinitions as $code => $award): ?>
+                <article class="award-legend-item">
+                  <span class="award-legend-icon"><?= h((string) $award['icon']) ?></span>
+                  <span>
+                    <strong><?= h((string) $award['label']) ?></strong>
+                    <small><?= h($awardDescriptions[$code] ?? 'Premio destacado de la fecha.') ?></small>
+                  </span>
+                </article>
+              <?php endforeach; ?>
+            </div>
+          </section>
+        </section>
       <?php endif; ?>
     <?php else: ?>
       <div class="grid cols-2 public-teams">
@@ -1085,7 +1114,7 @@ require __DIR__ . '/includes/header.php';
         <p class="small-muted home-multi-draw-vote-status">Esperando votos de los jugadores logueados convocados para completar la eleccion.</p>
       <?php endif; ?>
 
-      <div class="grid gap-3 lg:grid-cols-3">
+      <div class="home-multi-draw-options grid gap-3 lg:grid-cols-3">
         <?php foreach ($headerMultiDrawOptions as $option): ?>
           <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id']) ?>
         <?php endforeach; ?>
@@ -1189,14 +1218,7 @@ require __DIR__ . '/includes/header.php';
                 </span>
               </summary>
               <div class="history-match-body">
-                <?php if ($isSelected): ?>
-                  <?= render_public_match_detail_content($match, $awardDefinitions, $awardDescriptions) ?>
-                <?php else: ?>
-                  <div class="history-match-preview">
-                    <p class="small-muted">Detalle completo disponible al abrir esta fecha.</p>
-                    <a class="btn btn-muted" href="historial.php?match_id=<?= (int) $match['id'] ?>#partido-<?= (int) $match['id'] ?>">Abrir detalle</a>
-                  </div>
-                <?php endif; ?>
+                <?= render_public_match_detail_content($match, $awardDefinitions, $awardDescriptions) ?>
               </div>
             </details>
           <?php endforeach; ?>

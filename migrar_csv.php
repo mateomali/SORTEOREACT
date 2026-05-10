@@ -5,6 +5,17 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/db.php';
 
 require_admin();
+ensure_control_schema();
+
+function import_csv_rating_value(mixed $value, float $default = 1.0): float
+{
+    $normalized = str_replace(',', '.', trim((string) $value));
+    if ($normalized === '' || !is_numeric($normalized)) {
+        return $default;
+    }
+
+    return (float) $normalized;
+}
 
 function import_players_from_csv(string $csvPath): array
 {
@@ -28,6 +39,17 @@ function import_players_from_csv(string $csvPath): array
     $posIdx = array_search('posicion', $map, true);
     $paceIdx = array_search('ritmo', $map, true);
     $scoreIdx = array_search('puntuacion', $map, true);
+    $activeIdx = array_search('activo', $map, true);
+    $statIndexes = [
+        'technique' => array_search('tecnica', $map, true),
+        'rhythm' => array_search('ritmo_numero', $map, true),
+        'defense_physical' => array_search('defensa_fisico', $map, true),
+        'attack' => array_search('ataque', $map, true),
+        'teamwork' => array_search('juego_en_equipo', $map, true),
+        'mentality' => array_search('mentalidad', $map, true),
+        'regularity' => array_search('regularidad', $map, true),
+        'goalkeeper_skill' => array_search('arquero', $map, true),
+    ];
 
     if ($nameIdx === false || $posIdx === false || $paceIdx === false || $scoreIdx === false) {
         return [0, 0, count($rows)];
@@ -40,40 +62,116 @@ function import_players_from_csv(string $csvPath): array
             $name = trim((string) ($cols[$nameIdx] ?? ''));
             $positions = join_positions(parse_positions_csv((string) ($cols[$posIdx] ?? '')));
             $pace = normalize_pace((string) ($cols[$paceIdx] ?? ''));
-            $skill = (float) ($cols[$scoreIdx] ?? 1);
+            $skill = import_csv_rating_value($cols[$scoreIdx] ?? 1);
             $skill = max(1.0, min(6.0, round($skill * 2) / 2));
+            $active = $activeIdx !== false ? ((int) ($cols[$activeIdx] ?? 1) === 1 ? 1 : 0) : 1;
 
             if ($name === '' || $positions === '') {
                 $skipped++;
                 continue;
             }
 
+            $stats = [
+                'technique' => null,
+                'rhythm' => null,
+                'defense_physical' => null,
+                'attack' => null,
+                'teamwork' => 3.0,
+                'mentality' => 3.0,
+                'regularity' => null,
+                'goalkeeper_skill' => null,
+            ];
+            foreach ($statIndexes as $field => $index) {
+                if ($index === false || !array_key_exists((int) $index, $cols) || trim((string) $cols[(int) $index]) === '') {
+                    continue;
+                }
+                $stats[$field] = normalize_player_stat(str_replace(',', '.', (string) $cols[(int) $index]), $field === 'regularity' ? 3.5 : 3.0);
+            }
+            if (!in_array('ARQ', parse_positions_csv($positions), true)) {
+                $stats['goalkeeper_skill'] = null;
+            }
+
+            $ratingPlayer = [
+                'positions' => $positions,
+                'technique' => $stats['technique'] ?? $skill,
+                'rhythm' => $stats['rhythm'] ?? $skill,
+                'defense_physical' => $stats['defense_physical'] ?? $skill,
+                'attack' => $stats['attack'] ?? $skill,
+                'teamwork' => $stats['teamwork'] ?? 3.0,
+                'mentality' => $stats['mentality'] ?? 3.0,
+                'regularity' => $stats['regularity'] ?? 3.5,
+                'goalkeeper_skill' => $stats['goalkeeper_skill'],
+            ];
+            $hasFullStats = count(array_filter($statIndexes, static fn($index): bool => $index !== false)) > 0;
+            if ($hasFullStats) {
+                $skill = player_overall_rating($ratingPlayer);
+            }
+
             $find = $pdo->prepare('SELECT id FROM players WHERE name = :name LIMIT 1');
             $find->execute(['name' => $name]);
-            $existing = $find->fetchColumn();
-            if ($existing) {
-                $update = $pdo->prepare(
-                    'UPDATE players
-                     SET positions = :positions, pace = :pace, skill = :skill, active = 1
-                     WHERE id = :id'
-                );
-                $update->execute([
-                    'id' => (int) $existing,
-                    'positions' => $positions,
-                    'pace' => $pace,
-                    'skill' => $skill,
-                ]);
+            $existingId = $find->fetchColumn();
+            if ($existingId) {
+                if ($hasFullStats) {
+                    $update = $pdo->prepare(
+                        'UPDATE players
+                         SET positions = :positions, pace = :pace, skill = :skill,
+                             technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
+                             attack = :attack, teamwork = :teamwork, mentality = :mentality,
+                             regularity = :regularity, goalkeeper_skill = :goalkeeper_skill,
+                             active = :active
+                         WHERE id = :id'
+                    );
+                    $update->execute([
+                        'id' => (int) $existingId,
+                        'positions' => $positions,
+                        'pace' => $pace,
+                        'skill' => $skill,
+                        'technique' => $stats['technique'],
+                        'rhythm' => $stats['rhythm'],
+                        'defense_physical' => $stats['defense_physical'],
+                        'attack' => $stats['attack'],
+                        'teamwork' => $stats['teamwork'],
+                        'mentality' => $stats['mentality'],
+                        'regularity' => $stats['regularity'],
+                        'goalkeeper_skill' => $stats['goalkeeper_skill'],
+                        'active' => $active,
+                    ]);
+                } else {
+                    $update = $pdo->prepare(
+                        'UPDATE players
+                         SET positions = :positions, pace = :pace, skill = :skill, active = :active
+                         WHERE id = :id'
+                    );
+                    $update->execute([
+                        'id' => (int) $existingId,
+                        'positions' => $positions,
+                        'pace' => $pace,
+                        'skill' => $skill,
+                        'active' => $active,
+                    ]);
+                }
                 $updated++;
             } else {
                 $insert = $pdo->prepare(
-                    'INSERT INTO players (name, positions, pace, skill, active)
-                     VALUES (:name, :positions, :pace, :skill, 1)'
+                    'INSERT INTO players
+                       (name, positions, pace, skill, technique, rhythm, defense_physical, attack, teamwork, mentality, regularity, goalkeeper_skill, active)
+                     VALUES
+                       (:name, :positions, :pace, :skill, :technique, :rhythm, :defense_physical, :attack, :teamwork, :mentality, :regularity, :goalkeeper_skill, :active)'
                 );
                 $insert->execute([
                     'name' => $name,
                     'positions' => $positions,
                     'pace' => $pace,
                     'skill' => $skill,
+                    'technique' => $stats['technique'],
+                    'rhythm' => $stats['rhythm'],
+                    'defense_physical' => $stats['defense_physical'],
+                    'attack' => $stats['attack'],
+                    'teamwork' => $stats['teamwork'],
+                    'mentality' => $stats['mentality'],
+                    'regularity' => $stats['regularity'],
+                    'goalkeeper_skill' => $stats['goalkeeper_skill'],
+                    'active' => $active,
                 ]);
                 $inserted++;
             }
@@ -177,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (($_POST['action'] ?? '') === 'import_default') {
             $path = __DIR__ . '/jugadores.csv';
             [$inserted, $updated, $skipped] = import_players_from_csv($path);
-            flash('success', "Importacion finalizada. Nuevos: {$inserted}, actualizados: {$updated}, omitidos: {$skipped}.");
+            flash('success', "Importacion finalizada. Nuevos: {$inserted}, actualizados desde backup: {$updated}, omitidos: {$skipped}.");
             redirect('jugadores.php');
         }
 
@@ -188,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 redirect('migrar_csv.php');
             }
             [$inserted, $updated, $skipped] = import_players_from_csv($tmp);
-            flash('success', "Importacion finalizada. Nuevos: {$inserted}, actualizados: {$updated}, omitidos: {$skipped}.");
+            flash('success', "Importacion finalizada. Nuevos: {$inserted}, actualizados desde backup: {$updated}, omitidos: {$skipped}.");
             redirect('jugadores.php');
         }
     } catch (Throwable $e) {

@@ -396,6 +396,16 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
     $barPercent = max(0, min(100, (int) round(($rating / 6) * 100)));
     $html = '<div class="' . $classes . '" data-stat-rating' . $readonlyAttr . '>';
     $html .= '<input type="hidden" name="' . h($name) . '" value="' . $rating . '"' . $formAttr . ' data-stat-rating-input>';
+    $html .= '<div class="stat-rating-stars" role="radiogroup" aria-label="' . h($name) . '">';
+    for ($i = 1; $i <= 6; $i++) {
+        $activeClass = $i <= $rating ? ' is-active' : '';
+        if ($readonly) {
+            $html .= '<span class="stat-rating-star' . $activeClass . '" aria-hidden="true">★</span>';
+            continue;
+        }
+        $html .= '<button class="stat-rating-star' . $activeClass . '" type="button" data-stat-value="' . $i . '" role="radio" aria-checked="' . ($i === $rating ? 'true' : 'false') . '" aria-label="' . $i . ' de 6">★</button>';
+    }
+    $html .= '</div>';
     $html .= '<div class="stat-rating-bar-shell">';
     $html .= '<div class="stat-rating-bar" aria-hidden="true"><span data-stat-rating-bar style="width: ' . $barPercent . '%"></span></div>';
     if (!$readonly) {
@@ -483,7 +493,7 @@ $bodyClass = $isAdmin ? 'page-jugadores page-jugadores-admin' : 'page-jugadores'
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head">
+<section class="page-head players-page-head">
   <div>
     <h1>Jugadores</h1>
     <p class="small-muted"><?= $isAdmin ? 'Alta, edicion y administracion general de la plantilla.' : 'Consulta de plantilla, posiciones y stats actuales.' ?></p>
@@ -509,7 +519,7 @@ require __DIR__ . '/includes/header.php';
   ></div>
 <?php endif; ?>
 
-<section class="card">
+<section class="card players-list-card">
   <div class="section-toolbar">
     <div>
       <h3>Listado de jugadores</h3>

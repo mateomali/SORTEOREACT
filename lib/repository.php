@@ -28,7 +28,7 @@ function repo_matches(string $where = '1=1'): array
               (SELECT COUNT(*) FROM match_players mp WHERE mp.match_id = m.id) AS participants_count
             FROM matches m
             WHERE {$where}
-            ORDER BY m.created_at DESC, m.id DESC";
+            ORDER BY m.match_date DESC, m.id DESC";
     return db()->query($sql)->fetchAll();
 }
 

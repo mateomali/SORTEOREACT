@@ -172,10 +172,11 @@ $voteCount = count(array_filter($users, static fn(array $user): bool => (int) ($
 
 $title = 'Usuarios | ' . APP_NAME;
 $activePage = 'usuarios.php';
+$bodyClass = 'page-usuarios';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head directivos-page-head">
+<section class="page-head usuarios-page-head">
   <div>
     <h1>Usuarios</h1>
     <p class="small-muted">Asigna roles y permisos a las cuentas registradas.</p>
@@ -183,27 +184,27 @@ require __DIR__ . '/includes/header.php';
   <a class="btn btn-muted" href="editar_partidos.php">Volver</a>
 </section>
 
-<section class="directivos-summary mb-3">
-  <div class="directivos-stat">
+<section class="usuarios-summary mb-3">
+  <div class="usuarios-stat">
     <span>Total</span>
     <strong><?= h((string) count($users)) ?></strong>
   </div>
-  <div class="directivos-stat">
+  <div class="usuarios-stat">
     <span>Activos</span>
     <strong><?= h((string) $activeCount) ?></strong>
   </div>
-  <div class="directivos-stat">
+  <div class="usuarios-stat">
     <span>Jugadores</span>
     <strong><?= h((string) $playerRoleCount) ?></strong>
   </div>
-  <div class="directivos-stat">
+  <div class="usuarios-stat">
     <span>Habilitados voto</span>
     <strong><?= h((string) $voteCount) ?></strong>
   </div>
 </section>
 
-<section class="card directivos-list-card">
-  <div class="directivos-list-head">
+<section class="card usuarios-list-card">
+  <div class="usuarios-list-head">
     <div>
       <h3>Cuentas del sitio</h3>
       <p class="small-muted">Una cuenta puede estar vinculada a un jugador y tener rol usuario, jugador, directivo o admin.</p>
@@ -212,7 +213,7 @@ require __DIR__ . '/includes/header.php';
   <?php if (!$users): ?>
     <p class="small-muted">Todavia no hay cuentas creadas.</p>
   <?php else: ?>
-    <div class="directivos-grid">
+    <div class="usuarios-grid">
       <?php foreach ($users as $user): ?>
         <?php
           $userId = (int) $user['id'];
@@ -220,17 +221,17 @@ require __DIR__ . '/includes/header.php';
           $isActive = (int) $user['active'] === 1;
           $linkedPlayerId = (int) ($user['player_id'] ?? 0);
         ?>
-        <form method="post" class="directivo-card">
+        <form method="post" class="usuario-card">
           <input type="hidden" name="id" value="<?= $userId ?>">
-          <div class="directivo-card-head">
-            <div class="directivo-avatar" aria-hidden="true"><?= h(strtoupper(substr((string) $user['username'], 0, 1))) ?></div>
+          <div class="usuario-card-head">
+            <div class="usuario-avatar" aria-hidden="true"><?= h(strtoupper(substr((string) $user['username'], 0, 1))) ?></div>
             <div>
               <strong><?= h((string) $user['username']) ?></strong>
               <small><?= $linkedPlayerId > 0 ? h((string) $user['player_name']) : 'Sin jugador vinculado' ?></small>
             </div>
-            <span class="directivo-status <?= $isActive ? 'is-active' : 'is-inactive' ?>"><?= h($roleLabels[$role] ?? $role) ?></span>
+            <span class="usuario-status <?= $isActive ? 'is-active' : 'is-inactive' ?>"><?= h($roleLabels[$role] ?? $role) ?></span>
           </div>
-          <div class="directivo-fields">
+          <div class="usuario-fields">
             <div class="form-row">
               <label>Usuario</label>
               <input type="text" name="username" value="<?= h((string) $user['username']) ?>" required>
@@ -258,23 +259,23 @@ require __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
               </select>
             </div>
-            <label class="directivo-switch">
+            <label class="usuario-switch">
               <input type="checkbox" name="active" value="1" <?= checked_attr($isActive) ?>>
               <span>Cuenta activa</span>
             </label>
-            <label class="directivo-switch">
+            <label class="usuario-switch">
               <input type="checkbox" name="can_vote" value="1" <?= checked_attr((int) ($user['can_vote'] ?? 0) === 1) ?>>
               <span>Puede votar premios y puntajes</span>
             </label>
           </div>
-          <div class="directivo-meta">
+          <div class="usuario-meta">
             <span class="badge <?= $isActive ? 'done' : 'warn' ?>"><?= $isActive ? 'Activo' : 'Bloqueado' ?></span>
             <?php if ((int) ($user['password_needs_reset'] ?? 0) === 1): ?>
               <span class="badge warn">Debe cambiar clave</span>
             <?php endif; ?>
             <span class="small-muted">Creado <?= h(date('d/m/Y', strtotime((string) $user['created_at']))) ?></span>
           </div>
-          <div class="directivo-actions">
+          <div class="usuario-actions">
             <button class="btn btn-primary" type="submit" name="action" value="update_user">Guardar</button>
             <button class="btn btn-muted" type="submit" name="action" value="reset_user_password" data-confirm="Reiniciar la clave de <?= h((string) $user['username']) ?> a 123456? En el proximo ingreso debera cambiarla.">Reset clave</button>
             <button class="btn btn-warning" type="submit" name="action" value="unlink_user_player" <?= $linkedPlayerId <= 0 ? 'disabled' : '' ?> data-confirm="Desvincular a <?= h((string) ($user['player_name'] ?? '')) ?> de la cuenta <?= h((string) $user['username']) ?>?">Desvincular jugador</button>

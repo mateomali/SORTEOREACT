@@ -19,6 +19,11 @@ ensure_multiple_draw_schema();
 ensure_admin_config_schema();
 $adminSettings = admin_config_settings();
 $activeRentalCourts = rental_courts(true);
+$allRentalCourts = rental_courts(false);
+$rentalCourtsById = [];
+foreach ($allRentalCourts as $rentalCourtRow) {
+    $rentalCourtsById[(int) $rentalCourtRow['id']] = $rentalCourtRow;
+}
 
 $matchAdminView = defined('MATCH_ADMIN_VIEW') ? (string) MATCH_ADMIN_VIEW : 'edit';
 $showCreateSection = in_array($matchAdminView, ['create', 'all'], true);
@@ -62,6 +67,24 @@ function delete_match_cascade(PDO $pdo, int $matchId): void
         }
         throw $e;
     }
+}
+
+function admin_rental_court_label(?array $court): string
+{
+    if (!$court) {
+        return 'Sin cancha';
+    }
+
+    $key = trim((string) ($court['court_key'] ?? ''));
+    $place = trim((string) ($court['place'] ?? ''));
+    if ($key === '') {
+        return $place !== '' ? $place : 'Cancha';
+    }
+    if ($place === '') {
+        return $key;
+    }
+
+    return $key . ' - ' . $place;
 }
 
 function normalize_import_player_name(string $value): string
@@ -449,6 +472,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($matchListPage);
     }
 
+    if ($action === 'update_match_court') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $selectedCourtId = max(0, (int) ($_POST['rental_court_id'] ?? 0));
+        $selectedCourt = $selectedCourtId > 0 ? ($rentalCourtsById[$selectedCourtId] ?? null) : null;
+
+        if ($id <= 0 || !repo_match_by_id($id)) {
+            flash('error', 'La fecha seleccionada no existe.');
+            redirect($matchListPage);
+        }
+
+        if ($selectedCourtId > 0 && !$selectedCourt) {
+            flash('error', 'La cancha seleccionada no existe.');
+            redirect($matchListPage . '?focus_match=' . $id);
+        }
+
+        $stmt = $pdo->prepare('UPDATE matches SET rental_court_id = :rental_court_id WHERE id = :id');
+        $stmt->execute([
+            'id' => $id,
+            'rental_court_id' => $selectedCourt ? (int) $selectedCourt['id'] : null,
+        ]);
+
+        flash('success', 'Cancha de la fecha actualizada.');
+        redirect($matchListPage . '?focus_match=' . $id);
+    }
+
     if ($action === 'save_match') {
         $id = (int) ($_POST['id'] ?? 0);
         $titleTxt = trim((string) ($_POST['title'] ?? ''));
@@ -571,7 +619,14 @@ if (!is_array($importList)) {
 $matches = repo_matches();
 $latestMatch = null;
 foreach ($matches as $candidateMatch) {
-    if (!$latestMatch || (int) $candidateMatch['id'] > (int) $latestMatch['id']) {
+    if (
+        !$latestMatch
+        || strtotime((string) $candidateMatch['match_date']) > strtotime((string) $latestMatch['match_date'])
+        || (
+            strtotime((string) $candidateMatch['match_date']) === strtotime((string) $latestMatch['match_date'])
+            && (int) $candidateMatch['id'] > (int) $latestMatch['id']
+        )
+    ) {
         $latestMatch = $candidateMatch;
     }
 }
@@ -1341,6 +1396,8 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
           $statusClass = $isFinalized ? 'done' : ($canFinalize ? 'ready' : 'warn');
           $historyTeams = $historyTeamsByMatch[$matchId] ?? [];
           $historyScoreboard = admin_render_match_scoreboard($m, $historyTeams, $historyCaptainNames);
+          $matchCourt = $rentalCourtsById[(int) ($m['rental_court_id'] ?? 0)] ?? null;
+          $matchCourtLabel = admin_rental_court_label($matchCourt);
           $historyCaptainSearch = [];
           foreach ($historyTeams as $historyTeam) {
               if (!empty($historyTeam['captain_player_id'])) {
@@ -1353,6 +1410,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
               date('d/m/Y', strtotime((string) $m['match_date'])),
               date('Y-m-d', strtotime((string) $m['match_date'])),
               date('d/m/Y H:i', strtotime((string) $m['match_date'])),
+              $matchCourtLabel,
               admin_match_status_label((string) $m['status']),
               implode(' ', $historyCaptainSearch),
               admin_history_match_score_line($m, $historyTeams, $historyCaptainNames),
@@ -1389,6 +1447,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
 
           <div class="encounter-card-status-group">
             <span class="badge encounter-card-status <?= h($statusClass) ?>" style="<?= h($encounterBadgeStyle) ?>"><?= h(admin_match_status_label((string) $m['status'])) ?></span>
+            <span class="badge encounter-court-badge" style="<?= h($encounterBadgeStyle) ?>">Cancha: <?= h($matchCourtLabel) ?></span>
             <?php if ($missingAwards): ?><span class="badge pending" style="<?= h($encounterBadgeStyle) ?>">Sin premios</span><?php endif; ?>
             <?php if ($missingRating): ?><span class="badge pending" style="<?= h($encounterBadgeStyle) ?>">Sin puntaje</span><?php endif; ?>
           </div>
