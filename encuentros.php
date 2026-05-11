@@ -948,7 +948,7 @@ $encounterMutedTextStyle = 'color:#315247!important;';
 $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#063d2b!important;background-image:none!important;border-color:#022c22!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;';
 ?>
 
-<section class="<?= $showCreateSection && !$showEditSection ? 'mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">
+<section class="<?= $showCreateSection && !$showEditSection ? 'crear-partido-hero mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">
   <div>
     <h1 class="<?= $showCreateSection && !$showEditSection ? 'mb-1 text-3xl font-extrabold leading-tight tracking-normal text-lime-50 max-[760px]:text-2xl' : '' ?>"><?= h($pageHeading) ?></h1>
     <p class="<?= $showCreateSection && !$showEditSection ? 'max-w-2xl text-sm text-emerald-100/80' : 'small-muted' ?>"><?= h($pageDescription) ?></p>
@@ -976,7 +976,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
 <?php endif; ?>
 
 <?php if ($showCreateSection): ?>
-<details class="<?= $showCreateSection && !$showEditSection ? 'relative mb-4 min-h-0 overflow-hidden rounded-2xl border border-lime-200/38 bg-emerald-950/88 p-0 shadow-xl shadow-emerald-950/24' : 'encounter-drawer ' . ($form['id'] ? 'is-editing' : 'is-new') ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
+<details class="<?= $showCreateSection && !$showEditSection ? 'crear-partido-drawer relative mb-4 min-h-0 overflow-hidden rounded-2xl border border-lime-200/38 bg-emerald-950/88 p-0 shadow-xl shadow-emerald-950/24' : 'encounter-drawer ' . ($form['id'] ? 'is-editing' : 'is-new') ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
   <summary class="<?= $showCreateSection && !$showEditSection ? 'flex cursor-pointer list-none items-center justify-between gap-3 border-b border-lime-200/25 bg-emerald-950 px-4 py-3 text-lime-50 [&::-webkit-details-marker]:hidden' : 'encounter-drawer-tab' ?>">
     <span class="<?= $showCreateSection && !$showEditSection ? 'text-sm font-black uppercase tracking-wide text-lime-50' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></span>
     <small class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-xs font-extrabold uppercase leading-none text-emerald-950 shadow-sm shadow-emerald-950/10' : '' ?>"><?= $targetSelection ?> convocados requeridos</small>

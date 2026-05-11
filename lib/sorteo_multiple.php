@@ -390,9 +390,9 @@ function multiple_draw_player_card_rating(float $value): int
     return formation_view_card_rating($value);
 }
 
-function multiple_draw_render_pitch_view(array $option): string
+function multiple_draw_render_pitch_view(array $option, bool $visible = false): string
 {
-    $html = '<div class="multi-draw-pitch-view" data-multi-draw-pitch-view hidden>';
+    $html = '<div class="multi-draw-pitch-view" data-multi-draw-pitch-view' . ($visible ? '' : ' hidden') . '>';
     $html .= '<button class="multi-draw-pitch-close" type="button" data-multi-draw-pitch-close aria-label="Volver a vista lista">x</button>';
     $html .= formation_view_render_pitch((array) ($option['teams'] ?? []), [
         'highlight_player_id' => current_player_id(),
@@ -401,15 +401,17 @@ function multiple_draw_render_pitch_view(array $option): string
     return $html;
 }
 
-function multiple_draw_render_option(array $option, bool $selected = false): string
+function multiple_draw_render_option(array $option, bool $selected = false, bool $showPitchByDefault = false): string
 {
     $currentPlayerId = current_player_id();
     $selectedClasses = $selected
         ? ' is-selected'
         : '';
-    $html = '<article class="multi-draw-option' . $selectedClasses . '">';
-    $html .= '<button class="multi-draw-option-toggle" type="button" data-multi-draw-pitch-toggle><span class="multi-draw-option-copy"><strong class="multi-draw-option-title"><span data-multi-draw-pitch-label>Ver en cancha</span>: Opcion ' . h((string) $option['option_number']) . '</strong><small class="multi-draw-option-meta">Diferencia ' . h(number_format((float) $option['total_diff'], 1)) . '</small></span><span class="multi-draw-vote-pill">' . h((string) (int) ($option['vote_count'] ?? 0)) . ' votos</span></button>';
-    $html .= '<div class="multi-draw-teams" data-multi-draw-list-view>';
+    $pitchClass = $showPitchByDefault ? ' lg:col-span-full' : '';
+    $toggleLabel = $showPitchByDefault ? 'Ver lista' : 'Ver en cancha';
+    $html = '<article class="multi-draw-option' . $selectedClasses . $pitchClass . '">';
+    $html .= '<button class="multi-draw-option-toggle" type="button" data-multi-draw-pitch-toggle><span class="multi-draw-option-copy"><strong class="multi-draw-option-title"><span data-multi-draw-pitch-label>' . h($toggleLabel) . '</span>: Opcion ' . h((string) $option['option_number']) . '</strong><small class="multi-draw-option-meta">Diferencia ' . h(number_format((float) $option['total_diff'], 1)) . '</small></span><span class="multi-draw-vote-pill">' . h((string) (int) ($option['vote_count'] ?? 0)) . ' votos</span></button>';
+    $html .= '<div class="multi-draw-teams" data-multi-draw-list-view' . ($showPitchByDefault ? ' hidden' : '') . '>';
     foreach (($option['teams'] ?? []) as $team) {
         $teamTotal = (float) ($team['total_skill'] ?? 0);
         $html .= '<section class="multi-draw-team">';
@@ -430,7 +432,7 @@ function multiple_draw_render_option(array $option, bool $selected = false): str
         $html .= '</div></section>';
     }
     $html .= '</div>';
-    $html .= multiple_draw_render_pitch_view($option);
+    $html .= multiple_draw_render_pitch_view($option, $showPitchByDefault);
     $html .= '</article>';
     return $html;
 }

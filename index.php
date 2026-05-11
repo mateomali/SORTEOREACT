@@ -1116,7 +1116,7 @@ require __DIR__ . '/includes/header.php';
 
       <div class="home-multi-draw-options grid gap-3 lg:grid-cols-3">
         <?php foreach ($headerMultiDrawOptions as $option): ?>
-          <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id']) ?>
+          <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id'], true) ?>
         <?php endforeach; ?>
       </div>
     </section>

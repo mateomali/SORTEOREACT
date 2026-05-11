@@ -64,6 +64,13 @@ function applySort(sort) {
   syncSortHeaders(sort);
 }
 
+function visiblePlayerRows() {
+  return Array.from(document.querySelectorAll('[data-player-table-row]')).filter((row) => {
+    if (row.hidden || row.classList.contains('hidden')) return false;
+    return row.getClientRects().length > 0;
+  });
+}
+
 export function PlayerListControlsIsland({ root }) {
   const total = Number(root.dataset.total || 0);
   const canFilterActive = root.dataset.canFilterActive === '1';
@@ -78,6 +85,24 @@ export function PlayerListControlsIsland({ root }) {
     }
     return `${visible} de ${total} jugadores`;
   }, [activeOnly, query, total, visible]);
+
+  const focusResults = () => {
+    const firstVisibleRow = visiblePlayerRows()[0];
+    const fallback = document.querySelector('.mobile-player-list-body')
+      || document.querySelector('.players-desktop-table')
+      || document.querySelector('[data-player-list-empty]');
+    const target = firstVisibleRow || fallback;
+
+    if (!target) {
+      return;
+    }
+
+    if (!target.hasAttribute('tabindex')) {
+      target.setAttribute('tabindex', '-1');
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => target.focus({ preventScroll: true }), 260);
+  };
 
   useEffect(() => {
     const rows = Array.from(document.querySelectorAll('[data-player-table-row]'));
@@ -125,15 +150,35 @@ export function PlayerListControlsIsland({ root }) {
     <div className="player-list-react-controls grid gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 shadow-sm shadow-emerald-950/5 sm:grid-cols-[minmax(0,1fr)_auto]">
       <div className="player-list-search-shell grid gap-1">
         <label className="mb-0 text-xs font-extrabold uppercase tracking-wide text-emerald-800" htmlFor="playerListSearchReact">Buscar jugador</label>
-        <input
-          className="player-list-search-input w-full rounded-xl border border-emerald-100 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-          id="playerListSearchReact"
-          type="search"
-          placeholder="Nombre, posicion o stats"
-          autoComplete="off"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
+          <input
+            className="player-list-search-input w-full rounded-xl border border-emerald-100 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            id="playerListSearchReact"
+            type="search"
+            placeholder="Nombre, posicion o stats"
+            autoComplete="off"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                focusResults();
+              }
+            }}
+          />
+          <button
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/60 bg-emerald-950 text-lime-100 shadow-md shadow-emerald-950/15 transition hover:bg-emerald-900 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+            type="button"
+            onClick={focusResults}
+            aria-label="Ir a resultados de jugadores"
+            title="Ir a resultados"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-4-4" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="player-list-react-side flex items-end">
         <span className="player-count-filter inline-flex flex-wrap items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-xs font-extrabold text-emerald-950" aria-live="polite">

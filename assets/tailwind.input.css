@@ -11522,6 +11522,601 @@
 
 }
 
+/* Crear fecha: Goodfellas Compact Profile UI */
+.page-crear-partido .content {
+  background:
+    radial-gradient(circle at 12% 0, rgba(183, 241, 61, 0.14), transparent 18rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(238, 246, 241, 0.96));
+}
+
+.page-crear-partido .content > section:first-of-type {
+  margin-bottom: 10px !important;
+  border: 1px solid rgba(0, 163, 108, 0.22) !important;
+  border-left: 5px solid #063d2b !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #ffffff, #f4fbf7) !important;
+  color: #07130f !important;
+  padding: 12px !important;
+  box-shadow: 0 10px 24px rgba(7, 19, 15, 0.10) !important;
+}
+
+.page-crear-partido .content > section:first-of-type h1 {
+  margin: 0 0 4px !important;
+  color: #07130f !important;
+  font-size: 1.42rem !important;
+  line-height: 1.04 !important;
+}
+
+.page-crear-partido .content > section:first-of-type p {
+  max-width: 44rem !important;
+  color: #456158 !important;
+  font-size: 0.82rem !important;
+  line-height: 1.25 !important;
+}
+
+.page-crear-partido .content > section:first-of-type a {
+  min-height: 36px !important;
+  border-color: rgba(0, 163, 108, 0.28) !important;
+  border-radius: 11px !important;
+  background: #063d2b !important;
+  color: #f7ffe8 !important;
+  padding: 8px 10px !important;
+  font-size: 0.74rem !important;
+  box-shadow: 0 8px 16px rgba(7, 19, 15, 0.14) !important;
+}
+
+.page-crear-partido .content > details {
+  overflow: hidden !important;
+  border: 1px solid rgba(0, 163, 108, 0.22) !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  box-shadow: 0 12px 28px rgba(7, 19, 15, 0.10) !important;
+}
+
+.page-crear-partido .content > details > summary {
+  min-height: 52px !important;
+  border-bottom: 1px solid #dbe7e2 !important;
+  background: linear-gradient(135deg, #063d2b, #0b4f39) !important;
+  color: #f7ffe8 !important;
+  padding: 10px 12px !important;
+}
+
+.page-crear-partido .content > details > summary span {
+  max-width: 12rem !important;
+  color: #f7ffe8 !important;
+  font-size: 0.78rem !important;
+  line-height: 1.06 !important;
+}
+
+.page-crear-partido .content > details > summary small {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #eaffb8 !important;
+  color: #063d2b !important;
+  padding: 7px 10px !important;
+  font-size: 0.62rem !important;
+  line-height: 1.05 !important;
+  text-align: center !important;
+}
+
+.page-crear-partido .content > details > section {
+  background: #fbfdfc !important;
+  color: #07130f !important;
+  padding: 10px !important;
+}
+
+.page-crear-partido .content > details > section > div:first-child {
+  margin-bottom: 10px !important;
+  border-bottom: 1px solid #dbe7e2 !important;
+  padding-bottom: 10px !important;
+}
+
+.page-crear-partido .content > details > section > div:first-child h3 {
+  color: #07130f !important;
+  font-size: 1.12rem !important;
+  line-height: 1.06 !important;
+}
+
+.page-crear-partido .content > details > section > div:first-child span {
+  border-color: rgba(0, 163, 108, 0.24) !important;
+  background: #ecfdf5 !important;
+  color: #063d2b !important;
+}
+
+.page-crear-partido .content > details > section > div:first-child [aria-label="Resumen de cupos"] span {
+  min-height: 40px !important;
+  border-color: rgba(0, 163, 108, 0.25) !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #36554a !important;
+  padding: 7px 8px !important;
+  box-shadow: 0 6px 14px rgba(7, 19, 15, 0.06) !important;
+}
+
+.page-crear-partido .content > details > section > div:first-child [aria-label="Resumen de cupos"] strong {
+  color: #063d2b !important;
+  font-size: 1rem !important;
+}
+
+.page-crear-partido .content > details form > div:first-of-type > div,
+.page-crear-partido .content > details form > div[class*="rounded-2xl"],
+.page-crear-partido .content > details section[class*="rounded-2xl"],
+.page-crear-partido .content > details details[class*="rounded-2xl"] {
+  border-color: rgba(0, 163, 108, 0.20) !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  box-shadow: 0 8px 18px rgba(7, 19, 15, 0.06) !important;
+}
+
+.page-crear-partido .content > details label,
+.page-crear-partido .content > details h4,
+.page-crear-partido .content > details strong {
+  color: #063d2b !important;
+}
+
+.page-crear-partido .content > details label {
+  margin-bottom: 5px !important;
+  font-size: 0.68rem !important;
+  line-height: 1.05 !important;
+}
+
+.page-crear-partido .content > details input:not([type="checkbox"]):not([type="radio"]),
+.page-crear-partido .content > details select,
+.page-crear-partido .content > details textarea {
+  min-height: 40px !important;
+  border-color: #cfe0d9 !important;
+  border-radius: 11px !important;
+  background: #f8fbf9 !important;
+  color: #07130f !important;
+  -webkit-text-fill-color: #07130f !important;
+  padding: 8px 10px !important;
+  font-size: 0.82rem !important;
+  box-shadow: inset 3px 0 0 rgba(0, 163, 108, 0.55) !important;
+}
+
+.page-crear-partido .content > details textarea {
+  min-height: 110px !important;
+}
+
+.page-crear-partido .content > details small,
+.page-crear-partido .content > details p,
+.page-crear-partido .content > details [class*="text-emerald-100"],
+.page-crear-partido .content > details [class*="text-lime-50"],
+.page-crear-partido .content > details [class*="text-lime-100"] {
+  color: #526b62 !important;
+}
+
+.page-crear-partido .content > details .participant-head,
+.page-crear-partido .content > details div[class*="bg-emerald-950"] {
+  border-color: rgba(0, 163, 108, 0.22) !important;
+  background: #f3faf6 !important;
+  color: #07130f !important;
+}
+
+.page-crear-partido [data-react-island="participant_controls"] > div {
+  border-color: rgba(0, 163, 108, 0.24) !important;
+  border-radius: 14px !important;
+  background: #063d2b !important;
+  color: #f7ffe8 !important;
+  padding: 9px !important;
+  box-shadow: 0 10px 22px rgba(7, 19, 15, 0.16) !important;
+}
+
+.page-crear-partido [data-react-island="participant_controls"] label {
+  color: #dff7c4 !important;
+}
+
+.page-crear-partido [data-react-island="participant_controls"] input {
+  border-color: rgba(183, 241, 61, 0.38) !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  -webkit-text-fill-color: #07130f !important;
+}
+
+.page-crear-partido [data-player-row] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 8px !important;
+  border-color: rgba(0, 163, 108, 0.18) !important;
+  border-radius: 13px !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  padding: 9px !important;
+  box-shadow: 0 6px 14px rgba(7, 19, 15, 0.06) !important;
+}
+
+.page-crear-partido [data-player-row] strong {
+  color: #07130f !important;
+  font-size: 0.9rem !important;
+}
+
+.page-crear-partido [data-player-row] small {
+  color: #526b62 !important;
+  font-size: 0.68rem !important;
+}
+
+.page-crear-partido [data-player-row] button[data-remove-player-row] {
+  width: 32px !important;
+  min-height: 32px !important;
+  border-color: rgba(220, 38, 38, 0.28) !important;
+  border-radius: 10px !important;
+  background: #fff1f2 !important;
+  color: #b91c1c !important;
+}
+
+.page-crear-partido [data-player-row] button[data-participant-toggle] {
+  min-height: 32px !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 0.72rem !important;
+}
+
+.page-crear-partido .content > details button[type="submit"]:not([data-mobile-submit]),
+.page-crear-partido .content > details .btn-primary {
+  border-color: #b7f13d !important;
+  background: #063d2b !important;
+  color: #f7ffe8 !important;
+  -webkit-text-fill-color: #f7ffe8 !important;
+}
+
+.page-crear-partido .content > details a[href="configuracion.php"],
+.page-crear-partido .content > details a[href="editar_partidos.php"] {
+  border-color: rgba(0, 163, 108, 0.26) !important;
+  background: #ecfdf5 !important;
+  color: #063d2b !important;
+}
+
+.page-crear-partido .content > details > section > form > .sticky {
+  border-color: rgba(0, 163, 108, 0.26) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 760px) {
+  .page-crear-partido .content {
+    padding: 8px;
+  }
+
+  .page-crear-partido .content > section:first-of-type {
+    display: grid !important;
+    gap: 8px !important;
+  }
+
+  .page-crear-partido .content > details > summary {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .page-crear-partido .content > details form > div:first-of-type {
+    gap: 8px !important;
+  }
+
+  .page-crear-partido .content > details form > div:first-of-type > div {
+    padding: 9px !important;
+  }
+
+  .page-crear-partido [data-react-island="participant_controls"] > div {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .page-crear-partido [data-player-row] {
+    padding: 8px !important;
+  }
+
+  .page-crear-partido [data-player-row] > span:last-of-type {
+    gap: 5px !important;
+  }
+
+  .page-crear-partido [data-player-row] button[data-participant-toggle] {
+    min-width: 76px !important;
+    padding: 6px 8px !important;
+  }
+
+  .page-crear-partido [data-participant-marquee] {
+    border-color: #b7f13d !important;
+    border-radius: 14px !important;
+    background: #063d2b !important;
+  }
+}
+
+/* Also target the create-match blocks directly because admin login uses partial navigation. */
+.crear-partido-hero {
+  margin-bottom: 10px !important;
+  border: 1px solid rgba(0, 163, 108, 0.22) !important;
+  border-left: 5px solid #063d2b !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #ffffff, #f4fbf7) !important;
+  color: #07130f !important;
+  padding: 12px !important;
+  box-shadow: 0 10px 24px rgba(7, 19, 15, 0.10) !important;
+}
+
+.crear-partido-hero h1 {
+  margin: 0 0 4px !important;
+  color: #07130f !important;
+  font-size: 1.42rem !important;
+  line-height: 1.04 !important;
+}
+
+.crear-partido-hero p {
+  max-width: 44rem !important;
+  color: #456158 !important;
+  font-size: 0.82rem !important;
+  line-height: 1.25 !important;
+}
+
+.crear-partido-hero a {
+  min-height: 36px !important;
+  border-color: rgba(0, 163, 108, 0.28) !important;
+  border-radius: 11px !important;
+  background: #063d2b !important;
+  color: #f7ffe8 !important;
+  padding: 8px 10px !important;
+  font-size: 0.74rem !important;
+  box-shadow: 0 8px 16px rgba(7, 19, 15, 0.14) !important;
+}
+
+.crear-partido-drawer {
+  overflow: hidden !important;
+  border: 1px solid rgba(0, 163, 108, 0.22) !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  box-shadow: 0 12px 28px rgba(7, 19, 15, 0.10) !important;
+}
+
+.crear-partido-drawer > summary {
+  min-height: 52px !important;
+  border-bottom: 1px solid #dbe7e2 !important;
+  background: linear-gradient(135deg, #063d2b, #0b4f39) !important;
+  color: #f7ffe8 !important;
+  padding: 10px 12px !important;
+}
+
+.crear-partido-drawer > summary span {
+  max-width: 12rem !important;
+  color: #f7ffe8 !important;
+  font-size: 0.78rem !important;
+  line-height: 1.06 !important;
+}
+
+.crear-partido-drawer > summary small {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #eaffb8 !important;
+  color: #063d2b !important;
+  padding: 7px 10px !important;
+  font-size: 0.62rem !important;
+  line-height: 1.05 !important;
+  text-align: center !important;
+}
+
+.crear-partido-drawer > section {
+  background: #fbfdfc !important;
+  color: #07130f !important;
+  padding: 10px !important;
+}
+
+.crear-partido-drawer > section > div:first-child {
+  margin-bottom: 10px !important;
+  border-bottom: 1px solid #dbe7e2 !important;
+  padding-bottom: 10px !important;
+}
+
+.crear-partido-drawer > section > div:first-child h3 {
+  color: #07130f !important;
+  font-size: 1.12rem !important;
+  line-height: 1.06 !important;
+}
+
+.crear-partido-drawer > section > div:first-child span {
+  border-color: rgba(0, 163, 108, 0.24) !important;
+  background: #ecfdf5 !important;
+  color: #063d2b !important;
+}
+
+.crear-partido-drawer > section > div:first-child [aria-label="Resumen de cupos"] span {
+  min-height: 40px !important;
+  border-color: rgba(0, 163, 108, 0.25) !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #36554a !important;
+  padding: 7px 8px !important;
+  box-shadow: 0 6px 14px rgba(7, 19, 15, 0.06) !important;
+}
+
+.crear-partido-drawer > section > div:first-child [aria-label="Resumen de cupos"] strong {
+  color: #063d2b !important;
+  font-size: 1rem !important;
+}
+
+.crear-partido-drawer form > div:first-of-type > div,
+.crear-partido-drawer form > div[class*="rounded-2xl"],
+.crear-partido-drawer section[class*="rounded-2xl"],
+.crear-partido-drawer details[class*="rounded-2xl"] {
+  border-color: rgba(0, 163, 108, 0.20) !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  box-shadow: 0 8px 18px rgba(7, 19, 15, 0.06) !important;
+}
+
+.crear-partido-drawer label,
+.crear-partido-drawer h4,
+.crear-partido-drawer strong {
+  color: #063d2b !important;
+}
+
+.crear-partido-drawer label {
+  margin-bottom: 5px !important;
+  font-size: 0.68rem !important;
+  line-height: 1.05 !important;
+}
+
+.crear-partido-drawer input:not([type="checkbox"]):not([type="radio"]),
+.crear-partido-drawer select,
+.crear-partido-drawer textarea {
+  min-height: 40px !important;
+  border-color: #cfe0d9 !important;
+  border-radius: 11px !important;
+  background: #f8fbf9 !important;
+  color: #07130f !important;
+  -webkit-text-fill-color: #07130f !important;
+  padding: 8px 10px !important;
+  font-size: 0.82rem !important;
+  box-shadow: inset 3px 0 0 rgba(0, 163, 108, 0.55) !important;
+}
+
+.crear-partido-drawer textarea {
+  min-height: 110px !important;
+}
+
+.crear-partido-drawer small,
+.crear-partido-drawer p,
+.crear-partido-drawer [class*="text-emerald-100"],
+.crear-partido-drawer [class*="text-lime-50"],
+.crear-partido-drawer [class*="text-lime-100"] {
+  color: #526b62 !important;
+}
+
+.crear-partido-drawer > summary span,
+.crear-partido-drawer > summary [class*="text-lime-50"] {
+  color: #f7ffe8 !important;
+}
+
+.crear-partido-drawer > summary small {
+  color: #063d2b !important;
+}
+
+.crear-partido-drawer .participant-head,
+.crear-partido-drawer div[class*="bg-emerald-950"] {
+  border-color: rgba(0, 163, 108, 0.22) !important;
+  background: #f3faf6 !important;
+  color: #07130f !important;
+}
+
+.crear-partido-drawer [data-react-island="participant_controls"] > div {
+  border-color: rgba(0, 163, 108, 0.24) !important;
+  border-radius: 14px !important;
+  background: #063d2b !important;
+  color: #f7ffe8 !important;
+  padding: 9px !important;
+  box-shadow: 0 10px 22px rgba(7, 19, 15, 0.16) !important;
+}
+
+.crear-partido-drawer [data-react-island="participant_controls"] label {
+  color: #dff7c4 !important;
+}
+
+.crear-partido-drawer [data-react-island="participant_controls"] input {
+  border-color: rgba(183, 241, 61, 0.38) !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  -webkit-text-fill-color: #07130f !important;
+}
+
+.crear-partido-drawer [data-player-row] {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 8px !important;
+  border-color: rgba(0, 163, 108, 0.18) !important;
+  border-radius: 13px !important;
+  background: #ffffff !important;
+  color: #07130f !important;
+  padding: 9px !important;
+  box-shadow: 0 6px 14px rgba(7, 19, 15, 0.06) !important;
+}
+
+.crear-partido-drawer [data-player-row] strong {
+  color: #07130f !important;
+  font-size: 0.9rem !important;
+}
+
+.crear-partido-drawer [data-player-row] small {
+  color: #526b62 !important;
+  font-size: 0.68rem !important;
+}
+
+.crear-partido-drawer [data-player-row] button[data-remove-player-row] {
+  width: 32px !important;
+  min-height: 32px !important;
+  border-color: rgba(220, 38, 38, 0.28) !important;
+  border-radius: 10px !important;
+  background: #fff1f2 !important;
+  color: #b91c1c !important;
+}
+
+.crear-partido-drawer [data-player-row] button[data-participant-toggle] {
+  min-height: 32px !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 0.72rem !important;
+}
+
+.crear-partido-drawer button[type="submit"]:not([data-mobile-submit]),
+.crear-partido-drawer .btn-primary {
+  border-color: #b7f13d !important;
+  background: #063d2b !important;
+  color: #f7ffe8 !important;
+  -webkit-text-fill-color: #f7ffe8 !important;
+}
+
+.crear-partido-drawer a[href="configuracion.php"],
+.crear-partido-drawer a[href="editar_partidos.php"] {
+  border-color: rgba(0, 163, 108, 0.26) !important;
+  background: #ecfdf5 !important;
+  color: #063d2b !important;
+}
+
+.crear-partido-drawer > section > form > .sticky {
+  border-color: rgba(0, 163, 108, 0.26) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 760px) {
+  .crear-partido-hero {
+    display: grid !important;
+    gap: 8px !important;
+  }
+
+  .crear-partido-drawer > summary {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .crear-partido-drawer form > div:first-of-type {
+    gap: 8px !important;
+  }
+
+  .crear-partido-drawer form > div:first-of-type > div {
+    padding: 9px !important;
+  }
+
+  .crear-partido-drawer [data-react-island="participant_controls"] > div {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .crear-partido-drawer [data-player-row] {
+    padding: 8px !important;
+  }
+
+  .crear-partido-drawer [data-player-row] > span:last-of-type {
+    gap: 5px !important;
+  }
+
+  .crear-partido-drawer [data-player-row] button[data-participant-toggle] {
+    min-width: 76px !important;
+    padding: 6px 8px !important;
+  }
+
+  .crear-partido-drawer [data-participant-marquee] {
+    border-color: #b7f13d !important;
+    border-radius: 14px !important;
+    background: #063d2b !important;
+  }
+}
+
 /* Page-specific compact stats controls. Kept unlayered so it wins over older broad stats rules. */
 @media (min-width: 761px) {
   .page-estadisticas .stats-control-bar {

@@ -6,6 +6,19 @@ require_once __DIR__ . '/../lib/helpers.php';
 $title = $title ?? APP_NAME;
 $activePage = $activePage ?? '';
 $bodyClass = trim((string) ($bodyClass ?? ''));
+if ($bodyClass === '') {
+    $classSource = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    if ($classSource === '') {
+        $classSource = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    }
+    if ($classSource === '' && $activePage !== '') {
+        $classSource = (string) $activePage;
+    }
+    $pageClass = preg_replace('/[^a-z0-9]+/', '-', strtolower(pathinfo(basename($classSource), PATHINFO_FILENAME))) ?: '';
+    if ($pageClass !== '') {
+        $bodyClass = 'page-' . trim($pageClass, '-');
+    }
+}
 $flashMessages = consume_flash();
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/../assets/tailwind.css') ?: time());
 $contrastVersion = (string) (@filemtime(__DIR__ . '/../assets/contrast-overrides.css') ?: time());
@@ -13,9 +26,9 @@ $disableContrastOverrides = (bool) ($disableContrastOverrides ?? true);
 $brandLogoPath = __DIR__ . '/../assets/goodfellas-logo.png';
 $publicMenu = [
     'index.php' => 'Inicio',
-    'historial.php' => 'Historial',
-    'estadisticas.php' => 'Estadisticas',
     'jugadores.php' => 'Jugadores',
+    'estadisticas.php' => 'Estadisticas',
+    'historial.php' => 'Historial',
 ];
 $roleMenu = [];
 $roleLabel = '';
@@ -59,10 +72,10 @@ if (is_admin()) {
         'login.php' => 'Ingresar',
     ];
 }
-$showRoleShortcut = !is_admin();
+$showRoleShortcut = false;
 $roleShortcutHref = is_player_user() ? 'perfil.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : (current_user_id() > 0 ? 'logout.php' : 'login.php'));
 $roleShortcutLabel = is_player_user() ? 'Mi perfil' : (is_directivo() ? 'Junta' : (!empty($_SESSION['guest_vote_invite_id']) ? 'Votacion' : (current_user_id() > 0 ? 'Salir' : 'Ingresar')));
-$navLinkBase = 'block rounded-xl border border-transparent px-3 py-2 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/35 hover:bg-lime-100/10 hover:text-lime-100 max-[760px]:w-full max-[760px]:border-lime-200/25 max-[760px]:bg-emerald-900/45 max-[760px]:px-2.5 max-[760px]:py-2 max-[760px]:text-xs max-[760px]:leading-tight max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
+$navLinkBase = 'inline-flex min-h-8 items-center justify-center rounded-xl border border-transparent px-3 py-2 text-sm font-extrabold leading-tight text-lime-50 no-underline transition hover:border-lime-200/35 hover:bg-lime-100/10 hover:text-lime-100 max-[760px]:min-h-8 max-[760px]:border-lime-200/25 max-[760px]:bg-emerald-900/45 max-[760px]:px-2.5 max-[760px]:py-1.5 max-[760px]:text-[11px] max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
 $navLinkActive = 'border-lime-200/60 bg-lime-200 text-emerald-950 hover:bg-lime-100 hover:text-emerald-950';
 $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:text-red-50';
 ?>
@@ -97,25 +110,16 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
         <?php endif; ?>
       </div>
       <nav
-        class="col-span-full row-start-2 hidden w-full min-w-0 flex-col gap-2 border-t border-lime-200/15 pt-2 min-[761px]:col-start-2 min-[761px]:row-start-1 min-[761px]:flex min-[761px]:flex-row min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:justify-end min-[761px]:gap-2 min-[761px]:border-t-0 min-[761px]:pt-0"
+        class="col-span-full row-start-2 hidden w-full min-w-0 flex-wrap items-center justify-end gap-1.5 border-t border-lime-200/15 pt-2 min-[761px]:col-start-2 min-[761px]:row-start-1 min-[761px]:flex min-[761px]:gap-2 min-[761px]:border-t-0 min-[761px]:pt-0"
         id="mainNav"
         aria-label="Navegacion principal"
       >
-        <div class="mobile-nav-group grid grid-cols-2 gap-1.5 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1" aria-label="Opciones publicas">
-          <span class="mobile-nav-label">Publico</span>
-          <?php foreach ($publicMenu as $file => $label): ?>
-            <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
-          <?php endforeach; ?>
-        </div>
-        <div class="mobile-nav-group grid grid-cols-2 gap-1.5 border-t border-lime-200/20 pt-2 min-[761px]:flex min-[761px]:flex-wrap min-[761px]:items-center min-[761px]:gap-1 min-[761px]:border-l min-[761px]:border-t-0 min-[761px]:pl-2 min-[761px]:pt-0" aria-label="<?= $roleLabel !== '' ? 'Opciones ' . h($roleLabel) : 'Acceso admin' ?>">
-          <span class="mobile-nav-label"><?= $roleLabel !== '' ? h($roleLabel) : 'Acceso' ?></span>
-          <?php if ($roleLabel !== ''): ?>
-            <span class="col-span-full w-fit rounded-full bg-lime-100/10 px-2 py-0.5 text-[9px] font-black uppercase leading-tight text-lime-50 min-[761px]:px-2.5 min-[761px]:py-1 min-[761px]:text-[10px]"><?= h($roleLabel) ?></span>
-          <?php endif; ?>
-          <?php foreach ($roleMenu as $file => $label): ?>
-            <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '') . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
-          <?php endforeach; ?>
-        </div>
+        <?php foreach ($publicMenu as $file => $label): ?>
+          <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+        <?php endforeach; ?>
+        <?php foreach ($roleMenu as $file => $label): ?>
+          <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '') . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+        <?php endforeach; ?>
       </nav>
       <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-2 min-[761px]:col-start-3 min-[761px]:row-start-1">
         <?php if ($showRoleShortcut): ?>

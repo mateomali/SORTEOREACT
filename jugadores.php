@@ -590,8 +590,14 @@ require __DIR__ . '/includes/header.php';
                   <strong><?= h((string) shared_profile_player_fifa_overall(player_overall_rating($player))) ?></strong>
                   <small><?= h((string) $player['positions']) ?></small>
                 </span>
-                <button class="mobile-player-info-button" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">
-                  <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border-2 border-current text-[0.72rem] font-black leading-none" aria-hidden="true">i</span>
+                <button class="mobile-player-info-button !h-11 !min-h-11 !w-11" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">
+                  <svg class="h-6 w-6" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+                    <circle cx="9" cy="12" r="2.2"></circle>
+                    <path d="M14 10h4"></path>
+                    <path d="M14 14h3"></path>
+                    <path d="M7 16.5c.8-1 3.2-1 4 0"></path>
+                  </svg>
                 </button>
               <?php endif; ?>
             </span>

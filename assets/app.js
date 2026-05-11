@@ -1867,6 +1867,17 @@
       });
     });
 
+    root.querySelectorAll?.('.mobile-player-list-item[data-player-table-row]:not([data-player-row-open-bound="1"])').forEach((row) => {
+      row.dataset.playerRowOpenBound = '1';
+      row.addEventListener('click', (event) => {
+        if (event.target.closest('button, a, input, select, textarea, form, label')) {
+          return;
+        }
+        const openButton = row.querySelector('[data-player-edit-open]');
+        openButton?.click();
+      });
+    });
+
     root.querySelectorAll?.('[data-player-edit-dialog]:not([data-player-edit-dialog-bound="1"])').forEach((dialog) => {
       dialog.dataset.playerEditDialogBound = '1';
       dialog.querySelectorAll('[data-player-edit-close]').forEach((button) => {

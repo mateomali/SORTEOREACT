@@ -37,6 +37,22 @@ export function ParticipantControlsIsland({ root }) {
     setSelected(participantCheckboxes().filter((checkbox) => checkbox.checked).length);
   };
 
+  const focusResults = () => {
+    const list = document.querySelector('[data-participant-list]');
+    const firstVisibleRow = participantRows().find((row) => !row.classList.contains('hidden'));
+    const target = firstVisibleRow || list || document.querySelector('[data-participant-empty]');
+
+    if (!target) {
+      return;
+    }
+
+    if (!target.hasAttribute('tabindex')) {
+      target.setAttribute('tabindex', '-1');
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => target.focus({ preventScroll: true }), 260);
+  };
+
   useEffect(() => {
     const rows = participantRows();
     const normalizedQuery = normalize(query);
@@ -123,15 +139,35 @@ export function ParticipantControlsIsland({ root }) {
     <div className="grid items-end gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 p-3 text-lime-50 shadow-md shadow-emerald-950/20 md:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <label className="mb-1.5 block text-sm font-black text-lime-100" htmlFor="participantSearchReact">Buscar jugador</label>
-        <input
-          className="min-h-11 w-full rounded-xl border border-lime-200/40 bg-emerald-900/60 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/60 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25"
-          id="participantSearchReact"
-          type="search"
-          placeholder="Nombre, posicion o ritmo"
-          autoComplete="off"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
+          <input
+            className="min-h-11 w-full rounded-xl border border-lime-200/40 bg-emerald-900/60 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/60 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25"
+            id="participantSearchReact"
+            type="search"
+            placeholder="Nombre, posicion o ritmo"
+            autoComplete="off"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                focusResults();
+              }
+            }}
+          />
+          <button
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/45 bg-lime-100 text-emerald-950 shadow-md shadow-emerald-950/15 transition hover:bg-lime-200 focus:outline-none focus:ring-4 focus:ring-lime-200/30"
+            type="button"
+            onClick={focusResults}
+            aria-label="Ir a resultados de busqueda"
+            title="Ir a resultados"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-4-4" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2 max-[760px]:items-stretch">
         <label className="mb-0 inline-flex min-h-11 items-center gap-2 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-sm font-bold text-lime-50 shadow-sm">
