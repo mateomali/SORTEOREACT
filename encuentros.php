@@ -1359,6 +1359,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
           <?php if ($latestIsScheduled): ?>
             <a class="btn btn-muted" href="<?= h($matchFormPage) ?>?edit=<?= $latestId ?>">Editar</a>
             <a class="btn btn-warning" href="sorteo_legacy_csv.php?match_id=<?= $latestId ?>">Sortear</a>
+            <a class="btn btn-warning" href="sorteo_multiple.php?match_id=<?= $latestId ?>">Multiple</a>
             <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="capitanes.php?match_id=<?= $latestId ?>">Capitanes</a>
             <a class="btn btn-muted" href="equipos_manual.php?match_id=<?= $latestId ?>">Manual</a>
           <?php elseif ($latestCanFinalize): ?>

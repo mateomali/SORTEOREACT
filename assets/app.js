@@ -403,6 +403,16 @@
     currentNav.classList.remove('open');
   };
 
+  const updatePageChrome = (nextDocument) => {
+    const nextBodyClass = nextDocument.body?.getAttribute('class') || '';
+    if (nextBodyClass) {
+      document.body.className = nextBodyClass;
+    } else {
+      document.body.removeAttribute('class');
+    }
+    updateActiveNavigation(nextDocument);
+  };
+
   const scrollToUrlTarget = (url, fallbackTop = true) => {
     const hash = new URL(url, window.location.href).hash;
     const id = hash ? decodeURIComponent(hash.slice(1)) : '';
@@ -947,7 +957,7 @@
 
       document.title = nextDocument.title || document.title;
       document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
-      updateActiveNavigation(nextDocument);
+      updatePageChrome(nextDocument);
       content.replaceChildren(...Array.from(nextContent.childNodes));
       runPageScripts(content);
       hydrateDynamicContent(content);
@@ -986,7 +996,7 @@
 
     document.title = nextDocument.title || document.title;
     document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
-    updateActiveNavigation(nextDocument);
+    updatePageChrome(nextDocument);
     content.replaceChildren(...Array.from(nextContent.childNodes));
     runPageScripts(content);
     hydrateDynamicContent(content);

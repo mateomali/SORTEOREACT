@@ -9390,14 +9390,33 @@
 
   @media (max-width: 1280px) and (min-width: 761px) {
     .page-editar-partidos .encounter-card {
-      grid-template-columns: minmax(190px, 0.9fr) minmax(230px, 1fr) auto;
+      grid-template-columns: minmax(190px, 0.8fr) minmax(230px, 1fr) minmax(220px, 0.9fr);
       grid-template-areas:
-        "head score actions"
-        "status status status";
+        "head score status"
+        "actions actions actions";
+      align-items: start;
+    }
+
+    .page-editar-partidos .encounter-card-status-group {
+      justify-self: end;
+      justify-content: flex-end;
     }
 
     .page-editar-partidos .encounter-actions {
+      width: 100%;
+      flex-wrap: wrap;
       justify-content: flex-end;
+      gap: 6px;
+      padding-top: 2px;
+    }
+
+    .page-editar-partidos .encounter-actions .btn {
+      max-width: none;
+    }
+
+    .page-editar-partidos .encounter-actions .btn,
+    .page-editar-partidos .encounter-actions button {
+      min-height: 36px;
     }
   }
 
