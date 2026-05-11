@@ -1223,18 +1223,27 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         ],
       };
     };
-    const openPlayerScoutPanel = (trigger) => {
-      const panel = document.querySelector('[data-player-scout-panel]');
+    const renderPlayerInfoScout = (scope) => {
+      const panel = scope.querySelector('[data-player-info-scout]');
       if (!panel) return;
-      const scout = describeScoutPlayer(scoutDataFromTrigger(trigger));
-      panel.querySelector('[data-player-scout-title]').textContent = scout.title;
-      panel.querySelector('[data-player-scout-body]').textContent = scout.body;
-      panel.querySelector('[data-player-scout-tags]').innerHTML = scout.tags.map((tag) => `<span class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-emerald-950">${tag}</span>`).join('');
-      panel.hidden = false;
+      const scout = describeScoutPlayer(scoutDataFromTrigger(scope));
+      const title = panel.querySelector('[data-player-info-scout-title]');
+      const body = panel.querySelector('[data-player-info-scout-body]');
+      const tags = panel.querySelector('[data-player-info-scout-tags]');
+      if (title) title.textContent = scout.title;
+      if (body) body.textContent = scout.body;
+      if (tags) {
+        tags.innerHTML = scout.tags.map((tag) => `<span class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-emerald-950">${tag}</span>`).join('');
+      }
     };
-    const closePlayerScoutPanel = () => {
-      const panel = document.querySelector('[data-player-scout-panel]');
-      if (panel) panel.hidden = true;
+    const togglePlayerInfoScout = (button) => {
+      const panel = button.closest('[data-player-info-scout]');
+      if (!panel) return;
+      const isCollapsed = panel.getAttribute('data-player-info-scout-collapsed') !== '0';
+      panel.setAttribute('data-player-info-scout-collapsed', isCollapsed ? '0' : '1');
+      button.textContent = isCollapsed ? '-' : '+';
+      button.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+      button.setAttribute('aria-label', isCollapsed ? 'Compactar relato' : 'Expandir relato');
     };
     const playerNameFromScope = (scope) => {
       const readonlyName = scope.querySelector('.player-readonly-name')?.textContent;
@@ -1509,6 +1518,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         input.addEventListener('change', () => syncGoalkeeperStats(scope));
       });
       updateGeneralRating(scope);
+      renderPlayerInfoScout(scope);
     });
 
     document.querySelectorAll('.players-user-table .player-radar-card-compact').forEach((card) => {
@@ -1528,9 +1538,9 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     });
 
     document.addEventListener('click', (event) => {
-      const scoutTrigger = event.target.closest('[data-player-scout-open]');
-      if (scoutTrigger) {
-        openPlayerScoutPanel(scoutTrigger);
+      const scoutToggle = event.target.closest('[data-player-info-scout-toggle]');
+      if (scoutToggle) {
+        togglePlayerInfoScout(scoutToggle);
         return;
       }
       const radarTrigger = event.target.closest('.players-user-table .player-radar-card-compact');
@@ -1541,14 +1551,10 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (event.target.closest('[data-player-radar-close]') || event.target.matches('[data-player-radar-panel]')) {
         closePlayerRadarPanel();
       }
-      if (event.target.closest('[data-player-scout-close]') || event.target.matches('[data-player-scout-panel]')) {
-        closePlayerScoutPanel();
-      }
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        closePlayerScoutPanel();
         closePlayerRadarPanel();
       }
     });

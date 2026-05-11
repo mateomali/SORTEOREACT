@@ -506,7 +506,6 @@ require __DIR__ . '/includes/header.php';
     <span class="stats-filter-hub-icon" aria-hidden="true"></span>
   </summary>
   <div class="stats-filter-hub-body">
-  <div class="stats-court-switcher">
   <div class="stats-year-switcher">
     <div class="stats-court-switcher-head">
       <div>
@@ -607,9 +606,10 @@ require __DIR__ . '/includes/header.php';
       <?php endforeach; ?>
     </div>
   </div>
-</div>
 
-<div class="stats-control-search">
+</details>
+
+<div class="stats-control-search stats-player-search-panel mb-3.5">
   <div
     data-react-root
     data-react-island="stats_player_search"
@@ -632,8 +632,6 @@ require __DIR__ . '/includes/header.php';
     <?php endforeach; ?>
   </datalist>
 </div>
-  </div>
-</details>
 
 <section class="stats-player-result" data-stats-player-result hidden>
   <article class="stat-box">

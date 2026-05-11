@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
+require_once __DIR__ . '/lib/player_profile_visual.php';
 
 function player_ajax_token(): string
 {
@@ -73,6 +74,12 @@ $currentPlayerId = current_player_id();
 function player_row_search_text(array $player): string
 {
     return strtolower(trim((string) $player['name'] . ' ' . $player['positions'] . ' ' . number_format(player_overall_rating($player), 1) . ' ' . implode(' ', array_map(static fn(string $field): string => number_format(player_effective_stat($player, $field), 1), player_stat_fields())) . ' ' . ((int) $player['active'] === 1 ? 'activo si' : 'inactivo no')));
+}
+
+function player_rating_stars(float $rating): string
+{
+    $filled = (int) round(max(1, min(6, $rating)));
+    return str_repeat('★', $filled) . str_repeat('☆', max(0, 6 - $filled));
 }
 
 function player_scout_data_attrs(array $player): string
@@ -554,7 +561,10 @@ require __DIR__ . '/includes/header.php';
           <article id="player-<?= $playerId ?>" class="mobile-player-list-item <?= $isCurrentPlayerRow ? 'is-current-player-row' : '' ?>" data-player-table-row data-player-id="<?= $playerId ?>" data-search="<?= h($rowSearch) ?>"<?= player_sort_data_attrs($player) ?>>
             <span>
               <strong><?= h((string) $player['name']) ?></strong>
-              <small><?= h((string) $player['positions']) ?> | General <?= h(skill_label(player_overall_rating($player))) ?></small>
+              <small>
+                <?= h(number_format(player_overall_rating($player), 1)) ?>
+                <span class="mobile-player-list-stars" aria-label="<?= h(player_rating_stars(player_overall_rating($player))) ?>"><?= h(player_rating_stars(player_overall_rating($player))) ?></span>
+              </small>
             </span>
             <span class="mobile-player-list-actions">
               <?php if ($isAdmin): ?>
@@ -567,7 +577,6 @@ require __DIR__ . '/includes/header.php';
                     <?= (int) $player['active'] === 1 ? 'Activo' : 'Inactivo' ?>
                   </button>
                 </form>
-                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato"></button>
                 <button class="btn btn-muted player-icon-button icon-pencil" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Editar <?= h((string) $player['name']) ?>" title="Editar"></button>
                 <form method="post" class="inline">
                   <input type="hidden" name="action" value="delete">
@@ -577,8 +586,13 @@ require __DIR__ . '/includes/header.php';
                   <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar">X</button>
                 </form>
               <?php else: ?>
-                <button class="btn btn-muted player-icon-button player-scout-icon" type="button" data-player-scout-open<?= player_scout_data_attrs($player) ?> aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato"></button>
-                <button class="btn btn-muted player-icon-button player-info-icon" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats"></button>
+                <span class="mobile-player-list-score-card" aria-label="Puntaje <?= h((string) shared_profile_player_fifa_overall(player_overall_rating($player))) ?>">
+                  <strong><?= h((string) shared_profile_player_fifa_overall(player_overall_rating($player))) ?></strong>
+                  <small><?= h((string) $player['positions']) ?></small>
+                </span>
+                <button class="mobile-player-info-button" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">
+                  <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border-2 border-current text-[0.72rem] font-black leading-none" aria-hidden="true">i</span>
+                </button>
               <?php endif; ?>
             </span>
           </article>
@@ -629,10 +643,6 @@ require __DIR__ . '/includes/header.php';
               <?php else: ?>
                 <strong class="player-readonly-name"><?= h((string) $player['name']) ?></strong>
               <?php endif; ?>
-              <button class="btn btn-muted player-scout-row-button" type="button" data-player-scout-open aria-label="Relato de <?= h((string) $player['name']) ?>" title="Relato del jugador">
-                <span class="player-scout-icon" aria-hidden="true"></span>
-                <span>Relato</span>
-              </button>
             </td>
             <td>
               <?= player_position_selects($rowPositions, $isAdmin ? $rowFormId : null, !$isAdmin) ?>
@@ -681,25 +691,13 @@ require __DIR__ . '/includes/header.php';
   </div>
 </section>
 
-<div class="player-scout-floating-panel" data-player-scout-panel hidden>
-  <article class="player-scout-floating-card" role="dialog" aria-modal="true" aria-labelledby="playerScoutTitle">
-    <div class="player-scout-floating-head">
-      <span>Relato del jugador</span>
-      <button class="player-scout-close" type="button" data-player-scout-close aria-label="Cerrar">x</button>
-    </div>
-    <h3 id="playerScoutTitle" data-player-scout-title>Perfil del jugador</h3>
-    <p data-player-scout-body>-</p>
-    <div class="player-scout-tags" data-player-scout-tags></div>
-  </article>
-</div>
-
 <?php foreach ($players as $player): ?>
   <?php
     $playerId = (int) $player['id'];
     $rowPositions = parse_positions_csv((string) $player['positions']);
   ?>
   <dialog class="player-edit-dialog <?= $isAdmin ? '' : 'player-info-dialog' ?>" data-player-edit-dialog="<?= $playerId ?>">
-    <form method="post" class="player-edit-panel <?= $isAdmin ? '' : 'player-info-panel' ?>" <?= $isAdmin ? '' : 'data-player-readonly-form' ?>>
+    <form method="post" class="player-edit-panel <?= $isAdmin ? 'player-admin-edit-panel' : 'player-info-panel' ?>" <?= $isAdmin ? '' : 'data-player-readonly-form ' . player_scout_data_attrs($player) ?>>
       <div class="player-edit-head">
         <div>
           <h3><?= $isAdmin ? 'Editar jugador' : 'Ficha de jugador' ?></h3>
@@ -716,11 +714,21 @@ require __DIR__ . '/includes/header.php';
       <?php endif; ?>
 
       <?php if ($isAdmin): ?>
-        <div class="form-grid">
+        <div class="form-grid player-edit-top-grid">
           <div class="form-row">
             <label>Nombre</label>
             <input type="text" name="name" required value="<?= h((string) $player['name']) ?>">
           </div>
+          <article class="desktop-player-card-overall player-edit-general-card">
+            <div class="mobile-player-card-rating">
+              <strong data-general-card-value><?= h((string) shared_profile_player_fifa_overall(player_overall_rating($player))) ?></strong>
+              <span>GEN</span>
+            </div>
+            <div class="mobile-player-card-meta">
+              <span>Puntaje general</span>
+              <strong data-general-card-position><?= h(implode(' / ', $rowPositions)) ?></strong>
+            </div>
+          </article>
           <div class="form-row">
             <label>General</label>
             <div class="player-general-rating" data-general-rating>
@@ -737,7 +745,7 @@ require __DIR__ . '/includes/header.php';
           </div>
         </div>
 
-        <div class="form-row">
+        <div class="form-row player-edit-positions-row">
           <label>Posiciones</label>
           <?= player_position_selects($rowPositions, null, false) ?>
         </div>
@@ -746,25 +754,40 @@ require __DIR__ . '/includes/header.php';
           <article class="player-info-main-card">
             <span>Jugador</span>
             <strong><?= h((string) $player['name']) ?></strong>
+            <div class="player-info-main-rating player-general-rating" data-general-rating>
+              <span data-general-rating-stars><?= h(player_rating_stars(player_overall_rating($player))) ?></span>
+              <strong data-general-rating-value><?= h(number_format(player_overall_rating($player), 1)) ?>/6</strong>
+            </div>
             <div class="player-info-position-chips">
               <?php foreach ($rowPositions as $position): ?>
                 <span><?= h($position) ?></span>
               <?php endforeach; ?>
             </div>
           </article>
-          <article class="player-info-score-card">
-            <span>Puntaje</span>
-            <strong><?= h(number_format(player_overall_rating($player), 1)) ?></strong>
-            <small>General / 6</small>
-            <div class="player-general-rating player-info-stars" data-general-rating>
-              <strong data-general-rating-value><?= h(number_format(player_overall_rating($player), 1)) ?>/6</strong>
-              <span data-general-rating-stars></span>
+          <article class="desktop-player-card-overall player-info-general-card">
+            <div class="mobile-player-card-rating">
+              <strong data-general-card-value><?= h((string) shared_profile_player_fifa_overall(player_overall_rating($player))) ?></strong>
+            </div>
+            <div class="mobile-player-card-meta">
+              <span>Puntaje general</span>
+              <strong data-general-card-position><?= h(implode(' / ', $rowPositions)) ?></strong>
             </div>
           </article>
         </section>
+        <article class="rounded-xl border border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5" data-player-info-scout data-player-info-scout-collapsed="1">
+          <div class="player-info-scout-head">
+            <span class="mb-1 block text-[0.62rem] font-black uppercase leading-none text-emerald-700">Relato</span>
+            <button class="player-info-scout-toggle" type="button" data-player-info-scout-toggle aria-expanded="false" aria-label="Expandir relato">+</button>
+          </div>
+          <div class="player-info-scout-content" data-player-info-scout-content>
+            <h4 class="mb-2 text-sm font-black leading-tight text-emerald-950" data-player-info-scout-title>Relato del jugador</h4>
+            <p class="m-0 text-sm font-semibold leading-relaxed text-slate-700" data-player-info-scout-body>-</p>
+            <div class="mt-3 flex flex-wrap gap-1.5" data-player-info-scout-tags></div>
+          </div>
+        </article>
       <?php endif; ?>
 
-      <div class="form-grid">
+      <div class="form-grid player-edit-stats-grid">
         <?php foreach (player_field_stat_fields() as $field): ?>
           <div class="form-row stat-form-row" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
             <label><?= h($statLabels[$field]) ?></label>
@@ -781,7 +804,7 @@ require __DIR__ . '/includes/header.php';
 
       <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 
-      <div class="btn-row">
+      <div class="btn-row player-edit-actions">
         <?php if ($isAdmin): ?>
           <button class="btn btn-primary" type="submit">Guardar cambios</button>
           <button class="btn btn-muted" type="button" data-player-edit-close>Cancelar</button>
