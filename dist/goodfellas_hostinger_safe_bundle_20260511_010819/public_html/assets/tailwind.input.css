@@ -10397,6 +10397,9 @@
     }
 
     .page-jugadores .player-info-panel .player-edit-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
       order: 1;
       margin: -8px -8px 0;
       padding: 8px;

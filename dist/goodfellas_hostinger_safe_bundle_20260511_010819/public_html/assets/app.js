@@ -1859,58 +1859,6 @@
     }
   });
 
-  let playerDialogHistoryToken = 0;
-  let activePlayerDialog = null;
-  let closingPlayerDialogFromHistory = false;
-
-  const closePlayerEditDialog = (dialog, { fromHistory = false } = {}) => {
-    if (!dialog) return;
-    if (fromHistory) closingPlayerDialogFromHistory = true;
-    if (typeof dialog.close === 'function' && dialog.open) {
-      dialog.close();
-    } else {
-      dialog.removeAttribute('open');
-    }
-    if (fromHistory) {
-      closingPlayerDialogFromHistory = false;
-      if (activePlayerDialog === dialog) activePlayerDialog = null;
-    }
-  };
-
-  const syncPlayerDialogHistoryOnClose = (dialog) => {
-    if (closingPlayerDialogFromHistory || activePlayerDialog !== dialog) return;
-    activePlayerDialog = null;
-    if (window.history.state?.goodfellasPlayerDialog) {
-      window.history.back();
-    }
-  };
-
-  const openPlayerEditDialog = (dialog) => {
-    if (!dialog) return;
-    if (typeof dialog.showModal === 'function') {
-      dialog.showModal();
-    } else {
-      dialog.setAttribute('open', '');
-    }
-    if (activePlayerDialog !== dialog) {
-      activePlayerDialog = dialog;
-      playerDialogHistoryToken += 1;
-      window.history.pushState({
-        ...(window.history.state || {}),
-        goodfellasPlayerDialog: true,
-        goodfellasPlayerDialogToken: playerDialogHistoryToken,
-      }, '', window.location.href);
-    }
-  };
-
-  window.addEventListener('popstate', () => {
-    if (!activePlayerDialog?.open) {
-      activePlayerDialog = null;
-      return;
-    }
-    closePlayerEditDialog(activePlayerDialog, { fromHistory: true });
-  });
-
   const bindPlayerEditDialogs = (root = document) => {
     root.querySelectorAll?.('[data-player-edit-open]:not([data-player-edit-open-bound="1"])').forEach((button) => {
       button.dataset.playerEditOpenBound = '1';
@@ -1921,7 +1869,11 @@
           : String(id || '').replace(/"/g, '\\"');
         const dialog = id ? document.querySelector(`[data-player-edit-dialog="${escapedId}"]`) : null;
         if (!dialog) return;
-        openPlayerEditDialog(dialog);
+        if (typeof dialog.showModal === 'function') {
+          dialog.showModal();
+        } else {
+          dialog.setAttribute('open', '');
+        }
       });
     });
 
@@ -1940,15 +1892,22 @@
       dialog.dataset.playerEditDialogBound = '1';
       dialog.querySelectorAll('[data-player-edit-close]').forEach((button) => {
         button.addEventListener('click', () => {
-          closePlayerEditDialog(dialog);
+          if (typeof dialog.close === 'function') {
+            dialog.close();
+          } else {
+            dialog.removeAttribute('open');
+          }
         });
       });
       dialog.addEventListener('click', (event) => {
         if (event.target === dialog) {
-          closePlayerEditDialog(dialog);
+          if (typeof dialog.close === 'function') {
+            dialog.close();
+          } else {
+            dialog.removeAttribute('open');
+          }
         }
       });
-      dialog.addEventListener('close', () => syncPlayerDialogHistoryOnClose(dialog));
     });
   };
 
