@@ -1589,10 +1589,12 @@
   const syncPlayerStatControl = (root, value) => {
     if (!root) return;
     const rating = Math.max(1, Math.min(6, Number(value) || 1));
+    const tone = rating <= 2 ? 'low' : (rating <= 3 ? 'medium' : (rating <= 4 ? 'good' : 'elite'));
     const input = root.querySelector('[data-stat-rating-input]');
     const label = root.querySelector('[data-stat-rating-value]');
     const range = root.querySelector('[data-stat-rating-range]');
     const bar = root.querySelector('[data-stat-rating-bar]');
+    root.setAttribute('data-stat-rating-tone', tone);
     if (input) input.value = String(rating);
     if (label) label.textContent = `${rating}/6`;
     if (range) range.value = String(rating);

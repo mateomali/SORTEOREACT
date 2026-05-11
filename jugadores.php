@@ -401,7 +401,8 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
     $classes = 'stat-rating' . ($compact ? ' stat-rating-compact' : '') . ($readonly ? ' stat-rating-readonly' : '');
     $readonlyAttr = $readonly ? ' data-stat-rating-readonly' : '';
     $barPercent = max(0, min(100, (int) round(($rating / 6) * 100)));
-    $html = '<div class="' . $classes . '" data-stat-rating' . $readonlyAttr . '>';
+    $tone = $rating <= 2 ? 'low' : ($rating <= 3 ? 'medium' : ($rating <= 4 ? 'good' : 'elite'));
+    $html = '<div class="' . $classes . '" data-stat-rating data-stat-rating-tone="' . h($tone) . '"' . $readonlyAttr . '>';
     $html .= '<input type="hidden" name="' . h($name) . '" value="' . $rating . '"' . $formAttr . ' data-stat-rating-input>';
     $html .= '<div class="stat-rating-stars" role="radiogroup" aria-label="' . h($name) . '">';
     for ($i = 1; $i <= 6; $i++) {
