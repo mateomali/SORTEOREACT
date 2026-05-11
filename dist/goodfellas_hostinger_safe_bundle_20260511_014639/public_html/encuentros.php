@@ -44,7 +44,7 @@ function clear_match_draw_data(PDO $pdo, int $matchId): void
     )->execute(['mid' => $matchId]);
     $pdo->prepare(
         'UPDATE matches
-         SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
+         SET draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
          WHERE id = :mid'
     )->execute(['mid' => $matchId]);
 }
@@ -470,31 +470,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         redirect($matchListPage);
-    }
-
-    if ($action === 'undo_draw') {
-        $id = (int) ($_POST['id'] ?? 0);
-        $match = $id > 0 ? repo_match_by_id($id) : null;
-        if (!$match) {
-            flash('error', 'La fecha seleccionada no existe.');
-            redirect($matchListPage);
-        }
-        if ((string) ($match['status'] ?? '') === 'finalizado') {
-            flash('error', 'No se puede deshacer el sorteo de una fecha finalizada.');
-            redirect($matchListPage . '?focus_match=' . $id);
-        }
-        if ((string) ($match['status'] ?? '') !== 'sorteado') {
-            flash('info', 'La fecha ya esta lista para sortear.');
-            redirect($matchListPage . '?focus_match=' . $id);
-        }
-
-        try {
-            clear_match_draw_data($pdo, $id);
-            flash('success', 'Sorteo deshecho. La fecha vuelve a estar disponible para sortear.');
-        } catch (Throwable $e) {
-            flash('error', 'No se pudo deshacer el sorteo: ' . $e->getMessage());
-        }
-        redirect($matchListPage . '?focus_match=' . $id);
     }
 
     if ($action === 'update_match_court') {
@@ -1123,7 +1098,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
                 rows="8"
                 placeholder="1 Marcelo&#10;2 Pela&#10;3 Mauri&#10;4 Tebo"
                 form="importPlayersForm"><?= h((string) ($importList['source'] ?? '')) ?></textarea>
-              <button class="create-match-submit inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" style="border-color:#d9f99d!important;background:#d9f99d!important;background-color:#d9f99d!important;color:#022c22!important;-webkit-text-fill-color:#022c22!important;box-shadow:none!important;" type="submit" form="importPlayersForm">Importar listado</button>
+              <button class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" form="importPlayersForm">Importar listado</button>
             </div>
 
             <?php if ($importList): ?>
@@ -1332,7 +1307,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
     </div>
 
     <div class="sticky bottom-3 z-30 mt-0 flex flex-wrap gap-2 rounded-2xl border border-lime-200/35 bg-emerald-950/92 p-2 shadow-2xl shadow-emerald-950/25 max-[760px]:fixed max-[760px]:inset-x-3 max-[760px]:grid max-[760px]:grid-cols-1">
-      <button class="create-match-submit inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" style="border-color:#d9f99d!important;background:#d9f99d!important;background-color:#d9f99d!important;color:#022c22!important;-webkit-text-fill-color:#022c22!important;box-shadow:none!important;" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
+      <button class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
       <?php if ($form['id']): ?>
         <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100" href="<?= h($matchListPage) ?>">Cancelar</a>
       <?php endif; ?>
@@ -1391,11 +1366,6 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
             <?php if ($latestCanEditCaptainFormation): ?>
               <a class="btn btn-muted" href="capitanes.php?match_id=<?= $latestId ?>#formacion">Formaciones</a>
             <?php endif; ?>
-            <form method="post">
-              <input type="hidden" name="action" value="undo_draw">
-              <input type="hidden" name="id" value="<?= $latestId ?>">
-              <button class="btn btn-warning" type="submit" data-confirm="Deshacer el sorteo? Se borraran equipos, capitanes y variantes para volver a sortear.">Deshacer sorteo</button>
-            </form>
             <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="finalizar_partido.php?match_id=<?= $latestId ?>">Cargar resultado</a>
           <?php elseif ($latestIsFinalized): ?>
             <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>">Ver resultado</a>
@@ -1508,13 +1478,6 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
               <?php else: ?>
                 <span class="btn btn-disabled icon-captain" data-short="">Capitanes</span>
               <?php endif; ?>
-              <?php if ($canFinalize): ?>
-                <form method="post">
-                  <input type="hidden" name="action" value="undo_draw">
-                  <input type="hidden" name="id" value="<?= $matchId ?>">
-                  <button class="btn btn-warning encounter-undo-draw-action" data-short="D" data-confirm="Deshacer el sorteo? Se borraran equipos, capitanes y variantes para volver a sortear." aria-label="Deshacer sorteo" title="Deshacer sorteo">Deshacer</button>
-                </form>
-              <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($canFinalize): ?>
@@ -1551,14 +1514,6 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
                 <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Equipos manuales</a>
               <?php elseif ($canEditCaptainFormation): ?>
                 <a class="btn btn-muted icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>#formacion">Editar formaciones</a>
-              <?php endif; ?>
-
-              <?php if ($canFinalize): ?>
-                <form method="post">
-                  <input type="hidden" name="action" value="undo_draw">
-                  <input type="hidden" name="id" value="<?= $matchId ?>">
-                  <button class="btn btn-warning" data-short="" data-confirm="Deshacer el sorteo? Se borraran equipos, capitanes y variantes para volver a sortear.">Deshacer sorteo</button>
-                </form>
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>

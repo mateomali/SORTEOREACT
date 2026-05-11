@@ -217,26 +217,20 @@ $registerPlayers = array_values(array_filter(repo_all_players(true), static fn(a
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head login-page-head">
+<section class="page-head">
   <div>
     <h1>Ingreso</h1>
-    <p class="small-muted">Acceso para jugadores, directivos y administradores.</p>
+    <p class="small-muted">Una cuenta, permisos segun el rol que asigne el admin.</p>
   </div>
   <a class="btn btn-muted" href="index.php">Volver al inicio</a>
 </section>
 
-<section class="login-access-grid mx-auto grid max-w-3xl gap-3">
-  <article id="login-jugador" class="card login-card profile-player-panel profile-card-panel scroll-mt-20">
-    <div class="login-card-head">
-      <span class="login-card-rating">GF</span>
-      <div>
-        <strong>Goodfellas</strong>
-        <span>Cuenta de acceso</span>
-      </div>
-    </div>
-    <div class="login-card-copy mb-3">
+<section class="login-access-grid mx-auto grid max-w-2xl gap-3">
+  <article id="login-jugador" class="card border-lime-200/55 bg-emerald-950 scroll-mt-20">
+    <div class="mb-3">
+      <span class="chip mb-2 inline-flex w-fit bg-lime-100 text-emerald-950">Cuenta</span>
       <h3 class="mb-1">Entrar al sitio</h3>
-      <p class="small-muted">Usa tu usuario. El sistema abre las funciones segun tu rol.</p>
+      <p class="small-muted">Usa tu usuario. Si sos jugador, directivo o admin, el sistema habilita tus funciones automaticamente.</p>
     </div>
     <form method="post" class="grid gap-3">
       <input type="hidden" name="next" value="<?= h($next) ?>">
@@ -252,15 +246,15 @@ require __DIR__ . '/includes/header.php';
           <button class="password-toggle" type="button" data-password-toggle="userPassword" aria-pressed="false">Ver</button>
         </div>
       </div>
-      <button class="btn btn-primary w-full login-submit" type="submit">Entrar</button>
+      <button class="btn btn-primary w-full" type="submit">Entrar como jugador</button>
     </form>
 
-    <details id="registro-jugador" class="login-details mt-3">
-      <summary>Crear cuenta de jugador</summary>
+    <details id="registro-jugador" class="mt-3 rounded-xl border border-lime-200/30 bg-emerald-900/45 p-3">
+      <summary class="btn btn-muted w-full cursor-pointer list-none text-center [&::-webkit-details-marker]:hidden">Crear cuenta</summary>
       <div class="mt-3">
-        <div class="login-card-copy mb-3">
+        <div class="mb-3">
           <h3 class="mb-1">Vincularme a un jugador</h3>
-          <p class="small-muted">La cuenta queda vinculada a tu perfil de jugador.</p>
+          <p class="small-muted">La cuenta queda creada con rol jugador y queda vinculada a tu perfil.</p>
         </div>
         <form method="post" class="grid gap-3">
           <input type="hidden" name="role" value="player_register">
@@ -293,7 +287,7 @@ require __DIR__ . '/includes/header.php';
               </div>
             </div>
           </div>
-          <button class="btn btn-primary w-full login-submit" type="submit" <?= !$registerPlayers ? 'disabled' : '' ?>>Vincular jugador</button>
+          <button class="btn btn-primary w-full" type="submit" <?= !$registerPlayers ? 'disabled' : '' ?>>Vincular jugador</button>
           <?php if (!$registerPlayers): ?>
             <p class="small-muted">No quedan jugadores activos disponibles para registrar.</p>
           <?php endif; ?>
@@ -302,8 +296,8 @@ require __DIR__ . '/includes/header.php';
     </details>
   </article>
 
-  <details id="login-admin" class="card login-admin-card scroll-mt-20">
-    <summary>Acceso admin inicial</summary>
+  <details id="login-admin" class="card scroll-mt-20">
+    <summary class="cursor-pointer list-none text-sm font-extrabold text-lime-50 [&::-webkit-details-marker]:hidden">Acceso admin inicial</summary>
     <form method="post" class="mt-3 grid gap-3">
       <input type="hidden" name="next" value="<?= h($next) ?>">
       <input type="hidden" name="role" value="admin_bootstrap">
@@ -320,16 +314,10 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <?php if ($pendingUsername !== ''): ?>
-  <section class="login-access-grid mx-auto mt-3 grid max-w-3xl gap-3">
-    <article class="card login-card profile-player-panel profile-card-panel scroll-mt-20">
-      <div class="login-card-head">
-        <span class="login-card-rating">OK</span>
-        <div>
-          <strong><?= h($pendingUsername) ?></strong>
-          <span>Clave provisoria</span>
-        </div>
-      </div>
-      <div class="login-card-copy mb-3">
+  <section class="login-access-grid mx-auto mt-3 grid max-w-2xl gap-3">
+    <article class="card border-lime-200/55 bg-emerald-950 scroll-mt-20">
+      <div class="mb-3">
+        <span class="chip mb-2 inline-flex w-fit bg-lime-100 text-emerald-950">Clave nueva</span>
         <h3 class="mb-1">Actualizar clave</h3>
         <p class="small-muted"><?= h($pendingUsername) ?> ingreso con clave provisoria. Guarda una clave nueva para continuar.</p>
       </div>
@@ -351,7 +339,7 @@ require __DIR__ . '/includes/header.php';
             </div>
           </div>
         </div>
-        <button class="btn btn-primary w-full login-submit" type="submit">Guardar clave nueva</button>
+        <button class="btn btn-primary w-full" type="submit">Guardar clave nueva</button>
       </form>
     </article>
   </section>

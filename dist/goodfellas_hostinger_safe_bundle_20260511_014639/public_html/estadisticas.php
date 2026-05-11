@@ -497,8 +497,8 @@ require __DIR__ . '/includes/header.php';
   </div>
 </section>
 
-<details class="card stats-control-bar stats-filter-hub mb-3.5">
-  <summary class="stats-filter-hub-summary" aria-label="Abrir o cerrar filtros de estadisticas">
+<details class="card stats-control-bar stats-filter-hub mb-3.5" open>
+  <summary class="stats-filter-hub-summary">
     <span>
       <strong>Filtros</strong>
       <small><?= h($selectedCourtLabel) ?> | <?= $selectedYear === 'all' ? 'Todos los años' : h($selectedYear) ?></small>
@@ -718,28 +718,6 @@ require __DIR__ . '/includes/header.php';
   </summary>
   <div class="table-wrap">
     <div class="stats-player-grid" data-stats-sortable-grid>
-      <div class="stats-mobile-sort-bar" aria-label="Ordenar tabla de jugadores">
-        <button type="button" class="stats-sort-button" data-stats-sort="name" data-sort-type="text" aria-label="Ordenar jugadores por nombre">
-          <span>Jugador</span>
-          <small aria-hidden="true"></small>
-        </button>
-        <button type="button" class="stats-sort-button" data-stats-sort="matches" data-sort-type="number" aria-label="Ordenar jugadores por partidos jugados">
-          <span>PJ</span>
-          <small aria-hidden="true"></small>
-        </button>
-        <button type="button" class="stats-sort-button" data-stats-sort="goals" data-sort-type="number" aria-label="Ordenar jugadores por goles">
-          <span>Goles</span>
-          <small aria-hidden="true"></small>
-        </button>
-        <button type="button" class="stats-sort-button" data-stats-sort="rating" data-sort-type="number" aria-label="Ordenar jugadores por promedio">
-          <span>Prom</span>
-          <small aria-hidden="true"></small>
-        </button>
-        <button type="button" class="stats-sort-button" data-stats-sort="awardsTotal" data-sort-type="number" aria-label="Ordenar jugadores por premios">
-          <span>Premios</span>
-          <small aria-hidden="true"></small>
-        </button>
-      </div>
       <div class="stats-player-grid-head">
         <button type="button" class="stats-sort-button" data-stats-sort="name" data-sort-type="text" aria-label="Ordenar jugadores por nombre">
           <span>Jugador</span>

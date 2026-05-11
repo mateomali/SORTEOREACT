@@ -591,9 +591,7 @@
       const buttons = Array.from(grid.querySelectorAll('[data-stats-sort]'));
       const rows = () => Array.from(grid.querySelectorAll('[data-stats-player-row]'));
       const normalizeNumber = (value) => {
-        const rawValue = String(value ?? '').trim();
-        if (rawValue === '' || rawValue === '-') return null;
-        const normalized = Number(rawValue.replace(',', '.'));
+        const normalized = Number(String(value ?? '').replace(',', '.'));
         return Number.isFinite(normalized) ? normalized : null;
       };
       const valueFor = (row, key, type) => {
@@ -602,25 +600,17 @@
         }
         return String(key === 'name' ? row.dataset.playerName : row.dataset[key] || '').trim().toLowerCase();
       };
-      const resetButtons = (activeKey, direction) => {
+      const resetButtons = (activeButton, direction) => {
         buttons.forEach((button) => {
-          const active = button.dataset.statsSort === activeKey;
+          const active = button === activeButton;
           button.classList.toggle('is-active', active);
           button.dataset.sortDirection = active ? direction : '';
           button.setAttribute('aria-sort', active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none');
-          button.setAttribute('aria-pressed', active ? 'true' : 'false');
-          if (active) {
-            const label = button.querySelector('span')?.textContent?.trim() || 'columna';
-            button.setAttribute('title', `${label}: ${direction === 'asc' ? 'menor a mayor' : 'mayor a menor'}`);
-          } else {
-            button.removeAttribute('title');
-          }
         });
       };
 
       buttons.forEach((button) => {
         button.setAttribute('aria-sort', 'none');
-        button.setAttribute('aria-pressed', 'false');
         button.addEventListener('click', () => {
           grid.querySelectorAll('[data-stats-row-detail-panel]').forEach((panel) => panel.remove());
           grid.querySelectorAll('[data-stats-row-detail-trigger][aria-expanded="true"]').forEach((trigger) => {
@@ -629,9 +619,7 @@
           });
           const key = button.dataset.statsSort || '';
           const type = button.dataset.sortType || 'text';
-          const previousDirection = buttons.find((candidate) => (
-            candidate.dataset.statsSort === key && candidate.dataset.sortDirection
-          ))?.dataset.sortDirection || '';
+          const previousDirection = button.dataset.sortDirection || '';
           const direction = previousDirection === 'desc' ? 'asc' : (previousDirection === 'asc' ? 'desc' : (type === 'number' ? 'desc' : 'asc'));
           const directionMultiplier = direction === 'asc' ? 1 : -1;
           const sortedRows = rows().sort((leftRow, rightRow) => {
@@ -649,7 +637,7 @@
             return Number(leftRow.dataset.sortIndex || 0) - Number(rightRow.dataset.sortIndex || 0);
           });
 
-          resetButtons(key, direction);
+          resetButtons(button, direction);
           sortedRows.forEach((row) => grid.appendChild(row));
         });
       });

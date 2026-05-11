@@ -28,8 +28,6 @@ var hasSavedDraw = !!sorteoLegacyConfig.hasSavedDraw;
 var redrawsUsedThisSession = 0;
 var generatedOnceThisSession = false;
 var seenDrawSignatures = new Set();
-var formationPointerDragState = null;
-var formationPointerDragTarget = null;
 if (typeof sorteoLegacyConfig.savedDrawSignature === 'string' && sorteoLegacyConfig.savedDrawSignature !== '') {
   seenDrawSignatures.add(sorteoLegacyConfig.savedDrawSignature);
 }
@@ -111,12 +109,12 @@ function getMatchupDisplayName(teamCount) {
 
 function toggleSortDropdown() {
   const dropdown = document.getElementById('sortDropdown');
-  dropdown?.querySelector('[data-sort-dropdown-content]')?.classList.toggle('hidden');
+  dropdown.classList.toggle('active');
 }
 
 function selectSortOption(criteria) {
   const dropdown = document.getElementById('sortDropdown');
-  dropdown?.querySelector('[data-sort-dropdown-content]')?.classList.add('hidden');
+  dropdown.classList.remove('active');
   sortPlayers(criteria);
 }
 
@@ -170,14 +168,15 @@ function onTeamColorChange(teamIndex, selectedClass) {
   }
   refreshTeamColorControls();
 
-  const teamCard = document.querySelector(`#equipos-generados [data-team-index="${teamIndex}"]`);
+  const teamCard = document.querySelector(`#equipos-generados .team[data-team-index="${teamIndex}"]`);
   if (teamCard) {
-    teamCard.dataset.teamColor = selected.class;
-    const title = teamCard.querySelector('[data-team-title]');
+    TEAM_COLOR_OPTIONS.forEach(option => teamCard.classList.remove(option.class));
+    teamCard.classList.add(selected.class);
+    const title = teamCard.querySelector('.team-title');
     if (title) title.textContent = getTeamDisplayName(teamIndex);
   }
 
-  const matchupTitle = document.querySelector('#equipos-generados [data-sorteo-matchup-title]');
+  const matchupTitle = document.querySelector('#equipos-generados .sorteo-matchup-title');
   if (matchupTitle && lastEquipos) {
     matchupTitle.textContent = getMatchupDisplayName(lastEquipos.length);
   }
@@ -769,7 +768,7 @@ function actualizarListaJugadores() {
   container.innerHTML = '';
   jugadores.forEach((jugador, index) => {
     const div = document.createElement('div');
-    div.className = 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-emerald-950 shadow-sm';
+    div.className = 'player-item';
     div.innerHTML = `
       <input type="checkbox" id="jugador-${index}" ${jugador.selected ? 'checked' : ''} ${LOCKED_MATCH_MODE ? 'disabled' : ''} data-sorteo-action="toggle-player" data-player-index="${index}">
       <div class="player-info">
@@ -1526,9 +1525,9 @@ function redrawsRemaining() {
 
 function generateButtonLabel() {
   if (nextGenerationIsRedraw()) {
-    return `Rehacer sorteo (${redrawsRemaining()} restantes)`;
+    return `⚽ Rehacer sorteo (${redrawsRemaining()} restantes)`;
   }
-  return 'Generar equipos';
+  return '⚽ Generar Equipos';
 }
 
 function refreshGenerateButtonState() {
@@ -1601,7 +1600,6 @@ function pushTeamFormationUndo(teamIndex) {
   const key = String(teamIndex);
   teamFormationUndoStack[key] = teamFormationUndoStack[key] || [];
   teamFormationUndoStack[key].push({
-    lastEquipos: clonePlainObject(lastEquipos),
     teamFormations: clonePlainObject(teamFormations),
     customFormations: clonePlainObject(customFormations),
     manualAssignments: clonePlainObject(manualAssignments),
@@ -1612,7 +1610,6 @@ function undoTeamFormationChange(teamIndex) {
   const key = String(teamIndex);
   const snapshot = (teamFormationUndoStack[key] || []).pop();
   if (!snapshot) return;
-  if (snapshot.lastEquipos) lastEquipos = snapshot.lastEquipos;
   teamFormations = snapshot.teamFormations || {};
   customFormations = snapshot.customFormations || {};
   manualAssignments = snapshot.manualAssignments || {};
@@ -1622,100 +1619,6 @@ function undoTeamFormationChange(teamIndex) {
 function defaultFormationCounts(teamSize) {
   const first = getFormationOptions(teamSize)[0] || { DEF: 0, MED: 0, DEL: Math.max(0, teamSize - 1) };
   return { DEF: first.DEF, MED: first.MED, DEL: first.DEL };
-}
-
-function fieldLineMinimum(teamSize) {
-  return Math.max(0, Number(teamSize || 0) - 1) >= 3 ? 1 : 0;
-}
-
-function currentFormationLineCounts(teamIndex) {
-  const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
-  const assignment = buildFormationAssignment(team, teamIndex);
-  const counts = { DEF: 0, MED: 0, DEL: 0 };
-  team.forEach(jugador => {
-    const position = getPrimaryPosition(jugador, assignment);
-    if (counts[position] !== undefined) counts[position]++;
-  });
-  return counts;
-}
-
-function normalizeCustomFormationCounts(teamSize, currentCounts, changedLine, requestedValue) {
-  const total = Math.max(0, Number(teamSize || 0) - 1);
-  const min = fieldLineMinimum(teamSize);
-  const max = maxFieldPlayersPerLine(teamSize);
-  const lines = ['DEF', 'MED', 'DEL'];
-  const counts = {};
-  lines.forEach(line => {
-    counts[line] = Math.min(max, Math.max(min, parseInt(currentCounts?.[line] || 0, 10)));
-  });
-
-  if (lines.includes(changedLine)) {
-    counts[changedLine] = Math.min(max, Math.max(min, parseInt(requestedValue || 0, 10)));
-  }
-
-  let diff = total - lines.reduce((sum, line) => sum + counts[line], 0);
-  while (diff !== 0) {
-    const candidates = lines
-      .filter(line => line !== changedLine)
-      .filter(line => diff > 0 ? counts[line] < max : counts[line] > min)
-      .sort((a, b) => diff > 0 ? counts[a] - counts[b] : counts[b] - counts[a]);
-    const line = candidates[0] || lines.find(item => diff > 0 ? counts[item] < max : counts[item] > min);
-    if (!line) break;
-    counts[line] += diff > 0 ? 1 : -1;
-    diff += diff > 0 ? -1 : 1;
-  }
-  return counts;
-}
-
-function rebalanceManualAssignmentsForTeam(teamIndex, counts, previousAssignment) {
-  const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
-  if (!team.length) return;
-
-  team.forEach(jugador => {
-    delete manualAssignments[playerKey(jugador)];
-  });
-
-  const assigned = new Set();
-  const nextAssignment = new Map();
-  const goalkeeper = team.find(jugador => previousAssignment?.get(jugador) === 'ARQ')
-    || team.find(jugador => getPrimaryPlayerPosition(jugador) === 'ARQ' || isEmergencyGoalkeeper(jugador));
-  if (goalkeeper) {
-    assigned.add(goalkeeper);
-    nextAssignment.set(goalkeeper, 'ARQ');
-    manualAssignments[playerKey(goalkeeper)] = 'ARQ';
-  }
-
-  ['DEF', 'MED', 'DEL'].forEach(line => {
-    const preferredCurrent = team
-      .filter(jugador => !assigned.has(jugador) && previousAssignment?.get(jugador) === line)
-      .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line));
-    while ((counts[line] || 0) > 0 && preferredCurrent.length) {
-      const jugador = preferredCurrent.shift();
-      assigned.add(jugador);
-      nextAssignment.set(jugador, line);
-      manualAssignments[playerKey(jugador)] = line;
-      counts[line]--;
-    }
-  });
-
-  ['DEF', 'MED', 'DEL'].forEach(line => {
-    while ((counts[line] || 0) > 0) {
-      const candidates = team
-        .filter(jugador => !assigned.has(jugador))
-        .sort((a, b) => {
-          const prefA = getOrderedPlayerPositions(a).includes(line) ? 0 : 1;
-          const prefB = getOrderedPlayerPositions(b).includes(line) ? 0 : 1;
-          if (prefA !== prefB) return prefA - prefB;
-          return adjustedPositionRating(b, line) - adjustedPositionRating(a, line);
-        });
-      const jugador = candidates[0];
-      if (!jugador) break;
-      assigned.add(jugador);
-      nextAssignment.set(jugador, line);
-      manualAssignments[playerKey(jugador)] = line;
-      counts[line]--;
-    }
-  });
 }
 
 function onTeamFormationChange(teamIndex, value) {
@@ -1728,22 +1631,20 @@ function onTeamFormationChange(teamIndex, value) {
 }
 
 function onTeamCustomFormationChange(teamIndex, line, value) {
-  const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
-  if (!team.length) return;
   pushTeamFormationUndo(teamIndex);
-  const previousAssignment = buildFormationAssignment(team, teamIndex);
-  const current = currentFormationLineCounts(teamIndex);
-  const counts = normalizeCustomFormationCounts(team.length, current, line, value);
-  customFormations[teamIndex] = { ...counts };
+  if (!customFormations[teamIndex] && lastEquipos && lastEquipos[teamIndex]) {
+    customFormations[teamIndex] = defaultFormationCounts(lastEquipos[teamIndex].length);
+  }
+  const teamSize = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex].length : 0;
+  customFormations[teamIndex][line] = Math.min(maxFieldPlayersPerLine(teamSize), Math.max(0, parseInt(value || '0', 10)));
   teamFormations[teamIndex] = 'custom';
-  rebalanceManualAssignmentsForTeam(teamIndex, { ...counts }, previousAssignment);
   if (lastEquipos) mostrarEquipos(lastEquipos);
 }
 
 function onTeamLineDelta(teamIndex, line, delta) {
   const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
   if (!team.length || line === 'ARQ') return;
-  const current = currentFormationLineCounts(teamIndex);
+  const current = selectedFormationCounts(teamIndex, team.length) || defaultFormationCounts(team.length);
   const nextValue = Number(current[line] || 0) + Number(delta || 0);
   onTeamCustomFormationChange(teamIndex, line, nextValue);
 }
@@ -1777,75 +1678,30 @@ function assignmentGoalkeeperCount(team, assignment) {
 }
 
 function onFormationPlayerDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex, targetPlayerKey) {
-  if (!lastEquipos || sourcePlayerKey === targetPlayerKey) return;
-  const sourceTeam = lastEquipos[sourceTeamIndex];
-  const targetTeam = lastEquipos[targetTeamIndex];
-  if (!sourceTeam || !targetTeam) return;
+  if (!lastEquipos || sourceTeamIndex !== targetTeamIndex || sourcePlayerKey === targetPlayerKey) return;
+  const team = lastEquipos[targetTeamIndex];
+  if (!team) return;
 
-  const sourceAssignment = buildFormationAssignment(sourceTeam, sourceTeamIndex);
-  const targetAssignment = sourceTeamIndex === targetTeamIndex
-    ? sourceAssignment
-    : buildFormationAssignment(targetTeam, targetTeamIndex);
-  const sourcePlayer = sourceTeam.find(jugador => playerKey(jugador) === sourcePlayerKey);
-  const targetPlayer = targetTeam.find(jugador => playerKey(jugador) === targetPlayerKey);
+  const assignment = buildFormationAssignment(team, targetTeamIndex);
+  const sourcePlayer = team.find(jugador => playerKey(jugador) === sourcePlayerKey);
+  const targetPlayer = team.find(jugador => playerKey(jugador) === targetPlayerKey);
   if (!sourcePlayer || !targetPlayer) return;
 
-  const sourcePosition = getPrimaryPosition(sourcePlayer, sourceAssignment);
-  const targetPosition = getPrimaryPosition(targetPlayer, targetAssignment);
+  const sourcePosition = getPrimaryPosition(sourcePlayer, assignment);
+  const targetPosition = getPrimaryPosition(targetPlayer, assignment);
+  const proposedAssignment = new Map(assignment);
+  proposedAssignment.set(sourcePlayer, targetPosition);
+  proposedAssignment.set(targetPlayer, sourcePosition);
 
-  if (sourceTeamIndex === targetTeamIndex) {
-    const proposedAssignment = new Map(sourceAssignment);
-    proposedAssignment.set(sourcePlayer, targetPosition);
-    proposedAssignment.set(targetPlayer, sourcePosition);
-
-    if (assignmentGoalkeeperCount(sourceTeam, proposedAssignment) > 1) {
-      alert('Cada equipo puede tener como maximo un arquero.');
-      return;
-    }
-  } else {
-    const proposedSourceTeam = sourceTeam.map(jugador => (
-      playerKey(jugador) === sourcePlayerKey ? targetPlayer : jugador
-    ));
-    const proposedTargetTeam = targetTeam.map(jugador => (
-      playerKey(jugador) === targetPlayerKey ? sourcePlayer : jugador
-    ));
-    const proposedSourceAssignment = new Map(buildFormationAssignment(sourceTeam, sourceTeamIndex));
-    const proposedTargetAssignment = new Map(buildFormationAssignment(targetTeam, targetTeamIndex));
-    proposedSourceAssignment.delete(sourcePlayer);
-    proposedTargetAssignment.delete(targetPlayer);
-    proposedSourceAssignment.set(targetPlayer, sourcePosition);
-    proposedTargetAssignment.set(sourcePlayer, targetPosition);
-
-    if (
-      assignmentGoalkeeperCount(proposedSourceTeam, proposedSourceAssignment) > 1
-      || assignmentGoalkeeperCount(proposedTargetTeam, proposedTargetAssignment) > 1
-    ) {
-      alert('Cada equipo puede tener como maximo un arquero.');
-      return;
-    }
+  if (assignmentGoalkeeperCount(team, proposedAssignment) > 1) {
+    alert('Cada equipo puede tener como maximo un arquero.');
+    return;
   }
 
-  pushTeamFormationUndo(sourceTeamIndex);
-  if (sourceTeamIndex !== targetTeamIndex) {
-    pushTeamFormationUndo(targetTeamIndex);
-  }
-
-  if (sourceTeamIndex !== targetTeamIndex) {
-    const sourceIdx = sourceTeam.findIndex(jugador => playerKey(jugador) === sourcePlayerKey);
-    const targetIdx = targetTeam.findIndex(jugador => playerKey(jugador) === targetPlayerKey);
-    if (sourceIdx >= 0 && targetIdx >= 0) {
-      lastEquipos[sourceTeamIndex][sourceIdx] = targetPlayer;
-      lastEquipos[targetTeamIndex][targetIdx] = sourcePlayer;
-    }
-  }
-
-  if (!customFormations[sourceTeamIndex]) {
-    customFormations[sourceTeamIndex] = defaultFormationCounts(sourceTeam.length);
-  }
+  pushTeamFormationUndo(targetTeamIndex);
   if (!customFormations[targetTeamIndex]) {
-    customFormations[targetTeamIndex] = defaultFormationCounts(targetTeam.length);
+    customFormations[targetTeamIndex] = defaultFormationCounts(team.length);
   }
-  teamFormations[sourceTeamIndex] = 'custom';
   teamFormations[targetTeamIndex] = 'custom';
   manualAssignments[playerKey(sourcePlayer)] = targetPosition;
   manualAssignments[playerKey(targetPlayer)] = sourcePosition;
@@ -1853,21 +1709,12 @@ function onFormationPlayerDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex
 }
 
 function onFormationLineDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex, targetPosition) {
-  if (!lastEquipos) return;
+  if (!lastEquipos || sourceTeamIndex !== targetTeamIndex) return;
   const position = String(targetPosition || '').toUpperCase();
   if (!['ARQ', 'DEF', 'MED', 'DEL'].includes(position)) return;
 
   const team = lastEquipos[targetTeamIndex];
   if (!team) return;
-  if (sourceTeamIndex !== targetTeamIndex) {
-    const targetAssignment = buildFormationAssignment(team, targetTeamIndex);
-    const targetPlayer = team.find(jugador => getPrimaryPosition(jugador, targetAssignment) === position) || team[0];
-    if (targetPlayer) {
-      onFormationPlayerDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex, playerKey(targetPlayer));
-    }
-    return;
-  }
-
   const player = team.find(jugador => playerKey(jugador) === sourcePlayerKey);
   if (!player) return;
 
@@ -1948,20 +1795,18 @@ function mostrarEquipos(equipos) {
   const container = document.getElementById('equipos-generados');
   container.innerHTML = '';
   const matchupTitle = document.createElement('div');
-  matchupTitle.className = 'mx-auto w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-center text-xl font-black text-emerald-950 shadow-sm';
-  matchupTitle.dataset.sorteoMatchupTitle = '1';
+  matchupTitle.className = 'sorteo-matchup-title';
   matchupTitle.textContent = getMatchupDisplayName(equipos.length);
   container.appendChild(matchupTitle);
   
   equipos.forEach((equipo, index) => {
     const equipoDiv = document.createElement('div');
-    equipoDiv.className = 'grid gap-3 rounded-2xl border border-emerald-200 bg-white p-3 text-emerald-950 shadow-lg shadow-emerald-950/10';
+    equipoDiv.className = 'team';
     equipoDiv.dataset.teamIndex = String(index);
-    equipoDiv.dataset.sorteoTeamCard = '1';
     const teamColor = getTeamColor(index);
     let headerText = getTeamDisplayName(index);
     if (teamColor) {
-      equipoDiv.dataset.teamColor = teamColor.class;
+      equipoDiv.classList.add(teamColor.class);
     }
     
     const jugadoresOrdenados = equipo.slice().sort((a, b) => {
@@ -2005,11 +1850,11 @@ function mostrarEquipos(equipos) {
     });
 
     equipoDiv.innerHTML = `
-      <div class="team-head">
-        <h4 data-team-title>${headerText}</h4>
-        <span class="formation-total-badge">${totalPuntos.toFixed(1)} pts</span>
+      <div class="team-header">
+        <div class="team-title">${headerText}</div>
+        <div class="team-stats">${totalPuntos.toFixed(1)} ⭐</div>
       </div>
-      <div class="captain-formation-tools">
+      <div class="team-formation-controls captain-formation-tools">
         <div class="team-control-group">
           <label>Camiseta</label>
           <select data-sorteo-action="team-color-change" data-team-index="${index}">
@@ -2027,7 +1872,7 @@ function mostrarEquipos(equipos) {
       <div class="team-formation captain-formation-field" data-sorteo-drop-team="${index}">
         <button class="formation-undo-button" type="button" title="Deshacer ultimo cambio" aria-label="Deshacer ultimo cambio" data-sorteo-action="formation-undo" data-team-index="${index}" ${(teamFormationUndoStack[String(index)] || []).length ? '' : 'disabled'}>↶</button>
         ${ordenCancha.map(pos => `
-          <div class="formation-line captain-formation-line ${pos === 'ARQ' ? '' : 'has-line-tools'}">
+          <div class="formation-line captain-formation-line">
             ${pos === 'ARQ' ? `
               <div class="line-label captain-line-label"><span><strong>${etiquetasPosicion[pos]}</strong><small>${jugadoresPorLinea[pos].length}/1</small></span></div>
             ` : `
@@ -2049,7 +1894,7 @@ function mostrarEquipos(equipos) {
                   ${playerCardRatingHtml(adjustedRating, pos)}
                   <strong>${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
                   ${playerPositionPillsHtml(j)}
-                  <span class="formation-player-meta">${formatRating(generalRating)}${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
+                  <span class="formation-player-meta">${formatRating(generalRating)} &#11088;${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
                 </div>
               `}).join('')}
             </div>
@@ -2220,150 +2065,9 @@ function guardarSorteoEnBD() {
   });
 }
 
-function isFormationPointerDragEnabled() {
-  return window.matchMedia('(min-width: 761px)').matches;
-}
-
-function clearSorteoFormationDragHighlights(root = document) {
-  root.querySelectorAll('.is-team-drag-over, .is-drag-over')
-    .forEach(el => el.classList.remove('is-team-drag-over', 'is-drag-over'));
-}
-
-function formationDropTargetFromPoint(clientX, clientY, ghost = null) {
-  if (ghost) ghost.style.display = 'none';
-  const target = document.elementFromPoint(clientX, clientY);
-  if (ghost) ghost.style.display = '';
-  return target?.closest?.('[data-sorteo-drag-player], [data-sorteo-drop-line], [data-sorteo-drop-team], [data-sorteo-team-card]') || null;
-}
-
-function markSorteoFormationDragTarget(target, root) {
-  clearSorteoFormationDragHighlights(root);
-  formationPointerDragTarget = target || null;
-  if (!target) return;
-  const targetCard = target.closest?.('[data-sorteo-drag-player]');
-  const targetLine = target.closest?.('[data-sorteo-drop-line]');
-  const targetField = target.closest?.('.captain-formation-field');
-  const targetTeam = target.closest?.('[data-sorteo-team-card]');
-  if (targetCard) {
-    targetCard.classList.add('is-drag-over');
-  } else if (targetLine) {
-    targetLine.classList.add('is-drag-over');
-  } else if (targetField) {
-    targetField.classList.add('is-team-drag-over');
-  } else if (targetTeam) {
-    targetTeam.classList.add('is-team-drag-over');
-  }
-}
-
-function handleSorteoFormationDrop(source, target) {
-  if (!source || !target) return false;
-  const targetCard = target.closest?.('[data-sorteo-drag-player]');
-  const targetLine = target.closest?.('[data-sorteo-drop-line]');
-  const targetTeam = targetCard?.dataset.teamIndex
-    || targetLine?.dataset.teamIndex
-    || target.closest?.('[data-sorteo-drop-team]')?.dataset.sorteoDropTeam
-    || target.closest?.('[data-sorteo-team-card]')?.dataset.teamIndex;
-  if (targetCard) {
-    onFormationPlayerDrop(
-      Number(source.teamIndex),
-      String(source.playerKey || ''),
-      Number(targetCard.dataset.teamIndex),
-      String(targetCard.dataset.playerKey || '')
-    );
-    return true;
-  }
-  if (targetLine) {
-    onFormationLineDrop(
-      Number(source.teamIndex),
-      String(source.playerKey || ''),
-      Number(targetLine.dataset.teamIndex),
-      String(targetLine.dataset.sorteoDropLine || '')
-    );
-    return true;
-  }
-  if (targetTeam) {
-    const teamCard = target.closest?.('[data-sorteo-team-card]');
-    const fallbackCard = teamCard?.querySelector('[data-sorteo-drag-player]');
-    if (fallbackCard) {
-      onFormationPlayerDrop(
-        Number(source.teamIndex),
-        String(source.playerKey || ''),
-        Number(fallbackCard.dataset.teamIndex),
-        String(fallbackCard.dataset.playerKey || '')
-      );
-      return true;
-    }
-  }
-  return false;
-}
-
-function startSorteoFormationPointerDrag(event, card, root) {
-  if (!isFormationPointerDragEnabled() || event.button !== 0 || event.target.closest('button, select, input, textarea')) {
-    return false;
-  }
-
-  event.preventDefault();
-  const sourceRect = card.getBoundingClientRect();
-  const offsetX = event.clientX - sourceRect.left;
-  const offsetY = event.clientY - sourceRect.top;
-  let hasMoved = false;
-  let ghost = null;
-
-  formationPointerDragState = {
-    teamIndex: Number(card.dataset.teamIndex),
-    playerKey: card.dataset.playerKey || ''
-  };
-  formationPointerDragTarget = null;
-  card.classList.add('is-dragging');
-
-  const moveGhost = (moveEvent) => {
-    if (!ghost) return;
-    ghost.style.left = `${moveEvent.clientX - offsetX}px`;
-    ghost.style.top = `${moveEvent.clientY - offsetY}px`;
-  };
-
-  const onPointerMove = (moveEvent) => {
-    const distance = Math.hypot(moveEvent.clientX - event.clientX, moveEvent.clientY - event.clientY);
-    if (!hasMoved && distance < 4) return;
-    if (!hasMoved) {
-      hasMoved = true;
-      ghost = card.cloneNode(true);
-      ghost.classList.add('is-pointer-drag-ghost');
-      ghost.style.width = `${sourceRect.width}px`;
-      ghost.style.height = `${sourceRect.height}px`;
-      document.body.appendChild(ghost);
-    }
-    moveEvent.preventDefault();
-    moveGhost(moveEvent);
-    markSorteoFormationDragTarget(formationDropTargetFromPoint(moveEvent.clientX, moveEvent.clientY, ghost), root);
-  };
-
-  const onPointerUp = (upEvent) => {
-    window.removeEventListener('pointermove', onPointerMove, true);
-    window.removeEventListener('pointerup', onPointerUp, true);
-    window.removeEventListener('pointercancel', onPointerUp, true);
-
-    const target = hasMoved
-      ? formationDropTargetFromPoint(upEvent.clientX, upEvent.clientY, ghost) || formationPointerDragTarget
-      : null;
-    if (target) handleSorteoFormationDrop(formationPointerDragState, target);
-
-    card.classList.remove('is-dragging');
-    ghost?.remove();
-    formationPointerDragState = null;
-    formationPointerDragTarget = null;
-    clearSorteoFormationDragHighlights(root);
-  };
-
-  window.addEventListener('pointermove', onPointerMove, true);
-  window.addEventListener('pointerup', onPointerUp, true);
-  window.addEventListener('pointercancel', onPointerUp, true);
-  return true;
-}
-
 
 function bindSorteoLegacyEvents() {
-  const root = document.querySelector('[data-sorteo-legacy-root]');
+  const root = document.querySelector('.sorteo-page');
   if (!root || root.dataset.sorteoLegacyBound === '1') return;
   root.dataset.sorteoLegacyBound = '1';
 
@@ -2415,12 +2119,6 @@ function bindSorteoLegacyEvents() {
     }
   });
 
-  root.addEventListener('pointerdown', (event) => {
-    const playerCard = event.target.closest('[data-sorteo-drag-player]');
-    if (!playerCard || !root.contains(playerCard)) return;
-    startSorteoFormationPointerDrag(event, playerCard, root);
-  });
-
   root.addEventListener('dragstart', (event) => {
     const playerCard = event.target.closest('[data-sorteo-drag-player]');
     if (!playerCard || !root.contains(playerCard)) return;
@@ -2439,23 +2137,20 @@ function bindSorteoLegacyEvents() {
   root.addEventListener('dragend', (event) => {
     const playerCard = event.target.closest('[data-sorteo-drag-player]');
     if (playerCard) playerCard.classList.remove('is-dragging');
-    clearSorteoFormationDragHighlights(root);
+    root.querySelectorAll('.formation-player.is-drag-over').forEach(card => card.classList.remove('is-drag-over'));
+    root.querySelectorAll('.line-players.is-drag-over').forEach(line => line.classList.remove('is-drag-over'));
   });
 
   root.addEventListener('dragover', (event) => {
     const targetCard = event.target.closest('[data-sorteo-drag-player]');
     const targetLine = event.target.closest('[data-sorteo-drop-line]');
-    const targetField = event.target.closest('[data-sorteo-drop-team]');
-    if (!targetCard && !targetLine && (!targetField || !root.contains(targetField))) return;
+    if (!targetCard && (!targetLine || !root.contains(targetLine))) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    clearSorteoFormationDragHighlights(root);
     if (targetCard && root.contains(targetCard)) {
       targetCard.classList.add('is-drag-over');
     } else if (targetLine) {
       targetLine.classList.add('is-drag-over');
-    } else if (targetField) {
-      targetField.classList.add('is-team-drag-over');
     }
   });
 
@@ -2464,19 +2159,15 @@ function bindSorteoLegacyEvents() {
     if (targetCard) targetCard.classList.remove('is-drag-over');
     const targetLine = event.target.closest('[data-sorteo-drop-line]');
     if (targetLine) targetLine.classList.remove('is-drag-over');
-    const targetField = event.target.closest('[data-sorteo-drop-team]');
-    if (targetField && !targetField.contains(event.relatedTarget)) {
-      targetField.classList.remove('is-team-drag-over');
-    }
   });
 
   root.addEventListener('drop', (event) => {
     const targetCard = event.target.closest('[data-sorteo-drag-player]');
     const targetLine = event.target.closest('[data-sorteo-drop-line]');
-    const targetField = event.target.closest('[data-sorteo-drop-team]');
-    if (!targetCard && !targetLine && (!targetField || !root.contains(targetField))) return;
+    if (!targetCard && (!targetLine || !root.contains(targetLine))) return;
     event.preventDefault();
-    clearSorteoFormationDragHighlights(root);
+    if (targetCard) targetCard.classList.remove('is-drag-over');
+    if (targetLine) targetLine.classList.remove('is-drag-over');
     let source = null;
     try {
       source = JSON.parse(event.dataTransfer.getData('application/json') || 'null');
@@ -2484,7 +2175,21 @@ function bindSorteoLegacyEvents() {
       source = null;
     }
     if (!source) return;
-    handleSorteoFormationDrop(source, targetCard || targetLine || targetField);
+    if (targetCard && root.contains(targetCard)) {
+      onFormationPlayerDrop(
+        Number(source.teamIndex),
+        String(source.playerKey || ''),
+        Number(targetCard.dataset.teamIndex),
+        String(targetCard.dataset.playerKey || '')
+      );
+      return;
+    }
+    onFormationLineDrop(
+      Number(source.teamIndex),
+      String(source.playerKey || ''),
+      Number(targetLine.dataset.teamIndex),
+      String(targetLine.dataset.sorteoDropLine || '')
+    );
   });
 }
 // Lista inicial de jugadores según lo solicitado

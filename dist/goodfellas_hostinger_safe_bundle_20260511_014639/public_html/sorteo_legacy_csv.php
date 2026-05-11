@@ -130,98 +130,99 @@ $activePage = 'editar_partidos.php';
 require __DIR__ . '/includes/header.php';
 ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<section class="mx-auto grid w-full max-w-7xl gap-4 px-3 py-4 text-emerald-950 sm:px-5" data-sorteo-legacy-root>
-  <div class="grid gap-4">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <button class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-extrabold text-emerald-950 shadow-sm transition hover:border-lime-300 hover:bg-lime-50" type="button" data-sorteo-action="navigate" data-url="editar_partidos.php">Volver a fechas</button>
+<section class="sorteo-page">
+  <div class="container">
+    <div class="sorteo-backbar">
+      <button type="button" data-sorteo-action="navigate" data-url="editar_partidos.php">Volver a fechas</button>
     </div>
-    <h1 class="m-0 rounded-2xl border border-lime-200/70 bg-emerald-950 px-4 py-4 text-2xl font-black leading-tight text-lime-50 shadow-lg shadow-emerald-950/20 sm:text-3xl">Generador de Equipos GOODFELLAS</h1>
+    <h1><span class="soccer-ball"></span> Generador de Equipos GOODFELLAS <span class="soccer-ball"></span></h1>
     <?php if ($legacyMatch): ?>
-      <div class="rounded-xl border border-lime-200/70 bg-lime-50 px-4 py-3 text-sm font-bold text-emerald-950">
+      <div class="success mb-3">
         Fecha: <strong><?= h((string) ($legacyMatch['title'] ?: ('Fecha #' . $legacyMatch['id']))) ?></strong>
         | Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $legacyMatch['match_date']))) ?>
       </div>
     <?php endif; ?>
     <?php if ($legacyLoadError !== ''): ?>
-      <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-extrabold text-red-800"><?= h($legacyLoadError) ?></div>
+      <div class="error mb-3"><?= h($legacyLoadError) ?></div>
     <?php endif; ?>
-    <div class="flex flex-wrap gap-2">
+    <div class="controls">
       <?php if ($legacyMatch): ?>
-        <button class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200 bg-lime-100 px-4 py-2 text-sm font-extrabold text-emerald-950 shadow-sm transition hover:bg-lime-200" type="button" data-sorteo-action="navigate" data-url="finalizar_partido.php?match_id=<?= (int) $legacyMatch['id'] ?>">Finalizar fecha</button>
+        <button type="button" data-sorteo-action="navigate" data-url="finalizar_partido.php?match_id=<?= (int) $legacyMatch['id'] ?>">Finalizar fecha</button>
       <?php else: ?>
-        <button class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-lime-200 bg-lime-100 px-4 py-2 text-sm font-extrabold text-emerald-950 shadow-sm transition hover:bg-lime-200" type="button" data-sorteo-action="open-add-player"><span class="text-lg">+</span> Añadir Jugador</button>
+        <button type="button" data-sorteo-action="open-add-player"><span class="text-lg">+</span> Añadir Jugador</button>
       <?php endif; ?>
     </div>
-    <div class="rounded-2xl border border-emerald-200 bg-white shadow-sm">
-      <div class="flex cursor-pointer items-center justify-between gap-3 border-b border-emerald-100 px-4 py-3" data-sorteo-action="toggle-accordion">
+    <div class="accordion">
+      <div class="accordion-header" data-sorteo-action="toggle-accordion">
         <h3>👥 Jugadores Disponibles</h3>
       </div>
-      <div class="p-3">
-        <div class="grid gap-3">
+      <div class="accordion-content">
+        <div class="players-list">
           <?php if (!$legacyMatch): ?>
-            <div class="flex flex-wrap gap-2">
-              <button class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-emerald-950 transition hover:bg-emerald-50" type="button" data-sorteo-action="export-players-csv">Guardar lista de jugadores</button>
-              <label class="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-emerald-950 transition hover:bg-emerald-50">
+            <div class="data-controls">
+              <button type="button" data-sorteo-action="export-players-csv">💾 Guardar lista de jugadores</button>
+              <label class="file-label">
                 📥 Importar lista de jugadores
-                <input type="file" class="sr-only" id="csvInput" accept=".csv" data-sorteo-action="import-players-csv">
+                <input type="file" class="file-input" id="csvInput" accept=".csv" data-sorteo-action="import-players-csv">
               </label>
             </div>
           <?php endif; ?>
-          <div class="relative w-full sm:w-72">
-            <div id="sortDropdown">
-              <button class="flex min-h-10 w-full items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-950 px-3 py-2 text-sm font-extrabold text-lime-50 shadow-sm transition hover:bg-emerald-900" type="button" data-sorteo-action="toggle-sort-dropdown">
+          <div class="sort-controls">
+            <div class="sort-dropdown" id="sortDropdown">
+              <button class="sort-dropdown-btn" type="button" data-sorteo-action="toggle-sort-dropdown">
                 <span>🔽 Ordenar por: Nombre</span>
                 <span>▼</span>
               </button>
-              <div class="absolute z-30 mt-2 hidden w-full overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-xl" data-sort-dropdown-content>
-                <a class="block px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-lime-50" href="#" data-sorteo-action="select-sort" data-sort-key="nombre">Nombre</a>
-                <a class="block px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-lime-50" href="#" data-sorteo-action="select-sort" data-sort-key="puntuacion">Puntuación</a>
-                <a class="block px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-lime-50" href="#" data-sorteo-action="select-sort" data-sort-key="ritmo">Ritmo</a>
+              <div class="sort-dropdown-content">
+                <a href="#" data-sorteo-action="select-sort" data-sort-key="nombre">Nombre</a>
+                <a href="#" data-sorteo-action="select-sort" data-sort-key="puntuacion">Puntuación</a>
+                <a href="#" data-sorteo-action="select-sort" data-sort-key="ritmo">Ritmo</a>
               </div>
             </div>
           </div>
           <?php if (!$legacyMatch): ?>
-            <div>
-              <label class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-950">
-                <input class="h-4 w-4 accent-emerald-700" type="checkbox" id="select-all" data-sorteo-action="toggle-select-all" checked>
+            <div class="select-all">
+              <label>
+                <input type="checkbox" id="select-all" data-sorteo-action="toggle-select-all" checked>
                 Seleccionar todos
               </label>
             </div>
           <?php endif; ?>
-          <div class="grid max-h-80 gap-2 overflow-auto rounded-xl border border-emerald-100 bg-emerald-50/40 p-2" id="jugadores-container"></div>
+          <div id="jugadores-container"></div>
         </div>
       </div>
     </div>
-    <div class="flex flex-wrap items-center justify-center gap-2">
+    <div class="controls main-controls">
       <span id="teamDisplay" class="hidden"><?= h((string) $legacyNumTeams) ?></span>
       <span id="diffDisplay" class="hidden">0.5</span>
-      <button class="inline-flex min-h-12 items-center justify-center rounded-xl border border-lime-200 bg-lime-100 px-5 py-3 text-base font-black text-emerald-950 shadow-sm transition hover:bg-lime-200 disabled:cursor-wait disabled:opacity-70" id="generateTeamsButton" type="button" data-sorteo-action="generate-teams">Generar equipos</button>
+      <button id="generateTeamsButton" type="button" data-sorteo-action="generate-teams">⚽ Generar Equipos</button>
     </div>
-    <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800" id="generateTeamsLoading" role="status" aria-live="polite" hidden>
-      <strong class="block">Generando equipos...</strong>
-      <span>Buscando la combinación más equilibrada. Esto puede tardar unos segundos.</span>
+    <div id="generateTeamsLoading" class="draw-loading" role="status" aria-live="polite" hidden>
+      <strong>Generando equipos...</strong>
+      <span>Buscando la combinacion mas equilibrada. Esto puede tardar unos segundos.</span>
+      <div class="draw-loading-bar" aria-hidden="true"><span></span></div>
     </div>
-    <div id="error" class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-extrabold text-red-800"></div>
-    <div id="success" class="hidden rounded-xl border border-lime-200 bg-lime-50 px-4 py-3 text-sm font-extrabold text-emerald-950"></div>
-    <div id="equipos-generados" class="grid gap-4"></div>
-    <div class="mt-2 hidden" id="download-controls">
+    <div id="error" class="error"></div>
+    <div id="success" class="success"></div>
+    <div id="equipos-generados" class="teams-container"></div>
+    <div class="controls mt-5 hidden" id="download-controls">
       <div class="download-action-row hidden" data-feature-flag="BOTONES DE CAPTURA">
         <button type="button" data-sorteo-action="copy-teams">📋 Copiar al Portapapeles</button>
         <button type="button" data-sorteo-action="download-teams-jpg">📸 Descargar como JPG</button>
         <button type="button" data-sorteo-action="download-teams-text">📝 Descargar como Texto</button>
       </div>
       <?php if ($legacyMatch): ?>
-        <div class="flex justify-center">
-          <button class="inline-flex min-h-12 items-center justify-center rounded-xl border border-lime-200 bg-emerald-950 px-5 py-3 text-base font-black text-lime-50 shadow-sm transition hover:bg-emerald-900" type="button" data-sorteo-action="save-draw">Guardar sorteo</button>
+        <div class="download-save-row">
+          <button type="button" data-sorteo-action="save-draw">💾 GUARDAR SORTEO</button>
         </div>
       <?php endif; ?>
     </div>
   </div>
 
-  <div id="addModal" class="fixed inset-0 z-50 hidden grid place-items-center bg-emerald-950/70 p-4">
-    <div class="grid w-full max-w-md gap-3 rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl">
-      <button type="button" class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200 bg-white text-lg font-black text-emerald-950 hover:bg-emerald-50" data-sorteo-action="close-modal" data-modal-id="addModal">×</button>
-      <h3 class="m-0 text-lg font-black text-emerald-950">Añadir Jugador</h3>
+  <div id="addModal" class="modal hidden">
+    <div class="modal-content">
+      <button type="button" class="close-modal" data-sorteo-action="close-modal" data-modal-id="addModal">×</button>
+      <h3>Añadir Jugador</h3>
       <div class="form-row">
         <label>Nombre:</label>
         <input type="text" id="addNombre" required>
@@ -257,10 +258,10 @@ require __DIR__ . '/includes/header.php';
     </div>
   </div>
 
-  <div id="editModal" class="fixed inset-0 z-50 hidden grid place-items-center bg-emerald-950/70 p-4">
-    <div class="grid w-full max-w-md gap-3 rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl">
-      <button type="button" class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200 bg-white text-lg font-black text-emerald-950 hover:bg-emerald-50" data-sorteo-action="close-modal" data-modal-id="editModal">×</button>
-      <h3 class="m-0 text-lg font-black text-emerald-950">Editar Jugador</h3>
+  <div id="editModal" class="modal hidden">
+    <div class="modal-content">
+      <button type="button" class="close-modal" data-sorteo-action="close-modal" data-modal-id="editModal">×</button>
+      <h3>Editar Jugador</h3>
       <div class="form-row">
         <label>Nombre:</label>
         <input type="text" id="editNombre" required>
