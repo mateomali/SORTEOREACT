@@ -463,7 +463,60 @@
     const statsFilterRows = Array.from(document.querySelectorAll('[data-stats-player-filter-row]'));
     if (!statsPlayerSearch || !statsPlayerResult || !statsPlayerRows.length) return;
 
-    const query = statsPlayerSearch.value.trim().toLowerCase();
+    const normalizeStatsPlayerName = (value) => String(value || '')
+      .toLocaleLowerCase('es-AR')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    const escapeStatsRankingHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    const parseStatsRankings = (value) => {
+      try {
+        const parsed = JSON.parse(value || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    };
+    const hideStatsRankingCard = () => {
+      const rankingCard = document.querySelector('[data-stats-selected-ranking-card]');
+      const rankingGrid = document.querySelector('[data-stats-selected-ranking-grid]');
+      if (rankingCard) rankingCard.hidden = true;
+      if (rankingGrid) rankingGrid.innerHTML = '';
+    };
+    const renderStatsRankingCard = (selected) => {
+      const rankingCard = document.querySelector('[data-stats-selected-ranking-card]');
+      const rankingTitle = document.querySelector('[data-stats-selected-ranking-title]');
+      const rankingGrid = document.querySelector('[data-stats-selected-ranking-grid]');
+      if (!rankingCard || !rankingGrid) return;
+      const rankings = parseStatsRankings(selected.dataset.rankings || '[]');
+      if (!rankings.length) {
+        hideStatsRankingCard();
+        return;
+      }
+      if (rankingTitle) rankingTitle.textContent = `Posición en rankings de ${selected.dataset.playerName || 'jugador'}`;
+      rankingGrid.innerHTML = rankings.map((item) => {
+        const position = item.position ?? null;
+        const total = Number(item.total || 0);
+        const isTop = position !== null && Number(position) <= 3;
+        const value = item.value !== null && item.value !== undefined && item.value !== ''
+          ? ` | ${escapeStatsRankingHtml(item.value)} ${escapeStatsRankingHtml(item.suffix || '')}`.trimEnd()
+          : '';
+        return `
+          <article class="profile-ranking-item${isTop ? ' is-top' : ''}">
+            <span class="profile-ranking-label">${escapeStatsRankingHtml(item.label || '')}</span>
+            <strong class="profile-ranking-position">${position !== null ? `#${position}` : '-'}</strong>
+            <small>${position !== null ? `de ${total}` : 'sin datos'}${value}</small>
+          </article>
+        `;
+      }).join('');
+      rankingCard.hidden = false;
+    };
+    const query = normalizeStatsPlayerName(statsPlayerSearch.value);
     [...statsPlayerRows, ...statsFilterRows].forEach((row) => row.classList.remove('is-highlighted'));
 
     if (query === '') {
@@ -472,25 +525,26 @@
       const selectedProfile = document.querySelector('[data-stats-selected-profile]');
       if (selectedProfileCard) selectedProfileCard.hidden = true;
       if (selectedProfile) selectedProfile.innerHTML = '';
+      hideStatsRankingCard();
       [...statsPlayerRows, ...statsFilterRows].forEach((row) => {
         row.classList.remove('hidden');
       });
       return;
     }
 
-    const exact = statsPlayerRows.find((row) => (row.dataset.playerName || '').toLowerCase() === query);
-    const partial = statsPlayerRows.find((row) => (row.dataset.playerName || '').toLowerCase().includes(query));
+    const exact = statsPlayerRows.find((row) => normalizeStatsPlayerName(row.dataset.playerName) === query);
+    const partial = statsPlayerRows.find((row) => normalizeStatsPlayerName(row.dataset.playerName).includes(query));
     const selected = exact || partial;
 
     statsPlayerRows.forEach((row) => {
-      const name = (row.dataset.playerName || '').toLowerCase();
+      const name = normalizeStatsPlayerName(row.dataset.playerName);
       row.classList.toggle('hidden', !name.includes(query));
     });
     statsFilterRows.forEach((row) => {
-      const name = (row.dataset.playerName || '').toLowerCase();
+      const name = normalizeStatsPlayerName(row.dataset.playerName);
       const isMatch = name.includes(query);
       row.classList.toggle('hidden', !isMatch);
-      row.classList.toggle('is-highlighted', Boolean(selected) && name === (selected.dataset.playerName || '').toLowerCase());
+      row.classList.toggle('is-highlighted', Boolean(selected) && name === normalizeStatsPlayerName(selected.dataset.playerName));
     });
 
     if (!selected) {
@@ -499,6 +553,7 @@
       const selectedProfile = document.querySelector('[data-stats-selected-profile]');
       if (selectedProfileCard) selectedProfileCard.hidden = true;
       if (selectedProfile) selectedProfile.innerHTML = '';
+      hideStatsRankingCard();
       return;
     }
 
@@ -513,18 +568,11 @@
     document.querySelector('[data-stats-player-pp]').textContent = selected.dataset.pp || '0';
     const selectedProfileCard = document.querySelector('[data-stats-selected-profile-card]');
     const selectedProfile = document.querySelector('[data-stats-selected-profile]');
-    const profileId = selected.dataset.profileId || '';
-    const profileSource = profileId ? document.getElementById(profileId) : null;
     if (selectedProfileCard && selectedProfile) {
-      if (profileSource) {
-        selectedProfile.innerHTML = profileSource.innerHTML;
-        selectedProfileCard.hidden = false;
-        hydrateDynamicContent(selectedProfile);
-      } else {
-        selectedProfile.innerHTML = '';
-        selectedProfileCard.hidden = true;
-      }
+      selectedProfile.innerHTML = '';
+      selectedProfileCard.hidden = true;
     }
+    renderStatsRankingCard(selected);
   };
 
   const bindSortableStatsPlayerGrids = (root = document) => {

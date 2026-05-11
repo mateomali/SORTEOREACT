@@ -247,6 +247,7 @@ $shouldReturnHomeAfterVote = (string) ($_GET['vote_saved'] ?? '') === '1';
 
 $title = 'Junta directiva | ' . APP_NAME;
 $activePage = 'junta_votaciones.php';
+$bodyClass = 'page-junta-votaciones';
 require __DIR__ . '/includes/header.php';
 ?>
 

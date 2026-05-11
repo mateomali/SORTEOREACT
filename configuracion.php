@@ -29,6 +29,7 @@ $settings = admin_config_settings();
 $courts = rental_courts(false);
 $title = 'Configuracion | ' . APP_NAME;
 $activePage = 'configuracion.php';
+$bodyClass = 'page-configuracion';
 require __DIR__ . '/includes/header.php';
 ?>
 

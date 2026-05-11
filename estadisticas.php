@@ -19,22 +19,23 @@ $awardDefinitions = award_definitions();
 $awardDescriptions = [
     'player_of_match' => 'Jugador de la fecha.',
     'goal_of_week' => 'Mejor gol de la fecha.',
-    'lyrical' => 'Jugada fantastica o recurso tecnico destacado.',
+    'lyrical' => 'Jugada fantástica o recurso técnico destacado.',
     'wall' => 'Mejor defensor de la fecha.',
     'capocannoniere' => 'Goleador destacado de la fecha.',
-    'terminator' => 'Jugador mas bruto o jugada mas fuerte.',
-    'tractor' => 'Jugador mas aguerrido e intenso.',
+    'terminator' => 'Jugador más bruto o jugada más fuerte.',
+    'tractor' => 'Jugador más aguerrido e intenso.',
     'guinda' => 'Mejor pase o asistencia.',
-    'putita' => 'Jugador no comprometido o problematico.',
-    'ghost' => 'Jugador que erro mucho o participo poco.',
+    'putita' => 'Jugador no comprometido o problemático.',
+    'ghost' => 'Jugador que erró mucho o participó poco.',
     'keeper' => 'Mejor arquero de la fecha.',
-    'goodfellas' => 'Mejor actitud y buen companero.',
+    'goodfellas' => 'Mejor actitud y buen compañero.',
 ];
 $awardLegendDefinitions = $awardDefinitions + ['monthly_player' => monthly_player_award_definition()];
 $awardLegendDescriptions = $awardDescriptions + ['monthly_player' => monthly_player_award_description()];
 
 $dateFrom = trim((string) ($_GET['date_from'] ?? ''));
 $dateTo = trim((string) ($_GET['date_to'] ?? ''));
+$playerSearchQuery = trim((string) ($_GET['player_search'] ?? ''));
 $availableYears = $pdo->query(
     "SELECT DISTINCT YEAR(match_date) AS year_value
      FROM matches
@@ -72,6 +73,10 @@ if ($hasCourtRequest && $currentUserId > 0) {
 $selectedCourtLabel = $selectedCourt
     ? ((string) $selectedCourt['place'] . ' - ' . (string) $selectedCourt['court_key'])
     : 'General';
+$selectedStatsPeriodLabel = $selectedYear === 'all' ? 'Todos los años' : (string) $selectedYear;
+if ($dateFrom !== '' || $dateTo !== '') {
+    $selectedStatsPeriodLabel .= ' | ' . trim(($dateFrom !== '' ? $dateFrom : '...') . ' - ' . ($dateTo !== '' ? $dateTo : '...'));
+}
 $minMatches = 1;
 $currentPlayerId = current_player_id();
 
@@ -385,7 +390,95 @@ $captains = $stmtCaptains->fetchAll();
 $playerSearchRows = $ratings;
 usort($playerSearchRows, static fn(array $a, array $b): int => strcasecmp((string) $a['name'], (string) $b['name']));
 
-$title = 'Estadisticas | ' . APP_NAME;
+$sortStatsRankingRows = static function (array $rows, string $metric, string $direction = 'desc', array $tieBreakers = []): array {
+    usort($rows, static function (array $a, array $b) use ($metric, $direction, $tieBreakers): int {
+        $left = (float) ($a[$metric] ?? 0);
+        $right = (float) ($b[$metric] ?? 0);
+        $comparison = $left <=> $right;
+        if ($direction === 'desc') {
+            $comparison *= -1;
+        }
+        if ($comparison !== 0) {
+            return $comparison;
+        }
+        foreach ($tieBreakers as $tieMetric => $tieDirection) {
+            $tieLeft = (float) ($a[$tieMetric] ?? 0);
+            $tieRight = (float) ($b[$tieMetric] ?? 0);
+            $tieComparison = $tieLeft <=> $tieRight;
+            if ($tieDirection === 'desc') {
+                $tieComparison *= -1;
+            }
+            if ($tieComparison !== 0) {
+                return $tieComparison;
+            }
+        }
+        return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+    });
+    return $rows;
+};
+
+$statsRankingPosition = static function (array $rows, int $playerId): ?int {
+    foreach ($rows as $index => $row) {
+        if ((int) ($row['id'] ?? 0) === $playerId) {
+            return $index + 1;
+        }
+    }
+    return null;
+};
+
+$statsRankingItem = static function (string $label, array $rows, int $playerId, string $valueKey, string $suffix = '') use ($statsRankingPosition): array {
+    $position = $statsRankingPosition($rows, $playerId);
+    $value = null;
+    foreach ($rows as $row) {
+        if ((int) ($row['id'] ?? 0) === $playerId) {
+            $rawValue = $row[$valueKey] ?? null;
+            $value = is_numeric($rawValue)
+                ? (strpos((string) $rawValue, '.') !== false ? number_format((float) $rawValue, 2) : (string) (int) $rawValue)
+                : (string) $rawValue;
+            break;
+        }
+    }
+
+    return [
+        'label' => $label,
+        'position' => $position,
+        'total' => count($rows),
+        'value' => $value,
+        'suffix' => $suffix,
+    ];
+};
+
+$statsRankingMinimumMatches = ($selectedYear === 'all' && $dateFrom === '' && $dateTo === '') ? 10 : 4;
+$statsRankingRows = array_map(static function (array $row): array {
+    $row['promedio'] = $row['rating_promedio'] ?? null;
+    return $row;
+}, $ratings);
+$statsRankingRows = array_values(array_filter(
+    $statsRankingRows,
+    static fn(array $row): bool => (int) ($row['partidos'] ?? 0) >= $statsRankingMinimumMatches
+));
+$statsRankingEligiblePlayerIds = array_fill_keys(array_map(
+    static fn(array $row): int => (int) ($row['id'] ?? 0),
+    $statsRankingRows
+), true);
+$statsRankingCaptainRows = array_values(array_filter(
+    $captains,
+    static fn(array $row): bool => isset($statsRankingEligiblePlayerIds[(int) ($row['id'] ?? 0)])
+));
+$statsRankingItemsByPlayerId = [];
+foreach ($playerSearchRows as $playerSearchRow) {
+    $rankingPlayerId = (int) $playerSearchRow['id'];
+    $statsRankingItemsByPlayerId[$rankingPlayerId] = [
+        $statsRankingItem('Maximo goleador', $sortStatsRankingRows($statsRankingRows, 'goles', 'desc', ['partidos' => 'asc', 'promedio' => 'desc']), $rankingPlayerId, 'goles', 'goles'),
+        $statsRankingItem('Partidos ganados', $sortStatsRankingRows($statsRankingRows, 'pg', 'desc', ['partidos' => 'asc', 'promedio' => 'desc']), $rankingPlayerId, 'pg', 'PG'),
+        $statsRankingItem('Menos perdidos', $sortStatsRankingRows($statsRankingRows, 'pp', 'asc', ['partidos' => 'desc', 'promedio' => 'desc']), $rankingPlayerId, 'pp', 'PP'),
+        $statsRankingItem('Partidos jugados', $sortStatsRankingRows($statsRankingRows, 'partidos', 'desc', ['promedio' => 'desc']), $rankingPlayerId, 'partidos', 'PJ'),
+        $statsRankingItem('Capitanes', $statsRankingCaptainRows, $rankingPlayerId, 'puntos', 'pts'),
+        $statsRankingItem('Promedio general', $sortStatsRankingRows($statsRankingRows, 'promedio', 'desc', ['partidos' => 'desc', 'goles' => 'desc']), $rankingPlayerId, 'promedio', 'prom'),
+    ];
+}
+
+$title = 'Estadísticas | ' . APP_NAME;
 $activePage = 'estadisticas.php';
 $bodyClass = 'page-estadisticas';
 require __DIR__ . '/includes/header.php';
@@ -393,9 +486,9 @@ require __DIR__ . '/includes/header.php';
 
 <section class="page-head">
   <div>
-    <h1>Estadisticas</h1>
-    <p class="small-muted">Rendimiento por jugador, capitanes y goleadores de fechas finalizadas. Vista: <?= h($selectedCourtLabel) ?> | <?= $selectedYear === 'all' ? 'Todos los aÃ±os' : h($selectedYear) ?>.</p>
-    <div class="stats-head-summary" aria-label="Resumen de estadisticas">
+    <h1>Estadísticas</h1>
+    <p class="small-muted">Rendimiento por jugador, capitanes y goleadores de fechas finalizadas. Vista: <?= h($selectedCourtLabel) ?> | <?= $selectedYear === 'all' ? 'Todos los años' : h($selectedYear) ?>.</p>
+    <div class="stats-head-summary" aria-label="Resumen de estadísticas">
       <span><?= h($selectedCourtLabel) ?></span>
       <span><?= h((string) ((int) $summary['partidos'])) ?> fechas</span>
       <span><?= h((string) ((int) $summary['jugadores'])) ?> jugadores</span>
@@ -404,39 +497,73 @@ require __DIR__ . '/includes/header.php';
   </div>
 </section>
 
-<section class="card stats-control-bar stats-filter-hub mb-3.5">
+<details class="card stats-control-bar stats-filter-hub mb-3.5" open>
+  <summary class="stats-filter-hub-summary">
+    <span>
+      <strong>Filtros</strong>
+      <small><?= h($selectedCourtLabel) ?> | <?= $selectedYear === 'all' ? 'Todos los años' : h($selectedYear) ?></small>
+    </span>
+    <span class="stats-filter-hub-icon" aria-hidden="true"></span>
+  </summary>
   <div class="stats-filter-hub-body">
   <div class="stats-court-switcher">
   <div class="stats-year-switcher">
     <div class="stats-court-switcher-head">
       <div>
-        <h3>AÃ±o</h3>
+        <h3>Año</h3>
         <p class="small-muted">Filtrar tabla por temporada calendario.</p>
       </div>
     </div>
     <div class="stats-year-options">
       <?php
-        $allYearsParams = [
-            'year' => 'all',
-            'court_id' => $courtId,
-        ];
+          $allYearsParams = [
+              'year' => 'all',
+              'court_id' => $courtId,
+              'player_search' => $playerSearchQuery !== '' ? $playerSearchQuery : null,
+          ];
+          $allYearsParams = array_filter($allYearsParams, static fn($value): bool => $value !== null);
       ?>
       <a class="stats-court-option stats-year-option<?= $selectedYear === 'all' ? ' is-active' : '' ?>" href="estadisticas.php?<?= h(http_build_query($allYearsParams)) ?>" data-partial-link data-partial-scroll="none" data-partial-target="main.content">
         <strong>Todos</strong>
-        <small>Historico completo</small>
+        <small>Histórico completo</small>
       </a>
       <?php foreach ($availableYears as $yearOption): ?>
         <?php
-          $yearParams = [
-              'year' => $yearOption,
-              'court_id' => $courtId,
-          ];
+            $yearParams = [
+                'year' => $yearOption,
+                'court_id' => $courtId,
+                'player_search' => $playerSearchQuery !== '' ? $playerSearchQuery : null,
+            ];
+            $yearParams = array_filter($yearParams, static fn($value): bool => $value !== null);
         ?>
         <a class="stats-court-option stats-year-option<?= $selectedYear === (string) $yearOption ? ' is-active' : '' ?>" href="estadisticas.php?<?= h(http_build_query($yearParams)) ?>" data-partial-link data-partial-scroll="none" data-partial-target="main.content">
           <strong><?= h((string) $yearOption) ?></strong>
           <small>Temporada</small>
         </a>
       <?php endforeach; ?>
+      <details class="stats-custom-date-filter<?= ($dateFrom !== '' || $dateTo !== '') ? ' is-active' : '' ?>"<?= ($dateFrom !== '' || $dateTo !== '') ? ' open' : '' ?>>
+        <summary class="stats-court-option stats-year-option">
+          <strong>Personalizado</strong>
+          <small><?= ($dateFrom !== '' || $dateTo !== '') ? h(trim(($dateFrom ?: '...') . ' - ' . ($dateTo ?: '...'))) : 'Rango de fechas' ?></small>
+        </summary>
+        <form method="get" class="stats-filter-grid stats-inline-filter" data-partial-form data-partial-scroll="none" data-partial-target="main.content">
+          <input type="hidden" name="year" value="<?= h($selectedYear) ?>">
+          <input type="hidden" name="court_id" value="<?= (int) $courtId ?>">
+          <input type="hidden" name="player_search" value="<?= h($playerSearchQuery) ?>" data-stats-player-search-param>
+          <div class="form-row">
+            <label>Desde</label>
+            <input type="date" name="date_from" value="<?= h($dateFrom) ?>">
+          </div>
+          <div class="form-row">
+            <label>Hasta</label>
+            <input type="date" name="date_to" value="<?= h($dateTo) ?>">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" type="submit">Aplicar</button>
+            <a class="btn btn-muted" href="estadisticas.php?<?= h(http_build_query(array_filter(['year' => $selectedYear, 'court_id' => $courtId, 'player_search' => $playerSearchQuery !== '' ? $playerSearchQuery : null], static fn($value): bool => $value !== null))) ?>" data-partial-link data-partial-target="main.content">Limpiar</a>
+          </div>
+        </form>
+      </details>
     </div>
   </div>
 
@@ -444,7 +571,7 @@ require __DIR__ . '/includes/header.php';
     <div class="stats-court-switcher-head">
       <div>
         <h3>Cancha</h3>
-        <p class="small-muted">Elegir tabla de estadisticas por cancha o vista general.</p>
+        <p class="small-muted">Elegir tabla de estadísticas por cancha o vista general.</p>
       </div>
     </div>
     <div class="stats-court-options">
@@ -454,6 +581,7 @@ require __DIR__ . '/includes/header.php';
             'court_id' => 0,
             'date_from' => $dateFrom !== '' ? $dateFrom : null,
             'date_to' => $dateTo !== '' ? $dateTo : null,
+            'player_search' => $playerSearchQuery !== '' ? $playerSearchQuery : null,
         ], static fn($value): bool => $value !== null);
       ?>
       <a class="stats-court-option<?= $courtId === 0 ? ' is-active' : '' ?>" href="estadisticas.php?<?= h(http_build_query($generalParams)) ?>" data-partial-link data-partial-scroll="none" data-partial-target="main.content">
@@ -467,6 +595,7 @@ require __DIR__ . '/includes/header.php';
               'court_id' => (int) $court['id'],
               'date_from' => $dateFrom !== '' ? $dateFrom : null,
               'date_to' => $dateTo !== '' ? $dateTo : null,
+              'player_search' => $playerSearchQuery !== '' ? $playerSearchQuery : null,
           ], static fn($value): bool => $value !== null);
           $courtLabel = trim((string) $court['place']) . ' - ' . trim((string) $court['court_key']);
           $courtDetail = rental_weekday_label((int) $court['weekday']) . ' ' . substr((string) $court['time_value'], 0, 5);
@@ -480,29 +609,11 @@ require __DIR__ . '/includes/header.php';
   </div>
 </div>
 
-<div class="stats-control-filter">
-  <form method="get" class="stats-filter-grid stats-inline-filter" data-partial-form data-partial-scroll="none" data-partial-target="main.content">
-    <input type="hidden" name="year" value="<?= h($selectedYear) ?>">
-    <input type="hidden" name="court_id" value="<?= (int) $courtId ?>">
-    <div class="form-row">
-      <label>Desde</label>
-      <input type="date" name="date_from" value="<?= h($dateFrom) ?>">
-    </div>
-    <div class="form-row">
-      <label>Hasta</label>
-      <input type="date" name="date_to" value="<?= h($dateTo) ?>">
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" type="submit">Aplicar</button>
-      <a class="btn btn-muted" href="estadisticas.php" data-partial-link data-partial-target="main.content">Limpiar</a>
-    </div>
-  </form>
-</div>
-
 <div class="stats-control-search">
   <div
     data-react-root
     data-react-island="stats_player_search"
+    data-initial-query="<?= h($playerSearchQuery) ?>"
     data-players="<?= h(json_encode(array_map(static fn(array $row): array => [
         'name' => (string) $row['name'],
         'matches' => (string) $row['partidos'],
@@ -512,6 +623,7 @@ require __DIR__ . '/includes/header.php';
         'pe' => (string) ((int) ($row['pe'] ?? 0)),
         'pp' => (string) ((int) ($row['pp'] ?? 0)),
         'profileId' => 'stats-player-profile-' . (int) $row['id'],
+        'rankings' => $statsRankingItemsByPlayerId[(int) $row['id']] ?? [],
     ], $playerSearchRows), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
   ></div>
   <datalist id="statsPlayerList">
@@ -521,7 +633,7 @@ require __DIR__ . '/includes/header.php';
   </datalist>
 </div>
   </div>
-</section>
+</details>
 
 <section class="stats-player-result" data-stats-player-result hidden>
   <article class="stat-box">
@@ -537,7 +649,7 @@ require __DIR__ . '/includes/header.php';
     <div class="value" data-stats-player-goals>-</div>
   </article>
   <article class="stat-box">
-    <div class="label">Puntuacion promedio</div>
+    <div class="label">Puntuación promedio</div>
     <div class="value" data-stats-player-rating>-</div>
   </article>
   <article class="stat-box">
@@ -554,6 +666,16 @@ require __DIR__ . '/includes/header.php';
   </article>
   <article class="stats-selected-profile-card" data-stats-selected-profile-card hidden>
     <div data-stats-selected-profile></div>
+  </article>
+  <article class="card profile-ranking-card stats-selected-ranking-card col-span-full min-w-0" data-stats-selected-ranking-card hidden>
+    <div class="profile-ranking-head">
+      <div>
+        <h3 data-stats-selected-ranking-title>Posición en rankings</h3>
+        <p class="small-muted" data-stats-selected-ranking-context>Comparación en <?= h($selectedCourtLabel) ?> | <?= h($selectedStatsPeriodLabel) ?>.</p>
+      </div>
+      <a class="btn btn-muted" href="#stats-jugadores">Tabla completa</a>
+    </div>
+    <div class="profile-ranking-grid" data-stats-selected-ranking-grid></div>
   </article>
 </section>
 
@@ -576,7 +698,7 @@ require __DIR__ . '/includes/header.php';
         <div class="profile-detail-layout grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,.65fr)]">
           <?= shared_profile_player_card($profilePlayer, $profileStatLabels, $profileStatHelp) ?>
           <article class="stat-box profile-description-card">
-            <div class="label">Descripcion</div>
+            <div class="label">Descripción</div>
             <p class="profile-description-text mt-2 text-sm font-semibold leading-relaxed"><?= h(shared_profile_player_description($profilePlayer, $profileStatLabels)) ?></p>
             <div class="mt-3 flex flex-wrap gap-2">
               <?php foreach (parse_positions_csv((string) $profilePlayer['positions']) as $position): ?>
@@ -621,7 +743,7 @@ require __DIR__ . '/includes/header.php';
         </button>
       </div>
       <?php if (!$ratings): ?>
-        <p class="empty-state stats-empty-state"><strong>Sin datos</strong><span>No hay jugadores con estadisticas para este filtro.</span></p>
+        <p class="empty-state stats-empty-state"><strong>Sin datos</strong><span>No hay jugadores con estadísticas para este filtro.</span></p>
       <?php else: ?>
         <?php foreach ($ratings as $rowIndex => $row): ?>
           <?php
@@ -642,6 +764,7 @@ require __DIR__ . '/includes/header.php';
               data-rating-sort="<?= $row['rating_promedio'] !== null ? h((string) (float) $row['rating_promedio']) : '' ?>"
               data-awards-total="<?= h((string) $sortableAwardTotal) ?>"
               data-profile-id="stats-player-profile-<?= (int) $row['id'] ?>"
+              data-rankings="<?= h(json_encode($statsRankingItemsByPlayerId[(int) $row['id']] ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
               data-pg="<?= h((string) ((int) ($row['pg'] ?? 0))) ?>"
               data-pe="<?= h((string) ((int) ($row['pe'] ?? 0))) ?>"
               data-pp="<?= h((string) ((int) ($row['pp'] ?? 0))) ?>">
@@ -758,7 +881,7 @@ require __DIR__ . '/includes/header.php';
                     data-awards-trigger
                     data-awards-target="<?= h($awardPanelId) ?>"
                     data-awards-player="<?= h((string) $row['name']) ?>"
-                    aria-label="Ver detalle estadistico de <?= h((string) $row['name']) ?>"
+                    aria-label="Ver detalle estadístico de <?= h((string) $row['name']) ?>"
                   >
                     <span>+</span>
                     <strong>ver</strong>
@@ -805,7 +928,7 @@ require __DIR__ . '/includes/header.php';
                               <small><?= h($matchDetail['title']) ?> | <?= h($matchDetail['date']) ?> | <?= h($matchDetail['score']) ?></small>
                             <?php endforeach; ?>
                           <?php else: ?>
-                            <small>Sin fechas en esta categoria.</small>
+                            <small>Sin fechas en esta categoría.</small>
                           <?php endif; ?>
                         </span>
                       </div>
@@ -840,7 +963,7 @@ require __DIR__ . '/includes/header.php';
                         <span class="award-popover-icon">-</span>
                         <span>
                           <strong>Sin premios acumulados</strong>
-                          <small>Todavia no tiene premios cargados en el filtro actual.</small>
+                          <small>Todavía no tiene premios cargados en el filtro actual.</small>
                         </span>
                       </div>
                     <?php endif; ?>
@@ -859,7 +982,7 @@ require __DIR__ . '/includes/header.php';
                       <span class="award-popover-icon">PJ</span>
                       <span>
                         <strong><?= h((string) count($playerAppearanceDetails[$playerRowId] ?? [])) ?> partidos jugados</strong>
-                        <small>Detalle cronologico del filtro actual.</small>
+                        <small>Detalle cronológico del filtro actual.</small>
                       </span>
                     </div>
                       <?php foreach (($playerAppearanceDetails[$playerRowId] ?? []) as $matchDetail): ?>
@@ -879,7 +1002,7 @@ require __DIR__ . '/includes/header.php';
                       <span class="award-popover-icon">G</span>
                       <span>
                         <strong><?= h((string) (int) $row['goles']) ?> goles</strong>
-                        <small>Fechas donde convirtio en el filtro actual.</small>
+                        <small>Fechas donde convirtió en el filtro actual.</small>
                       </span>
                     </div>
                       <?php if (!empty($playerGoalDetails[$playerRowId])): ?>
@@ -959,7 +1082,7 @@ require __DIR__ . '/includes/header.php';
   <div class="table-wrap">
     <div class="stats-compact-grid stats-captains-grid">
       <div class="stats-compact-grid-head" aria-hidden="true">
-        <span>Capitan</span>
+        <span>Capitán</span>
         <span>Pts</span>
         <span>PJ</span>
         <span>G</span>

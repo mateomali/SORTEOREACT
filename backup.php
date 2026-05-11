@@ -399,6 +399,7 @@ foreach (backup_tables() as $table) {
 
 $title = 'Backup | ' . APP_NAME;
 $activePage = 'backup.php';
+$bodyClass = 'page-backup';
 require __DIR__ . '/includes/header.php';
 ?>
 
