@@ -213,19 +213,11 @@ $selectedMatch = null;
 if ($requestedMatchId > 0) {
     $selectedMatch = repo_match_by_id($requestedMatchId);
 }
-if (!$showHistoryPage && !$selectedMatch && $futureMatches) {
+if (!$showHistoryPage && $futureMatches) {
     $selectedMatch = repo_match_by_id((int) $futureMatches[0]['id']);
 }
 if (!$selectedMatch && $matches) {
     $selectedMatch = repo_match_by_id((int) $matches[0]['id']);
-}
-
-$latestFinalizedMatch = null;
-foreach ($historyMatches as $historyMatch) {
-    if ((string) ($historyMatch['status'] ?? '') === 'finalizado') {
-        $latestFinalizedMatch = $historyMatch;
-        break;
-    }
 }
 
 $selectedMatchId = $selectedMatch ? (int) $selectedMatch['id'] : 0;
@@ -1006,9 +998,7 @@ require __DIR__ . '/includes/header.php';
 <?php if (!$showHistoryPage && $matches): ?>
   <?php
     $topMatch = $matches[0];
-    $headerMatch = $showHistoryPage
-        ? ($selectedMatch ?: $topMatch)
-        : (($requestedMatchId > 0 && $selectedMatch) ? $selectedMatch : ($futureMatches[0] ?? $topMatch));
+    $headerMatch = $showHistoryPage ? ($selectedMatch ?: $topMatch) : ($futureMatches[0] ?? $topMatch);
     $headerTeams = repo_match_teams((int) $headerMatch['id']);
     $headerTeamLabels = $headerTeams ? repo_match_team_labels($headerMatch, $headerTeams) : [];
     $headerGoals = [];
@@ -1095,39 +1085,6 @@ require __DIR__ . '/includes/header.php';
       </button>
     <?php endif; ?>
   </section>
-
-  <?php if (
-      !$showHistoryPage
-      && $latestFinalizedMatch
-      && (int) $latestFinalizedMatch['id'] !== (int) $headerMatch['id']
-  ): ?>
-    <?php
-      $latestResultTeams = repo_match_teams((int) $latestFinalizedMatch['id']);
-      $latestResultLabels = $latestResultTeams ? repo_match_team_labels($latestFinalizedMatch, $latestResultTeams) : [];
-      $latestResultGoals = [];
-      foreach ($latestResultTeams as $team) {
-          $latestResultGoals[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
-      }
-      ksort($latestResultGoals);
-    ?>
-    <section class="card home-next-card home-next-card-with-result">
-      <div class="home-next-main">
-        <span class="home-kicker">Ultima fecha jugada</span>
-        <h2><?= h((string) ($latestFinalizedMatch['title'] ?: ('Fecha #' . $latestFinalizedMatch['id']))) ?></h2>
-        <p class="small-muted">
-          Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $latestFinalizedMatch['match_date']))) ?>
-          | <?= h(match_status_label((string) $latestFinalizedMatch['status'])) ?>
-        </p>
-      </div>
-      <div class="home-result-line">
-        <span>Resultado</span>
-        <?= render_match_scoreboard($latestResultGoals, $latestResultLabels) ?>
-      </div>
-      <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $latestFinalizedMatch['id'] ?>" aria-label="Ver detalles de la ultima fecha">
-        <span>Detalles</span>
-      </a>
-    </section>
-  <?php endif; ?>
 
   <?php if ($headerShowMultiDrawVote): ?>
     <section class="card home-multi-draw-card">
