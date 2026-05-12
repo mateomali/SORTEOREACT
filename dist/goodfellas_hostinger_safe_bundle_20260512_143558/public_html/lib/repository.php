@@ -135,8 +135,6 @@ function repo_match_team_labels(array $match, array $matchTeams): array
 
     foreach ($matchTeams as $team) {
         $teamNumber = (int) $team['team_number'];
-        $teamName = trim((string) ($team['team_name'] ?? ''));
-        $genericTeamName = $teamName === '' || preg_match('/^equipo\s+\d+$/i', $teamName) === 1;
         if (!empty($team['captain_player_id'])) {
             $captainName = $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
             $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
@@ -147,13 +145,7 @@ function repo_match_team_labels(array $match, array $matchTeams): array
 
         $color = trim((string) ($team['color_name'] ?? ''));
         if ($color !== '') {
-            $baseLabel = $genericTeamName ? 'Equipo' : $teamName;
-            $labels[$teamNumber] = $baseLabel . ' (' . $color . ')';
-            continue;
-        }
-
-        if (!$genericTeamName) {
-            $labels[$teamNumber] = $teamName;
+            $labels[$teamNumber] = 'Equipo (' . $color . ')';
             continue;
         }
 

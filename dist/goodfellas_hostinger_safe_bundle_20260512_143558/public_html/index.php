@@ -428,7 +428,6 @@ function team_heart_color(string $color): string
         'VERDE' => '#16a34a',
         'NEGRO' => '#111827',
         'NARANJA' => '#f97316',
-        'BLANCO' => '#f8fafc',
         default => '#047857',
     };
 }
@@ -448,7 +447,7 @@ function render_team_label(string $label, ?int $goals = null): string
     $heartColor = team_heart_color($color);
     return '<span class="team-label-with-heart" title="' . h($label) . '">' .
         '<span>' . h($name) . '</span>' .
-        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '" stroke="#0f172a" stroke-width="1.2">' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '">' .
         '<path d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
         '</svg>' .
         '<span class="team-label-score">' . h($score) . '</span>' .
@@ -462,15 +461,9 @@ function history_team_label(array $match, array $team, array $captainNames): str
         return $captainNames[(int) $team['captain_player_id']] ?? ('Capitan ' . $teamNumber);
     }
 
-    $teamName = trim((string) ($team['team_name'] ?? ''));
-    $genericTeamName = $teamName === '' || preg_match('/^equipo\s+\d+$/i', $teamName) === 1;
     $color = trim((string) ($team['color_name'] ?? ''));
     if ($color !== '') {
-        return $genericTeamName ? ('Equipo ' . strtolower($color)) : $teamName;
-    }
-
-    if (!$genericTeamName) {
-        return $teamName;
+        return 'Equipo ' . strtolower($color);
     }
 
     if (($match['draw_mode'] ?? '') !== 'captains') {
@@ -491,12 +484,6 @@ function history_team_label_short(array $match, array $team, array $captainNames
     }
 
     $teamNumber = (int) ($team['team_number'] ?? 0);
-    $teamName = trim((string) ($team['team_name'] ?? ''));
-    $genericTeamName = $teamName === '' || preg_match('/^equipo\s+\d+$/i', $teamName) === 1;
-    if (!$genericTeamName) {
-        return mb_strtoupper($teamName, 'UTF-8');
-    }
-
     $color = trim((string) ($team['color_name'] ?? ''));
     if ($color === '' && (($match['draw_mode'] ?? '') !== 'captains')) {
         $defaultColors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
@@ -550,16 +537,9 @@ function history_team_scoreboard_label(array $match, array $team, array $captain
         return $color !== '' ? ($captainName . ' (' . $color . ')') : $captainName;
     }
 
-    $teamName = trim((string) ($team['team_name'] ?? ''));
-    $genericTeamName = $teamName === '' || preg_match('/^equipo\s+\d+$/i', $teamName) === 1;
     $color = trim((string) ($team['color_name'] ?? ''));
     if ($color !== '') {
-        $baseLabel = $genericTeamName ? 'Equipo' : $teamName;
-        return $baseLabel . ' (' . mb_strtoupper($color, 'UTF-8') . ')';
-    }
-
-    if (!$genericTeamName) {
-        return $teamName;
+        return 'Equipo (' . mb_strtoupper($color, 'UTF-8') . ')';
     }
 
     if (($match['draw_mode'] ?? '') !== 'captains') {

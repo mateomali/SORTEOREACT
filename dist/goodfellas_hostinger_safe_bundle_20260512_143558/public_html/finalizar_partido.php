@@ -736,7 +736,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     try {
         $saveTeamGoals = $pdo->prepare(
             'UPDATE match_teams
-             SET goals = :goals, updated_at = NOW()
+             SET goals = :goals
              WHERE match_id = :mid AND team_number = :team_number'
         );
         foreach ($teams as $team) {
@@ -1027,7 +1027,7 @@ require __DIR__ . '/includes/header.php';
           </details>
         <?php else: ?>
           <div class="card">
-          <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>" data-no-partial>
+          <form method="post">
             <input type="hidden" name="action" value="save_score">
             <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
             <div class="finish-score-head">
