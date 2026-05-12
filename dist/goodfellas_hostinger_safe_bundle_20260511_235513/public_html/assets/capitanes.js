@@ -179,7 +179,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           return;
         }
         grid.innerHTML = desired.map(teamNumber => `
-          <article class="card captain-admin-formation-card" data-captain-team-card="${teamNumber}">
+          <article class="card" data-captain-team-card="${teamNumber}">
             <h3 id="team${teamNumber}Title">Equipo ${teamNumber}</h3>
             <div id="team${teamNumber}List" class="captain-team-list"></div>
           </article>

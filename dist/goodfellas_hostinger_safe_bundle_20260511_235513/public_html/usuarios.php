@@ -26,52 +26,7 @@ function site_user_by_id(int $id): ?array
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     try {
-        if ($action === 'create_user') {
-            $username = trim((string) ($_POST['username'] ?? ''));
-            $role = (string) ($_POST['user_role'] ?? 'usuario');
-            $playerId = (int) ($_POST['player_id'] ?? 0);
-            $active = isset($_POST['active']) ? 1 : 0;
-            $canVote = isset($_POST['can_vote']) ? 1 : 0;
-            $temporaryPassword = trim((string) ($_POST['temporary_password'] ?? ''));
-            if (!preg_match('/^[a-zA-Z0-9_.-]{3,80}$/', $username)) {
-                throw new RuntimeException('El usuario debe tener 3 a 80 caracteres: letras, numeros, punto, guion o guion bajo.');
-            }
-            if (!in_array($role, ['usuario', 'jugador', 'directivo', 'admin'], true)) {
-                throw new RuntimeException('Rol invalido.');
-            }
-            if ($temporaryPassword === '') {
-                $temporaryPassword = '123456';
-            }
-            if (strlen($temporaryPassword) < 6) {
-                throw new RuntimeException('La clave provisoria debe tener al menos 6 caracteres.');
-            }
-            $playerValue = $playerId > 0 ? $playerId : null;
-            if ($playerValue !== null && !repo_player_by_id($playerValue)) {
-                throw new RuntimeException('Jugador invalido.');
-            }
-            if ($role === 'jugador' && $playerValue === null) {
-                throw new RuntimeException('Para crear un usuario jugador, vincula su jugador correspondiente.');
-            }
-
-            $stmt = db()->prepare(
-                'INSERT INTO site_users (username, password_hash, password_needs_reset, role, player_id, can_vote, active)
-                 VALUES (:username, :password_hash, 1, :role, :player_id, :can_vote, :active)'
-            );
-            $stmt->execute([
-                'username' => $username,
-                'password_hash' => password_hash($temporaryPassword, PASSWORD_DEFAULT),
-                'role' => $role,
-                'player_id' => $playerValue,
-                'can_vote' => $canVote,
-                'active' => $active,
-            ]);
-            $userId = (int) db()->lastInsertId();
-            $created = site_user_by_id($userId) ?: [];
-            if ($role === 'directivo' && $active === 1) {
-                directive_member_for_site_user($userId, $username, (string) ($created['player_name'] ?? ''));
-            }
-            flash('success', 'Usuario creado. Clave provisoria: ' . $temporaryPassword . '.');
-        } elseif ($action === 'update_user') {
+        if ($action === 'update_user') {
             $id = (int) ($_POST['id'] ?? 0);
             $username = trim((string) ($_POST['username'] ?? ''));
             $role = (string) ($_POST['user_role'] ?? 'usuario');
@@ -87,9 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $playerValue = $playerId > 0 ? $playerId : null;
             if ($playerValue !== null && !repo_player_by_id($playerValue)) {
                 throw new RuntimeException('Jugador invalido.');
-            }
-            if ($role === 'jugador' && $playerValue === null) {
-                throw new RuntimeException('Para usar rol jugador, vincula su jugador correspondiente.');
             }
 
             $stmt = db()->prepare(
@@ -249,65 +201,6 @@ require __DIR__ . '/includes/header.php';
     <span>Habilitados voto</span>
     <strong><?= h((string) $voteCount) ?></strong>
   </div>
-</section>
-
-<section class="card usuarios-list-card mb-3">
-  <div class="usuarios-list-head">
-    <div>
-      <h3>Alta de usuario</h3>
-      <p class="small-muted">Crea una cuenta, vincula el jugador correspondiente y deja clave provisoria para primer ingreso.</p>
-    </div>
-  </div>
-  <form method="post" class="usuario-card">
-    <div class="usuario-fields">
-      <div class="form-row">
-        <label>Usuario</label>
-        <input type="text" name="username" placeholder="nombre_usuario" autocomplete="off" required>
-      </div>
-      <div class="form-row">
-        <label>Clave provisoria</label>
-        <input type="text" name="temporary_password" value="123456" minlength="6" required>
-      </div>
-      <div class="form-row">
-        <label>Rol</label>
-        <select name="user_role" required>
-          <?php foreach ($roleLabels as $value => $label): ?>
-            <option value="<?= h($value) ?>" <?= selected_attr($value === 'jugador') ?>><?= h($label) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Jugador vinculado</label>
-        <select name="player_id">
-          <option value="">Sin jugador</option>
-          <?php foreach ($players as $player): ?>
-            <?php
-              $playerId = (int) $player['id'];
-              $claimed = isset($claimedByPlayer[$playerId]);
-            ?>
-            <option value="<?= $playerId ?>" <?= $claimed ? 'disabled' : '' ?>>
-              <?= h((string) $player['name']) ?><?= $claimed ? ' (ocupado)' : '' ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <label class="usuario-switch">
-        <input type="checkbox" name="active" value="1" checked>
-        <span>Cuenta activa</span>
-      </label>
-      <label class="usuario-switch">
-        <input type="checkbox" name="can_vote" value="1" checked>
-        <span>Puede votar premios y puntajes</span>
-      </label>
-    </div>
-    <div class="usuario-meta">
-      <span class="badge warn">Debe cambiar clave</span>
-      <span class="small-muted">La clave provisoria se solicita cambiar en el primer login.</span>
-    </div>
-    <div class="usuario-actions">
-      <button class="btn btn-primary" type="submit" name="action" value="create_user">Crear usuario</button>
-    </div>
-  </form>
 </section>
 
 <section class="card usuarios-list-card">
