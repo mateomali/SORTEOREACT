@@ -1362,6 +1362,14 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         navigateCaptainUrl(url.toString(), { replace: true });
       };
 
+      const formationSavedHomeUrl = () => {
+        const url = new URL('index.php', window.location.href);
+        url.searchParams.set('match_id', String(matchId));
+        url.searchParams.set('formation_updated', String(Date.now()));
+        url.hash = 'formaciones';
+        return url.toString();
+      };
+
       const returnToPreviousPage = () => {
         const fallbackUrl = 'index.php';
         try {
@@ -1478,7 +1486,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           }, 2200);
         }
         window.setTimeout(() => {
-          window.location.href = 'index.php';
+          window.location.href = formationSavedHomeUrl();
         }, 700);
       };
 
@@ -1524,7 +1532,9 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         render();
         hasRenderedState = true;
         showMessage('Formaciones guardadas.', 'success');
-        window.setTimeout(returnToPreviousPage, 900);
+        window.setTimeout(() => {
+          window.location.href = formationSavedHomeUrl();
+        }, 900);
       };
 
       loadState({ forceRender: true });

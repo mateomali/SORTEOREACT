@@ -181,6 +181,21 @@ function repo_grouped_team_players(int $matchId): array
         }
         $grouped[$team][$line][] = $p;
     }
+    foreach ($grouped as &$lines) {
+        foreach ($lines as &$linePlayers) {
+            usort($linePlayers, static function (array $a, array $b): int {
+                $formationOrderA = $a['formation_line_order'] !== null ? (int) $a['formation_line_order'] : 999;
+                $formationOrderB = $b['formation_line_order'] !== null ? (int) $b['formation_line_order'] : 999;
+                $lineupOrderA = $a['lineup_order'] !== null ? (int) $a['lineup_order'] : 999;
+                $lineupOrderB = $b['lineup_order'] !== null ? (int) $b['lineup_order'] : 999;
+                return ($formationOrderA <=> $formationOrderB)
+                    ?: ($lineupOrderA <=> $lineupOrderB)
+                    ?: strcasecmp((string) $a['name'], (string) $b['name']);
+            });
+        }
+        unset($linePlayers);
+    }
+    unset($lines);
     ksort($grouped);
     return $grouped;
 }
