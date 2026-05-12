@@ -101,7 +101,7 @@ function stored_captain_access(PDO $pdo, int $matchId): ?array
     );
     $stmt->execute(['mid' => $matchId]);
     $draft = $stmt->fetch();
-    if (!$draft) {
+    if (!$draft || (string) ($draft['match_status'] ?? '') === 'finalizado') {
         return null;
     }
 
@@ -137,6 +137,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'capta
         flash('error', 'Token de capitan invalido.');
         redirect('index.php');
     }
+    if ((string) ($draftByToken['match_status'] ?? '') === 'finalizado') {
+        flash('error', 'Esa fecha ya finalizo.');
+        redirect('index.php');
+    }
+
     $tokenTeam = 0;
     foreach (captain_numbers_from_draft($draftByToken) as $candidateTeam) {
         if (hash_equals(captain_token_for_team($draftByToken, $candidateTeam), $postedToken)) {

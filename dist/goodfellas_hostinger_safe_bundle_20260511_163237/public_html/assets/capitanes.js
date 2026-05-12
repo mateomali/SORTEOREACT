@@ -1305,7 +1305,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           } else if (teamView > 0 && captainToken !== '' && state.match.can_edit_formations) {
             turn.innerHTML = 'Draft completo. Ajusta la formacion de tu equipo y toca Guardar formacion.';
           } else if (teamView > 0 && captainToken !== '') {
-            turn.innerHTML = 'Draft completo. La formacion no se puede editar para esta fecha.';
+            turn.innerHTML = 'Draft completo. La formacion ya no se puede editar porque la fecha esta finalizada.';
           } else {
             turn.innerHTML = 'Draft completo. Los equipos ya quedaron guardados para finalizar la fecha.';
           }

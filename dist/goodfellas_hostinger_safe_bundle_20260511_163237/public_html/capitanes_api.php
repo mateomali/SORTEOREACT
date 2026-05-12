@@ -249,7 +249,7 @@ function captain_next_team_by_lowest_total_skill(int $matchId, array $draft, int
 
 function can_edit_captain_formation(array $match): bool
 {
-    return in_array((string) ($match['status'] ?? ''), ['sorteado', 'finalizado'], true);
+    return (string) ($match['status'] ?? '') !== 'finalizado';
 }
 
 function validate_captain_formation_line_counts(array $counts): void
@@ -750,7 +750,7 @@ try {
             throw new RuntimeException('La formacion se puede ajustar cuando los equipos ya estan generados.');
         }
         if (!can_edit_captain_formation($match)) {
-            throw new RuntimeException('La formacion no se puede editar para esta fecha.');
+            throw new RuntimeException('La formacion ya no se puede editar porque la fecha esta finalizada.');
         }
 
         $teamsPayload = $data['teams'] ?? [];
@@ -884,7 +884,7 @@ try {
             throw new RuntimeException('La formacion se puede ajustar cuando los equipos ya estan generados.');
         }
         if (!can_edit_captain_formation($match)) {
-            throw new RuntimeException('La formacion no se puede editar para esta fecha.');
+            throw new RuntimeException('La formacion ya no se puede editar porque la fecha esta finalizada.');
         }
         $assignments = $data['assignments'] ?? [];
         if (!is_array($assignments)) {

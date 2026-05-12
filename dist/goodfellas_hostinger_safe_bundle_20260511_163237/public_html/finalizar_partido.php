@@ -750,14 +750,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()) WHERE id = :id');
         $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         $pdo->commit();
-        flash('success', 'Resultado guardado. Fecha finalizada.');
+        flash('success', 'Resultado guardado. Ya puedes cargar puntajes y premios.');
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
         flash('error', 'No se pudo guardar el resultado: ' . $e->getMessage());
     }
-    redirect('finalizar_partido.php?match_id=' . $matchId);
+    redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action'] ?? ''), ['save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'], true)) {
@@ -863,8 +863,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
             redirect('finalizar_partido.php?match_id=' . $matchId);
         }
         if ($shouldFinalizeRoundRobin) {
-            flash('success', 'Fecha finalizada. Resultado guardado.');
-            redirect('finalizar_partido.php?match_id=' . $matchId);
+            flash('success', 'Fecha finalizada. Ya puedes cargar goles por jugador, puntajes y premios.');
+            redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones');
         }
         flash('success', 'Resultados parciales guardados.');
     } catch (Throwable $e) {
@@ -947,7 +947,7 @@ require __DIR__ . '/includes/header.php';
         $scoreSaved = (string) $selectedMatch['status'] === 'finalizado' || (!$isRoundRobinMatch && array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $matchTeams)) > 0);
         $hasSavedRatings = count(array_filter($participants, static fn(array $player): bool => $player['rating'] !== null && $player['rating'] !== '')) > 0;
         $hasSavedAwards = count($savedAwards) > 0;
-        $canShareMatchSummary = $scoreSaved;
+        $canShareMatchSummary = $scoreSaved && ($hasSavedRatings || $hasSavedAwards);
         $shareSummary = $canShareMatchSummary
             ? build_match_share_summary($selectedMatch, $matchTeams, $teamLabels, $groupedTeams, $awardDefinitions, $savedAwards)
             : '';
@@ -1063,7 +1063,7 @@ require __DIR__ . '/includes/header.php';
         <section class="card finish-share-card">
           <div>
             <h3>Compartir datos</h3>
-            <p class="small-muted">Resumen con resultado, equipos y datos opcionales cargados.</p>
+            <p class="small-muted">Resumen completo con resultado, equipos, puntajes y premios cargados.</p>
           </div>
           <textarea class="sr-only" data-finish-share-text readonly><?= h($shareSummary) ?></textarea>
           <div class="btn-row finish-share-actions">
@@ -1143,8 +1143,8 @@ require __DIR__ . '/includes/header.php';
                               ? (string) max(0, (int) ($postedGoalsData[$playerId] ?? 0))
                               : (string) ((int) ($p['goals'] ?? 0));
                           $ratingValue = $detailFormError !== ''
-                              ? (string) ($postedRatingData[$playerId] ?? '')
-                              : ($p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '');
+                              ? (string) ($postedRatingData[$playerId] ?? '5')
+                              : ($p['rating'] !== null && $p['rating'] !== '' ? (string) $p['rating'] : '5');
                         ?>
                         <tr draggable="true" data-finish-player-row data-player-id="<?= $playerId ?>" data-team-number="<?= (int) $teamNumber ?>" data-position="<?= h((string) $line) ?>" data-search="<?= h(mb_strtolower((string) $p['name'] . ' ' . (string) $line . ' ' . ($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber)), 'UTF-8')) ?>">
                           <td data-label="Jugador">
@@ -1157,7 +1157,7 @@ require __DIR__ . '/includes/header.php';
                             <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>">
                           </td>
                           <td data-label="Puntuacion">
-                            <input class="finish-number-input" type="number" min="1" max="10" step="0.5" name="rating[<?= $playerId ?>]" value="<?= h($ratingValue) ?>" placeholder="Opcional">
+                            <input class="finish-number-input" type="number" min="1" max="10" step="0.5" name="rating[<?= $playerId ?>]" value="<?= h($ratingValue) ?>">
                           </td>
                         </tr>
                       <?php endforeach; ?>
