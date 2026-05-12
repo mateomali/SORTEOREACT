@@ -3831,6 +3831,10 @@
     @apply grid-cols-1;
   }
 
+  .captain-board[data-admin-editor="1"] .captain-teams-grid {
+    @apply grid-cols-1;
+  }
+
   .captain-pots {
     @apply grid-cols-1 lg:grid-cols-4;
   }
@@ -4214,84 +4218,153 @@
     @apply mt-3 w-full;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-teams-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr));
-  }
-
-  .captain-board[data-admin-editor="1"] .captain-formation-field {
-    @apply min-h-0 overflow-hidden rounded-xl p-2 pt-9;
-    aspect-ratio: 16 / 9;
+  .captain-editor-field {
+    @apply relative grid w-full overflow-hidden rounded-2xl border border-white/25 p-3 pt-10 shadow-inner;
+    min-height: clamp(360px, 52vw, 460px);
+    grid-template-rows: repeat(4, minmax(72px, 1fr));
+    gap: 8px;
     background:
       linear-gradient(rgba(5, 37, 27, 0.08), rgba(5, 37, 27, 0.18)),
       url("./images/captain-field-bg.jpg") center / cover no-repeat,
       linear-gradient(160deg, #0e7a43, #07563d);
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-line {
-    @apply mb-1.5 grid-cols-[30px_minmax(0,1fr)] gap-1 last:mb-0;
-    min-height: calc((100% - 18px) / 4);
+  .captain-editor-line {
+    @apply grid min-h-0 w-full items-center gap-1.5 overflow-visible;
+    grid-template-columns: 38px minmax(0, 1fr) 34px;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-line.has-line-tools {
-    @apply grid-cols-[30px_minmax(0,1fr)_26px];
+  .captain-editor-line-label {
+    @apply grid justify-items-center gap-0.5 text-center text-[10px] font-black leading-none text-white;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-line.has-line-tools > .line-players {
-    min-width: 0;
+  .captain-editor-line-label span {
+    @apply grid gap-0.5;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-line-label {
-    @apply text-[9px] leading-none;
+  .captain-editor-line-label strong {
+    @apply text-white;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-line-label small {
-    @apply px-1 py-0 text-[8px];
+  .captain-editor-line-label small {
+    @apply rounded bg-emerald-950/70 px-1 py-0 text-[8px] font-black text-lime-100;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-line-control {
-    @apply h-6 w-6 rounded-md text-xs;
+  .captain-editor-line-control {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/40 bg-lime-100 p-0 text-sm font-black leading-none text-emerald-950 shadow-sm transition hover:bg-lime-200 focus:outline-none focus:ring-2 focus:ring-lime-200;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-line .line-players {
-    @apply flex-nowrap justify-center gap-1;
+  .captain-editor-line-control.is-minus {
+    @apply bg-white text-emerald-950 hover:bg-lime-100;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-player {
-    @apply min-w-0 max-w-none flex-none rounded-lg px-1 py-1;
-    width: clamp(42px, 18%, 64px);
+  .captain-editor-line-control.is-plus {
+    @apply justify-self-center;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-player .player-card-rating {
-    @apply mb-0.5 h-7 w-7 rounded-md;
+  .captain-editor-line-players {
+    @apply col-start-2 flex h-full min-w-0 max-w-full flex-wrap content-center items-center justify-center gap-2 overflow-visible;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-player .player-card-rating strong {
-    @apply text-[11px];
+  .captain-editor-player {
+    @apply w-[clamp(70px,8vw,86px)] min-w-[70px] max-w-[86px] flex-none cursor-grab overflow-hidden rounded-xl border border-white/35 bg-emerald-950/75 px-1.5 py-1 text-center text-white shadow-md shadow-emerald-950/25 transition;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-player .player-card-rating span {
-    @apply text-[7px];
+  .captain-editor-player:active {
+    @apply cursor-grabbing;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-formation-player strong,
-  .captain-board[data-admin-editor="1"] .captain-formation-player span {
-    @apply text-[8px] leading-none;
+  .captain-editor-player.is-dragging {
+    @apply scale-95 opacity-50;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-player-position-icons {
+  .captain-editor-player.is-pointer-drag-ghost {
+    @apply pointer-events-none fixed z-[9999] scale-105 opacity-95 shadow-2xl ring-4 ring-amber-100;
+  }
+
+  .captain-editor-player.is-drag-over,
+  .captain-editor-line-players.is-drag-over,
+  .captain-editor-field.is-team-drag-over {
+    @apply ring-4 ring-amber-100;
+  }
+
+  .captain-editor-player.is-out-of-position {
+    @apply border-amber-200 bg-amber-300 text-emerald-950 ring-2 ring-amber-100;
+  }
+
+  .captain-editor-player .player-card-rating {
+    @apply mx-auto mb-1 grid h-9 w-9 place-items-center rounded-lg border border-white/35 bg-emerald-950/90 px-1 py-1 text-white shadow-sm;
+    grid-template-rows: 1fr auto;
+  }
+
+  .captain-editor-player .player-card-rating strong {
+    @apply text-sm font-black leading-none text-white;
+  }
+
+  .captain-editor-player .player-card-rating span {
+    @apply text-[8px] font-black leading-none text-lime-100;
+  }
+
+  .captain-editor-player > strong {
+    @apply block max-w-full truncate text-[10px] font-black leading-tight;
+  }
+
+  .captain-editor-player-meta {
+    @apply mt-0.5 block text-[9px] font-bold leading-none text-white/90;
+  }
+
+  .captain-editor-player .captain-player-position-icons {
     @apply mt-0.5 gap-0.5;
   }
 
-  .captain-board[data-admin-editor="1"] .captain-position-pill {
-    @apply px-1 py-0 text-[7px];
+  .captain-editor-player .captain-position-pill {
+    @apply rounded border px-0.5 py-0 text-[6px] font-black leading-none;
   }
 
-  .captain-board[data-admin-editor="1"] .formation-player-meta {
-    @apply mt-0.5 text-[8px] leading-none;
+  .captain-editor-penalty {
+    @apply rounded bg-amber-100 px-0.5 py-0 text-[6px] font-black not-italic text-amber-900;
   }
 
-  .captain-board[data-admin-editor="1"] .formation-penalty-badge {
-    @apply px-1 py-0 text-[7px];
+  .captain-editor-empty {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-sm font-black text-emerald-950;
+  }
+
+  .captain-editor-undo {
+    @apply absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/35 bg-emerald-950/55 p-0 text-lg font-extrabold leading-none text-white shadow-sm transition hover:bg-emerald-950/80 focus:outline-none focus:ring-2 focus:ring-lime-200 disabled:cursor-not-allowed disabled:opacity-35;
+  }
+
+  @media (max-width: 760px) {
+    .captain-editor-field {
+      @apply px-1.5 py-2 pt-9;
+      min-height: clamp(340px, 96vw, 430px);
+      gap: 6px;
+    }
+
+    .captain-editor-line {
+      @apply gap-1;
+      grid-template-columns: 30px minmax(0, 1fr) 30px;
+    }
+
+    .captain-editor-line-label {
+      @apply text-[9px];
+    }
+
+    .captain-editor-line-label small {
+      @apply px-0.5 text-[7px];
+    }
+
+    .captain-editor-line-control {
+      @apply h-7 w-7 rounded-lg text-xs;
+    }
+
+    .captain-editor-line-players {
+      @apply gap-1;
+    }
+
+    .captain-editor-player {
+      @apply min-w-[58px] max-w-[68px] px-1 py-1;
+      width: clamp(58px, 18vw, 68px);
+    }
   }
 
   .team-characteristics-card {
@@ -14069,7 +14142,7 @@ body[class*="page-"] .content :is(input[type="checkbox"], input[type="radio"]) {
   accent-color: #00a36c;
 }
 
-body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle) {
+body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.captain-editor-line-control):not(.captain-editor-undo) {
   min-height: 40px !important;
   border-radius: 11px !important;
   font-weight: 900 !important;
@@ -14087,7 +14160,7 @@ body[class*="page-"] .content :is(.btn-primary, button[type="submit"]:not(.btn-m
   background: linear-gradient(180deg, #0b5c40, #074832), #074832 !important;
 }
 
-body[class*="page-"] .content :is(.btn-muted, button[type="button"]:not(.btn-primary):not(.btn-danger):not(.btn-warning):not([class*="bg-"])) {
+body[class*="page-"] .content :is(.btn-muted, button[type="button"]:not(.btn-primary):not(.btn-danger):not(.btn-warning):not(.captain-editor-line-control):not(.captain-editor-undo):not([class*="bg-"])) {
   border-color: #cdded6 !important;
   background: #ffffff !important;
   color: #24453a !important;
@@ -14637,119 +14710,4 @@ body[class*="page-"] .content :is(.flash, .floating-form-alert) {
   body.page-estadisticas .content .stats-captains-grid .stats-compact-grid-row {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
-}
-
-/* Hard override for admin formation editor in capitanes.php.
-   This view reuses global formation classes, so keep this block last. */
-body .captain-board[data-admin-editor="1"] .captain-teams-grid {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 14px !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-admin-formation-card {
-  width: 100% !important;
-  max-width: none !important;
-  overflow: visible !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-team-list {
-  width: 100% !important;
-  max-width: none !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field.team-formation {
-  width: 100% !important;
-  min-height: 0 !important;
-  height: auto !important;
-  aspect-ratio: 16 / 9 !important;
-  overflow: hidden !important;
-  border-radius: 12px !important;
-  padding: 36px 10px 10px !important;
-  background:
-    linear-gradient(rgba(5, 37, 27, 0.08), rgba(5, 37, 27, 0.18)),
-    url("./images/captain-field-bg.jpg") center / cover no-repeat,
-    linear-gradient(160deg, #0e7a43, #07563d) !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-line {
-  display: grid !important;
-  grid-template-columns: 34px minmax(0, 1fr) 30px !important;
-  align-items: center !important;
-  gap: 6px !important;
-  min-height: 0 !important;
-  margin-bottom: 6px !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-line:last-child {
-  margin-bottom: 0 !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .line-players {
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 6px !important;
-  min-width: 0 !important;
-  overflow: visible !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-line-label {
-  color: #ffffff !important;
-  font-size: 10px !important;
-  line-height: 1 !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-line-control {
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
-  border-radius: 8px !important;
-  font-size: 13px !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-player {
-  flex: 0 1 76px !important;
-  width: 76px !important;
-  min-width: 58px !important;
-  max-width: 82px !important;
-  padding: 4px !important;
-  border-radius: 8px !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-player .player-card-rating {
-  width: 30px !important;
-  height: 30px !important;
-  margin-bottom: 2px !important;
-  border-radius: 7px !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-player .player-card-rating strong {
-  font-size: 12px !important;
-  line-height: 1 !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-player .player-card-rating span,
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-player strong,
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-formation-player span {
-  font-size: 8px !important;
-  line-height: 1.05 !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .captain-position-pill {
-  padding: 1px 3px !important;
-  font-size: 7px !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .formation-player-meta {
-  margin-top: 2px !important;
-  font-size: 8px !important;
-}
-
-body .captain-board[data-admin-editor="1"] .captain-formation-field .formation-undo-button {
-  width: 28px !important;
-  height: 28px !important;
-  right: 8px !important;
-  top: 8px !important;
 }

@@ -209,7 +209,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       const isFormationInteractionActive = () => {
         const active = document.activeElement;
         return Date.now() < formationInteractionUntil
-          || active?.closest?.('[data-captain-formation-field]')
+          || active?.closest?.('.captain-formation-field')
           || active?.closest?.('.captain-board button, .captain-board select, .captain-board input');
       };
 
@@ -236,13 +236,13 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       };
 
       board.addEventListener('pointerdown', (event) => {
-        if (event.target.closest('button, select, input, [data-drag-player-id]')) {
+        if (event.target.closest('button, select, input, .captain-formation-player')) {
           markFormationInteraction();
         }
       });
 
       board.addEventListener('focusin', (event) => {
-        if (event.target.closest('button, select, input, [data-captain-formation-field]')) {
+        if (event.target.closest('button, select, input, .captain-formation-field')) {
           markFormationInteraction();
         }
       });
@@ -785,7 +785,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         updateTeamTitles();
         teamNumbers().forEach(renderTeamNumber => {
           const teamContainer = document.getElementById(`team${renderTeamNumber}List`);
-          if (teamContainer && teamContainer.querySelector('[data-captain-formation-field]')) {
+          if (teamContainer && teamContainer.querySelector('.captain-formation-field')) {
             const players = state.teams[String(renderTeamNumber)] || state.teams[renderTeamNumber] || [];
             renderFormationLines(teamContainer, players);
             renderCustomFormationControls(teamContainer, players);
@@ -937,7 +937,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           clearFormationDragHighlights();
           if (!target) return;
           const targetCard = target.closest?.('[data-drag-player-id]');
-          const targetField = target.closest?.('[data-captain-formation-field]');
+          const targetField = target.closest?.('.captain-formation-field');
           const targetList = target.closest?.('.captain-team-list');
           if (targetCard) {
             targetCard.classList.add('is-drag-over');
@@ -990,7 +990,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       };
 
       const renderFormationLines = (container, players, options = {}) => {
-        const field = container.querySelector('[data-captain-formation-field]');
+        const field = container.querySelector('.captain-formation-field');
         if (!field) return;
         const readOnly = options.readOnly === true;
         const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
@@ -1006,18 +1006,16 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           const linePlayers = orderedFormationPlayers(teamNumber, players, pos);
           const canTuneLine = showLineControls && pos !== 'ARQ';
           const labelHtml = canTuneLine
-            ? `<div class="captain-editor-line-label has-line-controls">
+            ? `<div class="line-label captain-line-label has-line-controls">
                 <span><strong>${pos}</strong><small>${linePlayers.length}/${FORMATION_LINE_LIMITS[pos]}</small></span>
-                <button class="captain-editor-line-control is-minus" type="button" data-field-line="${pos}" data-field-line-delta="-1" aria-label="Quitar jugador de ${pos}">-</button>
-              </div>`
-            : `<div class="captain-editor-line-label"><span><strong>${pos}</strong><small>${linePlayers.length}/${FORMATION_LINE_LIMITS[pos]}</small></span></div>`;
-          const plusHtml = canTuneLine
-            ? `<button class="captain-editor-line-control is-plus" type="button" data-field-line="${pos}" data-field-line-delta="1" aria-label="Agregar jugador a ${pos}">+</button>`
-            : '';
+                <button class="captain-line-control is-minus" type="button" data-field-line="${pos}" data-field-line-delta="-1" aria-label="Quitar jugador de ${pos}">-</button>
+              </div>
+              <button class="captain-line-control is-plus" type="button" data-field-line="${pos}" data-field-line-delta="1" aria-label="Agregar jugador a ${pos}">+</button>`
+            : `<div class="line-label captain-line-label"><span><strong>${pos}</strong><small>${linePlayers.length}/${FORMATION_LINE_LIMITS[pos]}</small></span></div>`;
           return `
-            <div class="captain-editor-line">
+            <div class="formation-line captain-formation-line">
               ${labelHtml}
-              <div class="captain-editor-line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
+              <div class="line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
                 ${linePlayers.length ? linePlayers.map(player => {
                   const adjustedRating = adjustedPositionRating(player, pos);
                   const generalRating = Number(player.skill || 0);
@@ -1025,16 +1023,15 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
                   const penaltyPercent = positionPenaltyPercent(player, pos);
                   const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${pos} ${formatSkill(adjustedRating)}`;
                   return `
-                  <div class="captain-editor-player ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
+                  <div class="formation-player captain-formation-player ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
                     ${playerCardRatingHtml(adjustedRating, pos)}
                     <strong>${escapeHtml(player.name)}</strong>
                     ${playerPositionIconsHtml(player)}
-                    <span class="captain-editor-player-meta">${formatSkill(generalRating)}${penaltyPercent > 0 ? ` <em class="captain-editor-penalty">-${penaltyPercent}%</em>` : ''}</span>
+                    <span class="formation-player-meta">${formatSkill(generalRating)}${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
                   </div>
                 `;
-                }).join('') : '<span class="captain-editor-empty">-</span>'}
+                }).join('') : '<span class="formation-player empty-slot">-</span>'}
               </div>
-              ${plusHtml}
             </div>
           `;
         }).join('');
@@ -1042,7 +1039,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           return;
         }
         field.insertAdjacentHTML('afterbegin', `
-          <button class="captain-editor-undo" type="button" title="Deshacer ultimo cambio" aria-label="Deshacer ultimo cambio" data-captain-formation-undo="${teamNumber}" ${(formationUndoStacks[teamNumber] || []).length ? '' : 'disabled'}>↶</button>
+          <button class="formation-undo-button" type="button" title="Deshacer ultimo cambio" aria-label="Deshacer ultimo cambio" data-captain-formation-undo="${teamNumber}" ${(formationUndoStacks[teamNumber] || []).length ? '' : 'disabled'}>↶</button>
         `);
         field.querySelector('[data-captain-formation-undo]')?.addEventListener('click', () => {
           markFormationInteraction();
@@ -1168,7 +1165,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           <div class="captain-custom-formation" data-custom-formation-panel></div>
         </div>
         <div class="captain-formation-title" data-formation-total-title="${teamNumber}"><span>Ajustada</span><strong>${formationTotalSkill(teamNumber, players).toFixed(1)} pts</strong></div>
-        <div class="captain-editor-field" data-captain-formation-field data-drop-team="${teamNumber}"></div>
+        <div class="team-formation captain-formation-field" data-drop-team="${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
         <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar cambios</button>
@@ -1176,7 +1173,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const renderReadonlyFormation = (teamNumber, players) => `
         <div class="captain-formation-title" data-formation-total-title="${teamNumber}"><span>Base</span><strong>${teamTotalSkill(teamNumber).toFixed(1)} pts</strong></div>
-        <div class="captain-editor-field captain-editor-field-readonly" data-captain-formation-field data-drop-team="${teamNumber}" aria-label="Formacion del equipo ${teamNumber}"></div>
+        <div class="team-formation captain-formation-field captain-formation-readonly" data-drop-team="${teamNumber}" aria-label="Formacion del equipo ${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
       `;
 
