@@ -154,9 +154,11 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         const title = document.getElementById(`team${teamNumber}Title`);
         if (!title || !state?.ok) return;
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
-        const captainName = state.draft?.captains?.[teamNumber]?.name || `Equipo ${teamNumber}`;
+        const captain = state.draft?.captains?.[teamNumber] || {};
+        const captainName = captain.name || `Equipo ${teamNumber}`;
+        const shirt = captain.color_name ? ` (${captain.color_name})` : '';
         const targetSize = state.match?.target_team_size || players.length;
-        title.textContent = `Equipo ${teamNumber} - ${captainName} (${players.length}/${targetSize}) - ${defaultFormationTotalLabel(teamNumber)}`;
+        title.textContent = `Equipo ${teamNumber} - ${captainName}${shirt} (${players.length}/${targetSize}) - ${defaultFormationTotalLabel(teamNumber)}`;
       };
       const updateTeamTitles = () => {
         teamNumbers().forEach(updateTeamTitle);
@@ -188,13 +190,15 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const renderWaitingTeam = (teamNumber) => {
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
-        const captain = state.draft.captains[teamNumber]?.name || `Equipo ${teamNumber}`;
+        const captain = state.draft.captains[teamNumber] || {};
+        const captainName = captain.name || `Equipo ${teamNumber}`;
+        const shirt = captain.color_name ? ` (${captain.color_name})` : '';
         const targetSize = state.match.target_team_size || players.length;
         const title = document.getElementById(`captainWaitingTeam${teamNumber}Title`);
         const list = document.getElementById(`captainWaitingTeam${teamNumber}List`);
         if (!title || !list) return;
 
-        title.textContent = `${captain} (${players.length}/${targetSize}) - ${defaultFormationTotalLabel(teamNumber)}`;
+        title.textContent = `${captainName}${shirt} (${players.length}/${targetSize}) - ${defaultFormationTotalLabel(teamNumber)}`;
         list.innerHTML = players.length
           ? players.map(player => `<span>${escapeHtml(player.name)}</span>`).join('')
           : '<em>Sin jugadores.</em>';

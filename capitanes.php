@@ -71,6 +71,23 @@ function captain_token_for_team(array $draft, int $teamNumber): string
     return (string) ($draft['captain' . $teamNumber . '_token'] ?? '');
 }
 
+function captain_shirt_options(): array
+{
+    return ['ROSA', 'AZUL', 'NARANJA', 'NEGRO', 'VERDE', 'CAMISADO', 'DESCAMISADO'];
+}
+
+function captain_default_shirt(int $teamNumber): string
+{
+    $defaults = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO'];
+    return $defaults[$teamNumber] ?? 'VERDE';
+}
+
+function normalize_captain_shirt(string $shirt): string
+{
+    $shirt = strtoupper(trim($shirt));
+    return in_array($shirt, captain_shirt_options(), true) ? $shirt : '';
+}
+
 function stored_captain_access(PDO $pdo, int $matchId): ?array
 {
     if ($matchId <= 0) {
@@ -171,10 +188,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
     $matchForDraft = $matchId > 0 ? repo_match_by_id($matchId) : null;
     $captainCount = $matchForDraft ? (int) ($matchForDraft['num_teams'] ?? 2) : 0;
     $captains = [];
+    $captainShirts = [];
     foreach ([1, 2, 3, 4] as $teamNumber) {
         $captainId = (int) ($_POST['captain' . $teamNumber] ?? 0);
         if ($teamNumber <= $captainCount) {
             $captains[$teamNumber] = $captainId;
+            $captainShirts[$teamNumber] = normalize_captain_shirt((string) ($_POST['captain' . $teamNumber . '_color_name'] ?? ''));
         }
     }
     $participants = repo_match_participants_basic($matchId);
@@ -202,6 +221,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
             flash('error', 'Todos los capitanes deben estar dentro de los convocados.');
             redirect('capitanes.php?match_id=' . $matchId);
         }
+    }
+    $selectedShirts = array_filter(array_values($captainShirts), static fn(string $shirt): bool => $shirt !== '');
+    if (count($selectedShirts) !== $captainCount) {
+        flash('error', 'Elegí una camiseta para cada equipo.');
+        redirect('capitanes.php?match_id=' . $matchId);
+    }
+    if (count(array_unique($selectedShirts)) !== $captainCount) {
+        flash('error', 'No se puede iniciar: hay equipos con la misma camiseta.');
+        redirect('capitanes.php?match_id=' . $matchId);
     }
 
     $participantSkills = [];
@@ -236,12 +264,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
                 match_id,
                 captain1_player_id, captain2_player_id, captain3_player_id, captain4_player_id,
                 captain1_token, captain2_token, captain3_token, captain4_token,
+                captain1_color_name, captain2_color_name, captain3_color_name, captain4_color_name,
                 current_team, status, started_at
              )
              VALUES (
                 :mid,
                 :c1, :c2, :c3, :c4,
                 :t1, :t2, :t3, :t4,
+                :color1, :color2, :color3, :color4,
                 :current_team, "active", NOW()
              )'
         )->execute([
@@ -254,6 +284,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
             't2' => $tokens[2] ?? null,
             't3' => $tokens[3] ?? null,
             't4' => $tokens[4] ?? null,
+            'color1' => $captainShirts[1] ?? null,
+            'color2' => $captainShirts[2] ?? null,
+            'color3' => $captainShirts[3] ?? null,
+            'color4' => $captainShirts[4] ?? null,
             'current_team' => $firstTeam,
         ]);
         $insertPick = $pdo->prepare(
@@ -408,6 +442,14 @@ require __DIR__ . '/includes/header.php';
           <option value="">Elegir...</option>
           <?php foreach ($participants as $p): ?>
             <option value="<?= (int) $p['id'] ?>"><?= h((string) $p['name'] . ' - ' . $p['positions'] . ' - ' . skill_label((float) $p['skill'])) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Camiseta equipo <?= $teamNumber ?></label>
+        <select name="captain<?= $teamNumber ?>_color_name" required>
+          <?php foreach (captain_shirt_options() as $shirt): ?>
+            <option value="<?= h($shirt) ?>" <?= selected_attr($shirt === captain_default_shirt($teamNumber)) ?>><?= h($shirt) ?></option>
           <?php endforeach; ?>
         </select>
       </div>

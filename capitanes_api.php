@@ -578,6 +578,7 @@ function captain_state(int $matchId): array
         $captains[$teamNumber] = [
             'id' => $draft ? (int) ($draft['captain' . $teamNumber . '_player_id'] ?? 0) : 0,
             'name' => $draft ? draft_captain_name($draft, $teamNumber) : (string) ($teamLabels[$teamNumber] ?? 'Equipo ' . $teamNumber),
+            'color_name' => $draft ? trim((string) ($draft['captain' . $teamNumber . '_color_name'] ?? '')) : '',
         ];
     }
 
@@ -627,8 +628,8 @@ function finish_captain_draft(int $matchId): void
 
     $pdo->prepare('DELETE FROM match_teams WHERE match_id = :mid')->execute(['mid' => $matchId]);
     $saveTeam = $pdo->prepare(
-        'INSERT INTO match_teams (match_id, team_number, team_name, captain_player_id, total_skill, formation_name, formation_data)
-         VALUES (:mid, :team_number, :team_name, :captain_player_id, :total_skill, :formation_name, :formation_data)'
+        'INSERT INTO match_teams (match_id, team_number, team_name, captain_player_id, total_skill, formation_name, formation_data, color_name)
+         VALUES (:mid, :team_number, :team_name, :captain_player_id, :total_skill, :formation_name, :formation_data, :color_name)'
     );
     $savePlayer = $pdo->prepare(
         'UPDATE match_players
@@ -660,6 +661,7 @@ function finish_captain_draft(int $matchId): void
                 $line = $assignmentData['assignment'][(int) $p['id']] ?? primary_position($p);
                 return ['id' => (int) $p['id'], 'position' => $line];
             }, $team), JSON_UNESCAPED_UNICODE),
+            'color_name' => trim((string) ($draft['captain' . $teamNumber . '_color_name'] ?? '')),
         ]);
         $lineOrder = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
         foreach ($team as $lineupIndex => $p) {

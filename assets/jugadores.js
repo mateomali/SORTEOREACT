@@ -1293,6 +1293,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const panel = document.querySelector('[data-player-radar-panel]');
       if (panel) panel.hidden = true;
     };
+    const compactRadarSelector = '.players-desktop-table .player-radar-card-compact, .players-user-table .player-radar-card-compact';
 
     const radarPoint = (centerX, centerY, radius, index, total) => {
       const angle = (-Math.PI / 2) + (Math.PI * 2 * index / total);
@@ -1552,17 +1553,30 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     scopes.forEach((scope) => {
       syncGoalkeeperStats(scope);
       scope.querySelectorAll('[data-stat-rating-input]').forEach((input) => {
-        input.addEventListener('input', () => updateGeneralRating(scope));
-        input.addEventListener('change', () => updateGeneralRating(scope));
+        input.addEventListener('input', () => {
+          updateGeneralRating(scope);
+          renderPlayerInfoScout(scope);
+        });
+        input.addEventListener('change', () => {
+          updateGeneralRating(scope);
+          renderPlayerInfoScout(scope);
+        });
       });
       scope.querySelectorAll('input[name="positions[]"], select[name="positions[]"]').forEach((input) => {
-        input.addEventListener('change', () => syncGoalkeeperStats(scope));
+        input.addEventListener('change', () => {
+          syncGoalkeeperStats(scope);
+          renderPlayerInfoScout(scope);
+        });
+      });
+      scope.querySelectorAll('input[name="name"]').forEach((input) => {
+        input.addEventListener('input', () => renderPlayerInfoScout(scope));
+        input.addEventListener('change', () => renderPlayerInfoScout(scope));
       });
       updateGeneralRating(scope);
       renderPlayerInfoScout(scope);
     });
 
-    document.querySelectorAll('.players-user-table .player-radar-card-compact').forEach((card) => {
+    document.querySelectorAll(compactRadarSelector).forEach((card) => {
       card.setAttribute('role', 'button');
       card.setAttribute('tabindex', '0');
       card.setAttribute('aria-label', 'Ver radar ampliado');
@@ -1589,7 +1603,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         toggleStatInfo(statInfoPanel);
         return;
       }
-      const radarTrigger = event.target.closest('.players-user-table .player-radar-card-compact');
+      const radarTrigger = event.target.closest(compactRadarSelector);
       if (radarTrigger) {
         openPlayerRadarPanel(radarTrigger);
         return;

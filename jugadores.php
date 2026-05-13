@@ -126,6 +126,15 @@ function player_sort_data_attrs(array $player): string
     return $html;
 }
 
+function normalize_player_name(string $name): string
+{
+    $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
+    if (function_exists('mb_strtoupper')) {
+        return mb_strtoupper($name, 'UTF-8');
+    }
+    return strtoupper($name);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $returnAnchor = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($_POST['return_anchor'] ?? ''));
@@ -179,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save') {
         $id = (int) ($_POST['id'] ?? 0);
-        $name = trim((string) ($_POST['name'] ?? ''));
+        $name = normalize_player_name((string) ($_POST['name'] ?? ''));
         $positions = $_POST['positions'] ?? [];
         $active = isset($_POST['active']) ? 1 : 0;
         $ajax = ($_POST['ajax'] ?? '') === '1';
@@ -466,6 +475,21 @@ function player_stats_help_panel(array $statLabels, array $statHelp, array $rati
     return $html;
 }
 
+function player_scout_panel(): string
+{
+    return '<article class="rounded-xl border border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5" data-player-info-scout data-player-info-scout-collapsed="1">'
+        . '<div class="player-info-scout-head">'
+        . '<span class="mb-1 block text-[0.62rem] font-black uppercase leading-none text-emerald-700">Relato</span>'
+        . '<button class="player-info-scout-toggle" type="button" data-player-info-scout-toggle aria-expanded="false" aria-label="Expandir relato">+</button>'
+        . '</div>'
+        . '<div class="player-info-scout-content" data-player-info-scout-content>'
+        . '<h4 class="mb-2 text-sm font-black leading-tight text-emerald-950" data-player-info-scout-title>Relato del jugador</h4>'
+        . '<p class="m-0 text-sm font-semibold leading-relaxed text-slate-700" data-player-info-scout-body>-</p>'
+        . '<div class="mt-3 flex flex-wrap gap-1.5" data-player-info-scout-tags></div>'
+        . '</div>'
+        . '</article>';
+}
+
 function player_stats_radar_panel(bool $compact = false): string
 {
     $class = 'player-radar-card' . ($compact ? ' player-radar-card-compact' : '');
@@ -720,7 +744,7 @@ require __DIR__ . '/includes/header.php';
     $rowPositions = parse_positions_csv((string) $player['positions']);
   ?>
   <dialog class="player-edit-dialog <?= $isAdmin ? '' : 'player-info-dialog' ?>" data-player-edit-dialog="<?= $playerId ?>">
-    <form method="post" class="player-edit-panel <?= $isAdmin ? 'player-admin-edit-panel' : 'player-info-panel' ?>" <?= $isAdmin ? '' : 'data-player-readonly-form ' . player_scout_data_attrs($player) ?>>
+    <form method="post" class="player-edit-panel <?= $isAdmin ? 'player-admin-edit-panel' : 'player-info-panel' ?>" <?= $isAdmin ? player_scout_data_attrs($player) : 'data-player-readonly-form ' . player_scout_data_attrs($player) ?>>
       <div class="player-edit-head">
         <div>
           <h3><?= $isAdmin ? 'Editar jugador' : 'Ficha de jugador' ?></h3>
@@ -797,17 +821,7 @@ require __DIR__ . '/includes/header.php';
             </div>
           </article>
         </section>
-        <article class="rounded-xl border border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5" data-player-info-scout data-player-info-scout-collapsed="1">
-          <div class="player-info-scout-head">
-            <span class="mb-1 block text-[0.62rem] font-black uppercase leading-none text-emerald-700">Relato</span>
-            <button class="player-info-scout-toggle" type="button" data-player-info-scout-toggle aria-expanded="false" aria-label="Expandir relato">+</button>
-          </div>
-          <div class="player-info-scout-content" data-player-info-scout-content>
-            <h4 class="mb-2 text-sm font-black leading-tight text-emerald-950" data-player-info-scout-title>Relato del jugador</h4>
-            <p class="m-0 text-sm font-semibold leading-relaxed text-slate-700" data-player-info-scout-body>-</p>
-            <div class="mt-3 flex flex-wrap gap-1.5" data-player-info-scout-tags></div>
-          </div>
-        </article>
+        <?= player_scout_panel() ?>
       <?php endif; ?>
 
       <div class="form-grid player-edit-stats-grid">
@@ -827,6 +841,10 @@ require __DIR__ . '/includes/header.php';
 
       <?= player_stats_help_panel($statLabels, $statHelp, $ratingHelp, $fieldWeightHelp) ?>
 
+      <?php if ($isAdmin): ?>
+        <?= player_scout_panel() ?>
+      <?php endif; ?>
+
       <div class="btn-row player-edit-actions">
         <?php if ($isAdmin): ?>
           <button class="btn btn-primary" type="submit">Guardar cambios</button>
@@ -838,6 +856,20 @@ require __DIR__ . '/includes/header.php';
     </form>
   </dialog>
 <?php endforeach; ?>
+
+<div class="player-radar-floating-panel" data-player-radar-panel hidden>
+  <section class="player-radar-floating-card" role="dialog" aria-modal="true" aria-labelledby="playerRadarPanelTitle">
+    <div class="player-radar-floating-head">
+      <div>
+        <span>Radar ampliado</span>
+        <h3 id="playerRadarPanelTitle" data-player-radar-title>Jugador</h3>
+      </div>
+      <button class="btn btn-muted player-icon-button" type="button" data-player-radar-close aria-label="Cerrar radar">X</button>
+    </div>
+    <div class="player-radar-large-canvas" data-player-radar-large-canvas></div>
+    <div class="player-radar-floating-stats" data-player-radar-stats></div>
+  </section>
+</div>
 
 <span hidden data-player-ajax-token="<?= $isAdmin ? h(player_ajax_token()) : '' ?>"></span>
 <script src="assets/jugadores.js"></script>
