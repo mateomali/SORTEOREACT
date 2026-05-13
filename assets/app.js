@@ -2059,6 +2059,7 @@
         const value = !collapsed && isActiveItem ? '-' : '+';
         if (symbol) {
           symbol.textContent = value;
+          symbol.dataset.matchDetailIcon = value === '-' ? 'collapse' : 'expand';
           return;
         }
         label.textContent = `${value} Detalles`;
@@ -2067,6 +2068,7 @@
         const symbol = toggle.querySelector('[data-match-detail-symbol]');
         if (symbol) {
           symbol.textContent = collapsed ? '+' : '-';
+          symbol.dataset.matchDetailIcon = collapsed ? 'expand' : 'collapse';
         }
         toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
       });

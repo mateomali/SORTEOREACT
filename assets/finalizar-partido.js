@@ -62,3 +62,15 @@
     flashButton(event.currentTarget, 'Copiado');
   });
 })();
+
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('edit_formations') !== '1') return;
+
+  const panel = document.getElementById('formaciones');
+  if (!panel) return;
+
+  window.requestAnimationFrame(() => {
+    panel.scrollIntoView({ block: 'start', behavior: params.get('formation_saved') === '1' ? 'auto' : 'smooth' });
+  });
+})();

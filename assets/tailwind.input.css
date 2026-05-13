@@ -2402,7 +2402,36 @@
   }
 
   .match-detail-toggle-symbol {
-    @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-extrabold leading-none text-white;
+    @apply relative inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .match-detail-toggle-symbol::before,
+  .match-detail-toggle-symbol::after {
+    content: "";
+    position: absolute;
+    display: block;
+    border-radius: 999px;
+    background: currentColor;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+
+  .match-detail-toggle-symbol::before {
+    width: 10px;
+    height: 2px;
+  }
+
+  .match-detail-toggle-symbol::after {
+    width: 2px;
+    height: 10px;
+  }
+
+  .match-detail-toggle-symbol[data-match-detail-icon="collapse"]::after,
+  .match-detail-toggle-btn[aria-expanded="true"] .match-detail-toggle-symbol::after,
+  .history-match-accordion[open] .history-match-toggle .match-detail-toggle-symbol::after {
+    opacity: 0;
+    transform: scaleY(0);
   }
 
   .btn-primary .match-detail-toggle-symbol {
@@ -5039,6 +5068,74 @@
 
   .finish-rating-team h4 .team-label-with-heart {
     @apply min-w-0 font-extrabold;
+  }
+
+  .finish-formation-editor {
+    @apply mb-3 border-emerald-200 bg-white;
+  }
+
+  .finish-formation-head {
+    @apply flex flex-wrap items-start justify-between gap-3 border-b border-emerald-100 p-4;
+  }
+
+  .finish-formation-head h3 {
+    @apply m-0;
+  }
+
+  .finish-formation-grid {
+    @apply grid gap-3 p-3 xl:grid-cols-2;
+  }
+
+  .finish-formation-team {
+    @apply overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/35;
+  }
+
+  .finish-formation-team header {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-white px-4 py-3;
+  }
+
+  .finish-formation-team header small {
+    @apply block text-xs font-extrabold uppercase text-emerald-700;
+  }
+
+  .finish-formation-team h4 {
+    @apply m-0 flex min-w-0 text-base font-extrabold text-emerald-950;
+  }
+
+  .finish-formation-shirt {
+    @apply grid min-w-44 gap-1 text-xs font-extrabold uppercase text-slate-600;
+  }
+
+  .finish-formation-shirt select,
+  .finish-formation-table select {
+    @apply min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-extrabold text-emerald-950 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200;
+  }
+
+  .finish-formation-table-wrap {
+    @apply m-0 border-0 bg-transparent shadow-none;
+  }
+
+  .finish-formation-table {
+    @apply bg-transparent;
+  }
+
+  .finish-formation-table th:nth-child(2),
+  .finish-formation-table th:nth-child(3),
+  .finish-formation-table td:nth-child(2),
+  .finish-formation-table td:nth-child(3) {
+    @apply w-auto min-w-36 text-left;
+  }
+
+  .finish-formation-table td:first-child {
+    @apply min-w-44;
+  }
+
+  .finish-formation-table td strong {
+    @apply text-emerald-950;
+  }
+
+  .finish-formation-actions {
+    @apply justify-center border-t border-emerald-100 p-4 pt-3;
   }
 
   [data-finish-player-row] {

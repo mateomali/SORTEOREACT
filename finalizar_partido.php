@@ -135,6 +135,127 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
     return trim(implode("\n", $lines));
 }
 
+function finish_shirt_options(): array
+{
+    return ['ROSA', 'AZUL', 'NARANJA', 'NEGRO', 'VERDE', 'CAMISADO', 'DESCAMISADO'];
+}
+
+function finish_default_team_shirt(int $teamNumber): string
+{
+    $defaults = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO', 5 => 'VERDE'];
+    return $defaults[$teamNumber] ?? 'CAMISADO';
+}
+
+function finish_normalize_shirt(mixed $value, int $teamNumber): string
+{
+    $shirt = strtoupper(trim((string) $value));
+    return in_array($shirt, finish_shirt_options(), true) ? $shirt : finish_default_team_shirt($teamNumber);
+}
+
+function finish_player_position(array $player): string
+{
+    $position = strtoupper(trim((string) ($player['assigned_position'] ?? '')));
+    if (in_array($position, allowed_positions(), true)) {
+        return $position;
+    }
+    return player_primary_position($player);
+}
+
+function finish_save_match_formations(int $matchId, array $participants, array $teams, array $teamColorData, array $teamAssignments, array $positionAssignments): void
+{
+    $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], $teams);
+    $teamNumberSet = array_flip($teamNumbers);
+    $allowedPositions = allowed_positions();
+    $formationRows = [];
+
+    foreach ($participants as $player) {
+        if ($player['team_number'] === null) {
+            continue;
+        }
+        $playerId = (int) $player['id'];
+        $teamNumber = (int) ($teamAssignments[$playerId] ?? $player['team_number']);
+        if (!isset($teamNumberSet[$teamNumber])) {
+            throw new RuntimeException('Hay una asignacion de equipo invalida.');
+        }
+        $position = strtoupper(trim((string) ($positionAssignments[$playerId] ?? finish_player_position($player))));
+        if (!in_array($position, $allowedPositions, true)) {
+            throw new RuntimeException('Hay una posicion invalida en la formacion.');
+        }
+        $formationRows[] = [
+            'id' => $playerId,
+            'team_number' => $teamNumber,
+            'position' => $position,
+            'skill' => (float) ($player['skill'] ?? 0),
+        ];
+    }
+
+    if (!$formationRows) {
+        throw new RuntimeException('No hay jugadores asignados para guardar la formacion.');
+    }
+
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $lineOrder = [];
+        $lineupOrder = [];
+        $updateAssignment = $pdo->prepare(
+            'UPDATE match_players
+             SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
+                 lineup_order = :lineup_order, formation_line_order = :formation_line_order
+             WHERE match_id = :mid AND player_id = :pid'
+        );
+        foreach ($formationRows as $row) {
+            $teamNumber = (int) $row['team_number'];
+            $position = (string) $row['position'];
+            $lineOrder[$teamNumber] = $lineOrder[$teamNumber] ?? ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $lineupOrder[$teamNumber] = ($lineupOrder[$teamNumber] ?? 0) + 1;
+            $lineOrder[$teamNumber][$position]++;
+            $updateAssignment->execute([
+                'mid' => $matchId,
+                'pid' => (int) $row['id'],
+                'team_number' => $teamNumber,
+                'assigned_position' => $position,
+                'is_goalkeeper' => $position === 'ARQ' ? 1 : 0,
+                'lineup_order' => $lineupOrder[$teamNumber],
+                'formation_line_order' => $lineOrder[$teamNumber][$position],
+            ]);
+        }
+
+        $updateTeamFormation = $pdo->prepare(
+            'UPDATE match_teams
+             SET color_name = :color_name, total_skill = :total_skill, formation_name = :formation_name, formation_data = :formation_data, updated_at = NOW()
+             WHERE match_id = :mid AND team_number = :team_number'
+        );
+        foreach ($teamNumbers as $teamNumber) {
+            $teamRows = array_values(array_filter($formationRows, static fn(array $row): bool => (int) $row['team_number'] === (int) $teamNumber));
+            $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $totalSkill = 0.0;
+            foreach ($teamRows as $row) {
+                $counts[(string) $row['position']]++;
+                $totalSkill += (float) $row['skill'];
+            }
+            $updateTeamFormation->execute([
+                'mid' => $matchId,
+                'team_number' => $teamNumber,
+                'color_name' => finish_normalize_shirt($teamColorData[$teamNumber] ?? '', $teamNumber),
+                'total_skill' => $totalSkill,
+                'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]),
+                'formation_data' => json_encode(array_map(static fn(array $row): array => [
+                    'id' => (int) $row['id'],
+                    'position' => (string) $row['position'],
+                ], $teamRows), JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
 function ensure_round_robin_results_schema(): void
 {
     $pdo = db();
@@ -466,6 +587,44 @@ function render_round_robin_winner_panel(array $winner, array $teamLabels): stri
     </div>
     <?php
     return (string) ob_get_clean();
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_formations') {
+    $matchId = (int) ($_POST['match_id'] ?? 0);
+    $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
+    if (!$match) {
+        flash('error', 'Fecha invalida.');
+        redirect('finalizar_partido.php');
+    }
+    if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
+        flash('error', 'Solo se pueden editar formaciones de una fecha con equipos ya formados.');
+        redirect('finalizar_partido.php?match_id=' . $matchId);
+    }
+
+    $participants = repo_match_participants($matchId);
+    $teams = repo_match_teams($matchId);
+    $assignedCount = 0;
+    foreach ($participants as $player) {
+        if ($player['team_number'] !== null) {
+            $assignedCount++;
+        }
+    }
+    if (!$participants || $assignedCount !== count($participants) || count($teams) !== (int) $match['num_teams']) {
+        flash('error', 'La fecha no tiene todos los jugadores asignados a equipos.');
+        redirect('finalizar_partido.php?match_id=' . $matchId);
+    }
+
+    $teamColorData = is_array($_POST['team_color'] ?? null) ? $_POST['team_color'] : [];
+    $teamAssignments = is_array($_POST['player_team'] ?? null) ? $_POST['player_team'] : [];
+    $positionAssignments = is_array($_POST['player_position'] ?? null) ? $_POST['player_position'] : [];
+
+    try {
+        finish_save_match_formations($matchId, $participants, $teams, $teamColorData, $teamAssignments, $positionAssignments);
+        flash('success', 'Formaciones y camisetas guardadas.');
+    } catch (Throwable $e) {
+        flash('error', 'No se pudieron guardar las formaciones: ' . $e->getMessage());
+    }
+    redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_formations=1&formation_saved=1#formaciones');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_result') {
@@ -890,6 +1049,7 @@ $awardDescriptions = award_descriptions();
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
 $valuationsLocked = $selectedMatch ? valuations_locked_after_deadline($selectedMatch) : false;
 $editDetails = !$valuationsLocked && ($forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1'));
+$editFormations = isset($_GET['edit_formations']) && $_GET['edit_formations'] === '1';
 $backUrl = 'editar_partidos.php';
 $referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
 if ($referer !== '') {
@@ -1025,6 +1185,9 @@ require __DIR__ . '/includes/header.php';
               <?php if ($scoreSaved && !$valuationsLocked): ?>
                 <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
               <?php endif; ?>
+              <?php if ($scoreSaved): ?>
+                <a class="btn <?= $editFormations ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_formations=<?= $editFormations ? '0' : '1' ?><?= $editFormations ? '' : '#formaciones' ?>" title="<?= $editFormations ? 'Ocultar formaciones y camisetas' : 'Editar formaciones y camisetas' ?>"><span class="finish-edit-icon"><?= $editFormations ? '-' : '+' ?></span><span><?= $editFormations ? 'Ocultar formaciones' : 'Ver formaciones' ?></span></a>
+              <?php endif; ?>
             </div>
           </form>
           </details>
@@ -1056,6 +1219,9 @@ require __DIR__ . '/includes/header.php';
               <?php else: ?>
                 <span class="btn btn-disabled finish-edit-btn" title="Guarda el resultado para habilitar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></span>
               <?php endif; ?>
+              <?php if ($scoreSaved): ?>
+                <a class="btn <?= $editFormations ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_formations=<?= $editFormations ? '0' : '1' ?><?= $editFormations ? '' : '#formaciones' ?>" title="<?= $editFormations ? 'Ocultar formaciones y camisetas' : 'Editar formaciones y camisetas' ?>"><span class="finish-edit-icon"><?= $editFormations ? '-' : '+' ?></span><span><?= $editFormations ? 'Ocultar formaciones' : 'Ver formaciones' ?></span></a>
+              <?php endif; ?>
             </div>
           </form>
           </div>
@@ -1078,6 +1244,103 @@ require __DIR__ . '/includes/header.php';
 
       <?php if ($scoreSaved && $valuationsLocked): ?>
         <p class="flash flash-info">Las valoraciones quedaron bloqueadas porque pasaron mas de 7 dias desde la finalizacion de la fecha.</p>
+      <?php endif; ?>
+
+      <?php if ($scoreSaved && $editFormations): ?>
+        <?php
+          $shirtOptions = finish_shirt_options();
+          $teamPlayerRows = [];
+          foreach ($matchTeams as $team) {
+              $teamPlayerRows[(int) $team['team_number']] = [];
+          }
+          foreach ($groupedTeams as $teamNumber => $lines) {
+              foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+                  foreach ($lines[$line] as $player) {
+                      $teamPlayerRows[(int) $teamNumber][] = $player;
+                  }
+              }
+          }
+        ?>
+        <form method="post" id="formaciones" class="card finish-formation-editor" data-no-partial>
+          <input type="hidden" name="action" value="save_formations">
+          <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+          <div class="finish-formation-head">
+            <div>
+              <h3>Formaciones y camisetas</h3>
+              <p class="small-muted">Ajusta como quedo parado cada equipo y que camiseta uso en este partido.</p>
+            </div>
+            <button class="btn btn-primary" type="submit" name="action" value="save_formations" data-confirm="Guardar formaciones y camisetas de esta fecha?">Guardar formaciones</button>
+          </div>
+          <div class="finish-formation-grid">
+            <?php foreach ($matchTeams as $team): ?>
+              <?php
+                $teamNumber = (int) $team['team_number'];
+                $currentShirt = finish_normalize_shirt($team['color_name'] ?? '', $teamNumber);
+                $teamRows = $teamPlayerRows[$teamNumber] ?? [];
+              ?>
+              <article class="finish-formation-team">
+                <header>
+                  <div>
+                    <small>Equipo <?= $teamNumber ?></small>
+                    <h4><?= finish_render_team_label($teamLabels[$teamNumber] ?? ('Equipo ' . $teamNumber)) ?></h4>
+                  </div>
+                  <label class="finish-formation-shirt">
+                    <span>Camiseta</span>
+                    <select name="team_color[<?= $teamNumber ?>]" aria-label="Camiseta del equipo <?= $teamNumber ?>">
+                      <?php foreach ($shirtOptions as $shirt): ?>
+                        <option value="<?= h($shirt) ?>" <?= selected_attr($currentShirt === $shirt) ?>><?= h($shirt) ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  </label>
+                </header>
+                <div class="table-wrap finish-formation-table-wrap">
+                  <table class="finish-table finish-formation-table">
+                    <thead>
+                      <tr>
+                        <th>Jugador</th>
+                        <th>Equipo</th>
+                        <th>Linea</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($teamRows as $player): ?>
+                        <?php
+                          $playerId = (int) $player['id'];
+                          $currentTeam = (int) ($player['team_number'] ?? $teamNumber);
+                          $currentPosition = finish_player_position($player);
+                        ?>
+                        <tr>
+                          <td data-label="Jugador">
+                            <strong><?= h((string) $player['name']) ?></strong>
+                            <small><?= h((string) ($player['positions'] ?? '')) ?></small>
+                          </td>
+                          <td data-label="Equipo">
+                            <select name="player_team[<?= $playerId ?>]" aria-label="Equipo de <?= h((string) $player['name']) ?>">
+                              <?php foreach ($matchTeams as $targetTeam): ?>
+                                <?php $targetTeamNumber = (int) $targetTeam['team_number']; ?>
+                                <option value="<?= $targetTeamNumber ?>" <?= selected_attr($currentTeam === $targetTeamNumber) ?>><?= h($teamLabels[$targetTeamNumber] ?? ('Equipo ' . $targetTeamNumber)) ?></option>
+                              <?php endforeach; ?>
+                            </select>
+                          </td>
+                          <td data-label="Linea">
+                            <select name="player_position[<?= $playerId ?>]" aria-label="Linea de <?= h((string) $player['name']) ?>">
+                              <?php foreach (allowed_positions() as $position): ?>
+                                <option value="<?= h($position) ?>" <?= selected_attr($currentPosition === $position) ?>><?= h($position) ?></option>
+                              <?php endforeach; ?>
+                            </select>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+          <div class="btn-row finish-formation-actions">
+            <button class="btn btn-primary" type="submit" name="action" value="save_formations" data-confirm="Guardar formaciones y camisetas de esta fecha?">Guardar formaciones</button>
+          </div>
+        </form>
       <?php endif; ?>
 
       <?php if ($scoreSaved && $editDetails): ?>
