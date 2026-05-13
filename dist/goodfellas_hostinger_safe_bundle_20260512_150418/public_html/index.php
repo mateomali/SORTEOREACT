@@ -222,8 +222,7 @@ if (!$selectedMatch && $matches) {
 
 $latestFinalizedMatch = null;
 foreach ($historyMatches as $historyMatch) {
-    $historyTeams = $historyTeamsByMatch[(int) ($historyMatch['id'] ?? 0)] ?? [];
-    if (repo_match_has_saved_result($historyMatch, $historyTeams)) {
+    if ((string) ($historyMatch['status'] ?? '') === 'finalizado') {
         $latestFinalizedMatch = $historyMatch;
         break;
     }
@@ -417,7 +416,7 @@ function team_color_from_label(string $label): string
     }
 
     $color = mb_strtoupper(trim($matches[1]), 'UTF-8');
-    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA', 'CAMISADO', 'DESCAMISADO'];
+    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA'];
     return in_array($color, $knownColors, true) ? $color : '';
 }
 
@@ -429,8 +428,6 @@ function team_heart_color(string $color): string
         'VERDE' => '#16a34a',
         'NEGRO' => '#111827',
         'NARANJA' => '#f97316',
-        'CAMISADO' => '#f8fafc',
-        'DESCAMISADO' => '#d6d3d1',
         'BLANCO' => '#f8fafc',
         default => '#047857',
     };
@@ -512,8 +509,6 @@ function history_team_label_short(array $match, array $team, array $captainNames
         'VERDE' => '💚',
         'NEGRO' => '🖤',
         'NARANJA' => '🧡',
-        'CAMISADO' => 'C',
-        'DESCAMISADO' => 'D',
     ];
     $normalizedColor = mb_strtoupper($color, 'UTF-8');
     if (isset($heartByColor[$normalizedColor])) {
@@ -1044,9 +1039,8 @@ require __DIR__ . '/includes/header.php';
     $headerParticipantsCount = isset($headerMatch['participants_count'])
         ? (int) $headerMatch['participants_count']
         : count(repo_match_participants((int) $headerMatch['id']));
-    $headerHasSavedResult = repo_match_has_saved_result($headerMatch, $headerTeams);
     $headerHasCaptains = (string) ($headerMatch['draw_mode'] ?? '') === 'captains'
-        && !$headerHasSavedResult;
+        && (string) ($headerMatch['status'] ?? '') !== 'finalizado';
     $headerCaptainDraftStatus = '';
     if ($headerHasCaptains) {
         $stmtHeaderDraft = $pdo->prepare('SELECT status FROM captain_drafts WHERE match_id = :mid LIMIT 1');
@@ -1074,7 +1068,6 @@ require __DIR__ . '/includes/header.php';
         && !($headerShowCaptainLive && (int) $selectedMatchId === (int) $headerMatch['id']);
     multiple_draw_finalize_if_due($headerMatch);
     $headerMatch = repo_match_by_id((int) $headerMatch['id']) ?: $headerMatch;
-    $headerHasSavedResult = repo_match_has_saved_result($headerMatch, $headerTeams);
     $headerMultiDrawOptions = multiple_draw_options((int) $headerMatch['id']);
     $headerMultiDrawWinnerId = (int) ($headerMatch['multi_draw_winner_option_id'] ?? 0);
     $headerShowMultiDrawVote = $headerMultiDrawOptions
@@ -1085,9 +1078,9 @@ require __DIR__ . '/includes/header.php';
     $headerMultiDrawDeadline = multiple_draw_deadline($headerMatch);
     $headerMultiDrawParticipantCount = count(multiple_draw_participant_ids((int) $headerMatch['id']));
   ?>
-  <section class="card home-next-card <?= $headerHasSavedResult ? 'home-next-card-with-result' : ($headerHasCaptains ? 'home-next-card-with-captain' : '') ?>">
+  <section class="card home-next-card <?= (string) $headerMatch['status'] === 'finalizado' ? 'home-next-card-with-result' : ($headerHasCaptains ? 'home-next-card-with-captain' : '') ?>">
     <div class="home-next-main">
-      <span class="home-kicker"><?= $headerHasSavedResult ? 'Datos de la ultima fecha jugada' : 'Proxima fecha' ?></span>
+      <span class="home-kicker"><?= (string) $headerMatch['status'] === 'finalizado' ? 'Datos de la ultima fecha jugada' : 'Proxima fecha' ?></span>
       <h2><?= h((string) ($headerMatch['title'] ?: ('Fecha #' . $headerMatch['id']))) ?></h2>
       <p class="small-muted">
         Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $headerMatch['match_date']))) ?>
@@ -1095,7 +1088,7 @@ require __DIR__ . '/includes/header.php';
         | <?= h(match_status_label((string) $headerMatch['status'])) ?>
       </p>
     </div>
-    <?php if ($headerHasSavedResult): ?>
+    <?php if ((string) $headerMatch['status'] === 'finalizado'): ?>
       <div class="home-result-line">
         <span>Resultado</span>
         <?= render_match_scoreboard($headerGoals, $headerTeamLabels) ?>

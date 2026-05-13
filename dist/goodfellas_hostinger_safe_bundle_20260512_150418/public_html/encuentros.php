@@ -44,7 +44,7 @@ function clear_match_draw_data(PDO $pdo, int $matchId): void
     )->execute(['mid' => $matchId]);
     $pdo->prepare(
         'UPDATE matches
-         SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, result_saved_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
+         SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
          WHERE id = :mid'
     )->execute(['mid' => $matchId]);
 }
@@ -808,8 +808,6 @@ function admin_history_team_label(array $match, array $team, array $captainNames
         'VERDE' => 'ðŸ’š',
         'NEGRO' => 'ðŸ–¤',
         'NARANJA' => 'ðŸ§¡',
-        'CAMISADO' => 'C',
-        'DESCAMISADO' => 'D',
     ];
     $normalizedColor = mb_strtoupper($color, 'UTF-8');
     if (isset($heartByColor[$normalizedColor])) {
@@ -826,7 +824,11 @@ function admin_history_match_score_line(array $match, array $teams, array $capta
         return '';
     }
 
-    $showGoals = count($teams) === 2 && repo_match_has_saved_result($match, $teams);
+    $showGoals = count($teams) === 2
+        && (
+            (string) ($match['status'] ?? '') === 'finalizado'
+            || array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams)) > 0
+        );
 
     $parts = [];
     foreach ($teams as $team) {
@@ -844,7 +846,7 @@ function admin_team_color_from_label(string $label): string
     }
 
     $color = mb_strtoupper(trim($matches[1]), 'UTF-8');
-    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA', 'CAMISADO', 'DESCAMISADO'];
+    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA'];
     return in_array($color, $knownColors, true) ? $color : '';
 }
 
@@ -856,8 +858,6 @@ function admin_team_heart_color(string $color): string
         'VERDE' => '#16a34a',
         'NEGRO' => '#111827',
         'NARANJA' => '#f97316',
-        'CAMISADO' => '#f8fafc',
-        'DESCAMISADO' => '#d6d3d1',
         default => '#047857',
     };
 }
@@ -910,9 +910,6 @@ function admin_history_team_scoreboard_label(array $match, array $team, array $c
 function admin_render_match_scoreboard(array $match, array $teams, array $captainNames): string
 {
     if (!$teams) {
-        return '';
-    }
-    if (!repo_match_has_saved_result($match, $teams)) {
         return '';
     }
 
@@ -1361,15 +1358,13 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
       <?php
         $latestId = (int) $latestMatch['id'];
         $latestIsScheduled = (string) $latestMatch['status'] === 'programado';
-        $latestTeams = $historyTeamsByMatch[$latestId] ?? [];
-        $latestHasSavedResult = repo_match_has_saved_result($latestMatch, $latestTeams);
-        $latestCanFinalize = (string) $latestMatch['status'] === 'sorteado'
-            || ((string) $latestMatch['status'] === 'finalizado' && !$latestHasSavedResult);
-        $latestIsFinalized = $latestHasSavedResult;
+        $latestCanFinalize = (string) $latestMatch['status'] === 'sorteado';
+        $latestIsFinalized = (string) $latestMatch['status'] === 'finalizado';
         $latestCanEditCaptainFormation = $latestCanFinalize;
         $latestPlayersPerTeam = (int) ($latestMatch['players_per_team'] ?? ((int) $latestMatch['participants_count'] / max(1, (int) $latestMatch['num_teams'])));
         $latestExpectedPlayers = (int) $latestMatch['num_teams'] * max(1, $latestPlayersPerTeam);
         $latestParticipantsCount = (int) $latestMatch['participants_count'];
+        $latestTeams = $historyTeamsByMatch[$latestId] ?? [];
         $latestScoreboard = admin_render_match_scoreboard($latestMatch, $latestTeams, $historyCaptainNames);
       ?>
       <article class="encounter-latest-card" style="<?= h($encounterLatestStyle) ?>">
@@ -1419,20 +1414,18 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
     <div class="encounter-card-grid" data-encounter-current-page="<?= h((string) $currentPage) ?>">
       <?php foreach ($matches as $matchIndex => $m): ?>
         <?php
-          $matchId = (int) $m['id'];
-          $historyTeams = $historyTeamsByMatch[$matchId] ?? [];
-          $hasSavedResult = repo_match_has_saved_result($m, $historyTeams);
-          $canFinalize = (string) $m['status'] === 'sorteado'
-              || ((string) $m['status'] === 'finalizado' && !$hasSavedResult);
-          $isFinalized = $hasSavedResult;
+          $canFinalize = (string) $m['status'] === 'sorteado';
+          $isFinalized = (string) $m['status'] === 'finalizado';
           $isScheduled = (string) $m['status'] === 'programado';
           $canEditCaptainFormation = $canFinalize;
+          $matchId = (int) $m['id'];
           $cardPage = intdiv($matchIndex, $matchesPerPage) + 1;
           $participantsCount = (int) $m['participants_count'];
           $ratingStatus = $historyRatingCounts[$matchId] ?? ['player_count' => $participantsCount, 'rated_count' => 0];
           $missingAwards = $isFinalized && (($historyAwardCounts[$matchId] ?? 0) === 0);
           $missingRating = $isFinalized && (int) $ratingStatus['player_count'] > 0 && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
           $statusClass = $isFinalized ? 'done' : ($canFinalize ? 'ready' : 'warn');
+          $historyTeams = $historyTeamsByMatch[$matchId] ?? [];
           $historyScoreboard = admin_render_match_scoreboard($m, $historyTeams, $historyCaptainNames);
           $matchCourt = $rentalCourtsById[(int) ($m['rental_court_id'] ?? 0)] ?? null;
           $matchCourtLabel = admin_rental_court_label($matchCourt);

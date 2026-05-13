@@ -2701,8 +2701,6 @@
       { name: 'NARANJA', className: 'manual-team-naranja' },
       { name: 'NEGRO', className: 'manual-team-negro' },
       { name: 'VERDE', className: 'manual-team-verde' },
-      { name: 'CAMISADO', className: 'manual-team-camisado' },
-      { name: 'DESCAMISADO', className: 'manual-team-descamisado' },
     ];
     const selectedTeamColors = Array.from({ length: numTeams }, (_, index) => teamColors[index % teamColors.length].name);
     const assignments = new Map(players.map((player) => [String(player.id), {

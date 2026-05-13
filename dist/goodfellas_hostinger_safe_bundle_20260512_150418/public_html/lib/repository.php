@@ -112,25 +112,6 @@ function repo_match_teams(int $matchId): array
     return $stmt->fetchAll();
 }
 
-function repo_match_has_saved_result(array $match, array $matchTeams): bool
-{
-    if (trim((string) ($match['result_saved_at'] ?? '')) !== '') {
-        return true;
-    }
-
-    if ((string) ($match['status'] ?? '') !== 'finalizado') {
-        return false;
-    }
-
-    foreach ($matchTeams as $team) {
-        if ((int) ($team['goals'] ?? 0) > 0) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 function repo_match_team_labels(array $match, array $matchTeams): array
 {
     $labels = [];

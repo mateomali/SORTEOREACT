@@ -27,7 +27,6 @@ if (!is_admin()) {
 
 try {
     $pdo = db();
-    ensure_control_schema();
     ensure_match_awards_schema();
     ensure_round_robin_results_schema();
     ensure_round_robin_settings_schema();
@@ -241,7 +240,7 @@ function finish_team_color_from_label(string $label): string
     }
 
     $color = mb_strtoupper(trim($matches[1]), 'UTF-8');
-    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA', 'CAMISADO', 'DESCAMISADO'];
+    $knownColors = ['ROSA', 'AZUL', 'VERDE', 'NEGRO', 'NARANJA'];
     return in_array($color, $knownColors, true) ? $color : '';
 }
 
@@ -253,8 +252,6 @@ function finish_team_heart_color(string $color): string
         'VERDE' => '#16a34a',
         'NEGRO' => '#111827',
         'NARANJA' => '#f97316',
-        'CAMISADO' => '#f8fafc',
-        'DESCAMISADO' => '#d6d3d1',
         default => '#047857',
     };
 }
@@ -693,7 +690,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             }
             repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
 
-            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = NOW(), result_saved_at = COALESCE(result_saved_at, NOW()) WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = NOW() WHERE id = :id');
             $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
 
             $pdo->commit();
@@ -750,7 +747,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                 'goals' => max(0, (int) ($teamGoalsData[$teamNumber] ?? 0)),
             ]);
         }
-        $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW() WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()) WHERE id = :id');
         $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         $pdo->commit();
         flash('success', 'Resultado guardado. Fecha finalizada.');
@@ -836,7 +833,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
                     'goals' => (int) $row['gf'],
                 ]);
             }
-            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW() WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()) WHERE id = :id');
             $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         }
 
@@ -947,7 +944,7 @@ require __DIR__ . '/includes/header.php';
         $roundRobinHasScores = $roundRobinPlayedCount > 0;
         $roundRobinComplete = $isRoundRobinMatch && $roundRobinPlayedCount === count($roundRobinFixtures);
         $roundRobinTable = $isRoundRobinMatch ? calculate_round_robin_table($matchTeams, $roundRobinFixtures, $roundRobinScores) : [];
-        $scoreSaved = repo_match_has_saved_result($selectedMatch, $matchTeams);
+        $scoreSaved = (string) $selectedMatch['status'] === 'finalizado' || (!$isRoundRobinMatch && array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $matchTeams)) > 0);
         $hasSavedRatings = count(array_filter($participants, static fn(array $player): bool => $player['rating'] !== null && $player['rating'] !== '')) > 0;
         $hasSavedAwards = count($savedAwards) > 0;
         $canShareMatchSummary = $scoreSaved;
@@ -1048,7 +1045,7 @@ require __DIR__ . '/includes/header.php';
               <?php endforeach; ?>
             </div>
             <div class="btn-row finish-score-actions">
-              <button class="btn btn-primary" type="submit" name="action" value="save_score" data-confirm="Guardar este resultado?">Guardar resultado</button>
+              <button class="btn btn-primary" type="submit" data-confirm="Guardar este resultado?">Guardar resultado</button>
               <?php if ($scoreSaved && !$valuationsLocked): ?>
                 <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
               <?php elseif ($scoreSaved && $valuationsLocked): ?>

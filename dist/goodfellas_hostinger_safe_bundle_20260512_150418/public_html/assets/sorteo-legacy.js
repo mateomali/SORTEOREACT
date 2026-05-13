@@ -59,9 +59,7 @@ var TEAM_COLOR_OPTIONS = [
   { name: "AZUL", class: "team-azul" },
   { name: "NARANJA", class: "team-naranja" },
   { name: "NEGRO", class: "team-negro" },
-  { name: "VERDE", class: "team-verde" },
-  { name: "CAMISADO", class: "team-camisado" },
-  { name: "DESCAMISADO", class: "team-descamisado" }
+  { name: "VERDE", class: "team-verde" }
 ];
 var teamColorMapping = TEAM_COLOR_OPTIONS.map(option => ({ ...option }));
 
@@ -98,8 +96,6 @@ function getTeamColorHeart(colorName) {
     NEGRO: '🖤',
     NARANJA: '🧡'
   };
-  hearts.CAMISADO = 'C';
-  hearts.DESCAMISADO = 'D';
   return hearts[String(colorName || '').trim().toUpperCase()] || '';
 }
 

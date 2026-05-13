@@ -404,20 +404,18 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
     $tone = $rating <= 2 ? 'low' : ($rating <= 3 ? 'medium' : ($rating <= 4 ? 'good' : 'elite'));
     $html = '<div class="' . $classes . '" data-stat-rating data-stat-rating-tone="' . h($tone) . '"' . $readonlyAttr . '>';
     $html .= '<input type="hidden" name="' . h($name) . '" value="' . $rating . '"' . $formAttr . ' data-stat-rating-input>';
-    $starsClass = 'stat-rating-stars inline-flex shrink-0 items-center gap-0.5 leading-none' . ($compact ? ' col-start-1 row-start-1 min-w-0' : '');
-    $html .= '<div class="' . $starsClass . '" role="radiogroup" aria-label="' . h($name) . '">';
+    $html .= '<div class="stat-rating-stars" role="radiogroup" aria-label="' . h($name) . '">';
     for ($i = 1; $i <= 6; $i++) {
-        $activeClass = $i <= $rating ? ' is-active !text-[#f5b625]' : ' !text-[#c6d3ce]';
-        $starClasses = 'stat-rating-star inline-flex h-6 w-4 items-center justify-center rounded-none bg-transparent p-0 text-lg leading-none shadow-none transition-colors' . $activeClass;
+        $activeClass = $i <= $rating ? ' is-active' : '';
         if ($readonly) {
-            $html .= '<span class="' . $starClasses . '" aria-hidden="true">★</span>';
+            $html .= '<span class="stat-rating-star' . $activeClass . '" aria-hidden="true">★</span>';
             continue;
         }
-        $html .= '<span class="' . $starClasses . ' cursor-pointer focus:outline-none focus:ring-2 focus:ring-lime-200/70" tabindex="0" data-stat-value="' . $i . '" role="radio" aria-checked="' . ($i === $rating ? 'true' : 'false') . '" aria-label="' . $i . ' de 6">★</span>';
+        $html .= '<button class="stat-rating-star' . $activeClass . '" type="button" data-stat-value="' . $i . '" role="radio" aria-checked="' . ($i === $rating ? 'true' : 'false') . '" aria-label="' . $i . ' de 6">★</button>';
     }
     $html .= '</div>';
-    $html .= '<div class="stat-rating-bar-shell relative col-span-full row-start-2 grid min-h-3 min-w-0 flex-1 items-center">';
-    $html .= '<div class="stat-rating-bar h-2.5 w-full overflow-hidden rounded-full bg-emerald-100" aria-hidden="true"><span class="block h-full rounded-full transition-[width,background-color]" data-stat-rating-bar style="width: ' . $barPercent . '%"></span></div>';
+    $html .= '<div class="stat-rating-bar-shell">';
+    $html .= '<div class="stat-rating-bar" aria-hidden="true"><span data-stat-rating-bar style="width: ' . $barPercent . '%"></span></div>';
     if (!$readonly) {
         $html .= '<input class="stat-rating-range" type="range" min="1" max="6" step="1" value="' . $rating . '" aria-label="' . h($name) . '" data-stat-rating-range>';
     }
@@ -425,20 +423,6 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
     $html .= '<span class="stat-rating-value" data-stat-rating-value>' . $rating . '/6</span>';
     $html .= '</div>';
     return $html;
-}
-
-function player_stat_info_button(string $field, array $statLabels, array $statHelp): string
-{
-    $label = (string) ($statLabels[$field] ?? $field);
-    $description = (string) ($statHelp[$field] ?? '');
-    return '<span class="player-stat-info-trigger">' . h($label) . '</span>';
-}
-
-function player_stat_info_attrs(string $field, array $statLabels, array $statHelp): string
-{
-    $label = (string) ($statLabels[$field] ?? $field);
-    $description = (string) ($statHelp[$field] ?? '');
-    return ' data-player-stat-info="' . h($field) . '" data-player-stat-label="' . h($label) . '" data-player-stat-description="' . h($description) . '" aria-expanded="false"';
 }
 
 function player_stats_help_panel(array $statLabels, array $statHelp, array $ratingHelp, array $fieldWeightHelp): string
@@ -680,13 +664,13 @@ require __DIR__ . '/includes/header.php';
             <td>
               <div class="player-table-stat-grid">
                 <?php foreach (player_field_stat_fields() as $field): ?>
-                  <div class="player-table-stat"<?= player_stat_info_attrs($field, $statLabels, $statHelp) ?> <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
-                    <?= player_stat_info_button($field, $statLabels, $statHelp) ?>
+                  <div class="player-table-stat" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
+                    <span><?= h($statLabels[$field]) ?></span>
                     <?= stat_rating_control($field, player_effective_stat($player, $field), $isAdmin ? $rowFormId : null, true, !$isAdmin) ?>
                   </div>
                 <?php endforeach; ?>
-                <div class="player-table-stat"<?= player_stat_info_attrs('goalkeeper_skill', $statLabels, $statHelp) ?> data-goalkeeper-stat-row>
-                  <?= player_stat_info_button('goalkeeper_skill', $statLabels, $statHelp) ?>
+                <div class="player-table-stat" data-goalkeeper-stat-row>
+                  <span><?= h($statLabels['goalkeeper_skill']) ?></span>
                   <?= stat_rating_control('goalkeeper_skill', player_effective_stat($player, 'goalkeeper_skill'), $isAdmin ? $rowFormId : null, true, !$isAdmin) ?>
                 </div>
               </div>
@@ -812,13 +796,13 @@ require __DIR__ . '/includes/header.php';
 
       <div class="form-grid player-edit-stats-grid">
         <?php foreach (player_field_stat_fields() as $field): ?>
-          <div class="form-row stat-form-row"<?= player_stat_info_attrs($field, $statLabels, $statHelp) ?> <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
-            <?= player_stat_info_button($field, $statLabels, $statHelp) ?>
+          <div class="form-row stat-form-row" <?= $field === 'attack' ? 'data-attack-stat-row' : '' ?>>
+            <label><?= h($statLabels[$field]) ?></label>
             <?= stat_rating_control($field, player_effective_stat($player, $field), null, false, !$isAdmin) ?>
           </div>
         <?php endforeach; ?>
-        <div class="form-row stat-form-row"<?= player_stat_info_attrs('goalkeeper_skill', $statLabels, $statHelp) ?> data-goalkeeper-stat-row>
-          <?= player_stat_info_button('goalkeeper_skill', $statLabels, $statHelp) ?>
+        <div class="form-row stat-form-row" data-goalkeeper-stat-row>
+          <label><?= h($statLabels['goalkeeper_skill']) ?></label>
           <?= stat_rating_control('goalkeeper_skill', player_effective_stat($player, 'goalkeeper_skill'), null, false, !$isAdmin) ?>
         </div>
       </div>

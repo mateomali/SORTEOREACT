@@ -227,7 +227,6 @@ function ensure_control_schema(): array
         ['matches', 'draw_started_at', 'draw_started_at DATETIME NULL AFTER draw_mode'],
         ['matches', 'draw_completed_at', 'draw_completed_at DATETIME NULL AFTER draw_started_at'],
         ['matches', 'finalized_at', 'finalized_at DATETIME NULL AFTER draw_completed_at'],
-        ['matches', 'result_saved_at', 'result_saved_at DATETIME NULL AFTER finalized_at'],
         ['matches', 'formation_edit_deadline', 'formation_edit_deadline DATETIME NULL AFTER finalized_at'],
         ['matches', 'public_token', 'public_token VARCHAR(64) NULL AFTER formation_edit_deadline'],
         ['matches', 'result_notes', 'result_notes TEXT NULL AFTER notes'],
@@ -313,21 +312,6 @@ function backfill_control_schema(PDO $pdo): void
            AND status = 'finalizado'"
     );
 
-    if (schema_column_exists($pdo, 'matches', 'result_saved_at')) {
-        $pdo->exec(
-            "UPDATE matches m
-             INNER JOIN (
-               SELECT match_id, COALESCE(SUM(goals), 0) AS total_goals
-               FROM match_teams
-               GROUP BY match_id
-             ) mt ON mt.match_id = m.id
-             SET m.result_saved_at = COALESCE(m.finalized_at, m.updated_at)
-             WHERE m.result_saved_at IS NULL
-               AND m.status = 'finalizado'
-               AND mt.total_goals > 0"
-        );
-    }
-
     $pdo->exec(
         "UPDATE matches
          SET formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
@@ -347,7 +331,6 @@ function backfill_control_schema(PDO $pdo): void
 
     $pdo->exec(
         "UPDATE match_teams mt
-         INNER JOIN matches m ON m.id = mt.match_id
          LEFT JOIN (
            SELECT match_id, team_number, COALESCE(SUM(goals), 0) AS goals
            FROM match_players
@@ -355,7 +338,6 @@ function backfill_control_schema(PDO $pdo): void
            GROUP BY match_id, team_number
          ) g ON g.match_id = mt.match_id AND g.team_number = mt.team_number
          SET mt.goals = COALESCE(g.goals, 0)"
-         . (schema_column_exists($pdo, 'matches', 'result_saved_at') ? " WHERE m.result_saved_at IS NULL" : '')
     );
 
     $pdo->exec(

@@ -1451,8 +1451,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         const current = Number(button.getAttribute('data-stat-value') || '0');
         const active = current <= rating;
         button.classList.toggle('is-active', active);
-        button.classList.toggle('!text-[#f5b625]', active);
-        button.classList.toggle('!text-[#c6d3ce]', !active);
+        button.classList.toggle('text-amber-300', active);
+        button.classList.toggle('text-emerald-200/35', !active);
         button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
       });
       root.querySelectorAll('[data-stat-rating-range]').forEach((range) => {
@@ -1473,11 +1473,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       root.querySelectorAll('[data-stat-value]').forEach((button) => {
         button.addEventListener('click', () => setRating(root, button.getAttribute('data-stat-value')));
         button.addEventListener('keydown', (event) => {
-          if (['Enter', ' '].includes(event.key)) {
-            event.preventDefault();
-            setRating(root, button.getAttribute('data-stat-value'));
-            return;
-          }
           if (!['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
             return;
           }
@@ -1493,42 +1488,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         });
       });
     });
-
-    const closeStatInfoPanels = (except = null) => {
-      document.querySelectorAll('[data-player-stat-info-panel]').forEach((panel) => {
-        if (panel !== except) panel.remove();
-      });
-      document.querySelectorAll('[data-player-stat-info][aria-expanded="true"]').forEach((button) => {
-        if (except && button.closest('.player-table-stat, .stat-form-row')?.contains(except)) return;
-        button.setAttribute('aria-expanded', 'false');
-      });
-    };
-
-    const toggleStatInfo = (statRow) => {
-      const field = statRow.getAttribute('data-player-stat-info') || '';
-      const label = statRow.getAttribute('data-player-stat-label') || statRow.querySelector('.player-stat-info-trigger')?.textContent.trim() || '';
-      const description = statRow.getAttribute('data-player-stat-description') || '';
-      if (!field || !description || !statRow) return;
-
-      const currentPanel = statRow.querySelector('[data-player-stat-info-panel]');
-      if (currentPanel) {
-        currentPanel.remove();
-        statRow.setAttribute('aria-expanded', 'false');
-        return;
-      }
-
-      closeStatInfoPanels();
-      const panel = document.createElement('div');
-      panel.className = 'player-stat-info-panel';
-      panel.setAttribute('data-player-stat-info-panel', field);
-      const text = document.createElement('p');
-      text.textContent = description;
-      panel.append(text);
-      statRow.append(panel);
-      statRow.setAttribute('aria-expanded', 'true');
-    };
-
-    const shouldIgnoreStatInfoClick = (target) => Boolean(target.closest('[data-stat-value], [data-stat-rating-range], input, select, textarea, button, a'));
 
     const syncGoalkeeperStats = (scope) => {
       syncPositionSelectOptions(scope);
@@ -1584,11 +1543,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         togglePlayerInfoScout(scoutToggle);
         return;
       }
-      const statInfoPanel = event.target.closest('[data-player-stat-info]');
-      if (statInfoPanel && !shouldIgnoreStatInfoClick(event.target)) {
-        toggleStatInfo(statInfoPanel);
-        return;
-      }
       const radarTrigger = event.target.closest('.players-user-table .player-radar-card-compact');
       if (radarTrigger) {
         openPlayerRadarPanel(radarTrigger);
@@ -1602,7 +1556,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         closePlayerRadarPanel();
-        closeStatInfoPanels();
       }
     });
   })();
