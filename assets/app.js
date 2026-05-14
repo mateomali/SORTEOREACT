@@ -2645,8 +2645,11 @@
     if (!(input instanceof HTMLInputElement)) return;
     const showing = input.type === 'text';
     input.type = showing ? 'password' : 'text';
-    toggle.textContent = showing ? 'Ver' : 'Ocultar';
     toggle.setAttribute('aria-pressed', showing ? 'false' : 'true');
+    toggle.setAttribute('aria-label', showing ? 'Mostrar clave' : 'Ocultar clave');
+    toggle.innerHTML = showing
+      ? '<svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="3"/></svg>'
+      : '<svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 5.2A10 10 0 0 1 12 5c6 0 9.5 7 9.5 7a16 16 0 0 1-2.1 2.9"/><path d="M6.1 6.4C3.8 8 2.5 12 2.5 12s3.5 7 9.5 7a9.6 9.6 0 0 0 4.5-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
   });
 
   document.addEventListener('click', (event) => {
