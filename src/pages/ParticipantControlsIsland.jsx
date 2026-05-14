@@ -156,7 +156,7 @@ export function ParticipantControlsIsland({ root }) {
             }}
           />
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/45 bg-lime-100 text-emerald-950 shadow-md shadow-emerald-950/15 transition hover:bg-lime-200 focus:outline-none focus:ring-4 focus:ring-lime-200/30"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/45 bg-lime-100 text-[#07130f] shadow-md shadow-emerald-950/15 transition hover:bg-lime-200 focus:outline-none focus:ring-4 focus:ring-lime-200/30"
             type="button"
             onClick={focusResults}
             aria-label="Ir a resultados de busqueda"

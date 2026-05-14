@@ -1233,7 +1233,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (title) title.textContent = scout.title;
       if (body) body.textContent = scout.body;
       if (tags) {
-        tags.innerHTML = scout.tags.map((tag) => `<span class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-emerald-950">${tag}</span>`).join('');
+        tags.innerHTML = scout.tags.map((tag) => `<span class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold text-[#07130f]">${tag}</span>`).join('');
       }
     };
     const togglePlayerInfoScout = (button) => {
@@ -1279,7 +1279,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           <div class="player-radar-floating-stat rounded-xl border border-lime-200/30 bg-emerald-950/70 px-3 py-2">
             <div class="mb-1 flex items-center justify-between gap-2">
               <span class="text-[11px] font-extrabold uppercase text-lime-100">${radarLabels[field]}</span>
-              <strong class="rounded-full bg-lime-100 px-2 py-0.5 text-[10px] font-black text-emerald-950">${formatRating(value)}/6</strong>
+              <strong class="rounded-full bg-lime-100 px-2 py-0.5 text-[10px] font-black text-[#07130f]">${formatRating(value)}/6</strong>
             </div>
             <div class="h-1.5 overflow-hidden rounded-full bg-emerald-900">
               <span class="block h-full rounded-full" style="width:${percent}%; background-color:${statBarColor(value)}"></span>
@@ -1452,8 +1452,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         const current = Number(button.getAttribute('data-stat-value') || '0');
         const active = current <= rating;
         button.classList.toggle('is-active', active);
-        button.classList.toggle('!text-[#f5b625]', active);
-        button.classList.toggle('!text-[#c6d3ce]', !active);
+        button.classList.toggle('text-[#f5b625]', active);
+        button.classList.toggle('text-[#c6d3ce]', !active);
         button.setAttribute('aria-checked', current === rating ? 'true' : 'false');
       });
       root.querySelectorAll('[data-stat-rating-range]').forEach((range) => {

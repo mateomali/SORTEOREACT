@@ -430,7 +430,7 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="action" value="import_backup">
       <div class="form-row">
         <label for="backupFile">Archivo backup .zip o .json</label>
-        <input class="block w-full max-w-full min-w-0 text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-lime-100 file:px-3 file:py-2 file:text-xs file:font-extrabold file:text-emerald-950 hover:file:bg-lime-200" id="backupFile" type="file" name="backup_file" accept=".zip,.json,application/zip,application/json" required>
+        <input class="block w-full max-w-full min-w-0 text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-lime-100 file:px-3 file:py-2 file:text-xs file:font-extrabold file:text-[#07130f] hover:file:bg-lime-200" id="backupFile" type="file" name="backup_file" accept=".zip,.json,application/zip,application/json" required>
       </div>
       <div class="form-row">
         <label>Que importar</label>

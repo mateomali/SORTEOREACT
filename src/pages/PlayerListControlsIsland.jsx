@@ -181,17 +181,17 @@ export function PlayerListControlsIsland({ root }) {
         </div>
       </div>
       <div className="player-list-react-side flex items-end">
-        <span className="player-count-filter inline-flex flex-wrap items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-xs font-extrabold text-emerald-950" aria-live="polite">
+        <span className="player-count-filter inline-flex flex-wrap items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-xs font-extrabold text-[#07130f]" aria-live="polite">
           <strong>{helperText}</strong>
           {canFilterActive ? (
-            <label className="mb-0 inline-flex items-center gap-1.5 text-emerald-950">
+            <label className="mb-0 inline-flex items-center gap-1.5 text-[#07130f]">
               <input
                 className="player-active-filter-checkbox"
                 type="checkbox"
                 checked={activeOnly}
                 onChange={(event) => setActiveOnly(event.target.checked)}
               />
-              <small className="text-xs font-extrabold text-emerald-950">Solo activos</small>
+              <small className="text-xs font-extrabold text-[#07130f]">Solo activos</small>
             </label>
           ) : null}
         </span>
@@ -205,7 +205,7 @@ export function PlayerListControlsIsland({ root }) {
           <button
             key={key}
             type="button"
-            className={`min-h-9 rounded-xl border px-2 py-1 text-xs font-extrabold ${sort.key === key ? 'is-active border-lime-200 bg-lime-100 text-emerald-950' : 'border-lime-200/35 bg-emerald-950 text-lime-50'}`}
+            className={`min-h-9 rounded-xl border px-2 py-1 text-xs font-extrabold ${sort.key === key ? 'is-active border-lime-200 bg-lime-100 text-[#07130f]' : 'border-lime-200/35 bg-emerald-950 text-lime-50'}`}
             data-direction={sort.key === key ? sort.direction : ''}
             onClick={() => {
               setSort((current) => ({

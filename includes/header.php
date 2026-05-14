@@ -75,8 +75,9 @@ if (is_admin()) {
 $showRoleShortcut = false;
 $roleShortcutHref = is_player_user() ? 'perfil.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : (current_user_id() > 0 ? 'logout.php' : 'login.php'));
 $roleShortcutLabel = is_player_user() ? 'Mi perfil' : (is_directivo() ? 'Junta' : (!empty($_SESSION['guest_vote_invite_id']) ? 'Votacion' : (current_user_id() > 0 ? 'Salir' : 'Ingresar')));
-$navLinkBase = 'inline-flex min-h-8 items-center justify-center rounded-xl border border-transparent px-3 py-2 text-sm font-extrabold leading-tight text-lime-50 no-underline transition hover:border-lime-200/35 hover:bg-lime-100/10 hover:text-lime-100 max-[760px]:min-h-8 max-[760px]:border-lime-200/25 max-[760px]:bg-emerald-900/45 max-[760px]:px-2.5 max-[760px]:py-1.5 max-[760px]:text-[11px] max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
-$navLinkActive = 'border-lime-200/60 bg-lime-200 text-emerald-950 hover:bg-lime-100 hover:text-emerald-950';
+$navLinkLayout = 'inline-flex min-h-8 items-center justify-center rounded-xl border px-3 py-2 text-sm font-extrabold leading-tight no-underline transition max-[760px]:min-h-8 max-[760px]:px-2.5 max-[760px]:py-1.5 max-[760px]:text-[11px] max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
+$navLinkBase = $navLinkLayout . ' border-transparent text-white hover:border-white/30 hover:bg-white/10 hover:text-white max-[760px]:border-white/20 max-[760px]:bg-emerald-900/45';
+$navLinkActive = $navLinkLayout . ' border-white/45 bg-[#e7eee9] text-[#07130f] hover:bg-[#f4f8f6] hover:text-[#07130f] max-[760px]:border-white/45 max-[760px]:bg-[#e7eee9]';
 $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:text-red-50';
 ?>
 <!doctype html>
@@ -115,17 +116,17 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
         aria-label="Navegacion principal"
       >
         <?php foreach ($publicMenu as $file => $label): ?>
-          <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+          <a class="<?= h($activePage === $file ? $navLinkActive : $navLinkBase) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
         <?php endforeach; ?>
         <?php foreach ($roleMenu as $file => $label): ?>
-          <a class="<?= h($navLinkBase . ' ' . ($activePage === $file ? $navLinkActive : '') . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+          <a class="<?= h(($activePage === $file ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
         <?php endforeach; ?>
       </nav>
       <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-2 min-[761px]:col-start-3 min-[761px]:row-start-1">
         <?php if ($showRoleShortcut): ?>
-          <a class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 no-underline shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" href="<?= h($roleShortcutHref) ?>"><?= h($roleShortcutLabel) ?></a>
+          <a class="inline-flex min-h-8 items-center justify-center rounded-xl border border-white/25 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-white no-underline shadow-md shadow-emerald-950/15 transition hover:border-white/50 hover:bg-white/10 hover:text-white min-[761px]:hidden" href="<?= h($roleShortcutHref) ?>"><?= h($roleShortcutLabel) ?></a>
         <?php endif; ?>
-        <button class="inline-flex min-h-8 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-lime-50 shadow-md shadow-emerald-950/15 transition hover:border-lime-200/75 hover:bg-lime-100/15 hover:text-lime-100 min-[761px]:hidden" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">Menu</button>
+        <button class="inline-flex min-h-8 items-center justify-center rounded-xl border border-white/25 bg-emerald-950/55 px-2.5 py-1.5 text-[11px] font-extrabold leading-tight text-white shadow-md shadow-emerald-950/15 transition hover:border-white/50 hover:bg-white/10 hover:text-white min-[761px]:hidden" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">Menu</button>
       </div>
     </header>
 

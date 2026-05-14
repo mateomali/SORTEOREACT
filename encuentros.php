@@ -916,10 +916,10 @@ function admin_render_match_scoreboard(array $match, array $teams, array $captai
         return '';
     }
 
-    $scoreboardStyle = 'background:#0a5b0a!important;background-color:#0a5b0a!important;background-image:none!important;border-color:#094b0a!important;color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
-    $scoreboardTeamStyle = 'background:#0a5b0a!important;background-color:#0a5b0a!important;background-image:none!important;border-color:#094b0a!important;color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
-    $scoreboardTeamTextStyle = 'color:#f0fced!important;-webkit-text-fill-color:#f0fced!important;';
-    $scoreboardScoreStyle = 'background:#b6f0aa!important;background-color:#b6f0aa!important;background-image:none!important;border-color:#0e900b!important;color:#021703!important;-webkit-text-fill-color:#021703!important;';
+    $scoreboardStyle = 'background:#0a5b0a;background-color:#0a5b0a;background-image:none;border-color:#094b0a;color:#f0fced;-webkit-text-fill-color:#f0fced;';
+    $scoreboardTeamStyle = 'background:#0a5b0a;background-color:#0a5b0a;background-image:none;border-color:#094b0a;color:#f0fced;-webkit-text-fill-color:#f0fced;';
+    $scoreboardTeamTextStyle = 'color:#f0fced;-webkit-text-fill-color:#f0fced;';
+    $scoreboardScoreStyle = 'background:#b6f0aa;background-color:#b6f0aa;background-image:none;border-color:#0e900b;color:#021703;-webkit-text-fill-color:#021703;';
     $renderScoreboardTeam = static function (string $label) use ($scoreboardTeamStyle, $scoreboardTeamTextStyle): string {
         $html = admin_render_team_label($label);
         $html = str_replace('class="team-label-with-heart"', 'class="team-label-with-heart" style="' . h($scoreboardTeamStyle) . '"', $html);
@@ -961,19 +961,19 @@ $activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchL
 $bodyClass = $showEditSection ? 'page-editar-partidos' : 'page-crear-partido';
 require __DIR__ . '/includes/header.php';
 
-$encounterOverviewStyle = 'background:#fbfdfc!important;background-color:#fbfdfc!important;background-image:none!important;border-color:#cfe0d9!important;color:#10231d!important;';
-$encounterOverviewLabelStyle = 'color:#315247!important;';
-$encounterOverviewValueStyle = 'color:#082017!important;';
-$encounterHistoryPanelStyle = 'background:#ffffff!important;background-color:#ffffff!important;background-image:none!important;border-color:#cfe0d9!important;color:#10231d!important;';
-$encounterCardStyle = 'background:#fbfdfc!important;background-color:#fbfdfc!important;background-image:none!important;border-color:#dbe7e2!important;color:#10231d!important;';
-$encounterDateStyle = 'color:#047857!important;font-weight:900!important;';
-$encounterTitleStyle = 'color:#082017!important;';
-$encounterBadgeStyle = 'background:#ecfdf5!important;background-color:#ecfdf5!important;background-image:none!important;border-color:#b9dfcd!important;color:#063d2b!important;';
-$encounterNoteStyle = 'color:#315247!important;';
-$encounterActionsStyle = 'background:#f3f8f6!important;background-color:#f3f8f6!important;background-image:none!important;border-color:#dbe7e2!important;color:#10231d!important;';
-$encounterLatestStyle = 'background:#f2fbf6!important;background-color:#f2fbf6!important;background-image:none!important;border-color:#b9dfcd!important;color:#10231d!important;';
-$encounterMutedTextStyle = 'color:#315247!important;';
-$encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#063d2b!important;background-image:none!important;border-color:#022c22!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;';
+$encounterOverviewStyle = 'background:#fbfdfc;background-color:#fbfdfc;background-image:none;border-color:#cfe0d9;color:#10231d;';
+$encounterOverviewLabelStyle = 'color:#315247;';
+$encounterOverviewValueStyle = 'color:#082017;';
+$encounterHistoryPanelStyle = 'background:#ffffff;background-color:#ffffff;background-image:none;border-color:#cfe0d9;color:#10231d;';
+$encounterCardStyle = 'background:#fbfdfc;background-color:#fbfdfc;background-image:none;border-color:#dbe7e2;color:#10231d;';
+$encounterDateStyle = 'color:#047857;font-weight:900;';
+$encounterTitleStyle = 'color:#082017;';
+$encounterBadgeStyle = 'background:#ecfdf5;background-color:#ecfdf5;background-image:none;border-color:#b9dfcd;color:#063d2b;';
+$encounterNoteStyle = 'color:#315247;';
+$encounterActionsStyle = 'background:#f3f8f6;background-color:#f3f8f6;background-image:none;border-color:#dbe7e2;color:#10231d;';
+$encounterLatestStyle = 'background:#f2fbf6;background-color:#f2fbf6;background-image:none;border-color:#b9dfcd;color:#10231d;';
+$encounterMutedTextStyle = 'color:#315247;';
+$encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;background-image:none;border-color:#022c22;color:#ffffff;-webkit-text-fill-color:#ffffff;';
 ?>
 
 <section class="<?= $showCreateSection && !$showEditSection ? 'crear-partido-hero mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">
@@ -1007,12 +1007,12 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
 <details class="<?= $showCreateSection && !$showEditSection ? 'crear-partido-drawer relative mb-4 min-h-0 overflow-hidden rounded-2xl border border-lime-200/38 bg-emerald-950/88 p-0 shadow-xl shadow-emerald-950/24' : 'encounter-drawer ' . ($form['id'] ? 'is-editing' : 'is-new') ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
   <summary class="<?= $showCreateSection && !$showEditSection ? 'flex cursor-pointer list-none items-center justify-between gap-3 border-b border-lime-200/25 bg-emerald-950 px-4 py-3 text-lime-50 [&::-webkit-details-marker]:hidden' : 'encounter-drawer-tab' ?>">
     <span class="<?= $showCreateSection && !$showEditSection ? 'text-sm font-black uppercase tracking-wide text-lime-50' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></span>
-    <small class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-xs font-extrabold uppercase leading-none text-emerald-950 shadow-sm shadow-emerald-950/10' : '' ?>"><?= $targetSelection ?> convocados requeridos</small>
+    <small class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-xs font-extrabold uppercase leading-none text-[#07130f] shadow-sm shadow-emerald-950/10' : '' ?>"><?= $targetSelection ?> convocados requeridos</small>
   </summary>
   <section class="<?= $showCreateSection && !$showEditSection ? 'bg-emerald-950/72 p-4 text-lime-50 max-[760px]:p-3' : 'card encounter-drawer-body' ?>">
   <div class="<?= $showCreateSection && !$showEditSection ? 'mb-4 grid items-start gap-3 border-b border-lime-200/20 pb-4 md:grid-cols-[minmax(0,1fr)_auto] max-[760px]:grid-cols-1 max-[760px]:gap-2 max-[760px]:pb-3' : '' ?>">
     <div>
-      <span class="<?= $showCreateSection && !$showEditSection ? 'mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-950' : '' ?>"><?= $form['id'] ? 'Edicion' : 'Nueva fecha' ?></span>
+      <span class="<?= $showCreateSection && !$showEditSection ? 'mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-[#07130f]' : '' ?>"><?= $form['id'] ? 'Edicion' : 'Nueva fecha' ?></span>
       <h3 class="<?= $showCreateSection && !$showEditSection ? 'm-0 text-2xl font-extrabold leading-tight text-lime-50 max-[760px]:text-xl' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'Crear nueva fecha' ?></h3>
     </div>
     <div class="<?= $showCreateSection && !$showEditSection ? 'flex flex-wrap gap-2 md:justify-end max-[760px]:grid max-[760px]:grid-cols-3 max-[760px]:gap-1.5' : '' ?>" aria-label="Resumen de cupos">
@@ -1070,17 +1070,17 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Fecha y hora</label>
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="datetime-local" name="match_date" step="3600" required value="<?= h(date('Y-m-d\TH:00', strtotime((string) $form['match_date']))) ?>" data-rental-court-date-input>
-        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-emerald-950 shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-date-changed>Fecha actualizada por cancha</span>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-date-changed>Fecha actualizada por cancha</span>
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Numero de equipos</label>
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams data-rental-court-field-input>
-        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-emerald-950 shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Jugadores por equipo</label>
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team data-rental-court-field-input>
-        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-emerald-950 shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 text-sm font-semibold text-emerald-100/85 shadow-sm shadow-emerald-950/15 md:col-span-2' : 'form-row' ?>">
         <strong class="block text-xs font-black uppercase text-lime-100/85">Configuracion aplicada</strong>
@@ -1092,7 +1092,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
     <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 grid gap-3 rounded-2xl border border-lime-200/28 bg-emerald-900/28 p-3 shadow-inner shadow-emerald-950/15' : 'form-row' ?>">
       <div class="<?= $showCreateSection && !$showEditSection ? 'flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20' : 'participant-head' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'm-0 text-base font-black text-lime-50' : '' ?>">Jugadores convocados</label>
-        <span class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-sm font-bold text-emerald-950 shadow-sm shadow-emerald-950/10' : 'participant-count' ?>">
+        <span class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1.5 text-sm font-bold text-[#07130f] shadow-sm shadow-emerald-950/10' : 'participant-count' ?>">
           Seleccionados: <strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong>
         </span>
       </div>
@@ -1100,7 +1100,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
         <details class="rounded-2xl border border-lime-200/38 bg-emerald-950/88 text-lime-50 shadow-lg shadow-emerald-950/16" id="importar-listado" <?= $importList ? 'open' : '' ?>>
           <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-4 py-3 text-sm font-extrabold text-lime-50 shadow-md shadow-emerald-950/20 [&::-webkit-details-marker]:hidden">
             <span>Importar listado</span>
-            <small class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold uppercase leading-none text-emerald-950 shadow-sm shadow-emerald-950/10"><?= $importList ? h((string) count($importMatched)) . ' encontrados | ' . h((string) count($importMissing)) . ' faltantes' : 'Pegar lista numerada' ?></small>
+            <small class="rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-extrabold uppercase leading-none text-[#07130f] shadow-sm shadow-emerald-950/10"><?= $importList ? h((string) count($importMatched)) . ' encontrados | ' . h((string) count($importMissing)) . ' faltantes' : 'Pegar lista numerada' ?></small>
           </summary>
 
           <div class="p-3">
@@ -1126,7 +1126,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
                 rows="8"
                 placeholder="1 Marcelo&#10;2 Pela&#10;3 Mauri&#10;4 Tebo"
                 form="importPlayersForm"><?= h((string) ($importList['source'] ?? '')) ?></textarea>
-              <button class="create-match-submit inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" style="border-color:#d9f99d!important;background:#d9f99d!important;background-color:#d9f99d!important;color:#022c22!important;-webkit-text-fill-color:#022c22!important;box-shadow:none!important;" type="submit" form="importPlayersForm">Importar listado</button>
+              <button class="create-match-submit inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-[#07130f] shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" style="border-color:#d9f99d;background:#d9f99d;background-color:#d9f99d;color:#022c22;-webkit-text-fill-color:#022c22;box-shadow:none;" type="submit" form="importPlayersForm">Importar listado</button>
             </div>
 
             <?php if ($importList): ?>
@@ -1179,7 +1179,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
                       <details class="rounded-xl border border-lime-200/35 bg-emerald-950/90 p-2 text-lime-50">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm font-extrabold text-lime-50 [&::-webkit-details-marker]:hidden">
                           <span><?= h((string) $missing['number']) ?>. <?= h((string) $missing['name']) ?></span>
-                          <strong class="rounded-full bg-lime-100 px-3 py-1 text-xs text-emerald-950">Agregar jugador</strong>
+                          <strong class="rounded-full bg-lime-100 px-3 py-1 text-xs text-[#07130f]">Agregar jugador</strong>
                         </summary>
                         <div class="mt-2 rounded-xl border border-lime-200/35 bg-emerald-950/90 p-3">
                           <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -1247,7 +1247,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
                             </div>
                           </div>
 
-                          <button class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" form="<?= h($createFormId) ?>">Guardar jugador</button>
+                          <button class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-[#07130f] shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" form="<?= h($createFormId) ?>">Guardar jugador</button>
                         </div>
                       </details>
                     <?php endforeach; ?>
@@ -1269,7 +1269,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
       <section class="min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20">
           <div>
-            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-950">Disponibles</span>
+            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-[#07130f]">Disponibles</span>
             <h4 class="m-0 text-base font-extrabold text-lime-50">Lista de jugadores activos</h4>
           </div>
           <div class="flex flex-wrap items-center gap-2">
@@ -1284,14 +1284,14 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
               $checked = in_array($pid, $editingParticipants, true);
               $searchText = strtolower(trim((string) $p['name'] . ' ' . $p['positions'] . ' ' . pace_label((string) $p['pace']) . ' ' . number_format((float) $p['skill'], 1)));
             ?>
-            <article class="flex items-center justify-between gap-2 rounded-lg border border-lime-200/24 bg-emerald-900/72 px-2.5 py-2 text-sm text-lime-50 shadow-sm shadow-emerald-950/18 transition hover:border-lime-200/52 hover:bg-emerald-800/82 <?= $checked ? '!border-lime-200/70 !bg-emerald-800/90 ring-2 ring-lime-200/25' : '' ?>" data-player-row data-player-id="<?= $pid ?>" data-search="<?= h($searchText) ?>">
+            <article class="flex items-center justify-between gap-2 rounded-lg border border-lime-200/24 bg-emerald-900/72 px-2.5 py-2 text-sm text-lime-50 shadow-sm shadow-emerald-950/18 transition hover:border-lime-200/52 hover:bg-emerald-800/82 <?= $checked ? 'border-lime-200/70 bg-emerald-800/90 ring-2 ring-lime-200/25' : '' ?>" data-player-row data-player-id="<?= $pid ?>" data-search="<?= h($searchText) ?>">
               <span class="min-w-0">
                 <strong class="block truncate text-sm font-extrabold text-lime-50"><?= h((string) $p['name']) ?></strong>
                 <small class="block truncate text-xs text-emerald-100/82"><?= h((string) $p['positions']) ?> | <?= h(pace_label((string) $p['pace'])) ?> | <?= h(skill_label((float) $p['skill'])) ?></small>
               </span>
               <span class="flex shrink-0 items-center gap-1.5">
                 <button class="inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-red-300/55 bg-red-950/85 px-0 py-2 text-sm font-extrabold text-red-100 transition hover:bg-red-900 hover:text-white <?= $checked ? 'cursor-not-allowed opacity-40' : '' ?>" type="button" data-remove-player-row aria-label="Quitar <?= h((string) $p['name']) ?>" title="Quitar">X</button>
-                <button class="inline-flex min-h-9 items-center justify-center rounded-full px-3 py-1.5 text-sm font-extrabold transition <?= $checked ? '!bg-emerald-600 !text-white hover:!bg-emerald-700' : '!bg-lime-100 !text-emerald-950 hover:!bg-lime-200' ?>" type="button" data-participant-toggle><?= $checked ? 'Convocado' : 'Agregar' ?></button>
+                <button class="inline-flex min-h-9 items-center justify-center rounded-full px-3 py-1.5 text-sm font-extrabold transition <?= $checked ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-lime-100 text-[#07130f] hover:bg-lime-200' ?>" type="button" data-participant-toggle><?= $checked ? 'Convocado' : 'Agregar' ?></button>
               </span>
               <input
                 class="sr-only"
@@ -1311,7 +1311,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
       <section class="min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16 lg:sticky lg:top-3 max-[760px]:hidden">
         <div class="mb-2 flex items-start justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20">
           <div>
-            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-950">Convocados</span>
+            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-[#07130f]">Convocados</span>
             <h4 class="m-0 text-base font-extrabold text-lime-50">Seleccionados para esta fecha</h4>
           </div>
           <span class="inline-flex shrink-0 rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><strong data-selection-count="participants">0</strong>/<strong data-selection-max="participants"><?= $targetSelection ?></strong></span>
@@ -1335,7 +1335,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
     </div>
 
     <div class="sticky bottom-3 z-30 mt-0 flex flex-wrap gap-2 rounded-2xl border border-lime-200/35 bg-emerald-950/92 p-2 shadow-2xl shadow-emerald-950/25 max-[760px]:fixed max-[760px]:inset-x-3 max-[760px]:grid max-[760px]:grid-cols-1">
-      <button class="create-match-submit inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-emerald-950 shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" style="border-color:#d9f99d!important;background:#d9f99d!important;background-color:#d9f99d!important;color:#022c22!important;-webkit-text-fill-color:#022c22!important;box-shadow:none!important;" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
+      <button class="create-match-submit inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-[#07130f] shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" style="border-color:#d9f99d;background:#d9f99d;background-color:#d9f99d;color:#022c22;-webkit-text-fill-color:#022c22;box-shadow:none;" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
       <?php if ($form['id']): ?>
         <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100" href="<?= h($matchListPage) ?>">Cancelar</a>
       <?php endif; ?>
@@ -1350,7 +1350,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b!important;background-color:#0
   <div class="section-toolbar">
     <div>
       <h3>Historial de fechas</h3>
-      <p class="small-muted" style="color:#375647!important;">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> fechas cargadas.</p>
+      <p class="small-muted" style="color:#375647;">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> fechas cargadas.</p>
     </div>
   </div>
 

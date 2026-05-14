@@ -220,7 +220,7 @@ function profile_player_card(array $player, array $statLabels, array $statHelp):
         $html .= '<summary class="cursor-pointer list-none p-2.5">';
         $html .= '<div class="mb-1.5 flex items-center justify-between gap-2">';
         $html .= '<span class="min-w-0 truncate text-xs font-extrabold text-lime-100">' . h((string) ($statLabels[$field] ?? $field)) . '</span>';
-        $html .= '<strong class="shrink-0 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-extrabold text-emerald-950">' . h(number_format($value, 1)) . '/6</strong>';
+        $html .= '<strong class="shrink-0 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-extrabold text-[#07130f]">' . h(number_format($value, 1)) . '/6</strong>';
         $html .= '</div><div class="h-2 overflow-hidden rounded-full bg-emerald-950/80">';
         $html .= '<span class="block h-full rounded-full" style="width: ' . $percent . '%; background-color: ' . h($barColor) . '"></span>';
         $html .= '</div></summary>';
@@ -1110,7 +1110,7 @@ require __DIR__ . '/includes/header.php';
   <article class="player-scout-floating-card w-[min(92vw,520px)] rounded-2xl border border-lime-200/55 bg-emerald-950 p-4 text-left text-lime-50 shadow-2xl shadow-emerald-950/25" role="dialog" aria-modal="true" aria-labelledby="playerScoutTitle">
     <div class="player-scout-floating-head mb-3 flex items-center justify-between gap-3 border-b border-lime-200/30 pb-3">
       <span class="text-xs font-black uppercase tracking-wide text-lime-100">Relato del jugador</span>
-      <button class="player-scout-close inline-flex h-8 w-8 items-center justify-center rounded-xl bg-lime-100 text-sm font-extrabold text-emerald-950 transition hover:bg-lime-200" type="button" data-player-scout-close aria-label="Cerrar">x</button>
+      <button class="player-scout-close inline-flex h-8 w-8 items-center justify-center rounded-xl bg-lime-100 text-sm font-extrabold text-[#07130f] transition hover:bg-lime-200" type="button" data-player-scout-close aria-label="Cerrar">x</button>
     </div>
     <h3 class="mb-2 text-lg font-extrabold leading-tight text-lime-50" id="playerScoutTitle" data-player-scout-title>Perfil del jugador</h3>
     <p class="text-sm font-medium leading-relaxed text-emerald-100/85" data-player-scout-body>-</p>

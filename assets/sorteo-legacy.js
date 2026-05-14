@@ -773,7 +773,7 @@ function actualizarListaJugadores() {
   container.innerHTML = '';
   jugadores.forEach((jugador, index) => {
     const div = document.createElement('div');
-    div.className = 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-emerald-950 shadow-sm';
+    div.className = 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-[#07130f] shadow-sm';
     div.innerHTML = `
       <input type="checkbox" id="jugador-${index}" ${jugador.selected ? 'checked' : ''} ${LOCKED_MATCH_MODE ? 'disabled' : ''} data-sorteo-action="toggle-player" data-player-index="${index}">
       <div class="player-info">
@@ -1952,14 +1952,14 @@ function mostrarEquipos(equipos) {
   const container = document.getElementById('equipos-generados');
   container.innerHTML = '';
   const matchupTitle = document.createElement('div');
-  matchupTitle.className = 'mx-auto w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-center text-xl font-black text-emerald-950 shadow-sm';
+  matchupTitle.className = 'mx-auto w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-center text-xl font-black text-[#07130f] shadow-sm';
   matchupTitle.dataset.sorteoMatchupTitle = '1';
   matchupTitle.textContent = getMatchupDisplayName(equipos.length);
   container.appendChild(matchupTitle);
   
   equipos.forEach((equipo, index) => {
     const equipoDiv = document.createElement('div');
-    equipoDiv.className = 'grid gap-3 rounded-2xl border border-emerald-200 bg-white p-3 text-emerald-950 shadow-lg shadow-emerald-950/10';
+    equipoDiv.className = 'grid gap-3 rounded-2xl border border-emerald-200 bg-white p-3 text-[#07130f] shadow-lg shadow-emerald-950/10';
     equipoDiv.dataset.teamIndex = String(index);
     equipoDiv.dataset.sorteoTeamCard = '1';
     const teamColor = getTeamColor(index);

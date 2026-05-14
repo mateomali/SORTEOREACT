@@ -40,75 +40,75 @@ body.colorway-black-bean {
 }
 
 body.colorway-black-bean > .app-shell > header {
-  background: var(--bb-950) !important;
-  background-color: var(--bb-950) !important;
-  color: var(--bb-50) !important;
+  background: var(--bb-950);
+  background-color: var(--bb-950);
+  color: var(--bb-50);
 }
 
 body.colorway-black-bean > .app-shell > header :is(a, button, span) {
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
-  border-color: var(--bb-700) !important;
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
+  border-color: var(--bb-700);
 }
 
 body.colorway-black-bean > .app-shell > header .bg-lime-200,
 body.colorway-black-bean > .app-shell > header [class*="bg-lime-200"] {
-  background: var(--bb-200) !important;
-  background-color: var(--bb-200) !important;
-  color: var(--bb-950) !important;
-  -webkit-text-fill-color: var(--bb-950) !important;
+  background: var(--bb-200);
+  background-color: var(--bb-200);
+  color: var(--bb-950);
+  -webkit-text-fill-color: var(--bb-950);
 }
 
 body.colorway-black-bean main.content :is(.btn, a.btn, button.btn, .action-button, .icon-button, .history-match-toggle, .match-detail-toggle-btn, .pagination-link) {
-  background: var(--bb-900) !important;
-  background-color: var(--bb-900) !important;
-  border-color: var(--bb-950) !important;
-  box-shadow: 0 4px 10px rgba(2, 23, 3, 0.16) !important;
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  background: var(--bb-900);
+  background-color: var(--bb-900);
+  border-color: var(--bb-950);
+  box-shadow: 0 4px 10px rgba(2, 23, 3, 0.16);
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 body.colorway-black-bean main.content :is(.btn, a.btn, button.btn, .action-button, .icon-button, .history-match-toggle, .match-detail-toggle-btn, .pagination-link):hover {
-  background: var(--bb-800) !important;
-  background-color: var(--bb-800) !important;
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  background: var(--bb-800);
+  background-color: var(--bb-800);
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 body.colorway-black-bean main.content :is(.btn-muted, .btn-warning, a.btn-muted, a.btn-warning, button.btn-muted, button.btn-warning) {
-  background: var(--bb-200) !important;
-  background-color: var(--bb-200) !important;
-  border-color: var(--bb-600) !important;
-  color: var(--bb-950) !important;
-  -webkit-text-fill-color: var(--bb-950) !important;
+  background: var(--bb-200);
+  background-color: var(--bb-200);
+  border-color: var(--bb-600);
+  color: var(--bb-950);
+  -webkit-text-fill-color: var(--bb-950);
 }
 
 body.colorway-black-bean main.content :is(.btn-muted, .btn-warning, a.btn-muted, a.btn-warning, button.btn-muted, button.btn-warning):hover {
-  background: var(--bb-300) !important;
-  background-color: var(--bb-300) !important;
-  color: var(--bb-950) !important;
-  -webkit-text-fill-color: var(--bb-950) !important;
+  background: var(--bb-300);
+  background-color: var(--bb-300);
+  color: var(--bb-950);
+  -webkit-text-fill-color: var(--bb-950);
 }
 
 body.colorway-black-bean main.content :is(.btn-disabled, [disabled]) {
-  background: var(--bb-100) !important;
-  background-color: var(--bb-100) !important;
-  border-color: var(--bb-300) !important;
-  box-shadow: none !important;
-  color: var(--bb-800) !important;
-  -webkit-text-fill-color: var(--bb-800) !important;
+  background: var(--bb-100);
+  background-color: var(--bb-100);
+  border-color: var(--bb-300);
+  box-shadow: none;
+  color: var(--bb-800);
+  -webkit-text-fill-color: var(--bb-800);
 }
 
 html,
 body {
-  background: var(--gf-page) !important;
-  color: var(--gf-text) !important;
+  background: var(--gf-page);
+  color: var(--gf-text);
 }
 
 html body main.content,
 html body .app-shell {
-  background: var(--gf-page) !important;
-  color: var(--gf-text) !important;
+  background: var(--gf-page);
+  color: var(--gf-text);
 }
 
 html body main.content :is(h1, h2, h3, h4, h5, h6, p, label, span, small, strong, td, th, li, div) {
@@ -116,11 +116,11 @@ html body main.content :is(h1, h2, h3, h4, h5, h6, p, label, span, small, strong
 }
 
 html body main.content :is(h1, h2, h3, h4, h5, h6) {
-  color: var(--gf-ink) !important;
+  color: var(--gf-ink);
 }
 
 html body main.content :is(.small-muted, .text-muted, .meta, small):not(.badge):not(.chip):not(.pill):not(.stat-chip) {
-  color: var(--gf-muted) !important;
+  color: var(--gf-muted);
 }
 
 html body main.content :is(
@@ -155,12 +155,12 @@ html body main.content :is(
   .junta-history,
   .finish-collapse
 ) {
-  background: var(--gf-surface) !important;
-  background-color: var(--gf-surface) !important;
-  background-image: none !important;
-  color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
-  box-shadow: 0 8px 18px var(--gf-shadow) !important;
+  background: var(--gf-surface);
+  background-color: var(--gf-surface);
+  background-image: none;
+  color: var(--gf-text);
+  border-color: var(--gf-border);
+  box-shadow: 0 8px 18px var(--gf-shadow);
 }
 
 html body main.content :is(
@@ -186,13 +186,13 @@ html body main.content :is(
   .award-legend-section,
   .finish-awards
 ) {
-  background: var(--gf-surface) !important;
-  background-color: var(--gf-surface) !important;
-  background-image: none !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
-  box-shadow: 0 6px 14px var(--gf-shadow) !important;
+  background: var(--gf-surface);
+  background-color: var(--gf-surface);
+  background-image: none;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
+  box-shadow: 0 6px 14px var(--gf-shadow);
 }
 
 html body main.content :is(
@@ -218,8 +218,8 @@ html body main.content :is(
   .award-legend-section,
   .finish-awards
 ) :is(h1, h2, h3, h4, p, span, small, strong, label, div):not(.btn):not(.badge):not(.chip):not(.pill):not(.stat-chip):not(.mobile-player-card-rating):not(.stat-rating-value) {
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
 }
 
 html body main.content :is(
@@ -246,310 +246,310 @@ html body main.content :is(
   .junta-panel,
   .junta-vote-card
 ) :is(h1, h2, h3, h4, p, span, small, strong, label, div):not(.btn):not(.badge):not(.chip):not(.pill):not(.stat-chip):not(.match-scoreboard):not(.scoreboard-team):not(.scoreboard-score):not(.team-label-with-heart):not(.multi-draw-position):not(.multi-draw-vote-pill):not(.match-detail-toggle-symbol) {
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
 }
 
 html body main.content :is(.badge, .chip, .mini-chip, .pill, .stat-chip, .player-tag, .position-pill, .encounter-card-status, .encounter-score-empty, .encounter-latest-kicker, .stats-summary span, .date-pill, .history-result-pill) {
-  background: var(--gf-accent-soft) !important;
-  background-color: var(--gf-accent-soft) !important;
-  background-image: none !important;
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
-  border-color: var(--gf-accent-border) !important;
+  background: var(--gf-accent-soft);
+  background-color: var(--gf-accent-soft);
+  background-image: none;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
+  border-color: var(--gf-accent-border);
 }
 
 html body main.content :is(.badge, .chip, .mini-chip, .pill, .stat-chip, .player-tag, .position-pill, .encounter-card-status, .encounter-score-empty, .encounter-latest-kicker, .stats-summary span, .date-pill, .history-result-pill) * {
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
 }
 
 html body main.content :is(.match-scoreboard, .scoreboard-team, .scoreboard-score, .team-label-with-heart, .match-list-title-score) {
-  background: var(--gf-primary-soft) !important;
-  background-color: var(--gf-primary-soft) !important;
-  background-image: none !important;
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
-  border-color: var(--gf-border-strong) !important;
+  background: var(--gf-primary-soft);
+  background-color: var(--gf-primary-soft);
+  background-image: none;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
+  border-color: var(--gf-border-strong);
 }
 
 html body main.content :is(.match-scoreboard, .scoreboard-team, .scoreboard-score, .team-label-with-heart, .match-list-title-score) * {
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
 }
 
 html body main.content :is(.btn, button, a.btn, .action-button, .icon-button, .history-match-toggle, .match-detail-toggle-btn, .pagination-link) {
-  background: var(--gf-surface) !important;
-  background-color: var(--gf-surface) !important;
-  background-image: none !important;
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
-  border-color: var(--gf-border) !important;
-  box-shadow: 0 4px 10px var(--gf-shadow) !important;
+  background: var(--gf-surface);
+  background-color: var(--gf-surface);
+  background-image: none;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
+  border-color: var(--gf-border);
+  box-shadow: 0 4px 10px var(--gf-shadow);
 }
 
 html body main.content :is(.btn, button, a.btn, .action-button, .icon-button, .history-match-toggle, .match-detail-toggle-btn, .pagination-link) * {
-  color: inherit !important;
-  -webkit-text-fill-color: inherit !important;
+  color: inherit;
+  -webkit-text-fill-color: inherit;
 }
 
 html body main.content :is(.btn-primary, .primary-action, .home-app-download, .pagination-link.active, .visual-tab-nav a.active, button[type="submit"]:not(.btn-muted):not(.btn-secondary):not(.btn-warning):not(.btn-danger)) {
-  background: var(--gf-primary) !important;
-  background-color: var(--gf-primary) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: var(--gf-primary) !important;
+  background: var(--gf-primary);
+  background-color: var(--gf-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--gf-primary);
 }
 
 html body main.content :is(.btn-primary, .primary-action, .home-app-download, .match-detail-toggle-btn, .pagination-link.active, .visual-tab-nav a.active, button[type="submit"]:not(.btn-muted):not(.btn-secondary):not(.btn-warning):not(.btn-danger)) * {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content :is(.match-detail-toggle-btn, .btn-primary) .match-detail-toggle-symbol {
-  background: var(--gf-primary-strong) !important;
-  background-color: var(--gf-primary-strong) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  background: var(--gf-primary-strong);
+  background-color: var(--gf-primary-strong);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content :is(.btn-warning, .btn-sort, .btn-multiple, .warning-action) {
-  background: var(--gf-warning) !important;
-  background-color: var(--gf-warning) !important;
-  color: #241700 !important;
-  -webkit-text-fill-color: #241700 !important;
-  border-color: #bd8200 !important;
+  background: var(--gf-warning);
+  background-color: var(--gf-warning);
+  color: #241700;
+  -webkit-text-fill-color: #241700;
+  border-color: #bd8200;
 }
 
 html body main.content :is(.btn-danger, .danger-action) {
-  background: var(--gf-danger) !important;
-  background-color: var(--gf-danger) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: var(--gf-danger) !important;
+  background: var(--gf-danger);
+  background-color: var(--gf-danger);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--gf-danger);
 }
 
 html body main.content :is(input, select, textarea) {
-  background: var(--gf-surface) !important;
-  background-color: var(--gf-surface) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface);
+  background-color: var(--gf-surface);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content :is(input, select, textarea)::placeholder {
-  color: #7b7058 !important;
-  -webkit-text-fill-color: #7b7058 !important;
+  color: #7b7058;
+  -webkit-text-fill-color: #7b7058;
 }
 
 html body main.content :is(.settings-panel, .draw-settings, .directivo-card, .junta-panel) :is(input, select, textarea) {
-  background: var(--gf-surface) !important;
-  background-color: var(--gf-surface) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface);
+  background-color: var(--gf-surface);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content :is(.settings-panel, .draw-settings, .directivo-card, .junta-panel) :is(label, .inline-check, .directivo-switch) {
-  background: var(--gf-surface-soft) !important;
-  background-color: var(--gf-surface-soft) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface-soft);
+  background-color: var(--gf-surface-soft);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content :is(.settings-panel, .draw-settings, .directivo-card, .junta-panel) :is(label, .inline-check, .directivo-switch) *:not(input):not(select):not(textarea):not(.btn):not(.badge):not(.chip) {
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
 }
 
 html body main.content .settings-panel :is(form, label, label > span, .inline-check):not(#gf-contrast-lock) {
-  background: var(--gf-surface-soft) !important;
-  background-color: var(--gf-surface-soft) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface-soft);
+  background-color: var(--gf-surface-soft);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content .settings-panel :is(input, select, textarea):not(#gf-contrast-lock) {
-  background: var(--gf-surface) !important;
-  background-color: var(--gf-surface) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface);
+  background-color: var(--gf-surface);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content .settings-panel button[type="submit"]:not(.btn-muted):not(.btn-secondary):not(#gf-contrast-lock) {
-  background: var(--gf-primary) !important;
-  background-color: var(--gf-primary) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: var(--gf-primary) !important;
+  background: var(--gf-primary);
+  background-color: var(--gf-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--gf-primary);
 }
 
 html body main.content :is(.stats-filter-menu, .stats-collapsible, .finish-collapse, .junta-history) > summary,
 html body main.content .encounter-action-menu > summary {
-  background: var(--gf-primary) !important;
-  background-color: var(--gf-primary) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: var(--gf-primary) !important;
+  background: var(--gf-primary);
+  background-color: var(--gf-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--gf-primary);
 }
 
 html body main.content :is(.stats-filter-menu, .stats-collapsible, .finish-collapse, .junta-history) > summary *,
 html body main.content .encounter-action-menu > summary * {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content .encounter-action-menu-list {
-  background: var(--gf-surface) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface);
+  border-color: var(--gf-border);
 }
 
 html body main.content :is(.encounter-actions, .encounter-action-menu-list) .icon-pencil::before {
-  color: var(--gf-primary) !important;
-  background: var(--gf-primary) !important;
+  color: var(--gf-primary);
+  background: var(--gf-primary);
 }
 
 html body main.content :is(.encounter-actions, .encounter-action-menu-list) .icon-dice::before {
   background:
     radial-gradient(circle, var(--gf-ink) 0 2px, transparent 2.5px) 4px 4px / 9px 9px,
     radial-gradient(circle, var(--gf-ink) 0 2px, transparent 2.5px) 13px 13px / 9px 9px,
-    var(--gf-accent-soft) !important;
+    var(--gf-accent-soft);
 }
 
 html body main.content .page-head {
-  border-left: 6px solid var(--gf-primary) !important;
+  border-left: 6px solid var(--gf-primary);
 }
 
 html body main.content .page-head::before,
 html body main.content .page-head::after {
-  background: var(--gf-primary) !important;
+  background: var(--gf-primary);
 }
 
 html body main.content [class*="bg-lime-"],
 html body main.content [class*="bg-lime-"] * {
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
 }
 
 html body main.content [class*="text-lime-"] {
-  color: var(--gf-primary) !important;
-  -webkit-text-fill-color: var(--gf-primary) !important;
+  color: var(--gf-primary);
+  -webkit-text-fill-color: var(--gf-primary);
 }
 
 html body main.content :is(table, .stats-table, .finish-table) thead th,
 html body main.content .table-wrap :is(table, .stats-table, .finish-table) thead th {
-  background: var(--gf-primary-strong) !important;
-  background-color: var(--gf-primary-strong) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: var(--gf-border-strong) !important;
+  background: var(--gf-primary-strong);
+  background-color: var(--gf-primary-strong);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--gf-border-strong);
 }
 
 html body main.content :is(table, .stats-table, .finish-table) tbody td,
 html body main.content .table-wrap :is(table, .stats-table, .finish-table) tbody td {
-  background-color: var(--gf-surface) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background-color: var(--gf-surface);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content :is(.file-label, label.file-label) {
-  background: var(--gf-primary) !important;
-  background-color: var(--gf-primary) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: var(--gf-primary) !important;
+  background: var(--gf-primary);
+  background-color: var(--gf-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--gf-primary);
 }
 
 html body main.content :is(.player-icon-button, .player-save-icon, .player-trash-icon) {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content :is(.player-icon-button, .player-save-icon, .player-trash-icon)::before,
 html body main.content :is(.player-icon-button, .player-save-icon, .player-trash-icon)::after {
-  background-color: currentColor !important;
-  color: inherit !important;
+  background-color: currentColor;
+  color: inherit;
 }
 
 html body main.content :is(.directivo-switch, .inline-check) {
-  background: var(--gf-surface-soft) !important;
-  background-color: var(--gf-surface-soft) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface-soft);
+  background-color: var(--gf-surface-soft);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content :is(.directivo-switch, .inline-check) *:not(input):not(select):not(textarea) {
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
 }
 
 html body main.content :is(.players-desktop-table, .players-user-table, #player-list) :is(.stat-rating, .player-table-stat) [class*="text-lime-"],
 html body main.content :is(.players-desktop-table, .players-user-table, #player-list) :is(.stat-rating, .player-table-stat) span {
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
 }
 
 html body main.content :is(.home-multi-draw-card, .home-multi-draw-card .multi-draw-option, .home-multi-draw-card .multi-draw-team, .home-multi-draw-card .multi-draw-player-row, .multi-draw-variants-card, .multi-draw-option, .multi-draw-team, .multi-draw-player-row) {
-  background: var(--gf-surface) !important;
-  background-color: var(--gf-surface) !important;
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
-  border-color: var(--gf-border) !important;
+  background: var(--gf-surface);
+  background-color: var(--gf-surface);
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
+  border-color: var(--gf-border);
 }
 
 html body main.content :is(.multi-draw-option, .multi-draw-team, .multi-draw-player-row) :is(h1, h2, h3, h4, p, span, small, strong, em):not(.badge):not(.chip):not(.multi-draw-position):not(.multi-draw-vote-pill) {
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
 }
 
 html body main.content :is(.multi-draw-position, .multi-draw-vote-pill, .multi-draw-player-name em) {
-  background: var(--gf-primary) !important;
-  background-color: var(--gf-primary) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  background: var(--gf-primary);
+  background-color: var(--gf-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content .multi-draw-team-badges :is(em, strong) {
-  background: var(--gf-primary-soft) !important;
-  background-color: var(--gf-primary-soft) !important;
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
-  border-color: var(--gf-border-strong) !important;
+  background: var(--gf-primary-soft);
+  background-color: var(--gf-primary-soft);
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
+  border-color: var(--gf-border-strong);
 }
 
 html body main.content .card :is(.match-detail-toggle-btn, .btn-primary) :is(span, strong, small, div):not(#gf-contrast-lock),
 html body main.content .card .match-detail-toggle-btn:not(#gf-contrast-lock) {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content .card :is(.multi-draw-position, .multi-draw-vote-pill, .multi-draw-player-name em):not(#gf-contrast-lock),
 html body main.content .home-multi-draw-card :is(.multi-draw-position, .multi-draw-vote-pill, .multi-draw-player-name em):not(#gf-contrast-lock),
 html body main.content .multi-draw-variants-card :is(.multi-draw-position, .multi-draw-vote-pill, .multi-draw-player-name em):not(#gf-contrast-lock) {
-  background: var(--gf-primary) !important;
-  background-color: var(--gf-primary) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: var(--gf-primary) !important;
+  background: var(--gf-primary);
+  background-color: var(--gf-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--gf-primary);
 }
 
 html body main.content .card :is(.stat-rating, .player-table-stat) [class*="text-lime-"]:not(#gf-contrast-lock),
 html body main.content .players-desktop-table :is(.stat-rating, .player-table-stat) [class*="text-lime-"]:not(#gf-contrast-lock) {
-  color: var(--gf-text) !important;
-  -webkit-text-fill-color: var(--gf-text) !important;
+  color: var(--gf-text);
+  -webkit-text-fill-color: var(--gf-text);
 }
 
 html body main.content .team-formation,
 html body main.content .sorteo-page .team-formation,
 html body main.content .captain-formation-field,
 html body main.content .profile-next-team-formation {
-  color: #ffffff !important;
-  background-color: var(--gf-field) !important;
+  color: #ffffff;
+  background-color: var(--gf-field);
 }
 
 html body main.content .team-formation *,
@@ -559,67 +559,67 @@ html body main.content .profile-next-team-formation * {
 }
 
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.formation-player, .captain-formation-player):not(#gf-contrast-lock) {
-  background: rgba(3, 35, 24, .86) !important;
-  background-color: rgba(3, 35, 24, .86) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: rgba(255, 255, 255, .26) !important;
+  background: rgba(3, 35, 24, .86);
+  background-color: rgba(3, 35, 24, .86);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: rgba(255, 255, 255, .26);
 }
 
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.formation-player, .captain-formation-player):not(#gf-contrast-lock) :is(.formation-player-name, strong, span):not(.player-card-rating):not(.captain-position-pill):not(.formation-penalty-badge) {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.formation-player, .captain-formation-player) .player-card-rating:not(#gf-contrast-lock),
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.formation-player, .captain-formation-player) .player-card-rating :is(strong, span):not(#gf-contrast-lock) {
-  background: var(--gf-primary-soft) !important;
-  background-color: var(--gf-primary-soft) !important;
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
-  border-color: var(--gf-accent) !important;
+  background: var(--gf-primary-soft);
+  background-color: var(--gf-primary-soft);
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
+  border-color: var(--gf-accent);
 }
 
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) .player-card-rating :is(strong, span):not(#gf-contrast-lock):not(#gf-contrast-lock-2) {
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
 }
 
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.captain-line-label, .line-label):not(#gf-contrast-lock),
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.captain-line-label, .line-label) :is(span, strong, small):not(#gf-contrast-lock) {
-  background: var(--gf-primary-strong) !important;
-  background-color: var(--gf-primary-strong) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border-color: rgba(255, 255, 255, .28) !important;
+  background: var(--gf-primary-strong);
+  background-color: var(--gf-primary-strong);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: rgba(255, 255, 255, .28);
 }
 
 html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.captain-position-pill, .formation-penalty-badge):not(#gf-contrast-lock) {
-  background: var(--gf-primary-soft) !important;
-  background-color: var(--gf-primary-soft) !important;
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
+  background: var(--gf-primary-soft);
+  background-color: var(--gf-primary-soft);
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
 }
 
 html body main.content :is(.captain-formation-tools, .captain-formation-title, .public-team-characteristics, .team-characteristics-card, .captain-team-characteristics):not(#gf-contrast-lock),
 html body main.content :is(.captain-formation-tools, .captain-formation-title, .public-team-characteristics, .team-characteristics-card, .captain-team-characteristics) :is(h3, h4, label, span, strong, small):not(.badge):not(.chip):not(#gf-contrast-lock):not(#gf-contrast-lock-2) {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 html body main.content :is(.captain-formation-title, .public-team-characteristics, .team-characteristics-card, .captain-team-characteristics) :is(.badge, .chip, .stat-chip, span):not(#gf-contrast-lock):not(#gf-contrast-lock-2),
 html body main.content :is(.captain-formation-title, .public-team-characteristics, .team-characteristics-card, .captain-team-characteristics) :is(.badge, .chip, .stat-chip, span):not(#gf-contrast-lock):not(#gf-contrast-lock-2) * {
-  background: var(--gf-primary-soft) !important;
-  background-color: var(--gf-primary-soft) !important;
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
-  border-color: var(--gf-border-strong) !important;
+  background: var(--gf-primary-soft);
+  background-color: var(--gf-primary-soft);
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
+  border-color: var(--gf-border-strong);
 }
 
 html body main.content :is(.captain-formation-title, .team-characteristics-card, .captain-team-characteristics) :is(span, strong):not(#gf-contrast-lock):not(#gf-contrast-lock-2):not(#gf-contrast-lock-3),
 html body main.content :is(.captain-formation-title, .team-characteristics-card, .captain-team-characteristics) :is(span, strong):not(#gf-contrast-lock):not(#gf-contrast-lock-2):not(#gf-contrast-lock-3) * {
-  color: var(--gf-ink) !important;
-  -webkit-text-fill-color: var(--gf-ink) !important;
+  color: var(--gf-ink);
+  -webkit-text-fill-color: var(--gf-ink);
 }
 
 @media (max-width: 760px) {
@@ -628,7 +628,7 @@ html body main.content :is(.captain-formation-title, .team-characteristics-card,
   }
 
   html body main.content .table-wrap {
-    overflow-x: auto !important;
+    overflow-x: auto;
   }
 }
 
@@ -672,187 +672,187 @@ html body main.content :is(.captain-formation-title, .team-characteristics-card,
     .encounter-drawer-body,
     .encounter-drawer-tab
   ) {
-    background: var(--gf-surface) !important;
-    background-color: var(--gf-surface) !important;
-    background-image: none !important;
-    color: var(--gf-text) !important;
-    -webkit-text-fill-color: var(--gf-text) !important;
-    border-color: var(--gf-border) !important;
-    box-shadow: 0 8px 18px var(--gf-shadow) !important;
+    background: var(--gf-surface);
+    background-color: var(--gf-surface);
+    background-image: none;
+    color: var(--gf-text);
+    -webkit-text-fill-color: var(--gf-text);
+    border-color: var(--gf-border);
+    box-shadow: 0 8px 18px var(--gf-shadow);
   }
 
   html body main.content :is(.btn-primary, .primary-action, .home-app-download, .pagination-link.active, .visual-tab-nav a.active, button[type="submit"]:not(.btn-muted):not(.btn-secondary):not(.btn-warning):not(.btn-danger)) {
-    background: var(--gf-primary) !important;
-    background-color: var(--gf-primary) !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    border-color: var(--gf-primary) !important;
+    background: var(--gf-primary);
+    background-color: var(--gf-primary);
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    border-color: var(--gf-primary);
   }
 
   html body main.content :is(.badge, .chip, .mini-chip, .pill, .stat-chip, .player-tag, .position-pill, .encounter-card-status, .encounter-score-empty, .encounter-latest-kicker, .stats-summary span, .date-pill, .history-result-pill, .match-list-title-score) {
-    background: var(--gf-primary-soft) !important;
-    background-color: var(--gf-primary-soft) !important;
-    background-image: none !important;
-    color: var(--gf-ink) !important;
-    -webkit-text-fill-color: var(--gf-ink) !important;
-    border-color: var(--gf-border-strong) !important;
+    background: var(--gf-primary-soft);
+    background-color: var(--gf-primary-soft);
+    background-image: none;
+    color: var(--gf-ink);
+    -webkit-text-fill-color: var(--gf-ink);
+    border-color: var(--gf-border-strong);
   }
 
   html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) {
-    color: #ffffff !important;
+    color: #ffffff;
     -webkit-text-fill-color: currentColor;
-    background-color: var(--gf-field) !important;
+    background-color: var(--gf-field);
   }
 
   html body main.content #player-list :is(.section-toolbar, .player-list-react-controls, .mobile-full-player-list > summary, .mobile-player-list-body, .mobile-player-list-item, .mobile-player-view-card, .mobile-player-view-summary),
   html body main.content details.player-create-drawer,
   html body main.content details.player-create-drawer > summary,
   html body main.content details.player-create-drawer .player-create-body {
-    background: var(--gf-surface) !important;
-    background-color: var(--gf-surface) !important;
-    background-image: none !important;
-    color: var(--gf-text) !important;
-    -webkit-text-fill-color: var(--gf-text) !important;
-    border-color: var(--gf-border) !important;
+    background: var(--gf-surface);
+    background-color: var(--gf-surface);
+    background-image: none;
+    color: var(--gf-text);
+    -webkit-text-fill-color: var(--gf-text);
+    border-color: var(--gf-border);
   }
 
   html body main.content .history-search :is(h1, h2, h3, h4, p, span, small, strong, label, button):not(.btn-primary):not(.btn-danger),
   html body main.content #player-list :is(.section-toolbar, .player-list-react-controls, .mobile-full-player-list > summary, .mobile-player-list-body, .mobile-player-list-item, .mobile-player-view-card, .mobile-player-view-summary) :is(h1, h2, h3, h4, p, span, small, strong, label, button):not(.btn-primary):not(.btn-danger),
   html body main.content details.player-create-drawer :is(h1, h2, h3, h4, p, span, small, strong, label):not(.btn-primary):not(.btn-danger) {
-    color: var(--gf-text) !important;
-    -webkit-text-fill-color: var(--gf-text) !important;
+    color: var(--gf-text);
+    -webkit-text-fill-color: var(--gf-text);
   }
 
   html body main.content details.player-create-drawer > summary small,
   html body main.content #player-list :is(.player-count-filter, .mobile-player-overall-chip, .player-status-pill.is-active, .player-active-inline) {
-    background: var(--gf-primary-soft) !important;
-    background-color: var(--gf-primary-soft) !important;
-    color: var(--gf-ink) !important;
-    -webkit-text-fill-color: var(--gf-ink) !important;
-    border-color: var(--gf-border-strong) !important;
+    background: var(--gf-primary-soft);
+    background-color: var(--gf-primary-soft);
+    color: var(--gf-ink);
+    -webkit-text-fill-color: var(--gf-ink);
+    border-color: var(--gf-border-strong);
   }
 
   html body main.content #player-list :is(input, select, textarea, .player-list-search-input, .table-input) {
-    background: var(--gf-surface) !important;
-    background-color: var(--gf-surface) !important;
-    color: var(--gf-text) !important;
-    -webkit-text-fill-color: var(--gf-text) !important;
-    border-color: var(--gf-border) !important;
+    background: var(--gf-surface);
+    background-color: var(--gf-surface);
+    color: var(--gf-text);
+    -webkit-text-fill-color: var(--gf-text);
+    border-color: var(--gf-border);
   }
 
   html body main.content #player-list :is(input, textarea)::placeholder {
-    color: #7b7058 !important;
-    -webkit-text-fill-color: #7b7058 !important;
+    color: #7b7058;
+    -webkit-text-fill-color: #7b7058;
   }
 
   html body main.content .player-stat-help > summary,
   html body main.content .player-stat-help > summary :is(span, strong, small) {
-    background: var(--gf-primary) !important;
-    background-color: var(--gf-primary) !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    border-color: var(--gf-primary) !important;
+    background: var(--gf-primary);
+    background-color: var(--gf-primary);
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    border-color: var(--gf-primary);
   }
 
   html body main.content .player-stat-help > summary > span[aria-hidden="true"] {
-    background: var(--gf-primary-soft) !important;
-    background-color: var(--gf-primary-soft) !important;
-    color: var(--gf-ink) !important;
-    -webkit-text-fill-color: var(--gf-ink) !important;
+    background: var(--gf-primary-soft);
+    background-color: var(--gf-primary-soft);
+    color: var(--gf-ink);
+    -webkit-text-fill-color: var(--gf-ink);
   }
 
   html body main.content :is(.stats-player-search, .react-stats-search, .stats-filter-menu, .stats-section) :is(input, select, textarea) {
-    background: var(--gf-surface) !important;
-    background-color: var(--gf-surface) !important;
-    color: var(--gf-text) !important;
-    -webkit-text-fill-color: var(--gf-text) !important;
-    border-color: var(--gf-border) !important;
+    background: var(--gf-surface);
+    background-color: var(--gf-surface);
+    color: var(--gf-text);
+    -webkit-text-fill-color: var(--gf-text);
+    border-color: var(--gf-border);
   }
 
   html body main.content :is(.stats-player-search, .react-stats-search, .stats-filter-menu, .stats-section) :is(input, textarea)::placeholder {
-    color: #7b7058 !important;
-    -webkit-text-fill-color: #7b7058 !important;
+    color: #7b7058;
+    -webkit-text-fill-color: #7b7058;
   }
 
   html body main.content :is(.stats-collapsible, .finish-collapse, .junta-history) > summary,
   html body main.content :is(.stats-collapsible, .finish-collapse, .junta-history) > summary :is(h1, h2, h3, h4, p, span, small, strong, label) {
-    background: var(--gf-primary) !important;
-    background-color: var(--gf-primary) !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    border-color: var(--gf-primary) !important;
+    background: var(--gf-primary);
+    background-color: var(--gf-primary);
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    border-color: var(--gf-primary);
   }
 
   html body main.content :is(.stats-collapsible, .finish-collapse, .junta-history) > summary small,
   html body main.content :is(.stats-collapsible, .finish-collapse, .junta-history) > summary .stat-range-pill {
-    background: var(--gf-primary-soft) !important;
-    background-color: var(--gf-primary-soft) !important;
-    color: var(--gf-ink) !important;
-    -webkit-text-fill-color: var(--gf-ink) !important;
-    border-color: var(--gf-border-strong) !important;
+    background: var(--gf-primary-soft);
+    background-color: var(--gf-primary-soft);
+    color: var(--gf-ink);
+    -webkit-text-fill-color: var(--gf-ink);
+    border-color: var(--gf-border-strong);
   }
 
   html body main.content :is(.stats-player-grid-head, .stats-compact-grid-head),
   html body main.content :is(.stats-player-grid-head, .stats-compact-grid-head) > span {
-    background: var(--gf-primary-strong) !important;
-    background-color: var(--gf-primary-strong) !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    border-color: var(--gf-border-strong) !important;
+    background: var(--gf-primary-strong);
+    background-color: var(--gf-primary-strong);
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    border-color: var(--gf-border-strong);
   }
 
   /* Preview scope: historial search bars only. Extend after visual approval. */
   html body main.content :is(.history-search, .encounter-history-search) {
-    background: #e8dcc0 !important;
-    background-color: #e8dcc0 !important;
-    background-image: none !important;
-    border: 1px solid #ad9460 !important;
-    box-shadow: 0 8px 18px rgba(21, 23, 17, 0.12) !important;
+    background: #e8dcc0;
+    background-color: #e8dcc0;
+    background-image: none;
+    border: 1px solid #ad9460;
+    box-shadow: 0 8px 18px rgba(21, 23, 17, 0.12);
   }
 
   html body main.content :is(.history-search, .encounter-history-search) label {
-    background: transparent !important;
-    color: var(--gf-ink) !important;
-    -webkit-text-fill-color: var(--gf-ink) !important;
+    background: transparent;
+    color: var(--gf-ink);
+    -webkit-text-fill-color: var(--gf-ink);
   }
 
   html body main.content :is(.history-search, .encounter-history-search) input {
-    background: #fffdf7 !important;
-    background-color: #fffdf7 !important;
-    border: 1px solid #cdbc93 !important;
-    box-shadow: inset 0 1px 2px rgba(21, 23, 17, 0.05) !important;
-    color: var(--gf-text) !important;
-    -webkit-text-fill-color: var(--gf-text) !important;
+    background: #fffdf7;
+    background-color: #fffdf7;
+    border: 1px solid #cdbc93;
+    box-shadow: inset 0 1px 2px rgba(21, 23, 17, 0.05);
+    color: var(--gf-text);
+    -webkit-text-fill-color: var(--gf-text);
   }
 
   html body main.content :is(.history-search, .encounter-history-search) input::placeholder {
-    color: #7b7058 !important;
-    -webkit-text-fill-color: #7b7058 !important;
+    color: #7b7058;
+    -webkit-text-fill-color: #7b7058;
   }
 
   html body main.content :is(.history-search, .encounter-history-search) input:focus {
-    border-color: var(--gf-accent) !important;
-    box-shadow: 0 0 0 3px rgba(184, 135, 27, 0.18), inset 0 1px 2px rgba(21, 23, 17, 0.05) !important;
-    outline: none !important;
+    border-color: var(--gf-accent);
+    box-shadow: 0 0 0 3px rgba(184, 135, 27, 0.18), inset 0 1px 2px rgba(21, 23, 17, 0.05);
+    outline: none;
   }
 
   html body main.content :is(.history-search, .encounter-history-search) > span {
-    background: var(--gf-primary-soft) !important;
-    background-color: var(--gf-primary-soft) !important;
-    border: 1px solid var(--gf-border-strong) !important;
-    box-shadow: none !important;
-    color: var(--gf-ink) !important;
-    -webkit-text-fill-color: var(--gf-ink) !important;
+    background: var(--gf-primary-soft);
+    background-color: var(--gf-primary-soft);
+    border: 1px solid var(--gf-border-strong);
+    box-shadow: none;
+    color: var(--gf-ink);
+    -webkit-text-fill-color: var(--gf-ink);
   }
 
   @media (max-width: 760px) {
     html body main.content :is(.history-search, .encounter-history-search) {
-      gap: 0.5rem !important;
-      grid-template-columns: 1fr !important;
+      gap: 0.5rem;
+      grid-template-columns: 1fr;
     }
 
     html body main.content :is(.history-search, .encounter-history-search) > span {
-      width: fit-content !important;
+      width: fit-content;
     }
   }
 
@@ -869,298 +869,298 @@ html body main.content :is(.captain-formation-title, .team-characteristics-card,
     --bb-800: #0a5b0a;
     --bb-900: #094b0a;
     --bb-950: #021703;
-    background: var(--bb-50) !important;
-    background-color: var(--bb-50) !important;
-    color: var(--bb-950) !important;
+    background: var(--bb-50);
+    background-color: var(--bb-50);
+    color: var(--bb-950);
   }
 
   html body.colorway-black-bean .app-shell,
   html body.colorway-black-bean main.content {
-    background: var(--bb-50) !important;
-    background-color: var(--bb-50) !important;
-    color: var(--bb-950) !important;
+    background: var(--bb-50);
+    background-color: var(--bb-50);
+    color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content .page-head {
-    background: var(--bb-50) !important;
-    background-color: var(--bb-50) !important;
-    background-image: none !important;
-    border-color: var(--bb-400) !important;
-    box-shadow: 0 8px 18px rgba(2, 23, 3, 0.08) !important;
-    color: var(--bb-950) !important;
+    background: var(--bb-50);
+    background-color: var(--bb-50);
+    background-image: none;
+    border-color: var(--bb-400);
+    box-shadow: 0 8px 18px rgba(2, 23, 3, 0.08);
+    color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content .page-head::before {
-    background: var(--bb-700) !important;
+    background: var(--bb-700);
   }
 
   html body.colorway-black-bean main.content .page-head::after {
-    background: linear-gradient(90deg, var(--bb-700), var(--bb-500), var(--bb-200)) !important;
+    background: linear-gradient(90deg, var(--bb-700), var(--bb-500), var(--bb-200));
   }
 
   html body.colorway-black-bean main.content .page-head :is(h1, h2, h3, p, span, small, strong) {
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content :is(.encounters-overview, .encounter-card-grid) {
-    color: var(--bb-950) !important;
+    color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content .encounter-overview-panel {
-    box-shadow: 0 4px 10px rgba(2, 23, 3, 0.06) !important;
+    box-shadow: 0 4px 10px rgba(2, 23, 3, 0.06);
   }
 
   html body.colorway-black-bean main.content .encounter-overview-panel.is-active {
-    background: var(--bb-200) !important;
-    background-color: var(--bb-200) !important;
-    border-color: var(--bb-700) !important;
-    box-shadow: 0 0 0 3px rgba(14, 144, 11, 0.22), 0 8px 16px rgba(2, 23, 3, 0.12) !important;
+    background: var(--bb-200);
+    background-color: var(--bb-200);
+    border-color: var(--bb-700);
+    box-shadow: 0 0 0 3px rgba(14, 144, 11, 0.22), 0 8px 16px rgba(2, 23, 3, 0.12);
   }
 
   html body.colorway-black-bean main.content .encounters-history {
-    border-radius: 16px !important;
-    box-shadow: 0 10px 24px rgba(2, 23, 3, 0.08) !important;
+    border-radius: 16px;
+    box-shadow: 0 10px 24px rgba(2, 23, 3, 0.08);
   }
 
   html body.colorway-black-bean main.content .encounters-history .section-toolbar {
-    background: transparent !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    border: 0 !important;
-    border-bottom: 1px solid var(--bb-300) !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+    border: 0;
+    border-bottom: 1px solid var(--bb-300);
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content .encounters-history :is(h2, h3, h4, p, span, small, strong, label) {
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content .encounters-history :is(div, article, section) {
-    -webkit-text-fill-color: currentColor !important;
+    -webkit-text-fill-color: currentColor;
   }
 
   html body.colorway-black-bean main.content .encounter-history-search {
-    background: var(--bb-800) !important;
-    background-color: var(--bb-800) !important;
-    border-color: var(--bb-900) !important;
-    box-shadow: 0 6px 14px rgba(2, 23, 3, 0.12) !important;
-    color: var(--bb-50) !important;
-    -webkit-text-fill-color: var(--bb-50) !important;
+    background: var(--bb-800);
+    background-color: var(--bb-800);
+    border-color: var(--bb-900);
+    box-shadow: 0 6px 14px rgba(2, 23, 3, 0.12);
+    color: var(--bb-50);
+    -webkit-text-fill-color: var(--bb-50);
   }
 
   html body.colorway-black-bean main.content .encounter-history-search label {
-    color: var(--bb-50) !important;
-    -webkit-text-fill-color: var(--bb-50) !important;
+    color: var(--bb-50);
+    -webkit-text-fill-color: var(--bb-50);
   }
 
   html body.colorway-black-bean main.content .encounter-history-search input {
-    background: var(--bb-50) !important;
-    background-color: var(--bb-50) !important;
-    border-color: var(--bb-600) !important;
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    background: var(--bb-50);
+    background-color: var(--bb-50);
+    border-color: var(--bb-600);
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content .encounter-history-search input::placeholder {
-    color: var(--bb-800) !important;
-    -webkit-text-fill-color: var(--bb-800) !important;
+    color: var(--bb-800);
+    -webkit-text-fill-color: var(--bb-800);
   }
 
   html body.colorway-black-bean main.content .encounter-history-search input:focus {
-    border-color: var(--bb-800) !important;
-    box-shadow: 0 0 0 3px rgba(30, 178, 23, 0.24) !important;
+    border-color: var(--bb-800);
+    box-shadow: 0 0 0 3px rgba(30, 178, 23, 0.24);
   }
 
   html body.colorway-black-bean main.content .encounter-history-search > span {
-    background: var(--bb-200) !important;
-    background-color: var(--bb-200) !important;
-    border-color: var(--bb-600) !important;
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    background: var(--bb-200);
+    background-color: var(--bb-200);
+    border-color: var(--bb-600);
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content :is(.encounter-card, .encounter-latest-card) {
-    border-color: var(--bb-300) !important;
-    box-shadow: 0 5px 14px rgba(2, 23, 3, 0.07) !important;
+    border-color: var(--bb-300);
+    box-shadow: 0 5px 14px rgba(2, 23, 3, 0.07);
   }
 
   html body.colorway-black-bean main.content .encounter-card.is-latest {
-    border-color: var(--bb-500) !important;
-    box-shadow: 0 0 0 1px rgba(30, 178, 23, 0.18), 0 5px 14px rgba(2, 23, 3, 0.08) !important;
+    border-color: var(--bb-500);
+    box-shadow: 0 0 0 1px rgba(30, 178, 23, 0.18), 0 5px 14px rgba(2, 23, 3, 0.08);
   }
 
   html body.colorway-black-bean main.content :is(.badge, .chip, .pill, .encounter-card-status, .encounter-score-empty, .encounter-latest-kicker, .date-pill, .history-result-pill) {
-    background: var(--bb-200) !important;
-    background-color: var(--bb-200) !important;
-    border-color: var(--bb-500) !important;
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    background: var(--bb-200);
+    background-color: var(--bb-200);
+    border-color: var(--bb-500);
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content :is(.match-scoreboard, .scoreboard-team, .team-label-with-heart, .match-list-title-score) {
-    background: var(--bb-900) !important;
-    background-color: var(--bb-900) !important;
-    background-image: none !important;
-    border-color: var(--bb-950) !important;
-    color: var(--bb-50) !important;
-    -webkit-text-fill-color: var(--bb-50) !important;
+    background: var(--bb-900);
+    background-color: var(--bb-900);
+    background-image: none;
+    border-color: var(--bb-950);
+    color: var(--bb-50);
+    -webkit-text-fill-color: var(--bb-50);
   }
 
   html body.colorway-black-bean main.content :is(.match-scoreboard, .scoreboard-team, .team-label-with-heart, .match-list-title-score) * {
-    color: var(--bb-50) !important;
-    -webkit-text-fill-color: var(--bb-50) !important;
+    color: var(--bb-50);
+    -webkit-text-fill-color: var(--bb-50);
   }
 
   html body.colorway-black-bean main.content .scoreboard-score {
-    background: var(--bb-200) !important;
-    background-color: var(--bb-200) !important;
-    border-color: var(--bb-600) !important;
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    background: var(--bb-200);
+    background-color: var(--bb-200);
+    border-color: var(--bb-600);
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content .encounter-actions {
-    border-radius: 12px !important;
-    box-shadow: inset 0 0 0 1px rgba(14, 144, 11, 0.10) !important;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px rgba(14, 144, 11, 0.10);
   }
 
   html body.colorway-black-bean main.content :is(.btn, button, a.btn) {
-    background: var(--bb-900) !important;
-    background-color: var(--bb-900) !important;
-    border-color: var(--bb-950) !important;
-    box-shadow: 0 3px 8px rgba(2, 23, 3, 0.14) !important;
-    color: var(--bb-50) !important;
-    -webkit-text-fill-color: var(--bb-50) !important;
+    background: var(--bb-900);
+    background-color: var(--bb-900);
+    border-color: var(--bb-950);
+    box-shadow: 0 3px 8px rgba(2, 23, 3, 0.14);
+    color: var(--bb-50);
+    -webkit-text-fill-color: var(--bb-50);
   }
 
   html body.colorway-black-bean main.content :is(.btn, button, a.btn):hover {
-    background: var(--bb-800) !important;
-    background-color: var(--bb-800) !important;
-    color: var(--bb-50) !important;
-    -webkit-text-fill-color: var(--bb-50) !important;
+    background: var(--bb-800);
+    background-color: var(--bb-800);
+    color: var(--bb-50);
+    -webkit-text-fill-color: var(--bb-50);
   }
 
   html body.colorway-black-bean main.content :is(.btn-warning, .btn-muted) {
-    background: var(--bb-200) !important;
-    background-color: var(--bb-200) !important;
-    border-color: var(--bb-600) !important;
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    background: var(--bb-200);
+    background-color: var(--bb-200);
+    border-color: var(--bb-600);
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content :is(.btn-warning, .btn-muted):hover {
-    background: var(--bb-300) !important;
-    background-color: var(--bb-300) !important;
-    color: var(--bb-950) !important;
-    -webkit-text-fill-color: var(--bb-950) !important;
+    background: var(--bb-300);
+    background-color: var(--bb-300);
+    color: var(--bb-950);
+    -webkit-text-fill-color: var(--bb-950);
   }
 
   html body.colorway-black-bean main.content :is(.btn-disabled, [disabled]) {
-    background: var(--bb-100) !important;
-    background-color: var(--bb-100) !important;
-    border-color: var(--bb-300) !important;
-    box-shadow: none !important;
-    color: var(--bb-800) !important;
-    -webkit-text-fill-color: var(--bb-800) !important;
+    background: var(--bb-100);
+    background-color: var(--bb-100);
+    border-color: var(--bb-300);
+    box-shadow: none;
+    color: var(--bb-800);
+    -webkit-text-fill-color: var(--bb-800);
   }
 
   html body.colorway-black-bean main.content .btn-danger {
-    background: var(--bb-950) !important;
-    background-color: var(--bb-950) !important;
-    border-color: var(--bb-950) !important;
-    color: var(--bb-50) !important;
-    -webkit-text-fill-color: var(--bb-50) !important;
+    background: var(--bb-950);
+    background-color: var(--bb-950);
+    border-color: var(--bb-950);
+    color: var(--bb-50);
+    -webkit-text-fill-color: var(--bb-50);
   }
 }
 
 body.colorway-black-bean main.content :is(.btn-primary, a.btn-primary, button.btn-primary, .primary-action, .home-app-download, .pagination-link.active, .visual-tab-nav a.active) {
-  background: var(--bb-900) !important;
-  background-color: var(--bb-900) !important;
-  border-color: var(--bb-950) !important;
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  background: var(--bb-900);
+  background-color: var(--bb-900);
+  border-color: var(--bb-950);
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 body.colorway-black-bean main.content :is(.btn-primary, a.btn-primary, button.btn-primary, .primary-action, .home-app-download, .pagination-link.active, .visual-tab-nav a.active) * {
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 html body.colorway-black-bean main.content :is(a.btn.btn-primary, button.btn.btn-primary, .btn.btn-primary, a.btn.primary-action, button.btn.primary-action) {
-  background: var(--bb-900) !important;
-  background-color: var(--bb-900) !important;
-  border-color: var(--bb-950) !important;
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  background: var(--bb-900);
+  background-color: var(--bb-900);
+  border-color: var(--bb-950);
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(a.btn.btn-primary.btn-primary, button.btn.btn-primary.btn-primary, .btn.btn-primary.btn-primary, a.btn.primary-action.primary-action, button.btn.primary-action.primary-action) {
-  background: var(--bb-900) !important;
-  background-color: var(--bb-900) !important;
-  border-color: var(--bb-950) !important;
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  background: var(--bb-900);
+  background-color: var(--bb-900);
+  border-color: var(--bb-950);
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(.history-search, .encounter-history-search) {
-  background: var(--bb-800) !important;
-  background-color: var(--bb-800) !important;
-  background-image: none !important;
-  border-color: var(--bb-900) !important;
-  box-shadow: 0 6px 14px rgba(2, 23, 3, 0.12) !important;
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  background: var(--bb-800);
+  background-color: var(--bb-800);
+  background-image: none;
+  border-color: var(--bb-900);
+  box-shadow: 0 6px 14px rgba(2, 23, 3, 0.12);
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(.history-search, .encounter-history-search) label {
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(.history-search, .encounter-history-search) input {
-  background: var(--bb-50) !important;
-  background-color: var(--bb-50) !important;
-  border-color: var(--bb-300) !important;
-  color: var(--bb-950) !important;
-  -webkit-text-fill-color: var(--bb-950) !important;
+  background: var(--bb-50);
+  background-color: var(--bb-50);
+  border-color: var(--bb-300);
+  color: var(--bb-950);
+  -webkit-text-fill-color: var(--bb-950);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(.history-search, .encounter-history-search) input::placeholder {
-  color: var(--bb-800) !important;
-  -webkit-text-fill-color: var(--bb-800) !important;
+  color: var(--bb-800);
+  -webkit-text-fill-color: var(--bb-800);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(.history-search, .encounter-history-search) > span {
-  background: var(--bb-200) !important;
-  background-color: var(--bb-200) !important;
-  border-color: var(--bb-600) !important;
-  color: var(--bb-950) !important;
-  -webkit-text-fill-color: var(--bb-950) !important;
+  background: var(--bb-200);
+  background-color: var(--bb-200);
+  border-color: var(--bb-600);
+  color: var(--bb-950);
+  -webkit-text-fill-color: var(--bb-950);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(.match-scoreboard, .scoreboard-team, .scoreboard-score, .team-label-with-heart, .match-list-title-score) {
-  background: var(--bb-800) !important;
-  background-color: var(--bb-800) !important;
-  background-image: none !important;
-  border-color: var(--bb-900) !important;
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  background: var(--bb-800);
+  background-color: var(--bb-800);
+  background-image: none;
+  border-color: var(--bb-900);
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content :is(.match-scoreboard, .scoreboard-team, .scoreboard-score, .team-label-with-heart, .match-list-title-score) * {
-  color: var(--bb-50) !important;
-  -webkit-text-fill-color: var(--bb-50) !important;
+  color: var(--bb-50);
+  -webkit-text-fill-color: var(--bb-50);
 }
 
 html body.colorway-black-bean.colorway-black-bean main.content.content .scoreboard-score {
-  background: var(--bb-200) !important;
-  background-color: var(--bb-200) !important;
-  border-color: var(--bb-600) !important;
-  color: var(--bb-950) !important;
-  -webkit-text-fill-color: var(--bb-950) !important;
+  background: var(--bb-200);
+  background-color: var(--bb-200);
+  border-color: var(--bb-600);
+  color: var(--bb-950);
+  -webkit-text-fill-color: var(--bb-950);
 }

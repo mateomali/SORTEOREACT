@@ -855,58 +855,73 @@ require __DIR__ . '/includes/header.php';
                       'lost' => ['label' => 'PERDIDOS', 'items' => $performanceDetails['lost'] ?? []],
                   ];
                 ?>
-                <button
-                  type="button"
-                  class="award-summary-button award-icon-only"
-                  data-awards-trigger
-                  data-awards-target="<?= h($performancePanelId) ?>"
-                  data-awards-player="<?= h((string) $row['name']) ?>"
-                  data-awards-title="Rendimiento - <?= h((string) $row['name']) ?>"
-                  aria-label="Ver rendimiento de <?= h((string) $row['name']) ?>"
-                  title="Rendimiento"
-                >
-                  <span class="award-count-icon">&#128200;</span>
-                </button>
-                <?php if ($playerAwardItems): ?>
-                  <?php if ($playerGoodAwardTotal > 0): ?>
-                    <button
-                      type="button"
-                      class="award-summary-button"
-                      data-awards-trigger
-                      data-awards-target="<?= h($goodAwardPanelId) ?>"
-                      data-awards-player="<?= h((string) $row['name']) ?>"
-                      aria-label="Ver premios buenos de <?= h((string) $row['name']) ?>"
-                      title="Premios buenos"
-                    >
-                      <span>&#127941;</span><strong>x<?= h((string) $playerGoodAwardTotal) ?></strong>
-                    </button>
-                  <?php endif; ?>
-                  <?php if ($playerBadAwardTotal > 0): ?>
-                    <button
-                      type="button"
-                      class="award-summary-button"
-                      data-awards-trigger
-                      data-awards-target="<?= h($badAwardPanelId) ?>"
-                      data-awards-player="<?= h((string) $row['name']) ?>"
-                      aria-label="Ver premios malos de <?= h((string) $row['name']) ?>"
-                      title="Premios malos"
-                    >
-                      <span>&#129313;</span><strong>x<?= h((string) $playerBadAwardTotal) ?></strong>
-                    </button>
-                  <?php endif; ?>
-                <?php else: ?>
+                <span class="award-desktop-actions">
                   <button
                     type="button"
-                    class="award-summary-button"
+                    class="award-summary-button award-icon-only"
                     data-awards-trigger
-                    data-awards-target="<?= h($awardPanelId) ?>"
+                    data-awards-target="<?= h($performancePanelId) ?>"
                     data-awards-player="<?= h((string) $row['name']) ?>"
-                    aria-label="Ver detalle estadístico de <?= h((string) $row['name']) ?>"
+                    data-awards-title="Rendimiento - <?= h((string) $row['name']) ?>"
+                    aria-label="Ver rendimiento de <?= h((string) $row['name']) ?>"
+                    title="Rendimiento"
                   >
-                    <span>+</span>
-                    <strong>ver</strong>
+                    <span class="award-count-icon">&#128200;</span>
                   </button>
-                <?php endif; ?>
+                  <?php if ($playerAwardItems): ?>
+                    <?php if ($playerGoodAwardTotal > 0): ?>
+                      <button
+                        type="button"
+                        class="award-summary-button"
+                        data-awards-trigger
+                        data-awards-target="<?= h($goodAwardPanelId) ?>"
+                        data-awards-player="<?= h((string) $row['name']) ?>"
+                        aria-label="Ver premios buenos de <?= h((string) $row['name']) ?>"
+                        title="Premios buenos"
+                      >
+                        <span>&#127941;</span><strong>x<?= h((string) $playerGoodAwardTotal) ?></strong>
+                      </button>
+                    <?php endif; ?>
+                    <?php if ($playerBadAwardTotal > 0): ?>
+                      <button
+                        type="button"
+                        class="award-summary-button"
+                        data-awards-trigger
+                        data-awards-target="<?= h($badAwardPanelId) ?>"
+                        data-awards-player="<?= h((string) $row['name']) ?>"
+                        aria-label="Ver premios malos de <?= h((string) $row['name']) ?>"
+                        title="Premios malos"
+                      >
+                        <span>&#129313;</span><strong>x<?= h((string) $playerBadAwardTotal) ?></strong>
+                      </button>
+                    <?php endif; ?>
+                  <?php else: ?>
+                    <button
+                      type="button"
+                      class="award-summary-button"
+                      data-awards-trigger
+                      data-awards-target="<?= h($awardPanelId) ?>"
+                      data-awards-player="<?= h((string) $row['name']) ?>"
+                      aria-label="Ver detalle estadístico de <?= h((string) $row['name']) ?>"
+                    >
+                      <span>+</span>
+                      <strong>ver</strong>
+                    </button>
+                  <?php endif; ?>
+                </span>
+                <button
+                  type="button"
+                  class="award-summary-button award-total-button award-mobile-action"
+                  data-awards-trigger
+                  data-awards-target="<?= h($awardPanelId) ?>-mobile"
+                  data-awards-player="<?= h((string) $row['name']) ?>"
+                  data-awards-title="Premios - <?= h((string) $row['name']) ?>"
+                  aria-label="Ver todos los premios de <?= h((string) $row['name']) ?>"
+                  title="Premios"
+                >
+                  <span class="award-count-icon">&#127941;</span>
+                  <strong><?= h((string) $sortableAwardTotal) ?></strong>
+                </button>
                 <?php foreach ([
                     $goodAwardPanelId => $playerGoodAwardItems,
                     $badAwardPanelId => $playerBadAwardItems,
@@ -952,6 +967,50 @@ require __DIR__ . '/includes/header.php';
                           <?php endif; ?>
                         </span>
                       </div>
+                    <?php endforeach; ?>
+                  </div>
+                </div>
+                <div id="<?= h($awardPanelId) ?>-mobile" class="award-popover-source" hidden>
+                  <div class="award-popover-list award-mobile-panel-list">
+                    <section class="award-popover-group award-popover-performance-group">
+                      <h3>Rendimiento</h3>
+                      <div class="award-performance-grid">
+                        <span><strong><?= h((string) ((int) ($row['pg'] ?? 0))) ?></strong><small>Ganados</small></span>
+                        <span><strong><?= h((string) ((int) ($row['pe'] ?? 0))) ?></strong><small>Empatados</small></span>
+                        <span><strong><?= h((string) ((int) ($row['pp'] ?? 0))) ?></strong><small>Perdidos</small></span>
+                      </div>
+                    </section>
+                    <?php foreach ([
+                        'Premios positivos' => $playerGoodAwardItems,
+                        'Premios negativos' => $playerBadAwardItems,
+                    ] as $awardGroupTitle => $awardGroupItems): ?>
+                      <section class="award-popover-group">
+                        <h3><?= h($awardGroupTitle) ?></h3>
+                        <?php if ($awardGroupItems): ?>
+                          <?php foreach ($awardGroupItems as $awardItem): ?>
+                            <details class="award-popover-item award-popover-detail">
+                              <summary>
+                                <span class="award-popover-icon"><?= h($awardItem['icon']) ?></span>
+                                <span>
+                                  <strong><?= h($awardItem['label']) ?> x<?= h((string) $awardItem['count']) ?></strong>
+                                  <small><?= h($awardItem['description']) ?></small>
+                                </span>
+                              </summary>
+                              <div class="award-popover-dates">
+                                <?php if (!empty($awardItem['dates'])): ?>
+                                  <?php foreach ($awardItem['dates'] as $awardDate): ?>
+                                    <span><?= h($awardDate['title']) ?> | <?= h($awardDate['date']) ?></span>
+                                  <?php endforeach; ?>
+                                <?php else: ?>
+                                  <span>Sin fechas registradas para este filtro.</span>
+                                <?php endif; ?>
+                              </div>
+                            </details>
+                          <?php endforeach; ?>
+                        <?php else: ?>
+                          <div class="award-popover-empty">Sin datos en este grupo.</div>
+                        <?php endif; ?>
+                      </section>
                     <?php endforeach; ?>
                   </div>
                 </div>

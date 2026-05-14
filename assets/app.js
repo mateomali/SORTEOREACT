@@ -664,7 +664,7 @@
         const grid = row?.closest('[data-stats-sortable-grid]');
         const sourceId = trigger.dataset.detailTarget || '';
         const source = sourceId ? document.getElementById(sourceId) : null;
-        if (!row || !grid || !source) return;
+        if (!row || grid == null || !source) return;
 
         const isOpen = trigger.getAttribute('aria-expanded') === 'true';
         grid.querySelectorAll('[data-stats-row-detail-panel]').forEach((panel) => panel.remove());
@@ -1224,12 +1224,12 @@
       if (!element) return;
       classes.forEach((className) => element.classList.toggle(className, enabled));
     };
-    const selectedRowClasses = ['!border-lime-200/70', '!bg-emerald-800/90', 'ring-2', 'ring-lime-200/25'];
-    const addedButtonClasses = ['!bg-emerald-600', '!text-white', 'hover:!bg-emerald-700'];
-    const defaultButtonClasses = ['!bg-lime-100', '!text-emerald-950', 'hover:!bg-lime-200'];
+    const selectedRowClasses = ['border-lime-200/70', 'bg-emerald-800/90', 'ring-2', 'ring-lime-200/25'];
+    const addedButtonClasses = ['bg-emerald-600', 'text-white', 'hover:bg-emerald-700'];
+    const defaultButtonClasses = ['bg-lime-100', 'text-[#07130f]', 'hover:bg-lime-200'];
     const disabledRemoveClasses = ['opacity-40', 'cursor-not-allowed'];
-    const readyMobileClasses = ['!bg-lime-100', '!text-emerald-950', 'hover:!bg-lime-200'];
-    const idleMobileClasses = ['!bg-lime-100/15', '!text-emerald-100/70'];
+    const readyMobileClasses = ['bg-lime-100', 'text-[#07130f]', 'hover:bg-lime-200'];
+    const idleMobileClasses = ['bg-lime-100/15', 'text-emerald-100/70'];
 
     checkboxes.forEach((el) => {
       const row = el.closest('[data-player-row]');
@@ -1992,7 +1992,7 @@
       button.classList.toggle('is-active', active);
       button.classList.toggle('is-inactive', !active);
       button.classList.toggle('bg-lime-100', active);
-      button.classList.toggle('text-emerald-950', active);
+      button.classList.toggle('text-[#07130f]', active);
       button.classList.toggle('bg-emerald-900', !active);
       button.classList.toggle('text-emerald-100/70', !active);
       if (card) {
@@ -2182,7 +2182,7 @@
       if (!input) return;
       input.classList.toggle('border-lime-200', enabled);
       input.classList.toggle('bg-lime-100', enabled);
-      input.classList.toggle('text-emerald-950', enabled);
+      input.classList.toggle('text-[#07130f]', enabled);
       input.classList.toggle('ring-4', enabled);
       input.classList.toggle('ring-lime-200/30', enabled);
       input.classList.toggle('shadow-lg', enabled);

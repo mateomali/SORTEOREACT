@@ -163,7 +163,7 @@ function award_legend_details_html(array $awardDefinitions, ?array $awardDescrip
     $html = '<details class="card stats-section award-legend-section scroll-mt-20"' . $openAttr . '>';
     $html .= '<summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-extrabold text-lime-50">';
     $html .= $escape($title);
-    $html .= '<span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-emerald-950 shadow-sm" aria-hidden="true">?</span>';
+    $html .= '<span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-[#07130f] shadow-sm" aria-hidden="true">?</span>';
     $html .= '</summary>';
     $html .= '<div class="award-legend-grid border-t border-lime-200/30 bg-emerald-950/70 p-3">';
 

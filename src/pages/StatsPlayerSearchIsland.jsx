@@ -21,7 +21,7 @@ function renderRankingCard(player) {
   const rankingCard = document.querySelector('[data-stats-selected-ranking-card]');
   const rankingTitle = document.querySelector('[data-stats-selected-ranking-title]');
   const rankingGrid = document.querySelector('[data-stats-selected-ranking-grid]');
-  if (!rankingCard || !rankingGrid) return;
+  if (!rankingCard || rankingGrid == null) return;
 
   const rankings = Array.isArray(player?.rankings) ? player.rankings : [];
   if (!rankings.length) {

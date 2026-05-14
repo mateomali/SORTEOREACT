@@ -134,7 +134,7 @@ function shared_profile_player_card(array $player, array $statLabels, array $sta
         $html .= '<summary class="cursor-pointer list-none p-2.5">';
         $html .= '<div class="mb-1.5 flex items-center justify-between gap-2">';
         $html .= '<span class="min-w-0 truncate text-xs font-extrabold text-lime-100">' . h((string) ($statLabels[$field] ?? $field)) . '</span>';
-        $html .= '<strong class="shrink-0 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-extrabold text-emerald-950">' . h(number_format($value, 1)) . '/6</strong>';
+        $html .= '<strong class="shrink-0 rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-extrabold text-[#07130f]">' . h(number_format($value, 1)) . '/6</strong>';
         $html .= '</div><div class="h-2 overflow-hidden rounded-full bg-emerald-950/80">';
         $html .= '<span class="block h-full rounded-full" style="width: ' . $percent . '%; background-color: ' . h($barColor) . '"></span>';
         $html .= '</div></summary>';

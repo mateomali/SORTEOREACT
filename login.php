@@ -208,20 +208,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $title = 'Ingreso | ' . APP_NAME;
 $activePage = 'login.php';
 $bodyClass = 'login-tailwind';
-$loginPanelClass = 'mx-auto w-full max-w-md overflow-hidden rounded-xl border border-emerald-900/15 bg-white text-emerald-950 shadow-sm shadow-emerald-950/10';
+$loginPanelClass = 'mx-auto w-full max-w-md overflow-hidden rounded-xl border border-emerald-900/15 bg-white text-[#07130f] shadow-sm shadow-emerald-950/10';
 $loginPanelHeadClass = 'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 border-b border-emerald-900/20 bg-emerald-950 px-3 py-2.5 text-lime-50';
-$loginRatingClass = 'inline-flex h-10 w-10 items-center justify-center rounded-lg bg-lime-100 text-sm font-black leading-none text-emerald-950';
-$loginTitleClass = 'mb-0 text-base font-black leading-tight text-emerald-950';
+$loginRatingClass = 'inline-flex h-10 w-10 items-center justify-center rounded-lg bg-lime-100 text-sm font-black leading-none text-[#07130f]';
+$loginTitleClass = 'mb-0 text-base font-black leading-tight text-[#07130f]';
 $loginHelpClass = 'text-[13px] font-semibold leading-snug text-slate-500';
-$loginLabelClass = 'mb-1 block text-xs font-black leading-tight text-emerald-950';
-$loginInputClass = 'h-10 w-full rounded-lg border border-emerald-900/25 bg-white px-3 text-sm font-bold text-emerald-950 outline-none placeholder:text-slate-500/70 placeholder:font-semibold focus:border-emerald-800 focus:ring-4 focus:ring-emerald-900/10 max-[760px]:h-9 max-[760px]:text-[13px]';
+$loginLabelClass = 'mb-1 block text-xs font-black leading-tight text-[#07130f]';
+$loginInputClass = 'h-10 w-full rounded-lg border border-emerald-900/25 bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-slate-500/70 placeholder:font-semibold focus:border-emerald-800 focus:ring-4 focus:ring-emerald-900/10 max-[760px]:h-9 max-[760px]:text-[13px]';
 $passwordInputClass = $loginInputClass;
 $passwordFieldClass = 'grid grid-cols-[minmax(0,1fr)_40px] items-stretch gap-1.5';
-$passwordToggleClass = 'inline-flex h-10 items-center justify-center rounded-lg border border-emerald-900/15 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-900/15 max-[760px]:h-9';
+$passwordToggleClass = 'inline-flex h-10 items-center justify-center rounded-lg border border-emerald-900/15 bg-emerald-50 text-[#07130f] hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-900/15 max-[760px]:h-9';
 $passwordToggleIcon = '<svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="3"/></svg>';
 $loginSubmitClass = 'inline-flex h-10 w-full items-center justify-center rounded-lg bg-emerald-950 px-3 text-sm font-black text-white transition hover:bg-emerald-900 focus:outline-none focus:ring-4 focus:ring-emerald-900/15 max-[760px]:h-9';
 $loginDetailsClass = 'group mt-3 rounded-lg border border-emerald-900/15 bg-emerald-50/55 px-2.5 py-1.5';
-$loginSummaryClass = 'flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 rounded-md text-[13px] font-black text-emerald-950 [&::-webkit-details-marker]:hidden';
+$loginSummaryClass = 'flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 rounded-md text-[13px] font-black text-[#07130f] [&::-webkit-details-marker]:hidden';
 $loginSummaryIconClass = 'h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-950 text-sm font-black leading-none text-white';
 ensure_auth_schema();
 $pendingUsername = (string) ($_SESSION['pending_username'] ?? '');
@@ -235,10 +235,10 @@ require __DIR__ . '/includes/header.php';
 
 <section class="mx-auto mb-3 flex w-full max-w-md flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-900/15 bg-white px-3 py-3 shadow-sm shadow-emerald-950/5 max-[760px]:mb-2 max-[760px]:py-2">
   <div>
-    <h1 class="mb-0 text-xl font-black leading-tight text-emerald-950 max-[760px]:text-lg">Ingreso</h1>
+    <h1 class="mb-0 text-xl font-black leading-tight text-[#07130f] max-[760px]:text-lg">Ingreso</h1>
     <p class="text-[13px] font-semibold leading-snug text-slate-500 max-[760px]:hidden">Acceso para jugadores, directivos y administradores.</p>
   </div>
-  <a class="inline-flex min-h-8 items-center justify-center rounded-lg border border-emerald-900/15 bg-white px-3 py-1.5 text-xs font-black text-emerald-950 no-underline hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-900/10" href="index.php">Volver al inicio</a>
+  <a class="inline-flex min-h-8 items-center justify-center rounded-lg border border-emerald-900/15 bg-white px-3 py-1.5 text-xs font-black text-[#07130f] no-underline hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-900/10" href="index.php">Volver al inicio</a>
 </section>
 
 <section class="mx-auto grid w-full max-w-md gap-3 max-[760px]:gap-2">
@@ -324,7 +324,7 @@ require __DIR__ . '/includes/header.php';
     </div>
   </article>
 
-  <details id="login-admin" class="group w-full rounded-xl border border-emerald-900/15 bg-white px-3 py-2 text-emerald-950 shadow-sm shadow-emerald-950/5 scroll-mt-20">
+  <details id="login-admin" class="group w-full rounded-xl border border-emerald-900/15 bg-white px-3 py-2 text-[#07130f] shadow-sm shadow-emerald-950/5 scroll-mt-20">
     <summary class="<?= h($loginSummaryClass) ?>">
       <span>Acceso admin inicial</span>
       <span class="<?= h($loginSummaryIconClass) ?> inline-flex group-open:hidden">+</span>
@@ -340,7 +340,7 @@ require __DIR__ . '/includes/header.php';
           <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="adminPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
         </div>
       </div>
-      <button class="inline-flex h-10 w-full items-center justify-center rounded-lg border border-emerald-900/15 bg-emerald-50 px-3 text-sm font-black text-emerald-950 transition hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-900/10" type="submit">Entrar como admin</button>
+      <button class="inline-flex h-10 w-full items-center justify-center rounded-lg border border-emerald-900/15 bg-emerald-50 px-3 text-sm font-black text-[#07130f] transition hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-900/10" type="submit">Entrar como admin</button>
     </form>
   </details>
 </section>

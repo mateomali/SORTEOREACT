@@ -369,7 +369,7 @@ export function PlayerCreateIsland({ root }) {
         </div>
 
         <details className="player-stat-help mt-2 rounded-xl border border-lime-200/55 bg-emerald-950 text-lime-50 shadow-md shadow-emerald-950/15" data-player-stat-help>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-extrabold text-lime-50">Como funciona?<span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-emerald-950 shadow-sm">?</span></summary>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-extrabold text-lime-50">Como funciona?<span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-100 text-base font-extrabold leading-none text-[#07130f] shadow-sm">?</span></summary>
           <div className="player-stat-help-body grid gap-3 border-t border-lime-200/30 bg-emerald-950/70 p-3 md:grid-cols-2">
             <section>
               <h4 className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-200">Stats</h4>
@@ -395,7 +395,7 @@ export function PlayerCreateIsland({ root }) {
         </details>
 
         <div className="btn-row">
-          <button className="btn border border-lime-200/55 bg-lime-100 text-emerald-950 hover:bg-lime-200" type="submit">Crear jugador</button>
+          <button className="btn border border-lime-200/55 bg-lime-100 text-[#07130f] hover:bg-lime-200" type="submit">Crear jugador</button>
         </div>
       </form>
     </details>

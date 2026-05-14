@@ -416,7 +416,7 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
     $starsClass = 'stat-rating-stars inline-flex shrink-0 items-center gap-0.5 leading-none' . ($compact ? ' col-start-1 row-start-1 min-w-0' : '');
     $html .= '<div class="' . $starsClass . '" role="radiogroup" aria-label="' . h($name) . '">';
     for ($i = 1; $i <= 6; $i++) {
-        $activeClass = $i <= $rating ? ' is-active !text-[#f5b625]' : ' !text-[#c6d3ce]';
+        $activeClass = $i <= $rating ? ' is-active text-[#f5b625]' : ' text-[#c6d3ce]';
         $starClasses = 'stat-rating-star inline-flex h-6 w-4 items-center justify-center rounded-none bg-transparent p-0 text-lg leading-none shadow-none transition-colors' . $activeClass;
         if ($readonly) {
             $html .= '<span class="' . $starClasses . '" aria-hidden="true">★</span>';
@@ -479,11 +479,11 @@ function player_scout_panel(): string
 {
     return '<article class="rounded-xl border border-emerald-100 bg-white p-3 shadow-sm shadow-emerald-950/5" data-player-info-scout data-player-info-scout-collapsed="1">'
         . '<div class="player-info-scout-head">'
-        . '<span class="mb-1 block text-[0.62rem] font-black uppercase leading-none text-emerald-700">Relato</span>'
+        . '<span class="mb-1 block text-[0.62rem] font-black uppercase leading-none text-[#12362a]">Relato</span>'
         . '<button class="player-info-scout-toggle" type="button" data-player-info-scout-toggle aria-expanded="false" aria-label="Expandir relato">+</button>'
         . '</div>'
         . '<div class="player-info-scout-content" data-player-info-scout-content>'
-        . '<h4 class="mb-2 text-sm font-black leading-tight text-emerald-950" data-player-info-scout-title>Relato del jugador</h4>'
+        . '<h4 class="mb-2 text-sm font-black leading-tight text-[#07130f]" data-player-info-scout-title>Relato del jugador</h4>'
         . '<p class="m-0 text-sm font-semibold leading-relaxed text-slate-700" data-player-info-scout-body>-</p>'
         . '<div class="mt-3 flex flex-wrap gap-1.5" data-player-info-scout-tags></div>'
         . '</div>'
@@ -631,7 +631,7 @@ require __DIR__ . '/includes/header.php';
                   <strong><?= h((string) shared_profile_player_fifa_overall(player_overall_rating($player))) ?></strong>
                   <small><?= h((string) $player['positions']) ?></small>
                 </span>
-                <button class="mobile-player-info-button !h-11 !min-h-11 !w-11" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">
+                <button class="mobile-player-info-button h-11 min-h-11 w-11" type="button" data-player-edit-open="<?= (int) $player['id'] ?>" aria-label="Ver stats de <?= h((string) $player['name']) ?>" title="Ver stats">
                   <svg class="h-6 w-6" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="5" width="18" height="14" rx="3"></rect>
                     <circle cx="9" cy="12" r="2.2"></circle>
