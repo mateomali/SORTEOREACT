@@ -415,12 +415,12 @@ function backfill_control_schema(PDO $pdo): void
                      ) * (1 + ((regularity - 3.5) / 50.0))
                     ELSE
                      (
-                      (technique * 0.18)
-                      + (rhythm * 0.18)
-                      + (defense_physical * 0.18)
-                      + (attack * 0.24)
-                      + (teamwork * 0.12)
-                      + (mentality * 0.10)
+                      (technique * 0.16)
+                      + (rhythm * 0.24)
+                      + (defense_physical * 0.17)
+                      + (attack * 0.23)
+                      + (teamwork * 0.11)
+                      + (mentality * 0.09)
                      ) * (1 + ((regularity - 3.5) / 50.0))
                  END
                )),

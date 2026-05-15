@@ -1,1037 +1,368 @@
-[Tue May 12 22:59:35 2026] PHP 8.0.30 Development Server (http://0.0.0.0:8000) started
-[Tue May 12 22:59:49 2026] 127.0.0.1:63930 Accepted
-[Tue May 12 22:59:53 2026] 127.0.0.1:63930 [500]: GET /
-[Tue May 12 22:59:53 2026] 127.0.0.1:63930 Closing
-[Tue May 12 23:00:50 2026] 127.0.0.1:63781 Accepted
-[Tue May 12 23:00:51 2026] 127.0.0.1:63781 [200]: GET /sorteo
-[Tue May 12 23:00:51 2026] 127.0.0.1:63781 Closing
-[Tue May 12 23:00:51 2026] 127.0.0.1:55678 Accepted
-[Tue May 12 23:00:52 2026] 127.0.0.1:55678 [200]: GET /estadisticas.php
-[Tue May 12 23:00:52 2026] 127.0.0.1:55678 Closing
-[Tue May 12 23:00:52 2026] 127.0.0.1:54123 Accepted
-[Tue May 12 23:00:52 2026] 127.0.0.1:58856 Accepted
-[Tue May 12 23:00:52 2026] 127.0.0.1:54123 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:00:52 2026] 127.0.0.1:62870 Accepted
-[Tue May 12 23:00:52 2026] 127.0.0.1:58856 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:00:53 2026] 127.0.0.1:62870 [200]: GET /
-[Tue May 12 23:00:53 2026] 127.0.0.1:62870 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:58856 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:54123 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:56037 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:51915 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:56037 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:00:53 2026] 127.0.0.1:51915 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:00:53 2026] 127.0.0.1:51915 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:56037 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:60436 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:64706 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:50337 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:60436 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:00:53 2026] 127.0.0.1:64706 [404]: GET /favicon.ico - No such file or directory
-[Tue May 12 23:00:53 2026] 127.0.0.1:50337 [200]: GET /assets/home/home-admin.png
-[Tue May 12 23:00:53 2026] 127.0.0.1:64706 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:60436 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:50337 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:55722 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:55722 [404]: GET /favicon.ico - No such file or directory
-[Tue May 12 23:00:53 2026] 127.0.0.1:55722 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:62958 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:51772 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:62958 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:00:53 2026] 127.0.0.1:51772 [200]: GET /assets/app.js?v=1778527686
-[Tue May 12 23:00:53 2026] 127.0.0.1:51096 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:51772 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:61660 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:51096 [200]: GET /assets/home/home-jugadores.png
-[Tue May 12 23:00:53 2026] 127.0.0.1:58818 Accepted
-[Tue May 12 23:00:53 2026] 127.0.0.1:61660 [200]: GET /assets/home/home-fechas.png
-[Tue May 12 23:00:53 2026] 127.0.0.1:58818 [200]: GET /assets/home/home-estadisticas.png
-[Tue May 12 23:00:53 2026] 127.0.0.1:62958 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:58818 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:61660 Closing
-[Tue May 12 23:00:53 2026] 127.0.0.1:51096 Closing
-[Tue May 12 23:00:58 2026] 127.0.0.1:51025 Accepted
-[Tue May 12 23:00:59 2026] 127.0.0.1:51025 [200]: GET /
-[Tue May 12 23:00:59 2026] 127.0.0.1:51025 Closing
-[Tue May 12 23:01:10 2026] 192.168.1.48:51035 Accepted
-[Tue May 12 23:01:11 2026] 192.168.1.48:51035 [200]: GET /
-[Tue May 12 23:01:11 2026] 192.168.1.48:51035 Closing
-[Tue May 12 23:01:15 2026] 127.0.0.1:64687 Accepted
-[Tue May 12 23:01:15 2026] 127.0.0.1:64687 [200]: GET /login.php
-[Tue May 12 23:01:15 2026] 127.0.0.1:64687 Closing
-[Tue May 12 23:01:15 2026] 127.0.0.1:52267 Accepted
-[Tue May 12 23:01:22 2026] 127.0.0.1:52267 [302]: POST /login.php
-[Tue May 12 23:01:22 2026] 127.0.0.1:52267 Closing
-[Tue May 12 23:01:22 2026] 127.0.0.1:57211 Accepted
-[Tue May 12 23:01:22 2026] 127.0.0.1:57211 [200]: GET /editar_partidos.php
-[Tue May 12 23:01:22 2026] 127.0.0.1:57211 Closing
-[Tue May 12 23:01:22 2026] 127.0.0.1:63092 Accepted
-[Tue May 12 23:01:28 2026] 127.0.0.1:63092 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:01:28 2026] 127.0.0.1:63092 Closing
-[Tue May 12 23:01:28 2026] 127.0.0.1:51757 Accepted
-[Tue May 12 23:01:28 2026] 127.0.0.1:51757 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:01:28 2026] 127.0.0.1:51757 Closing
-[Tue May 12 23:01:28 2026] 127.0.0.1:51558 Accepted
-[Tue May 12 23:01:35 2026] 127.0.0.1:51558 [302]: POST /finalizar_partido.php?match_id=176
-[Tue May 12 23:01:35 2026] 127.0.0.1:51558 Closing
-[Tue May 12 23:01:35 2026] 127.0.0.1:50021 Accepted
-[Tue May 12 23:01:35 2026] 127.0.0.1:50021 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:01:35 2026] 127.0.0.1:50021 Closing
-[Tue May 12 23:01:35 2026] 127.0.0.1:63594 Accepted
-[Tue May 12 23:01:35 2026] 127.0.0.1:63594 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:01:35 2026] 127.0.0.1:63594 Closing
-[Tue May 12 23:01:36 2026] 127.0.0.1:61060 Accepted
-[Tue May 12 23:01:36 2026] 127.0.0.1:62229 Accepted
-[Tue May 12 23:01:36 2026] 127.0.0.1:61092 Accepted
-[Tue May 12 23:01:36 2026] 127.0.0.1:58129 Accepted
-[Tue May 12 23:01:36 2026] 127.0.0.1:65056 Accepted
-[Tue May 12 23:01:36 2026] 127.0.0.1:61060 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:01:36 2026] 127.0.0.1:62229 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:01:36 2026] 127.0.0.1:61092 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:01:36 2026] 127.0.0.1:58129 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:01:36 2026] 127.0.0.1:65056 [200]: GET /assets/app.js?v=1778527686
-[Tue May 12 23:01:36 2026] 127.0.0.1:61060 Closing
-[Tue May 12 23:01:36 2026] 127.0.0.1:61092 Closing
-[Tue May 12 23:01:36 2026] 127.0.0.1:58129 Closing
-[Tue May 12 23:01:36 2026] 127.0.0.1:65056 Closing
-[Tue May 12 23:01:36 2026] 127.0.0.1:62229 Closing
-[Tue May 12 23:01:40 2026] 127.0.0.1:57379 Accepted
-[Tue May 12 23:01:40 2026] 127.0.0.1:57379 [200]: GET /editar_partidos.php
-[Tue May 12 23:01:40 2026] 127.0.0.1:57379 Closing
-[Tue May 12 23:01:40 2026] 127.0.0.1:50889 Accepted
-[Tue May 12 23:01:44 2026] 127.0.0.1:50889 Closed without sending a request; it was probably just an unused speculative preconnection
-[Tue May 12 23:01:44 2026] 127.0.0.1:50889 Closing
-[Tue May 12 23:01:52 2026] 127.0.0.1:59946 Accepted
-[Tue May 12 23:01:52 2026] 127.0.0.1:59946 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:01:52 2026] 127.0.0.1:59946 Closing
-[Tue May 12 23:01:52 2026] 127.0.0.1:64080 Accepted
-[Tue May 12 23:01:52 2026] 127.0.0.1:64080 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:01:52 2026] 127.0.0.1:64080 Closing
-[Tue May 12 23:01:52 2026] 127.0.0.1:51948 Accepted
-[Tue May 12 23:03:00 2026] 127.0.0.1:53002 Accepted
-[Tue May 12 23:03:00 2026] 127.0.0.1:53002 [302]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:03:00 2026] 127.0.0.1:53002 Closing
-[Tue May 12 23:03:00 2026] 127.0.0.1:53003 Accepted
-[Tue May 12 23:03:00 2026] 127.0.0.1:53003 [200]: GET /login.php?next=%2Ffinalizar_partido.php%3Fmatch_id%3D176
-[Tue May 12 23:03:00 2026] 127.0.0.1:53003 Closing
-[Tue May 12 23:03:15 2026] 127.0.0.1:52320 Accepted
-[Tue May 12 23:03:15 2026] 127.0.0.1:52320 [302]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:03:15 2026] 127.0.0.1:52320 Closing
-[Tue May 12 23:03:15 2026] 127.0.0.1:52321 Accepted
-[Tue May 12 23:03:15 2026] 127.0.0.1:52321 [200]: GET /login.php?next=%2Ffinalizar_partido.php%3Fmatch_id%3D176
-[Tue May 12 23:03:15 2026] 127.0.0.1:52321 Closing
-[Tue May 12 23:03:42 2026] 127.0.0.1:64162 Accepted
-[Tue May 12 23:03:43 2026] 127.0.0.1:64162 [302]: POST /login.php
-[Tue May 12 23:03:43 2026] 127.0.0.1:64162 Closing
-[Tue May 12 23:03:43 2026] 127.0.0.1:64164 Accepted
-[Tue May 12 23:03:43 2026] 127.0.0.1:64164 [302]: POST /finalizar_partido.php?match_id=176
-[Tue May 12 23:03:43 2026] 127.0.0.1:64164 Closing
-[Tue May 12 23:05:40 2026] 127.0.0.1:50663 Accepted
-[Tue May 12 23:05:40 2026] 127.0.0.1:50662 Accepted
-[Tue May 12 23:05:41 2026] 127.0.0.1:50663 [200]: GET /
-[Tue May 12 23:05:41 2026] 127.0.0.1:50663 Closing
-[Tue May 12 23:05:41 2026] 127.0.0.1:50662 [302]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:05:41 2026] 127.0.0.1:50662 Closing
-[Tue May 12 23:05:58 2026] 127.0.0.1:50671 Accepted
-[Tue May 12 23:05:58 2026] 127.0.0.1:50671 [302]: POST /login.php
-[Tue May 12 23:05:58 2026] 127.0.0.1:50671 Closing
-[Tue May 12 23:05:58 2026] 127.0.0.1:50673 Accepted
-[Tue May 12 23:05:58 2026] 127.0.0.1:50673 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:05:58 2026] 127.0.0.1:50673 Closing
-[Tue May 12 23:06:10 2026] 127.0.0.1:50676 Accepted
-[Tue May 12 23:06:11 2026] 127.0.0.1:50676 [302]: POST /login.php
-[Tue May 12 23:06:11 2026] 127.0.0.1:50676 Closing
-[Tue May 12 23:06:11 2026] 127.0.0.1:50678 Accepted
-[Tue May 12 23:06:11 2026] 127.0.0.1:50678 [302]: POST /finalizar_partido.php?match_id=176
-[Tue May 12 23:06:11 2026] 127.0.0.1:50678 Closing
-[Tue May 12 23:06:20 2026] 127.0.0.1:50684 Accepted
-[Tue May 12 23:06:21 2026] 127.0.0.1:50684 [200]: GET /
-[Tue May 12 23:06:21 2026] 127.0.0.1:50684 Closing
-[Tue May 12 23:07:54 2026] 127.0.0.1:51948 Closed without sending a request; it was probably just an unused speculative preconnection
-[Tue May 12 23:07:54 2026] 127.0.0.1:51948 Closing
-[Tue May 12 23:08:14 2026] 127.0.0.1:65351 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:65351 [200]: GET /
-[Tue May 12 23:08:15 2026] 127.0.0.1:65351 Closing
-[Tue May 12 23:08:15 2026] 127.0.0.1:63118 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:63118 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:08:15 2026] 127.0.0.1:63118 Closing
-[Tue May 12 23:08:15 2026] 127.0.0.1:53119 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:53119 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:08:15 2026] 127.0.0.1:53119 Closing
-[Tue May 12 23:08:15 2026] 127.0.0.1:64326 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:49709 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:62620 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:64326 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:08:15 2026] 127.0.0.1:58517 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:49709 [200]: GET /assets/home/home-admin.png
-[Tue May 12 23:08:15 2026] 127.0.0.1:62620 [200]: GET /assets/home/home-estadisticas.png
-[Tue May 12 23:08:15 2026] 127.0.0.1:64994 Accepted
-[Tue May 12 23:08:15 2026] 127.0.0.1:58517 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:08:16 2026] 127.0.0.1:64994 [200]: GET /assets/app.js?v=1778527686
-[Tue May 12 23:08:16 2026] 127.0.0.1:64326 Closing
-[Tue May 12 23:08:16 2026] 127.0.0.1:64994 Closing
-[Tue May 12 23:08:16 2026] 127.0.0.1:58517 Closing
-[Tue May 12 23:08:16 2026] 127.0.0.1:49709 Closing
-[Tue May 12 23:08:16 2026] 127.0.0.1:62620 Closing
-[Tue May 12 23:08:16 2026] 127.0.0.1:60442 Accepted
-[Tue May 12 23:08:16 2026] 127.0.0.1:60442 [200]: GET /assets/home/home-jugadores.png
-[Tue May 12 23:08:16 2026] 127.0.0.1:60442 Closing
-[Tue May 12 23:08:16 2026] 127.0.0.1:53209 Accepted
-[Tue May 12 23:08:16 2026] 127.0.0.1:53209 [200]: GET /assets/home/home-fechas.png
-[Tue May 12 23:08:16 2026] 127.0.0.1:53209 Closing
-[Tue May 12 23:08:21 2026] 127.0.0.1:60863 Accepted
-[Tue May 12 23:08:22 2026] 127.0.0.1:60863 [200]: GET /editar_partidos.php
-[Tue May 12 23:08:22 2026] 127.0.0.1:60863 Closing
-[Tue May 12 23:08:22 2026] 127.0.0.1:59184 Accepted
-[Tue May 12 23:08:33 2026] 127.0.0.1:59184 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:08:33 2026] 127.0.0.1:59184 Closing
-[Tue May 12 23:08:33 2026] 127.0.0.1:63675 Accepted
-[Tue May 12 23:08:33 2026] 127.0.0.1:63675 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:08:33 2026] 127.0.0.1:63675 Closing
-[Tue May 12 23:08:33 2026] 127.0.0.1:62406 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:62406 [302]: POST /finalizar_partido.php?match_id=176
-[Tue May 12 23:08:41 2026] 127.0.0.1:62406 Closing
-[Tue May 12 23:08:41 2026] 127.0.0.1:55759 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:55759 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:08:41 2026] 127.0.0.1:55759 Closing
-[Tue May 12 23:08:41 2026] 127.0.0.1:56611 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:56611 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:08:41 2026] 127.0.0.1:56611 Closing
-[Tue May 12 23:08:41 2026] 127.0.0.1:55476 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:49745 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:55476 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:08:41 2026] 127.0.0.1:64047 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:49745 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:08:41 2026] 127.0.0.1:50048 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:64047 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:08:41 2026] 127.0.0.1:55292 Accepted
-[Tue May 12 23:08:41 2026] 127.0.0.1:50048 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:08:41 2026] 127.0.0.1:55292 [200]: GET /assets/app.js?v=1778527686
-[Tue May 12 23:08:41 2026] 127.0.0.1:55476 Closing
-[Tue May 12 23:08:41 2026] 127.0.0.1:64047 Closing
-[Tue May 12 23:08:41 2026] 127.0.0.1:50048 Closing
-[Tue May 12 23:08:41 2026] 127.0.0.1:55292 Closing
-[Tue May 12 23:08:41 2026] 127.0.0.1:49745 Closing
-[Tue May 12 23:08:43 2026] 127.0.0.1:52872 Accepted
-[Tue May 12 23:08:44 2026] 127.0.0.1:52872 [200]: GET /editar_partidos.php
-[Tue May 12 23:08:44 2026] 127.0.0.1:52872 Closing
-[Tue May 12 23:08:44 2026] 127.0.0.1:57303 Accepted
-[Tue May 12 23:08:50 2026] 127.0.0.1:57303 [200]: GET /editar_partidos.php
-[Tue May 12 23:08:50 2026] 127.0.0.1:57303 Closing
-[Tue May 12 23:08:51 2026] 127.0.0.1:57025 Accepted
-[Tue May 12 23:08:51 2026] 127.0.0.1:52815 Accepted
-[Tue May 12 23:08:51 2026] 127.0.0.1:57025 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:08:51 2026] 127.0.0.1:50407 Accepted
-[Tue May 12 23:08:51 2026] 127.0.0.1:52815 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:08:51 2026] 127.0.0.1:55823 Accepted
-[Tue May 12 23:08:51 2026] 127.0.0.1:50407 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:08:51 2026] 127.0.0.1:63275 Accepted
-[Tue May 12 23:08:51 2026] 127.0.0.1:55823 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:08:51 2026] 127.0.0.1:63275 [200]: GET /assets/app.js?v=1778527686
-[Tue May 12 23:08:51 2026] 127.0.0.1:52815 Closing
-[Tue May 12 23:08:51 2026] 127.0.0.1:50407 Closing
-[Tue May 12 23:08:51 2026] 127.0.0.1:63275 Closing
-[Tue May 12 23:08:51 2026] 127.0.0.1:57025 Closing
-[Tue May 12 23:08:51 2026] 127.0.0.1:55823 Closing
-[Tue May 12 23:08:51 2026] 127.0.0.1:57851 Accepted
-[Tue May 12 23:09:08 2026] 127.0.0.1:57851 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:09:08 2026] 127.0.0.1:57851 Closing
-[Tue May 12 23:09:08 2026] 127.0.0.1:54645 Accepted
-[Tue May 12 23:09:08 2026] 127.0.0.1:54645 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:09:08 2026] 127.0.0.1:54645 Closing
-[Tue May 12 23:09:08 2026] 127.0.0.1:55763 Accepted
-[Tue May 12 23:09:13 2026] 127.0.0.1:55763 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:09:13 2026] 127.0.0.1:55763 Closing
-[Tue May 12 23:09:13 2026] 127.0.0.1:53270 Accepted
-[Tue May 12 23:09:13 2026] 127.0.0.1:53270 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Tue May 12 23:09:13 2026] 127.0.0.1:53270 Closing
-[Tue May 12 23:11:20 2026] 127.0.0.1:56798 Accepted
-[Tue May 12 23:11:20 2026] 127.0.0.1:56799 Accepted
-[Tue May 12 23:11:20 2026] 127.0.0.1:56799 [302]: POST /login.php
-[Tue May 12 23:11:20 2026] 127.0.0.1:56799 Closing
-[Tue May 12 23:11:20 2026] 127.0.0.1:56798 [302]: POST /login.php
-[Tue May 12 23:11:20 2026] 127.0.0.1:56798 Closing
-[Tue May 12 23:11:20 2026] 127.0.0.1:56802 Accepted
-[Tue May 12 23:11:20 2026] 127.0.0.1:56802 [200]: GET /editar_partidos.php
-[Tue May 12 23:11:20 2026] 127.0.0.1:56802 Closing
-[Tue May 12 23:11:20 2026] 127.0.0.1:56804 Accepted
-[Tue May 12 23:11:21 2026] 127.0.0.1:56804 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:11:21 2026] 127.0.0.1:56804 Closing
-[Tue May 12 23:11:28 2026] 127.0.0.1:58101 Accepted
-[Tue May 12 23:11:29 2026] 127.0.0.1:58101 [302]: POST /login.php
-[Tue May 12 23:11:29 2026] 127.0.0.1:58101 Closing
-[Tue May 12 23:11:29 2026] 127.0.0.1:58104 Accepted
-[Tue May 12 23:11:29 2026] 127.0.0.1:58104 [200]: GET /editar_partidos.php
-[Tue May 12 23:11:29 2026] 127.0.0.1:58104 Closing
-[Tue May 12 23:11:50 2026] 127.0.0.1:52949 Accepted
-[Tue May 12 23:11:51 2026] 127.0.0.1:52949 [302]: POST /login.php
-[Tue May 12 23:11:51 2026] 127.0.0.1:52949 Closing
-[Tue May 12 23:11:51 2026] 127.0.0.1:52951 Accepted
-[Tue May 12 23:11:51 2026] 127.0.0.1:52951 [302]: POST /finalizar_partido.php?match_id=176
-[Tue May 12 23:11:51 2026] 127.0.0.1:52951 Closing
-[Tue May 12 23:11:51 2026] 127.0.0.1:52954 Accepted
-[Tue May 12 23:11:52 2026] 127.0.0.1:52954 [200]: GET /editar_partidos.php
-[Tue May 12 23:11:52 2026] 127.0.0.1:52954 Closing
-[Tue May 12 23:12:28 2026] 127.0.0.1:49825 Accepted
-[Tue May 12 23:12:28 2026] 127.0.0.1:49825 [302]: POST /login.php
-[Tue May 12 23:12:28 2026] 127.0.0.1:49825 Closing
-[Tue May 12 23:12:28 2026] 127.0.0.1:49827 Accepted
-[Tue May 12 23:12:28 2026] 127.0.0.1:49827 [302]: POST /finalizar_partido.php?match_id=176
-[Tue May 12 23:12:28 2026] 127.0.0.1:49827 Closing
-[Tue May 12 23:12:28 2026] 127.0.0.1:49830 Accepted
-[Tue May 12 23:12:29 2026] 127.0.0.1:49830 [200]: GET /editar_partidos.php
-[Tue May 12 23:12:29 2026] 127.0.0.1:49830 Closing
-[Tue May 12 23:15:04 2026] 127.0.0.1:64741 Accepted
-[Tue May 12 23:15:04 2026] 127.0.0.1:64741 [302]: POST /finalizar_partido.php?match_id=176
-[Tue May 12 23:15:04 2026] 127.0.0.1:64741 Closing
-[Tue May 12 23:15:05 2026] 127.0.0.1:59084 Accepted
-[Tue May 12 23:15:05 2026] 127.0.0.1:59084 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:15:05 2026] 127.0.0.1:59084 Closing
-[Tue May 12 23:15:05 2026] 127.0.0.1:63356 Accepted
-[Tue May 12 23:15:05 2026] 127.0.0.1:63356 [200]: GET /assets/tailwind.css?v=1778564669
-[Tue May 12 23:15:05 2026] 127.0.0.1:63356 Closing
-[Tue May 12 23:15:05 2026] 127.0.0.1:61464 Accepted
-[Tue May 12 23:15:05 2026] 127.0.0.1:54751 Accepted
-[Tue May 12 23:15:05 2026] 127.0.0.1:61464 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:15:05 2026] 127.0.0.1:62915 Accepted
-[Tue May 12 23:15:05 2026] 127.0.0.1:54751 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:15:05 2026] 127.0.0.1:55601 Accepted
-[Tue May 12 23:15:05 2026] 127.0.0.1:62915 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:15:05 2026] 127.0.0.1:58368 Accepted
-[Tue May 12 23:15:05 2026] 127.0.0.1:55601 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:15:05 2026] 127.0.0.1:58368 [200]: GET /assets/app.js?v=1778527686
-[Tue May 12 23:15:05 2026] 127.0.0.1:61464 Closing
-[Tue May 12 23:15:05 2026] 127.0.0.1:62915 Closing
-[Tue May 12 23:15:05 2026] 127.0.0.1:55601 Closing
-[Tue May 12 23:15:05 2026] 127.0.0.1:58368 Closing
-[Tue May 12 23:15:05 2026] 127.0.0.1:54751 Closing
-[Tue May 12 23:15:06 2026] 127.0.0.1:53250 Accepted
-[Tue May 12 23:15:06 2026] 127.0.0.1:53250 [200]: GET /editar_partidos.php
-[Tue May 12 23:15:06 2026] 127.0.0.1:53250 Closing
-[Tue May 12 23:15:06 2026] 127.0.0.1:55372 Accepted
-[Tue May 12 23:15:12 2026] 127.0.0.1:55372 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:15:12 2026] 127.0.0.1:55372 Closing
-[Tue May 12 23:15:13 2026] 127.0.0.1:65423 Accepted
-[Tue May 12 23:15:13 2026] 127.0.0.1:65423 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:15:13 2026] 127.0.0.1:65423 Closing
-[Tue May 12 23:15:13 2026] 127.0.0.1:60496 Accepted
-[Tue May 12 23:15:16 2026] 127.0.0.1:60496 [200]: GET /editar_partidos.php
-[Tue May 12 23:15:16 2026] 127.0.0.1:60496 Closing
-[Tue May 12 23:15:26 2026] 127.0.0.1:49213 Accepted
-[Tue May 12 23:15:27 2026] 127.0.0.1:49213 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:15:27 2026] 127.0.0.1:49213 Closing
-[Tue May 12 23:15:27 2026] 127.0.0.1:65069 Accepted
-[Tue May 12 23:15:27 2026] 127.0.0.1:65069 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:15:27 2026] 127.0.0.1:65069 Closing
-[Tue May 12 23:15:27 2026] 127.0.0.1:56017 Accepted
-[Tue May 12 23:15:32 2026] 127.0.0.1:56017 [200]: GET /editar_partidos.php
-[Tue May 12 23:15:32 2026] 127.0.0.1:56017 Closing
-[Tue May 12 23:15:40 2026] 127.0.0.1:63959 Accepted
-[Tue May 12 23:15:40 2026] 127.0.0.1:63959 [200]: GET /finalizar_partido.php?match_id=176
-[Tue May 12 23:15:40 2026] 127.0.0.1:63959 Closing
-[Tue May 12 23:15:40 2026] 127.0.0.1:58061 Accepted
-[Tue May 12 23:15:40 2026] 127.0.0.1:58061 [200]: GET /assets/finalizar-partido.js
-[Tue May 12 23:15:40 2026] 127.0.0.1:58061 Closing
-[Tue May 12 23:15:40 2026] 127.0.0.1:58864 Accepted
-[Tue May 12 23:15:43 2026] 127.0.0.1:58864 [200]: GET /editar_partidos.php
-[Tue May 12 23:15:43 2026] 127.0.0.1:58864 Closing
-[Tue May 12 23:16:32 2026] 127.0.0.1:58524 Accepted
-[Tue May 12 23:16:32 2026] 127.0.0.1:58524 [200]: GET /usuarios.php
-[Tue May 12 23:16:32 2026] 127.0.0.1:58524 Closing
-[Tue May 12 23:16:32 2026] 127.0.0.1:51006 Accepted
-[Tue May 12 23:18:11 2026] 127.0.0.1:51006 Closed without sending a request; it was probably just an unused speculative preconnection
-[Tue May 12 23:18:11 2026] 127.0.0.1:51006 Closing
-[Tue May 12 23:19:33 2026] 127.0.0.1:64629 Accepted
-[Tue May 12 23:19:34 2026] 127.0.0.1:64629 [302]: POST /login.php
-[Tue May 12 23:19:34 2026] 127.0.0.1:64629 Closing
-[Tue May 12 23:19:34 2026] 127.0.0.1:64631 Accepted
-[Tue May 12 23:19:34 2026] 127.0.0.1:64631 [200]: GET /assets/sorteo-legacy.js
-[Tue May 12 23:19:34 2026] 127.0.0.1:64631 Closing
-[Tue May 12 23:24:20 2026] 127.0.0.1:54536 Accepted
-[Tue May 12 23:24:21 2026] 127.0.0.1:54536 [200]: GET /jugadores.php
-[Tue May 12 23:24:21 2026] 127.0.0.1:54536 Closing
-[Tue May 12 23:24:58 2026] 127.0.0.1:50950 Accepted
-[Tue May 12 23:24:59 2026] 127.0.0.1:50950 [200]: GET /jugadores.php
-[Tue May 12 23:24:59 2026] 127.0.0.1:50950 Closing
-[Tue May 12 23:28:19 2026] 127.0.0.1:58795 Accepted
-[Tue May 12 23:28:19 2026] 127.0.0.1:58795 [200]: GET /jugadores.php
-[Tue May 12 23:28:19 2026] 127.0.0.1:58795 Closing
-[Tue May 12 23:28:19 2026] 127.0.0.1:51907 Accepted
-[Tue May 12 23:28:19 2026] 127.0.0.1:51907 [200]: GET /assets/tailwind.css?v=1778639087
-[Tue May 12 23:28:19 2026] 127.0.0.1:62675 Accepted
-[Tue May 12 23:28:19 2026] 127.0.0.1:62675 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:28:19 2026] 127.0.0.1:55276 Accepted
-[Tue May 12 23:28:19 2026] 127.0.0.1:54755 Accepted
-[Tue May 12 23:28:19 2026] 127.0.0.1:55276 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:28:19 2026] 127.0.0.1:54755 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:28:19 2026] 127.0.0.1:55276 Closing
-[Tue May 12 23:28:19 2026] 127.0.0.1:54755 Closing
-[Tue May 12 23:28:19 2026] 127.0.0.1:51907 Closing
-[Tue May 12 23:28:19 2026] 127.0.0.1:62384 Accepted
-[Tue May 12 23:28:19 2026] 127.0.0.1:62384 [200]: GET /assets/jugadores.js
-[Tue May 12 23:28:19 2026] 127.0.0.1:62384 Closing
-[Tue May 12 23:28:19 2026] 127.0.0.1:57773 Accepted
-[Tue May 12 23:28:19 2026] 127.0.0.1:57773 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:28:19 2026] 127.0.0.1:57773 Closing
-[Tue May 12 23:28:19 2026] 127.0.0.1:62675 Closing
-[Tue May 12 23:28:20 2026] 127.0.0.1:55894 Accepted
-[Tue May 12 23:28:20 2026] 127.0.0.1:55894 [404]: GET /favicon.ico - No such file or directory
-[Tue May 12 23:28:20 2026] 127.0.0.1:55894 Closing
-[Tue May 12 23:28:43 2026] 127.0.0.1:56887 Accepted
-[Tue May 12 23:28:43 2026] 127.0.0.1:56887 [200]: GET /assets/tailwind.css?v=1778639087
-[Tue May 12 23:28:43 2026] 127.0.0.1:56887 Closing
-[Tue May 12 23:28:43 2026] 127.0.0.1:59877 Accepted
-[Tue May 12 23:28:43 2026] 127.0.0.1:59877 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Tue May 12 23:28:43 2026] 127.0.0.1:59877 Closing
-[Tue May 12 23:31:12 2026] 127.0.0.1:56369 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:56369 [200]: GET /
-[Tue May 12 23:31:13 2026] 127.0.0.1:56369 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:53973 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:53973 [200]: GET /assets/tailwind.css?v=1778639416
-[Tue May 12 23:31:13 2026] 127.0.0.1:53973 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:61412 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:61412 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:31:13 2026] 127.0.0.1:61412 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:65287 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:63987 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:52564 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:65287 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:31:13 2026] 127.0.0.1:63987 [200]: GET /assets/home/home-admin.png
-[Tue May 12 23:31:13 2026] 127.0.0.1:52564 [200]: GET /assets/home/home-estadisticas.png
-[Tue May 12 23:31:13 2026] 127.0.0.1:65287 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:63987 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:52564 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:52669 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:53631 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:52669 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:31:13 2026] 127.0.0.1:53631 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:31:13 2026] 127.0.0.1:53631 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:52669 Closing
-[Tue May 12 23:31:13 2026] 127.0.0.1:55860 Accepted
-[Tue May 12 23:31:13 2026] 127.0.0.1:55860 [200]: GET /assets/home/home-jugadores.png
-[Tue May 12 23:31:13 2026] 127.0.0.1:55860 Closing
-[Tue May 12 23:31:14 2026] 127.0.0.1:60394 Accepted
-[Tue May 12 23:31:14 2026] 127.0.0.1:60394 [200]: GET /assets/home/home-fechas.png
-[Tue May 12 23:31:14 2026] 127.0.0.1:60394 Closing
-[Tue May 12 23:31:16 2026] 127.0.0.1:59157 Accepted
-[Tue May 12 23:31:16 2026] 127.0.0.1:59157 [200]: GET /jugadores.php
-[Tue May 12 23:31:16 2026] 127.0.0.1:59157 Closing
-[Tue May 12 23:31:16 2026] 127.0.0.1:58542 Accepted
-[Tue May 12 23:31:16 2026] 127.0.0.1:58542 [200]: GET /assets/jugadores.js
-[Tue May 12 23:31:16 2026] 127.0.0.1:58542 Closing
-[Tue May 12 23:31:38 2026] 127.0.0.1:57974 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:57974 [200]: GET /jugadores.php
-[Tue May 12 23:31:39 2026] 127.0.0.1:57974 Closing
-[Tue May 12 23:31:39 2026] 127.0.0.1:57294 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:57294 [200]: GET /assets/tailwind.css?v=1778639416
-[Tue May 12 23:31:39 2026] 127.0.0.1:57294 Closing
-[Tue May 12 23:31:39 2026] 127.0.0.1:58978 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:53823 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:58978 [200]: GET /assets/jugadores.js
-[Tue May 12 23:31:39 2026] 127.0.0.1:53823 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:31:39 2026] 127.0.0.1:58978 Closing
-[Tue May 12 23:31:39 2026] 127.0.0.1:53823 Closing
-[Tue May 12 23:31:39 2026] 127.0.0.1:61729 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:58194 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:58148 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:58729 Accepted
-[Tue May 12 23:31:39 2026] 127.0.0.1:61729 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:31:39 2026] 127.0.0.1:58194 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:31:39 2026] 127.0.0.1:58148 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:31:39 2026] 127.0.0.1:58194 Closing
-[Tue May 12 23:31:39 2026] 127.0.0.1:58148 Closing
-[Tue May 12 23:31:39 2026] 127.0.0.1:61729 Closing
-[Tue May 12 23:33:46 2026] 127.0.0.1:58729 Closed without sending a request; it was probably just an unused speculative preconnection
-[Tue May 12 23:33:46 2026] 127.0.0.1:58729 Closing
-[Tue May 12 23:34:09 2026] 192.168.1.48:62526 Accepted
-[Tue May 12 23:34:10 2026] 192.168.1.48:62526 [200]: GET /jugadores.php
-[Tue May 12 23:34:10 2026] 192.168.1.48:62526 Closing
-[Tue May 12 23:35:20 2026] 192.168.1.48:49225 Accepted
-[Tue May 12 23:35:21 2026] 192.168.1.48:49225 [200]: GET /jugadores.php
-[Tue May 12 23:35:21 2026] 192.168.1.48:49225 Closing
-[Tue May 12 23:35:39 2026] 127.0.0.1:57849 Accepted
-[Tue May 12 23:35:40 2026] 127.0.0.1:57849 [200]: GET /jugadores.php
-[Tue May 12 23:35:40 2026] 127.0.0.1:57849 Closing
-[Tue May 12 23:35:40 2026] 192.168.1.48:57851 Accepted
-[Tue May 12 23:35:41 2026] 192.168.1.48:57851 [200]: GET /jugadores.php
-[Tue May 12 23:35:41 2026] 192.168.1.48:57851 Closing
-[Tue May 12 23:36:38 2026] 127.0.0.1:61869 Accepted
-[Tue May 12 23:36:38 2026] 127.0.0.1:61869 [200]: GET /jugadores.php
-[Tue May 12 23:36:38 2026] 127.0.0.1:61869 Closing
-[Tue May 12 23:36:38 2026] 127.0.0.1:61383 Accepted
-[Tue May 12 23:36:38 2026] 127.0.0.1:61383 [200]: GET /assets/tailwind.css?v=1778639614
-[Tue May 12 23:36:38 2026] 127.0.0.1:61383 Closing
-[Tue May 12 23:36:39 2026] 127.0.0.1:57625 Accepted
-[Tue May 12 23:36:39 2026] 127.0.0.1:63997 Accepted
-[Tue May 12 23:36:39 2026] 127.0.0.1:57625 [200]: GET /assets/jugadores.js
-[Tue May 12 23:36:39 2026] 127.0.0.1:63997 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:36:39 2026] 127.0.0.1:57625 Closing
-[Tue May 12 23:36:39 2026] 127.0.0.1:63997 Closing
-[Tue May 12 23:36:39 2026] 127.0.0.1:58453 Accepted
-[Tue May 12 23:36:39 2026] 127.0.0.1:58453 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:36:39 2026] 127.0.0.1:56678 Accepted
-[Tue May 12 23:36:39 2026] 127.0.0.1:54233 Accepted
-[Tue May 12 23:36:39 2026] 127.0.0.1:56678 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:36:39 2026] 127.0.0.1:54233 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:36:39 2026] 127.0.0.1:56678 Closing
-[Tue May 12 23:36:39 2026] 127.0.0.1:58453 Closing
-[Tue May 12 23:36:39 2026] 127.0.0.1:54233 Closing
-[Tue May 12 23:38:07 2026] 127.0.0.1:53297 Accepted
-[Tue May 12 23:38:08 2026] 127.0.0.1:53297 [200]: GET /jugadores.php
-[Tue May 12 23:38:08 2026] 127.0.0.1:53297 Closing
-[Tue May 12 23:44:35 2026] 127.0.0.1:52338 Accepted
-[Tue May 12 23:44:36 2026] 127.0.0.1:52338 [200]: GET /jugadores.php
-[Tue May 12 23:44:36 2026] 127.0.0.1:52338 Closing
-[Tue May 12 23:44:36 2026] 127.0.0.1:62543 Accepted
-[Tue May 12 23:44:36 2026] 127.0.0.1:62543 [200]: GET /assets/tailwind.css?v=1778639880
-[Tue May 12 23:44:36 2026] 127.0.0.1:62543 Closing
-[Tue May 12 23:44:36 2026] 127.0.0.1:63881 Accepted
-[Tue May 12 23:44:36 2026] 127.0.0.1:55708 Accepted
-[Tue May 12 23:44:36 2026] 127.0.0.1:63881 [200]: GET /assets/jugadores.js
-[Tue May 12 23:44:36 2026] 127.0.0.1:55708 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:44:36 2026] 127.0.0.1:63881 Closing
-[Tue May 12 23:44:36 2026] 127.0.0.1:55708 Closing
-[Tue May 12 23:44:36 2026] 127.0.0.1:60584 Accepted
-[Tue May 12 23:44:36 2026] 127.0.0.1:60584 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:44:36 2026] 127.0.0.1:60584 Closing
-[Tue May 12 23:44:36 2026] 127.0.0.1:60370 Accepted
-[Tue May 12 23:44:36 2026] 127.0.0.1:52638 Accepted
-[Tue May 12 23:44:36 2026] 127.0.0.1:60370 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:44:36 2026] 127.0.0.1:52638 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:44:36 2026] 127.0.0.1:60370 Closing
-[Tue May 12 23:44:36 2026] 127.0.0.1:52638 Closing
-[Tue May 12 23:44:38 2026] 127.0.0.1:49867 Accepted
-[Tue May 12 23:44:38 2026] 127.0.0.1:49867 [200]: GET /jugadores.php
-[Tue May 12 23:44:38 2026] 127.0.0.1:49867 Closing
-[Tue May 12 23:44:38 2026] 127.0.0.1:57618 Accepted
-[Tue May 12 23:44:38 2026] 127.0.0.1:57618 [200]: GET /assets/tailwind.css?v=1778639880
-[Tue May 12 23:44:38 2026] 127.0.0.1:57618 Closing
-[Tue May 12 23:44:38 2026] 127.0.0.1:61162 Accepted
-[Tue May 12 23:44:38 2026] 127.0.0.1:53412 Accepted
-[Tue May 12 23:44:38 2026] 127.0.0.1:61162 [200]: GET /assets/jugadores.js
-[Tue May 12 23:44:38 2026] 127.0.0.1:53412 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:44:38 2026] 127.0.0.1:61162 Closing
-[Tue May 12 23:44:38 2026] 127.0.0.1:53412 Closing
-[Tue May 12 23:44:38 2026] 127.0.0.1:59198 Accepted
-[Tue May 12 23:44:38 2026] 127.0.0.1:65300 Accepted
-[Tue May 12 23:44:38 2026] 127.0.0.1:63935 Accepted
-[Tue May 12 23:44:38 2026] 127.0.0.1:59198 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:44:38 2026] 127.0.0.1:65300 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:44:38 2026] 127.0.0.1:63935 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:44:38 2026] 127.0.0.1:65300 Closing
-[Tue May 12 23:44:38 2026] 127.0.0.1:63935 Closing
-[Tue May 12 23:44:38 2026] 127.0.0.1:59198 Closing
-[Tue May 12 23:45:02 2026] 127.0.0.1:63560 Accepted
-[Tue May 12 23:45:02 2026] 127.0.0.1:63560 [200]: GET /jugadores.php
-[Tue May 12 23:45:02 2026] 127.0.0.1:63560 Closing
-[Tue May 12 23:45:02 2026] 127.0.0.1:57392 Accepted
-[Tue May 12 23:45:02 2026] 127.0.0.1:57392 [200]: GET /assets/jugadores.js
-[Tue May 12 23:45:02 2026] 127.0.0.1:57392 Closing
-[Tue May 12 23:48:34 2026] 127.0.0.1:50278 Accepted
-[Tue May 12 23:48:34 2026] 127.0.0.1:50278 [200]: GET /jugadores.php
-[Tue May 12 23:48:34 2026] 127.0.0.1:50278 Closing
-[Tue May 12 23:48:34 2026] 127.0.0.1:49724 Accepted
-[Tue May 12 23:48:34 2026] 127.0.0.1:49724 [200]: GET /assets/tailwind.css?v=1778640361
-[Tue May 12 23:48:34 2026] 127.0.0.1:49724 Closing
-[Tue May 12 23:48:34 2026] 127.0.0.1:50958 Accepted
-[Tue May 12 23:48:34 2026] 127.0.0.1:53936 Accepted
-[Tue May 12 23:48:34 2026] 127.0.0.1:50958 [200]: GET /assets/jugadores.js
-[Tue May 12 23:48:34 2026] 127.0.0.1:53936 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:48:34 2026] 127.0.0.1:50958 Closing
-[Tue May 12 23:48:34 2026] 127.0.0.1:53936 Closing
-[Tue May 12 23:48:34 2026] 127.0.0.1:55506 Accepted
-[Tue May 12 23:48:34 2026] 127.0.0.1:65173 Accepted
-[Tue May 12 23:48:34 2026] 127.0.0.1:49987 Accepted
-[Tue May 12 23:48:34 2026] 127.0.0.1:55506 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:48:34 2026] 127.0.0.1:65173 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:48:34 2026] 127.0.0.1:49987 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:48:34 2026] 127.0.0.1:65173 Closing
-[Tue May 12 23:48:34 2026] 127.0.0.1:49987 Closing
-[Tue May 12 23:48:34 2026] 127.0.0.1:55506 Closing
-[Tue May 12 23:48:38 2026] 127.0.0.1:51166 Accepted
-[Tue May 12 23:48:38 2026] 127.0.0.1:51166 [200]: GET /jugadores.php
-[Tue May 12 23:48:38 2026] 127.0.0.1:51166 Closing
-[Tue May 12 23:48:39 2026] 127.0.0.1:61668 Accepted
-[Tue May 12 23:48:39 2026] 127.0.0.1:61668 [200]: GET /assets/tailwind.css?v=1778640361
-[Tue May 12 23:48:39 2026] 127.0.0.1:61668 Closing
-[Tue May 12 23:48:39 2026] 127.0.0.1:51964 Accepted
-[Tue May 12 23:48:39 2026] 127.0.0.1:62309 Accepted
-[Tue May 12 23:48:39 2026] 127.0.0.1:51964 [200]: GET /assets/jugadores.js
-[Tue May 12 23:48:39 2026] 127.0.0.1:62309 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:48:39 2026] 127.0.0.1:51964 Closing
-[Tue May 12 23:48:39 2026] 127.0.0.1:62309 Closing
-[Tue May 12 23:48:39 2026] 127.0.0.1:62212 Accepted
-[Tue May 12 23:48:39 2026] 127.0.0.1:50436 Accepted
-[Tue May 12 23:48:39 2026] 127.0.0.1:63281 Accepted
-[Tue May 12 23:48:39 2026] 127.0.0.1:62212 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:48:39 2026] 127.0.0.1:50436 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:48:39 2026] 127.0.0.1:63281 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:48:39 2026] 127.0.0.1:50436 Closing
-[Tue May 12 23:48:39 2026] 127.0.0.1:63281 Closing
-[Tue May 12 23:48:39 2026] 127.0.0.1:62212 Closing
-[Tue May 12 23:50:47 2026] 127.0.0.1:63601 Accepted
-[Tue May 12 23:50:48 2026] 127.0.0.1:63601 [200]: GET /jugadores.php
-[Tue May 12 23:50:48 2026] 127.0.0.1:63601 Closing
-[Tue May 12 23:56:28 2026] 127.0.0.1:58304 Accepted
-[Tue May 12 23:56:29 2026] 127.0.0.1:58304 [200]: GET /jugadores.php
-[Tue May 12 23:56:29 2026] 127.0.0.1:58304 Closing
-[Tue May 12 23:56:29 2026] 127.0.0.1:51590 Accepted
-[Tue May 12 23:56:29 2026] 127.0.0.1:51590 [200]: GET /assets/tailwind.css?v=1778640631
-[Tue May 12 23:56:29 2026] 127.0.0.1:51590 Closing
-[Tue May 12 23:56:29 2026] 127.0.0.1:64954 Accepted
-[Tue May 12 23:56:29 2026] 127.0.0.1:53028 Accepted
-[Tue May 12 23:56:29 2026] 127.0.0.1:64954 [200]: GET /assets/jugadores.js
-[Tue May 12 23:56:29 2026] 127.0.0.1:53028 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:56:29 2026] 127.0.0.1:64954 Closing
-[Tue May 12 23:56:29 2026] 127.0.0.1:53028 Closing
-[Tue May 12 23:56:29 2026] 127.0.0.1:58261 Accepted
-[Tue May 12 23:56:29 2026] 127.0.0.1:58261 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:56:29 2026] 127.0.0.1:51311 Accepted
-[Tue May 12 23:56:29 2026] 127.0.0.1:56757 Accepted
-[Tue May 12 23:56:29 2026] 127.0.0.1:51311 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:56:29 2026] 127.0.0.1:56757 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:56:29 2026] 127.0.0.1:51311 Closing
-[Tue May 12 23:56:29 2026] 127.0.0.1:58261 Closing
-[Tue May 12 23:56:29 2026] 127.0.0.1:56757 Closing
-[Tue May 12 23:57:40 2026] 127.0.0.1:57374 Accepted
-[Tue May 12 23:57:41 2026] 127.0.0.1:57374 [200]: GET /jugadores.php
-[Tue May 12 23:57:41 2026] 127.0.0.1:57374 Closing
-[Tue May 12 23:58:03 2026] 127.0.0.1:64194 Accepted
-[Tue May 12 23:58:03 2026] 127.0.0.1:64194 [200]: GET /jugadores.php
-[Tue May 12 23:58:03 2026] 127.0.0.1:64194 Closing
-[Tue May 12 23:58:03 2026] 127.0.0.1:56762 Accepted
-[Tue May 12 23:58:03 2026] 127.0.0.1:56762 [200]: GET /assets/tailwind.css?v=1778641052
-[Tue May 12 23:58:03 2026] 127.0.0.1:56762 Closing
-[Tue May 12 23:58:03 2026] 127.0.0.1:56871 Accepted
-[Tue May 12 23:58:03 2026] 127.0.0.1:59470 Accepted
-[Tue May 12 23:58:03 2026] 127.0.0.1:56871 [200]: GET /assets/jugadores.js
-[Tue May 12 23:58:03 2026] 127.0.0.1:59470 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:58:03 2026] 127.0.0.1:56871 Closing
-[Tue May 12 23:58:03 2026] 127.0.0.1:59470 Closing
-[Tue May 12 23:58:03 2026] 127.0.0.1:51164 Accepted
-[Tue May 12 23:58:03 2026] 127.0.0.1:61657 Accepted
-[Tue May 12 23:58:03 2026] 127.0.0.1:58619 Accepted
-[Tue May 12 23:58:03 2026] 127.0.0.1:51164 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:58:03 2026] 127.0.0.1:61657 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:58:03 2026] 127.0.0.1:58619 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:58:03 2026] 127.0.0.1:61657 Closing
-[Tue May 12 23:58:03 2026] 127.0.0.1:58619 Closing
-[Tue May 12 23:58:03 2026] 127.0.0.1:51164 Closing
-[Tue May 12 23:58:04 2026] 127.0.0.1:60158 Accepted
-[Tue May 12 23:58:04 2026] 127.0.0.1:60158 [200]: GET /jugadores.php
-[Tue May 12 23:58:04 2026] 127.0.0.1:60158 Closing
-[Tue May 12 23:58:04 2026] 127.0.0.1:54095 Accepted
-[Tue May 12 23:58:04 2026] 127.0.0.1:54095 [200]: GET /assets/tailwind.css?v=1778641052
-[Tue May 12 23:58:05 2026] 127.0.0.1:54095 Closing
-[Tue May 12 23:58:05 2026] 127.0.0.1:57474 Accepted
-[Tue May 12 23:58:05 2026] 127.0.0.1:54173 Accepted
-[Tue May 12 23:58:05 2026] 127.0.0.1:57474 [200]: GET /assets/jugadores.js
-[Tue May 12 23:58:05 2026] 127.0.0.1:54173 [200]: GET /assets/react/react-app.js?v=1778607320
-[Tue May 12 23:58:05 2026] 127.0.0.1:57474 Closing
-[Tue May 12 23:58:05 2026] 127.0.0.1:54173 Closing
-[Tue May 12 23:58:05 2026] 127.0.0.1:63193 Accepted
-[Tue May 12 23:58:05 2026] 127.0.0.1:63193 [200]: GET /assets/goodfellas-logo.png
-[Tue May 12 23:58:05 2026] 127.0.0.1:60197 Accepted
-[Tue May 12 23:58:05 2026] 127.0.0.1:63436 Accepted
-[Tue May 12 23:58:05 2026] 127.0.0.1:60197 [200]: GET /assets/app-ui.js?v=1778209647
-[Tue May 12 23:58:05 2026] 127.0.0.1:63436 [200]: GET /assets/app.js?v=1778638630
-[Tue May 12 23:58:05 2026] 127.0.0.1:60197 Closing
-[Tue May 12 23:58:05 2026] 127.0.0.1:63436 Closing
-[Tue May 12 23:58:05 2026] 127.0.0.1:63193 Closing
-[Tue May 12 23:59:55 2026] 127.0.0.1:60795 Accepted
-[Tue May 12 23:59:57 2026] 127.0.0.1:60795 [200]: GET /jugadores.php
-[Tue May 12 23:59:57 2026] 127.0.0.1:60795 Closing
-[Wed May 13 00:00:26 2026] 127.0.0.1:62301 Accepted
-[Wed May 13 00:00:26 2026] 127.0.0.1:62301 [200]: GET /jugadores.php
-[Wed May 13 00:00:26 2026] 127.0.0.1:62301 Closing
-[Wed May 13 00:00:26 2026] 127.0.0.1:52032 Accepted
-[Wed May 13 00:00:26 2026] 127.0.0.1:55408 Accepted
-[Wed May 13 00:00:26 2026] 127.0.0.1:52032 [200]: GET /assets/tailwind.css?v=1778641188
-[Wed May 13 00:00:26 2026] 127.0.0.1:55408 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:00:26 2026] 127.0.0.1:52032 Closing
-[Wed May 13 00:00:26 2026] 127.0.0.1:55408 Closing
-[Wed May 13 00:00:26 2026] 127.0.0.1:65300 Accepted
-[Wed May 13 00:00:26 2026] 127.0.0.1:65300 [200]: GET /assets/jugadores.js
-[Wed May 13 00:00:26 2026] 127.0.0.1:65300 Closing
-[Wed May 13 00:00:27 2026] 127.0.0.1:50594 Accepted
-[Wed May 13 00:00:27 2026] 127.0.0.1:65228 Accepted
-[Wed May 13 00:00:27 2026] 127.0.0.1:53552 Accepted
-[Wed May 13 00:00:27 2026] 127.0.0.1:50594 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:00:27 2026] 127.0.0.1:65228 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:00:27 2026] 127.0.0.1:53552 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:00:27 2026] 127.0.0.1:50594 Closing
-[Wed May 13 00:00:27 2026] 127.0.0.1:65228 Closing
-[Wed May 13 00:00:27 2026] 127.0.0.1:53552 Closing
-[Wed May 13 00:02:04 2026] 127.0.0.1:50204 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:50204 [200]: GET /jugadores.php
-[Wed May 13 00:02:06 2026] 127.0.0.1:50204 Closing
-[Wed May 13 00:02:06 2026] 127.0.0.1:60579 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:60579 [200]: GET /jugadores.php
-[Wed May 13 00:02:06 2026] 127.0.0.1:60579 Closing
-[Wed May 13 00:02:06 2026] 127.0.0.1:59112 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:55136 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:59112 [200]: GET /assets/tailwind.css?v=1778641311
-[Wed May 13 00:02:06 2026] 127.0.0.1:55136 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:02:06 2026] 127.0.0.1:59112 Closing
-[Wed May 13 00:02:06 2026] 127.0.0.1:52450 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:52450 [200]: GET /assets/jugadores.js
-[Wed May 13 00:02:06 2026] 127.0.0.1:52450 Closing
-[Wed May 13 00:02:06 2026] 127.0.0.1:55136 Closing
-[Wed May 13 00:02:06 2026] 127.0.0.1:51934 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:63120 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:53955 Accepted
-[Wed May 13 00:02:06 2026] 127.0.0.1:51934 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:02:06 2026] 127.0.0.1:63120 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:02:06 2026] 127.0.0.1:53955 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:02:06 2026] 127.0.0.1:51934 Closing
-[Wed May 13 00:02:06 2026] 127.0.0.1:63120 Closing
-[Wed May 13 00:02:06 2026] 127.0.0.1:53955 Closing
-[Wed May 13 00:02:31 2026] 127.0.0.1:62580 Accepted
-[Wed May 13 00:02:31 2026] 127.0.0.1:62580 [200]: GET /jugadores.php
-[Wed May 13 00:02:31 2026] 127.0.0.1:62580 Closing
-[Wed May 13 00:02:31 2026] 127.0.0.1:49901 Accepted
-[Wed May 13 00:02:31 2026] 127.0.0.1:49901 [200]: GET /assets/tailwind.css?v=1778641311
-[Wed May 13 00:02:31 2026] 127.0.0.1:49901 Closing
-[Wed May 13 00:02:31 2026] 127.0.0.1:60324 Accepted
-[Wed May 13 00:02:31 2026] 127.0.0.1:65388 Accepted
-[Wed May 13 00:02:31 2026] 127.0.0.1:60324 [200]: GET /assets/jugadores.js
-[Wed May 13 00:02:31 2026] 127.0.0.1:65388 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:02:31 2026] 127.0.0.1:60324 Closing
-[Wed May 13 00:02:31 2026] 127.0.0.1:65388 Closing
-[Wed May 13 00:02:31 2026] 127.0.0.1:59442 Accepted
-[Wed May 13 00:02:31 2026] 127.0.0.1:59442 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:02:31 2026] 127.0.0.1:59442 Closing
-[Wed May 13 00:02:31 2026] 127.0.0.1:50525 Accepted
-[Wed May 13 00:02:31 2026] 127.0.0.1:53001 Accepted
-[Wed May 13 00:02:31 2026] 127.0.0.1:50525 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:02:31 2026] 127.0.0.1:53001 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:02:31 2026] 127.0.0.1:50525 Closing
-[Wed May 13 00:02:31 2026] 127.0.0.1:53001 Closing
-[Wed May 13 00:04:26 2026] 127.0.0.1:64888 Accepted
-[Wed May 13 00:04:26 2026] 127.0.0.1:64888 [200]: GET /jugadores.php
-[Wed May 13 00:04:26 2026] 127.0.0.1:64888 Closing
-[Wed May 13 00:04:26 2026] 127.0.0.1:57369 Accepted
-[Wed May 13 00:04:26 2026] 127.0.0.1:57326 Accepted
-[Wed May 13 00:04:26 2026] 127.0.0.1:57369 [200]: GET /assets/tailwind.css?v=1778641455
-[Wed May 13 00:04:26 2026] 127.0.0.1:57326 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:04:26 2026] 127.0.0.1:57369 Closing
-[Wed May 13 00:04:26 2026] 127.0.0.1:57326 Closing
-[Wed May 13 00:04:26 2026] 127.0.0.1:54956 Accepted
-[Wed May 13 00:04:26 2026] 127.0.0.1:54956 [200]: GET /assets/jugadores.js
-[Wed May 13 00:04:26 2026] 127.0.0.1:54956 Closing
-[Wed May 13 00:04:26 2026] 127.0.0.1:58107 Accepted
-[Wed May 13 00:04:26 2026] 127.0.0.1:55140 Accepted
-[Wed May 13 00:04:26 2026] 127.0.0.1:51208 Accepted
-[Wed May 13 00:04:26 2026] 127.0.0.1:58107 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:04:26 2026] 127.0.0.1:55140 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:04:26 2026] 127.0.0.1:51208 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:04:26 2026] 127.0.0.1:58107 Closing
-[Wed May 13 00:04:26 2026] 127.0.0.1:55140 Closing
-[Wed May 13 00:04:26 2026] 127.0.0.1:51208 Closing
-[Wed May 13 00:05:12 2026] 127.0.0.1:65418 Accepted
-[Wed May 13 00:05:12 2026] 127.0.0.1:65418 [200]: GET /jugadores.php
-[Wed May 13 00:05:12 2026] 127.0.0.1:65418 Closing
-[Wed May 13 00:05:12 2026] 127.0.0.1:60589 Accepted
-[Wed May 13 00:05:12 2026] 127.0.0.1:63215 Accepted
-[Wed May 13 00:05:12 2026] 127.0.0.1:60589 [200]: GET /assets/tailwind.css?v=1778641501
-[Wed May 13 00:05:12 2026] 127.0.0.1:63215 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:05:12 2026] 127.0.0.1:60589 Closing
-[Wed May 13 00:05:12 2026] 127.0.0.1:63215 Closing
-[Wed May 13 00:05:12 2026] 127.0.0.1:55286 Accepted
-[Wed May 13 00:05:12 2026] 127.0.0.1:55286 [200]: GET /assets/jugadores.js
-[Wed May 13 00:05:12 2026] 127.0.0.1:55286 Closing
-[Wed May 13 00:05:12 2026] 127.0.0.1:61135 Accepted
-[Wed May 13 00:05:12 2026] 127.0.0.1:53507 Accepted
-[Wed May 13 00:05:12 2026] 127.0.0.1:63663 Accepted
-[Wed May 13 00:05:12 2026] 127.0.0.1:61135 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:05:12 2026] 127.0.0.1:53507 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:05:12 2026] 127.0.0.1:63663 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:05:12 2026] 127.0.0.1:61135 Closing
-[Wed May 13 00:05:12 2026] 127.0.0.1:53507 Closing
-[Wed May 13 00:05:12 2026] 127.0.0.1:63663 Closing
-[Wed May 13 00:17:13 2026] 127.0.0.1:50702 Accepted
-[Wed May 13 00:20:02 2026] 127.0.0.1:56576 Accepted
-[Wed May 13 00:20:03 2026] 127.0.0.1:56576 [200]: GET /
-[Wed May 13 00:20:03 2026] 127.0.0.1:56576 Closing
-[Wed May 13 00:20:06 2026] 127.0.0.1:50702 Closed without sending a request; it was probably just an unused speculative preconnection
-[Wed May 13 00:20:06 2026] 127.0.0.1:50702 Closing
-[Wed May 13 00:24:02 2026] 127.0.0.1:60239 Accepted
-[Wed May 13 00:24:02 2026] 127.0.0.1:60239 [200]: GET /jugadores.php
-[Wed May 13 00:24:02 2026] 127.0.0.1:60239 Closing
-[Wed May 13 00:24:02 2026] 127.0.0.1:60980 Accepted
-[Wed May 13 00:24:02 2026] 127.0.0.1:60980 [200]: GET /assets/tailwind.css?v=1778641501
-[Wed May 13 00:24:02 2026] 127.0.0.1:60980 Closing
-[Wed May 13 00:24:02 2026] 127.0.0.1:65092 Accepted
-[Wed May 13 00:24:02 2026] 127.0.0.1:51923 Accepted
-[Wed May 13 00:24:02 2026] 127.0.0.1:65092 [200]: GET /assets/jugadores.js
-[Wed May 13 00:24:02 2026] 127.0.0.1:51923 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:24:02 2026] 127.0.0.1:65092 Closing
-[Wed May 13 00:24:02 2026] 127.0.0.1:51923 Closing
-[Wed May 13 00:24:03 2026] 127.0.0.1:65317 Accepted
-[Wed May 13 00:24:03 2026] 127.0.0.1:58344 Accepted
-[Wed May 13 00:24:03 2026] 127.0.0.1:63246 Accepted
-[Wed May 13 00:24:03 2026] 127.0.0.1:65317 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:24:03 2026] 127.0.0.1:58344 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:24:03 2026] 127.0.0.1:63246 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:24:03 2026] 127.0.0.1:58344 Closing
-[Wed May 13 00:24:03 2026] 127.0.0.1:63246 Closing
-[Wed May 13 00:24:03 2026] 127.0.0.1:65317 Closing
-[Wed May 13 00:24:29 2026] 127.0.0.1:52851 Accepted
-[Wed May 13 00:24:29 2026] 127.0.0.1:59024 Accepted
-[Wed May 13 00:24:29 2026] 127.0.0.1:52851 [200]: GET /assets/tailwind.css?v=1778641501
-[Wed May 13 00:24:29 2026] 127.0.0.1:59024 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:24:29 2026] 127.0.0.1:59024 Closing
-[Wed May 13 00:24:29 2026] 127.0.0.1:52851 Closing
-[Wed May 13 00:24:29 2026] 127.0.0.1:55205 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:61981 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:61981 [200]: GET /jugadores.php
-[Wed May 13 00:26:18 2026] 127.0.0.1:61981 Closing
-[Wed May 13 00:26:18 2026] 127.0.0.1:49670 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:62494 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:49670 [200]: GET /assets/tailwind.css?v=1778642761
-[Wed May 13 00:26:18 2026] 127.0.0.1:62494 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:26:18 2026] 127.0.0.1:49670 Closing
-[Wed May 13 00:26:18 2026] 127.0.0.1:62494 Closing
-[Wed May 13 00:26:18 2026] 127.0.0.1:60052 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:60052 [200]: GET /assets/jugadores.js
-[Wed May 13 00:26:18 2026] 127.0.0.1:60052 Closing
-[Wed May 13 00:26:18 2026] 127.0.0.1:64092 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:59543 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:51380 Accepted
-[Wed May 13 00:26:18 2026] 127.0.0.1:64092 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:26:18 2026] 127.0.0.1:59543 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:26:18 2026] 127.0.0.1:51380 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:26:18 2026] 127.0.0.1:64092 Closing
-[Wed May 13 00:26:18 2026] 127.0.0.1:59543 Closing
-[Wed May 13 00:26:18 2026] 127.0.0.1:51380 Closing
-[Wed May 13 00:28:05 2026] 127.0.0.1:55205 Closed without sending a request; it was probably just an unused speculative preconnection
-[Wed May 13 00:28:05 2026] 127.0.0.1:55205 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:63686 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:63686 [200]: GET /jugadores.php
-[Wed May 13 00:28:06 2026] 127.0.0.1:63686 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:57548 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:57548 [200]: GET /assets/tailwind.css?v=1778642761
-[Wed May 13 00:28:06 2026] 127.0.0.1:57548 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:60384 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:58631 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:60384 [200]: GET /assets/jugadores.js
-[Wed May 13 00:28:06 2026] 127.0.0.1:58631 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:28:06 2026] 127.0.0.1:60384 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:58631 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:55157 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:55157 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:28:06 2026] 127.0.0.1:55157 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:59808 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:59808 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:28:06 2026] 127.0.0.1:57547 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:53129 Accepted
-[Wed May 13 00:28:06 2026] 127.0.0.1:57547 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:28:06 2026] 127.0.0.1:53129 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:28:06 2026] 127.0.0.1:59808 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:53129 Closing
-[Wed May 13 00:28:06 2026] 127.0.0.1:57547 Closing
-[Wed May 13 00:28:54 2026] 127.0.0.1:54019 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:54019 [200]: GET /jugadores.php
-[Wed May 13 00:28:55 2026] 127.0.0.1:54019 Closing
-[Wed May 13 00:28:55 2026] 127.0.0.1:62822 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:62822 [200]: GET /assets/tailwind.css?v=1778642761
-[Wed May 13 00:28:55 2026] 127.0.0.1:62822 Closing
-[Wed May 13 00:28:55 2026] 127.0.0.1:59549 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:53899 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:59549 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:28:55 2026] 127.0.0.1:53899 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:28:55 2026] 127.0.0.1:53899 Closing
-[Wed May 13 00:28:55 2026] 127.0.0.1:59549 Closing
-[Wed May 13 00:28:55 2026] 127.0.0.1:57088 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:57088 [200]: GET /assets/jugadores.js
-[Wed May 13 00:28:55 2026] 127.0.0.1:57088 Closing
-[Wed May 13 00:28:55 2026] 127.0.0.1:50899 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:62491 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:50899 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:28:55 2026] 127.0.0.1:52109 Accepted
-[Wed May 13 00:28:55 2026] 127.0.0.1:62491 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:28:55 2026] 127.0.0.1:52109 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:28:55 2026] 127.0.0.1:50899 Closing
-[Wed May 13 00:28:55 2026] 127.0.0.1:62491 Closing
-[Wed May 13 00:28:55 2026] 127.0.0.1:52109 Closing
-[Wed May 13 00:28:56 2026] 127.0.0.1:50845 Accepted
-[Wed May 13 00:30:36 2026] 127.0.0.1:50845 Closed without sending a request; it was probably just an unused speculative preconnection
-[Wed May 13 00:30:36 2026] 127.0.0.1:50845 Closing
-[Wed May 13 00:30:37 2026] 127.0.0.1:63758 Accepted
-[Wed May 13 00:30:37 2026] 127.0.0.1:63758 [200]: GET /jugadores.php
-[Wed May 13 00:30:37 2026] 127.0.0.1:63758 Closing
-[Wed May 13 00:30:37 2026] 127.0.0.1:64259 Accepted
-[Wed May 13 00:30:37 2026] 127.0.0.1:64259 [200]: GET /assets/tailwind.css?v=1778642761
-[Wed May 13 00:30:37 2026] 127.0.0.1:64259 Closing
-[Wed May 13 00:30:37 2026] 127.0.0.1:52827 Accepted
-[Wed May 13 00:30:37 2026] 127.0.0.1:64451 Accepted
-[Wed May 13 00:30:37 2026] 127.0.0.1:52827 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:30:37 2026] 127.0.0.1:64451 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:30:37 2026] 127.0.0.1:64451 Closing
-[Wed May 13 00:30:37 2026] 127.0.0.1:52827 Closing
-[Wed May 13 00:30:37 2026] 127.0.0.1:49650 Accepted
-[Wed May 13 00:30:38 2026] 127.0.0.1:49650 [200]: GET /assets/jugadores.js
-[Wed May 13 00:30:38 2026] 127.0.0.1:49650 Closing
-[Wed May 13 00:30:39 2026] 127.0.0.1:56494 Accepted
-[Wed May 13 00:30:39 2026] 127.0.0.1:51245 Accepted
-[Wed May 13 00:30:39 2026] 127.0.0.1:56494 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:30:39 2026] 127.0.0.1:51223 Accepted
-[Wed May 13 00:30:39 2026] 127.0.0.1:51245 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:30:39 2026] 127.0.0.1:51223 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:30:39 2026] 127.0.0.1:56494 Closing
-[Wed May 13 00:30:39 2026] 127.0.0.1:51245 Closing
-[Wed May 13 00:30:39 2026] 127.0.0.1:51223 Closing
-[Wed May 13 00:30:39 2026] 127.0.0.1:51653 Accepted
-[Wed May 13 00:31:34 2026] 127.0.0.1:51653 [200]: GET /jugadores.php
-[Wed May 13 00:31:34 2026] 127.0.0.1:51653 Closing
-[Wed May 13 00:31:35 2026] 127.0.0.1:61562 Accepted
-[Wed May 13 00:31:35 2026] 127.0.0.1:61562 [200]: GET /assets/jugadores.js
-[Wed May 13 00:31:35 2026] 127.0.0.1:61562 Closing
-[Wed May 13 00:31:35 2026] 127.0.0.1:58808 Accepted
-[Wed May 13 00:32:23 2026] 127.0.0.1:56764 Accepted
-[Wed May 13 00:32:24 2026] 127.0.0.1:56764 [200]: GET /jugadores.php
-[Wed May 13 00:32:24 2026] 127.0.0.1:56764 Closing
-[Wed May 13 00:32:24 2026] 127.0.0.1:60959 Accepted
-[Wed May 13 00:32:24 2026] 127.0.0.1:51007 Accepted
-[Wed May 13 00:32:24 2026] 127.0.0.1:60959 [200]: GET /assets/tailwind.css?v=1778643128
-[Wed May 13 00:32:24 2026] 127.0.0.1:51007 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:32:24 2026] 127.0.0.1:60959 Closing
-[Wed May 13 00:32:24 2026] 127.0.0.1:51007 Closing
-[Wed May 13 00:32:24 2026] 127.0.0.1:49446 Accepted
-[Wed May 13 00:32:24 2026] 127.0.0.1:49446 [200]: GET /assets/jugadores.js
-[Wed May 13 00:32:24 2026] 127.0.0.1:49446 Closing
-[Wed May 13 00:32:24 2026] 127.0.0.1:58796 Accepted
-[Wed May 13 00:32:24 2026] 127.0.0.1:60775 Accepted
-[Wed May 13 00:32:24 2026] 127.0.0.1:55252 Accepted
-[Wed May 13 00:32:24 2026] 127.0.0.1:58796 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:32:24 2026] 127.0.0.1:60775 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:32:24 2026] 127.0.0.1:55252 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:32:24 2026] 127.0.0.1:58796 Closing
-[Wed May 13 00:32:24 2026] 127.0.0.1:60775 Closing
-[Wed May 13 00:32:24 2026] 127.0.0.1:55252 Closing
-[Wed May 13 00:33:22 2026] 127.0.0.1:58808 Closed without sending a request; it was probably just an unused speculative preconnection
-[Wed May 13 00:33:22 2026] 127.0.0.1:58808 Closing
-[Wed May 13 00:33:22 2026] 127.0.0.1:61335 Accepted
-[Wed May 13 00:33:22 2026] 127.0.0.1:61335 [200]: GET /jugadores.php
-[Wed May 13 00:33:22 2026] 127.0.0.1:61335 Closing
-[Wed May 13 00:33:22 2026] 127.0.0.1:64007 Accepted
-[Wed May 13 00:33:22 2026] 127.0.0.1:64007 [200]: GET /assets/tailwind.css?v=1778643128
-[Wed May 13 00:33:22 2026] 127.0.0.1:64007 Closing
-[Wed May 13 00:33:23 2026] 127.0.0.1:58145 Accepted
-[Wed May 13 00:33:23 2026] 127.0.0.1:59822 Accepted
-[Wed May 13 00:33:23 2026] 127.0.0.1:58145 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:33:23 2026] 127.0.0.1:59822 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:33:23 2026] 127.0.0.1:59822 Closing
-[Wed May 13 00:33:23 2026] 127.0.0.1:58145 Closing
-[Wed May 13 00:33:23 2026] 127.0.0.1:65190 Accepted
-[Wed May 13 00:33:23 2026] 127.0.0.1:65190 [200]: GET /assets/jugadores.js
-[Wed May 13 00:33:23 2026] 127.0.0.1:65190 Closing
-[Wed May 13 00:33:24 2026] 127.0.0.1:62811 Accepted
-[Wed May 13 00:33:24 2026] 127.0.0.1:65146 Accepted
-[Wed May 13 00:33:24 2026] 127.0.0.1:64223 Accepted
-[Wed May 13 00:33:24 2026] 127.0.0.1:62811 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:33:24 2026] 127.0.0.1:65146 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:33:24 2026] 127.0.0.1:64223 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:33:24 2026] 127.0.0.1:62811 Closing
-[Wed May 13 00:33:24 2026] 127.0.0.1:65146 Closing
-[Wed May 13 00:33:24 2026] 127.0.0.1:64223 Closing
-[Wed May 13 00:33:24 2026] 127.0.0.1:54945 Accepted
-[Wed May 13 00:33:56 2026] 127.0.0.1:54945 [200]: GET /jugadores.php
-[Wed May 13 00:33:56 2026] 127.0.0.1:54945 Closing
-[Wed May 13 00:33:57 2026] 127.0.0.1:62319 Accepted
-[Wed May 13 00:33:57 2026] 127.0.0.1:62319 [200]: GET /assets/jugadores.js
-[Wed May 13 00:33:57 2026] 127.0.0.1:62319 Closing
-[Wed May 13 00:33:57 2026] 127.0.0.1:63742 Accepted
-[Wed May 13 00:34:05 2026] 127.0.0.1:63742 [200]: GET /assets/tailwind.css?v=1778643128
-[Wed May 13 00:34:05 2026] 127.0.0.1:63742 Closing
-[Wed May 13 00:34:05 2026] 127.0.0.1:58231 Accepted
-[Wed May 13 00:34:05 2026] 127.0.0.1:58231 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:34:05 2026] 127.0.0.1:58231 Closing
-[Wed May 13 00:34:06 2026] 127.0.0.1:49183 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:52718 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:52718 [200]: GET /jugadores.php
-[Wed May 13 00:36:14 2026] 127.0.0.1:52718 Closing
-[Wed May 13 00:36:14 2026] 127.0.0.1:62873 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:57031 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:62873 [200]: GET /assets/tailwind.css?v=1778643362
-[Wed May 13 00:36:14 2026] 127.0.0.1:57031 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:36:14 2026] 127.0.0.1:62873 Closing
-[Wed May 13 00:36:14 2026] 127.0.0.1:57031 Closing
-[Wed May 13 00:36:14 2026] 127.0.0.1:56519 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:56519 [200]: GET /assets/jugadores.js
-[Wed May 13 00:36:14 2026] 127.0.0.1:56519 Closing
-[Wed May 13 00:36:14 2026] 127.0.0.1:51925 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:51585 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:63439 Accepted
-[Wed May 13 00:36:14 2026] 127.0.0.1:51925 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:36:14 2026] 127.0.0.1:51585 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:36:14 2026] 127.0.0.1:63439 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:36:14 2026] 127.0.0.1:51925 Closing
-[Wed May 13 00:36:14 2026] 127.0.0.1:51585 Closing
-[Wed May 13 00:36:14 2026] 127.0.0.1:63439 Closing
-[Wed May 13 00:38:08 2026] 127.0.0.1:49183 Closed without sending a request; it was probably just an unused speculative preconnection
-[Wed May 13 00:38:08 2026] 127.0.0.1:49183 Closing
-[Wed May 13 00:38:08 2026] 127.0.0.1:49616 Accepted
-[Wed May 13 00:38:09 2026] 127.0.0.1:49616 [200]: GET /jugadores.php
-[Wed May 13 00:38:09 2026] 127.0.0.1:49616 Closing
-[Wed May 13 00:38:09 2026] 127.0.0.1:61136 Accepted
-[Wed May 13 00:38:09 2026] 127.0.0.1:61136 [200]: GET /assets/tailwind.css?v=1778643362
-[Wed May 13 00:38:09 2026] 127.0.0.1:61136 Closing
-[Wed May 13 00:38:09 2026] 127.0.0.1:61712 Accepted
-[Wed May 13 00:38:09 2026] 127.0.0.1:52126 Accepted
-[Wed May 13 00:38:09 2026] 127.0.0.1:61712 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:38:09 2026] 127.0.0.1:52126 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:38:09 2026] 127.0.0.1:52126 Closing
-[Wed May 13 00:38:09 2026] 127.0.0.1:61712 Closing
-[Wed May 13 00:38:09 2026] 127.0.0.1:59744 Accepted
-[Wed May 13 00:38:09 2026] 127.0.0.1:59744 [200]: GET /assets/jugadores.js
-[Wed May 13 00:38:09 2026] 127.0.0.1:59744 Closing
-[Wed May 13 00:38:10 2026] 127.0.0.1:56243 Accepted
-[Wed May 13 00:38:10 2026] 127.0.0.1:49378 Accepted
-[Wed May 13 00:38:10 2026] 127.0.0.1:51324 Accepted
-[Wed May 13 00:38:10 2026] 127.0.0.1:56243 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:38:10 2026] 127.0.0.1:49378 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:38:10 2026] 127.0.0.1:51324 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:38:10 2026] 127.0.0.1:56243 Closing
-[Wed May 13 00:38:10 2026] 127.0.0.1:49378 Closing
-[Wed May 13 00:38:10 2026] 127.0.0.1:51324 Closing
-[Wed May 13 00:38:10 2026] 127.0.0.1:62210 Accepted
-[Wed May 13 00:41:54 2026] 127.0.0.1:62210 Closed without sending a request; it was probably just an unused speculative preconnection
-[Wed May 13 00:41:54 2026] 127.0.0.1:62210 Closing
-[Wed May 13 00:41:54 2026] 127.0.0.1:56529 Accepted
-[Wed May 13 00:41:55 2026] 127.0.0.1:56529 [200]: GET /jugadores.php
-[Wed May 13 00:41:55 2026] 127.0.0.1:56529 Closing
-[Wed May 13 00:41:55 2026] 127.0.0.1:53366 Accepted
-[Wed May 13 00:41:55 2026] 127.0.0.1:53366 [200]: GET /assets/tailwind.css?v=1778643605
-[Wed May 13 00:41:55 2026] 127.0.0.1:53366 Closing
-[Wed May 13 00:41:55 2026] 127.0.0.1:59193 Accepted
-[Wed May 13 00:41:55 2026] 127.0.0.1:51134 Accepted
-[Wed May 13 00:41:55 2026] 127.0.0.1:59193 [200]: GET /assets/goodfellas-logo.png
-[Wed May 13 00:41:55 2026] 127.0.0.1:51134 [404]: GET /.well-known/appspecific/com.chrome.devtools.json - No such file or directory
-[Wed May 13 00:41:55 2026] 127.0.0.1:51134 Closing
-[Wed May 13 00:41:55 2026] 127.0.0.1:59193 Closing
-[Wed May 13 00:41:55 2026] 127.0.0.1:60783 Accepted
-[Wed May 13 00:41:56 2026] 127.0.0.1:60783 [200]: GET /assets/jugadores.js
-[Wed May 13 00:41:56 2026] 127.0.0.1:60783 Closing
-[Wed May 13 00:41:56 2026] 127.0.0.1:64126 Accepted
-[Wed May 13 00:41:56 2026] 127.0.0.1:65527 Accepted
-[Wed May 13 00:41:56 2026] 127.0.0.1:64126 [200]: GET /assets/react/react-app.js?v=1778607320
-[Wed May 13 00:41:56 2026] 127.0.0.1:53067 Accepted
-[Wed May 13 00:41:56 2026] 127.0.0.1:65527 [200]: GET /assets/app-ui.js?v=1778209647
-[Wed May 13 00:41:56 2026] 127.0.0.1:53067 [200]: GET /assets/app.js?v=1778638630
-[Wed May 13 00:41:56 2026] 127.0.0.1:64126 Closing
-[Wed May 13 00:41:56 2026] 127.0.0.1:65527 Closing
-[Wed May 13 00:41:56 2026] 127.0.0.1:53067 Closing
-[Wed May 13 00:41:56 2026] 127.0.0.1:64133 Accepted
-[Wed May 13 00:42:10 2026] 127.0.0.1:64133 [200]: GET /jugadores.php
-[Wed May 13 00:42:10 2026] 127.0.0.1:64133 Closing
-[Wed May 13 00:42:11 2026] 127.0.0.1:53986 Accepted
-[Wed May 13 00:42:11 2026] 127.0.0.1:53986 [200]: GET /assets/jugadores.js
-[Wed May 13 00:42:11 2026] 127.0.0.1:53986 Closing
-[Wed May 13 00:42:11 2026] 127.0.0.1:56052 Accepted
-[Wed May 13 00:42:39 2026] 127.0.0.1:56052 [200]: GET /jugadores.php
-[Wed May 13 00:42:39 2026] 127.0.0.1:56052 Closing
-[Wed May 13 00:42:39 2026] 127.0.0.1:53914 Accepted
-[Wed May 13 00:42:39 2026] 127.0.0.1:53914 [200]: GET /assets/jugadores.js
-[Wed May 13 00:42:39 2026] 127.0.0.1:53914 Closing
-[Wed May 13 00:42:40 2026] 127.0.0.1:62723 Accepted
+[Fri May 15 14:34:41 2026] PHP 8.2.12 Development Server (http://127.0.0.1:8000) started
+[Fri May 15 14:34:59 2026] 127.0.0.1:53143 Accepted
+[Fri May 15 14:35:03 2026] 127.0.0.1:53143 [500]: GET /
+[Fri May 15 14:35:03 2026] 127.0.0.1:53143 Closing
+[Fri May 15 14:35:12 2026] 127.0.0.1:53309 Accepted
+[Fri May 15 14:35:16 2026] 127.0.0.1:53309 [500]: GET /
+[Fri May 15 14:35:16 2026] 127.0.0.1:53309 Closing
+[Fri May 15 14:35:52 2026] 127.0.0.1:53807 Accepted
+[Fri May 15 14:35:53 2026] 127.0.0.1:53807 [200]: GET /
+[Fri May 15 14:35:53 2026] 127.0.0.1:53807 Closing
+[Fri May 15 14:58:56 2026] 127.0.0.1:53964 Accepted
+[Fri May 15 14:58:56 2026] 127.0.0.1:53964 [200]: GET /jugadores.php
+[Fri May 15 14:58:56 2026] 127.0.0.1:53964 Closing
+[Fri May 15 15:02:31 2026] 127.0.0.1:56591 Accepted
+[Fri May 15 15:02:31 2026] 127.0.0.1:56591 [302]: GET /sorteo.php
+[Fri May 15 15:02:31 2026] 127.0.0.1:56591 Closing
+[Fri May 15 15:02:31 2026] 127.0.0.1:56592 Accepted
+[Fri May 15 15:02:31 2026] 127.0.0.1:56592 [302]: GET /sorteo_legacy_csv.php
+[Fri May 15 15:02:31 2026] 127.0.0.1:56592 Closing
+[Fri May 15 15:02:31 2026] 127.0.0.1:56593 Accepted
+[Fri May 15 15:02:31 2026] 127.0.0.1:56593 [200]: GET /login.php?next=%2Fsorteo_legacy_csv.php
+[Fri May 15 15:02:31 2026] 127.0.0.1:56593 Closing
+[Fri May 15 15:07:33 2026] 127.0.0.1:60225 Accepted
+[Fri May 15 15:07:33 2026] 127.0.0.1:60225 [200]: GET /jugadores.php
+[Fri May 15 15:07:33 2026] 127.0.0.1:60225 Closing
+[Fri May 15 15:07:51 2026] 127.0.0.1:60447 Accepted
+[Fri May 15 15:07:51 2026] 127.0.0.1:60447 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:07:51 2026] 127.0.0.1:60447 Closing
+[Fri May 15 15:07:51 2026] 127.0.0.1:60449 Accepted
+[Fri May 15 15:07:51 2026] 127.0.0.1:60449 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:07:51 2026] 127.0.0.1:60449 Closing
+[Fri May 15 15:07:51 2026] 127.0.0.1:60451 Accepted
+[Fri May 15 15:07:51 2026] 127.0.0.1:60451 [200]: GET /jugadores.php
+[Fri May 15 15:07:51 2026] 127.0.0.1:60451 Closing
+[Fri May 15 15:08:06 2026] 127.0.0.1:60630 Accepted
+[Fri May 15 15:08:06 2026] 127.0.0.1:60630 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:08:06 2026] 127.0.0.1:60630 Closing
+[Fri May 15 15:08:06 2026] 127.0.0.1:60632 Accepted
+[Fri May 15 15:08:06 2026] 127.0.0.1:60633 Accepted
+[Fri May 15 15:08:06 2026] 127.0.0.1:60634 Accepted
+[Fri May 15 15:08:06 2026] 127.0.0.1:60635 Accepted
+[Fri May 15 15:08:06 2026] 127.0.0.1:60632 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:08:06 2026] 127.0.0.1:60633 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:08:06 2026] 127.0.0.1:60634 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:08:06 2026] 127.0.0.1:60635 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:08:06 2026] 127.0.0.1:60633 Closing
+[Fri May 15 15:08:06 2026] 127.0.0.1:60635 Closing
+[Fri May 15 15:08:06 2026] 127.0.0.1:60632 Closing
+[Fri May 15 15:08:06 2026] 127.0.0.1:60634 Closing
+[Fri May 15 15:08:06 2026] 127.0.0.1:60636 Accepted
+[Fri May 15 15:08:06 2026] 127.0.0.1:60636 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:08:06 2026] 127.0.0.1:60636 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60672 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60672 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:08:09 2026] 127.0.0.1:60672 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60674 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60674 [200]: GET /jugadores.php
+[Fri May 15 15:08:09 2026] 127.0.0.1:60674 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60675 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60679 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60675 [200]: GET /jugadores.php
+[Fri May 15 15:08:09 2026] 127.0.0.1:60675 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60680 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60679 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:08:09 2026] 127.0.0.1:60683 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60680 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:08:09 2026] 127.0.0.1:60684 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60683 [200]: GET /assets/jugadores.js
+[Fri May 15 15:08:09 2026] 127.0.0.1:60685 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60684 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:08:09 2026] 127.0.0.1:60686 Accepted
+[Fri May 15 15:08:09 2026] 127.0.0.1:60685 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:08:09 2026] 127.0.0.1:60686 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:08:09 2026] 127.0.0.1:60683 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60684 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60679 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60685 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60686 Closing
+[Fri May 15 15:08:09 2026] 127.0.0.1:60680 Closing
+[Fri May 15 15:08:31 2026] 127.0.0.1:60964 Accepted
+[Fri May 15 15:08:31 2026] 127.0.0.1:60964 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:08:31 2026] 127.0.0.1:60964 Closing
+[Fri May 15 15:08:31 2026] 127.0.0.1:60966 Accepted
+[Fri May 15 15:08:31 2026] 127.0.0.1:60967 Accepted
+[Fri May 15 15:08:31 2026] 127.0.0.1:60968 Accepted
+[Fri May 15 15:08:31 2026] 127.0.0.1:60969 Accepted
+[Fri May 15 15:08:31 2026] 127.0.0.1:60966 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:08:31 2026] 127.0.0.1:60967 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:08:31 2026] 127.0.0.1:60968 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:08:31 2026] 127.0.0.1:60969 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:08:31 2026] 127.0.0.1:60970 Accepted
+[Fri May 15 15:08:31 2026] 127.0.0.1:60967 Closing
+[Fri May 15 15:08:31 2026] 127.0.0.1:60969 Closing
+[Fri May 15 15:08:31 2026] 127.0.0.1:60966 Closing
+[Fri May 15 15:08:31 2026] 127.0.0.1:60968 Closing
+[Fri May 15 15:08:31 2026] 127.0.0.1:60970 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:08:31 2026] 127.0.0.1:60970 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60979 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60979 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:08:32 2026] 127.0.0.1:60979 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60980 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60980 [200]: GET /jugadores.php
+[Fri May 15 15:08:32 2026] 127.0.0.1:60980 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60982 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60985 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60982 [200]: GET /jugadores.php
+[Fri May 15 15:08:32 2026] 127.0.0.1:60982 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60986 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60985 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:08:32 2026] 127.0.0.1:60988 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60986 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:08:32 2026] 127.0.0.1:60989 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60988 [200]: GET /assets/jugadores.js
+[Fri May 15 15:08:32 2026] 127.0.0.1:60990 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60989 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:08:32 2026] 127.0.0.1:60991 Accepted
+[Fri May 15 15:08:32 2026] 127.0.0.1:60990 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:08:32 2026] 127.0.0.1:60991 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:08:32 2026] 127.0.0.1:60988 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60989 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60985 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60990 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60991 Closing
+[Fri May 15 15:08:32 2026] 127.0.0.1:60986 Closing
+[Fri May 15 15:09:38 2026] 127.0.0.1:61795 Accepted
+[Fri May 15 15:09:38 2026] 127.0.0.1:61795 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:09:38 2026] 127.0.0.1:61795 Closing
+[Fri May 15 15:09:38 2026] 127.0.0.1:61797 Accepted
+[Fri May 15 15:09:38 2026] 127.0.0.1:61797 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:09:38 2026] 127.0.0.1:61797 Closing
+[Fri May 15 15:09:38 2026] 127.0.0.1:61799 Accepted
+[Fri May 15 15:09:38 2026] 127.0.0.1:61799 [200]: GET /jugadores.php
+[Fri May 15 15:09:38 2026] 127.0.0.1:61799 Closing
+[Fri May 15 15:09:38 2026] 127.0.0.1:61802 Accepted
+[Fri May 15 15:09:38 2026] 127.0.0.1:61802 [200]: GET /jugadores.php
+[Fri May 15 15:09:38 2026] 127.0.0.1:61802 Closing
+[Fri May 15 15:09:39 2026] 127.0.0.1:61817 Accepted
+[Fri May 15 15:09:39 2026] 127.0.0.1:61817 [200]: GET /jugadores.php?show_inactive=1
+[Fri May 15 15:09:39 2026] 127.0.0.1:61817 Closing
+[Fri May 15 15:10:21 2026] 127.0.0.1:62335 Accepted
+[Fri May 15 15:10:22 2026] 127.0.0.1:62335 [200]: GET /index.php
+[Fri May 15 15:10:22 2026] 127.0.0.1:62335 Closing
+[Fri May 15 15:10:48 2026] 127.0.0.1:62667 Accepted
+[Fri May 15 15:10:48 2026] 127.0.0.1:62667 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:10:48 2026] 127.0.0.1:62667 Closing
+[Fri May 15 15:10:48 2026] 127.0.0.1:62669 Accepted
+[Fri May 15 15:10:48 2026] 127.0.0.1:62670 Accepted
+[Fri May 15 15:10:48 2026] 127.0.0.1:62671 Accepted
+[Fri May 15 15:10:48 2026] 127.0.0.1:62672 Accepted
+[Fri May 15 15:10:48 2026] 127.0.0.1:62669 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:10:48 2026] 127.0.0.1:62670 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:10:48 2026] 127.0.0.1:62671 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:10:48 2026] 127.0.0.1:62672 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:10:48 2026] 127.0.0.1:62673 Accepted
+[Fri May 15 15:10:48 2026] 127.0.0.1:62670 Closing
+[Fri May 15 15:10:48 2026] 127.0.0.1:62672 Closing
+[Fri May 15 15:10:48 2026] 127.0.0.1:62669 Closing
+[Fri May 15 15:10:48 2026] 127.0.0.1:62671 Closing
+[Fri May 15 15:10:48 2026] 127.0.0.1:62673 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:10:48 2026] 127.0.0.1:62673 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62683 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62683 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:10:49 2026] 127.0.0.1:62683 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62685 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62685 [200]: GET /jugadores.php
+[Fri May 15 15:10:49 2026] 127.0.0.1:62685 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62686 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62691 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62686 [200]: GET /jugadores.php
+[Fri May 15 15:10:49 2026] 127.0.0.1:62686 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62692 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62691 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:10:49 2026] 127.0.0.1:62694 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62692 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:10:49 2026] 127.0.0.1:62695 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62694 [200]: GET /assets/jugadores.js
+[Fri May 15 15:10:49 2026] 127.0.0.1:62696 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62695 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:10:49 2026] 127.0.0.1:62697 Accepted
+[Fri May 15 15:10:49 2026] 127.0.0.1:62696 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:10:49 2026] 127.0.0.1:62697 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:10:49 2026] 127.0.0.1:62694 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62695 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62691 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62696 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62697 Closing
+[Fri May 15 15:10:49 2026] 127.0.0.1:62692 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62841 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62841 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:11:01 2026] 127.0.0.1:62841 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62845 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62846 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62847 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62848 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62845 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:11:01 2026] 127.0.0.1:62846 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:11:01 2026] 127.0.0.1:62847 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:11:01 2026] 127.0.0.1:62848 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:11:01 2026] 127.0.0.1:62849 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62846 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62848 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62845 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62847 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62849 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:11:01 2026] 127.0.0.1:62849 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62857 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62857 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:11:01 2026] 127.0.0.1:62857 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62858 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62858 [200]: GET /jugadores.php
+[Fri May 15 15:11:01 2026] 127.0.0.1:62858 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62860 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62863 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62860 [200]: GET /jugadores.php
+[Fri May 15 15:11:01 2026] 127.0.0.1:62860 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62864 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62863 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:11:01 2026] 127.0.0.1:62866 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62864 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:11:01 2026] 127.0.0.1:62867 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62866 [200]: GET /assets/jugadores.js
+[Fri May 15 15:11:01 2026] 127.0.0.1:62868 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62867 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:11:01 2026] 127.0.0.1:62869 Accepted
+[Fri May 15 15:11:01 2026] 127.0.0.1:62868 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:11:01 2026] 127.0.0.1:62869 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:11:01 2026] 127.0.0.1:62866 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62867 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62863 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62868 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62869 Closing
+[Fri May 15 15:11:01 2026] 127.0.0.1:62864 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63136 Accepted
+[Fri May 15 15:11:23 2026] 127.0.0.1:63136 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:11:23 2026] 127.0.0.1:63136 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63138 Accepted
+[Fri May 15 15:11:23 2026] 127.0.0.1:63139 Accepted
+[Fri May 15 15:11:23 2026] 127.0.0.1:63140 Accepted
+[Fri May 15 15:11:23 2026] 127.0.0.1:63141 Accepted
+[Fri May 15 15:11:23 2026] 127.0.0.1:63138 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:11:23 2026] 127.0.0.1:63139 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:11:23 2026] 127.0.0.1:63140 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:11:23 2026] 127.0.0.1:63141 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:11:23 2026] 127.0.0.1:63142 Accepted
+[Fri May 15 15:11:23 2026] 127.0.0.1:63139 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63141 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63138 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63140 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63142 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:11:23 2026] 127.0.0.1:63142 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63151 Accepted
+[Fri May 15 15:11:23 2026] 127.0.0.1:63151 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:11:23 2026] 127.0.0.1:63151 Closing
+[Fri May 15 15:11:23 2026] 127.0.0.1:63153 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63153 [200]: GET /jugadores.php
+[Fri May 15 15:11:24 2026] 127.0.0.1:63153 Closing
+[Fri May 15 15:11:24 2026] 127.0.0.1:63154 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63157 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63154 [200]: GET /jugadores.php
+[Fri May 15 15:11:24 2026] 127.0.0.1:63154 Closing
+[Fri May 15 15:11:24 2026] 127.0.0.1:63158 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63157 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:11:24 2026] 127.0.0.1:63161 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63158 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:11:24 2026] 127.0.0.1:63162 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63161 [200]: GET /assets/jugadores.js
+[Fri May 15 15:11:24 2026] 127.0.0.1:63163 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63162 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:11:24 2026] 127.0.0.1:63164 Accepted
+[Fri May 15 15:11:24 2026] 127.0.0.1:63163 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:11:24 2026] 127.0.0.1:63164 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:11:24 2026] 127.0.0.1:63161 Closing
+[Fri May 15 15:11:24 2026] 127.0.0.1:63162 Closing
+[Fri May 15 15:11:24 2026] 127.0.0.1:63157 Closing
+[Fri May 15 15:11:24 2026] 127.0.0.1:63163 Closing
+[Fri May 15 15:11:24 2026] 127.0.0.1:63164 Closing
+[Fri May 15 15:11:24 2026] 127.0.0.1:63158 Closing
+[Fri May 15 15:11:38 2026] 127.0.0.1:63342 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63342 [200]: GET /
+[Fri May 15 15:11:39 2026] 127.0.0.1:63342 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63347 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63347 [200]: GET /assets/tailwind.css?v=1778868445
+[Fri May 15 15:11:39 2026] 127.0.0.1:63347 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63359 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63359 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:11:39 2026] 127.0.0.1:63359 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63362 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63363 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63364 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63362 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:11:39 2026] 127.0.0.1:63363 [200]: GET /assets/home/home-admin.png
+[Fri May 15 15:11:39 2026] 127.0.0.1:63364 [200]: GET /assets/home/home-estadisticas.png
+[Fri May 15 15:11:39 2026] 127.0.0.1:63362 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63363 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63364 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63366 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63367 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63366 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:11:39 2026] 127.0.0.1:63367 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:11:39 2026] 127.0.0.1:63367 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63366 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63371 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63371 [404]: GET /favicon.ico - No such file or directory
+[Fri May 15 15:11:39 2026] 127.0.0.1:63371 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63372 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63372 [200]: GET /assets/home/home-fechas.png
+[Fri May 15 15:11:39 2026] 127.0.0.1:63372 Closing
+[Fri May 15 15:11:39 2026] 127.0.0.1:63375 Accepted
+[Fri May 15 15:11:39 2026] 127.0.0.1:63375 [200]: GET /assets/home/home-jugadores.png
+[Fri May 15 15:11:39 2026] 127.0.0.1:63375 Closing
+[Fri May 15 15:11:42 2026] 127.0.0.1:63414 Accepted
+[Fri May 15 15:11:42 2026] 127.0.0.1:63414 [200]: GET /jugadores.php
+[Fri May 15 15:11:42 2026] 127.0.0.1:63414 Closing
+[Fri May 15 15:11:42 2026] 127.0.0.1:63421 Accepted
+[Fri May 15 15:11:42 2026] 127.0.0.1:63421 [200]: GET /assets/jugadores.js
+[Fri May 15 15:11:42 2026] 127.0.0.1:63421 Closing
+[Fri May 15 15:11:43 2026] 127.0.0.1:63423 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63737 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63737 [200]: GET /login.php?next=jugadores.php
+[Fri May 15 15:12:09 2026] 127.0.0.1:63737 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63739 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63740 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63741 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63742 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63739 [200]: GET /assets/tailwind.css?v=1778868716
+[Fri May 15 15:12:09 2026] 127.0.0.1:63740 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:12:09 2026] 127.0.0.1:63741 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:12:09 2026] 127.0.0.1:63742 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:12:09 2026] 127.0.0.1:63742 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63740 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63739 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63743 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63741 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63743 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:12:09 2026] 127.0.0.1:63743 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63752 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63752 [302]: POST /login.php?next=jugadores.php
+[Fri May 15 15:12:09 2026] 127.0.0.1:63752 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63754 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63754 [200]: GET /jugadores.php
+[Fri May 15 15:12:09 2026] 127.0.0.1:63754 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63755 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63758 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63755 [200]: GET /jugadores.php
+[Fri May 15 15:12:09 2026] 127.0.0.1:63755 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63759 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63758 [200]: GET /assets/tailwind.css?v=1778868716
+[Fri May 15 15:12:09 2026] 127.0.0.1:63762 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63759 [200]: GET /assets/goodfellas-logo.png
+[Fri May 15 15:12:09 2026] 127.0.0.1:63763 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63762 [200]: GET /assets/jugadores.js
+[Fri May 15 15:12:09 2026] 127.0.0.1:63764 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63763 [200]: GET /assets/app-ui.js?v=1778779737
+[Fri May 15 15:12:09 2026] 127.0.0.1:63765 Accepted
+[Fri May 15 15:12:09 2026] 127.0.0.1:63764 [200]: GET /assets/react/react-app.js?v=1778867918
+[Fri May 15 15:12:09 2026] 127.0.0.1:63765 [200]: GET /assets/app.js?v=1778783105
+[Fri May 15 15:12:09 2026] 127.0.0.1:63762 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63763 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63758 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63764 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63765 Closing
+[Fri May 15 15:12:09 2026] 127.0.0.1:63759 Closing
+[Fri May 15 15:13:00 2026] 127.0.0.1:63423 Closed without sending a request; it was probably just an unused speculative preconnection
+[Fri May 15 15:13:00 2026] 127.0.0.1:63423 Closing
+[Fri May 15 15:13:01 2026] 127.0.0.1:64397 Accepted
+[Fri May 15 15:13:01 2026] 127.0.0.1:64397 [200]: GET /estadisticas.php
+[Fri May 15 15:13:01 2026] 127.0.0.1:64397 Closing
+[Fri May 15 15:13:01 2026] 127.0.0.1:64402 Accepted

@@ -226,12 +226,12 @@ function player_field_stat_fields(): array
 function player_field_stat_weights(): array
 {
     return [
-        'technique' => 0.18,
-        'rhythm' => 0.18,
-        'defense_physical' => 0.18,
-        'attack' => 0.24,
-        'teamwork' => 0.12,
-        'mentality' => 0.10,
+        'technique' => 0.16,
+        'rhythm' => 0.24,
+        'defense_physical' => 0.17,
+        'attack' => 0.23,
+        'teamwork' => 0.11,
+        'mentality' => 0.09,
     ];
 }
 
@@ -253,7 +253,7 @@ function player_draw_balance_weights(): array
         'general' => 50.0,
         'attack' => 15.0,
         'defense_physical' => 15.0,
-        'rhythm' => 10.0,
+        'rhythm' => 18.0,
         'technique' => 5.0,
         'teamwork' => 8.0,
         'mentality' => 10.0,

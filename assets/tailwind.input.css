@@ -532,6 +532,18 @@
     @apply relative grid min-w-0 flex-1 items-center;
   }
 
+  .stat-rating-stars {
+    position: relative;
+    z-index: 3;
+  }
+
+  .stat-rating-star {
+    position: relative;
+    z-index: 4;
+    pointer-events: auto;
+    min-width: 20px;
+  }
+
   .stat-rating-bar {
     @apply h-2.5 overflow-hidden rounded-full bg-emerald-100;
   }
@@ -559,6 +571,7 @@
 
   .stat-rating-range {
     @apply absolute inset-x-0 top-1/2 h-6 w-full -translate-y-1/2 cursor-pointer opacity-0;
+    z-index: 1;
   }
 
   .stat-rating-value {
@@ -16043,26 +16056,35 @@ body.page-jugadores .content .player-admin-edit-panel .stat-rating-star.is-activ
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-compact {
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 4px 6px;
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-stars {
+    grid-column: 1 / -1;
+    grid-row: 1;
     gap: 0;
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-star {
-    width: 13px;
-    height: 18px;
+    width: 20px;
+    min-width: 20px;
+    height: 24px;
     font-size: 0.88rem;
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-value {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
     min-height: 24px;
     padding: 4px 7px;
     font-size: 0.68rem;
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-bar-shell {
+    grid-column: 1 / -1;
+    grid-row: 3;
     min-height: 5px;
   }
 

@@ -356,7 +356,7 @@ function draw_teams_quality_score(array $teams, array $bands): float
     $lowBandSpread = draw_count_spread(draw_team_band_counts($teams, $bands['low'] ?? []));
     $highBandSpread = draw_count_spread(draw_team_band_counts($teams, $bands['high'] ?? []));
 
-    $cost += draw_count_spread($lowRhythmCounts) * 5.0;
+    $cost += draw_count_spread($lowRhythmCounts) * 20.0;
     $cost += $lowBandSpread * 120.0;
     $cost += $highBandSpread * 90.0;
 
@@ -489,7 +489,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                     $values = array_map(static fn(array $stats): float => (float) $stats[$field], $projectedStats);
                     $cost += (max($values) - min($values)) * $weight;
                 }
-                $cost += (max($projectedLowRhythm) - min($projectedLowRhythm)) * 5;
+                $cost += (max($projectedLowRhythm) - min($projectedLowRhythm)) * 20.0;
                 if (isset($bands['low'][(int) $player['id']])) {
                     $projectedLowBand = draw_team_band_counts($teams, $bands['low']);
                     $projectedLowBand[$teamIndex]++;

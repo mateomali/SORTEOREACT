@@ -77,12 +77,12 @@ function overall(stats, selectedPositions) {
       + (stats.technique * 0.10)
       + (stats.teamwork * 0.14)
       + (stats.mentality * 0.10)
-    : (stats.technique * 0.18)
-      + (stats.rhythm * 0.18)
-      + (stats.defense_physical * 0.18)
-      + (stats.attack * 0.24)
-      + (stats.teamwork * 0.12)
-      + (stats.mentality * 0.10);
+    : (stats.technique * 0.16)
+      + (stats.rhythm * 0.24)
+      + (stats.defense_physical * 0.17)
+      + (stats.attack * 0.23)
+      + (stats.teamwork * 0.11)
+      + (stats.mentality * 0.09);
   const regularityFactor = 1 + ((stats.regularity - 3.5) / 50);
   return Math.max(1, Math.min(6, Math.round(base * regularityFactor * 10) / 10));
 }
