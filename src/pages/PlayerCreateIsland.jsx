@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StatRating } from '../components/StatRating.jsx';
 
 const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
@@ -39,9 +39,9 @@ const darkInputStyle = {
 };
 
 const limeBadgeStyle = {
-  background: '#063d2b',
-  borderColor: '#b7f13d',
-  color: '#f7ffe8',
+  background: '#e8f8ef',
+  borderColor: '#bfe3d3',
+  color: '#063d2b',
 };
 
 function stars(value) {
@@ -187,55 +187,6 @@ export function PlayerCreateIsland({ root }) {
   const general = useMemo(() => overall(stats, selectedPositions), [stats, selectedPositions]);
   const generalCard = cardOverallFromSix(general);
   const positionLabel = selectedPositions.length ? selectedPositions.join(' / ') : 'SIN POSICION';
-
-  useEffect(() => {
-    const applyImportant = (selector, styles) => {
-      root.querySelectorAll(selector).forEach((element) => {
-        Object.entries(styles).forEach(([property, value]) => {
-          element.style.setProperty(property, value, 'important');
-        });
-      });
-    };
-
-    applyImportant('.desktop-player-card-overall, .player-radar-card, .stat-form-row', {
-      background: '#ffffff',
-      'background-color': '#ffffff',
-      'background-image': 'none',
-      'border-color': '#d1fae5',
-      color: '#022c22',
-    });
-    applyImportant('.player-general-rating, .player-position-select, .stat-rating', {
-      background: '#ffffff',
-      'background-color': '#ffffff',
-      'background-image': 'none',
-      'border-color': '#dbe7e2',
-      color: '#07130f',
-    });
-    applyImportant('select, input[type="text"], textarea', {
-      background: '#ffffff',
-      'background-color': '#ffffff',
-      'background-image': 'none',
-      'border-color': '#d1fae5',
-      color: '#0f172a',
-    });
-    applyImportant('.mobile-player-card-rating, .mobile-player-card-rating *, .stat-rating-value, [data-stat-rating-value]', {
-      background: '#063d2b',
-      'background-color': '#063d2b',
-      'background-image': 'none',
-      'border-color': '#b7f13d',
-      color: '#f7ffe8',
-    });
-    applyImportant('.mobile-player-card-meta span, .player-radar-head strong, .stat-form-row > label, .player-position-select > span', {
-      color: '#047857',
-    });
-    applyImportant('.mobile-player-card-meta strong, .player-radar-head span', {
-      color: '#022c22',
-    });
-    applyImportant('.stat-rating-progress', {
-      background: '#d1fae5',
-      'background-color': '#d1fae5',
-    });
-  }, [root, selectedPositions.length]);
 
   const updateStat = (field, value) => {
     setStats((current) => ({ ...current, [field]: value }));

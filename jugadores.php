@@ -624,7 +624,7 @@ require __DIR__ . '/includes/header.php';
                   <input type="hidden" name="id" value="<?= (int) $player['id'] ?>">
                   <input type="hidden" name="show_inactive" value="<?= $showInactive ? '1' : '0' ?>">
                   <input type="hidden" name="return_anchor" value="player-<?= (int) $player['id'] ?>">
-                  <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar">X</button>
+                  <button class="btn btn-danger player-icon-button player-delete-icon" data-confirm="Eliminar jugador?" type="submit" aria-label="Eliminar <?= h((string) $player['name']) ?>" title="Eliminar"></button>
                 </form>
               <?php else: ?>
                 <span class="mobile-player-list-score-card" aria-label="Puntaje <?= h((string) shared_profile_player_fifa_overall(player_overall_rating($player))) ?>">

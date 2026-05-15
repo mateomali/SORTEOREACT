@@ -127,6 +127,7 @@ $legacyNumTeams = $legacyMatch ? (int) $legacyMatch['num_teams'] : 2;
 $legacyMaxDiff = 0.5;
 $title = 'Sortear equipos | ' . APP_NAME;
 $activePage = 'editar_partidos.php';
+$bodyClass = 'page-sorteo-legacy sorteo-page';
 require __DIR__ . '/includes/header.php';
 ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>

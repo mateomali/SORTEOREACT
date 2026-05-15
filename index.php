@@ -612,6 +612,7 @@ function match_player_award_icons(array $savedMatchAwards, array $awardDefinitio
             continue;
         }
         $icons[$awardPlayerId][] = [
+            'code' => (string) $awardCode,
             'icon' => (string) $awardDefinitions[$awardCode]['icon'],
             'label' => (string) $awardDefinitions[$awardCode]['label'],
         ];
@@ -868,11 +869,11 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $formationGoals = (int) ($player['goals'] ?? 0);
                           $formationRating = $player['rating'] !== null ? number_format((float) $player['rating'], 1) : '-';
                           $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
+                          $isPlayerOfMatch = (bool) array_filter($formationAwards, static fn(array $award): bool => ($award['code'] ?? '') === 'player_of_match');
                           $formationOverall = player_overall_rating($player);
-                          $formationCardRating = home_adjusted_position_rating($player, $line);
                         ?>
                         <div
-                          class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?>"
+                          class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?> <?= $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
                           draggable="false"
                           data-static-formation-player
                           data-static-player-key="<?= h((string) $player['id']) ?>"
@@ -888,13 +889,14 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
                         >
-                          <?= render_player_card_rating($formationCardRating, $line) ?>
-                          <strong><?= h((string) $player['name']) ?><?php if ((string) $match['status'] === 'finalizado'): ?> (<?= h($formationRating) ?>)<?php endif; ?></strong>
+                          <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
+                          <span class="player-card-rating formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
                           <?php if ((string) $match['status'] === 'finalizado'): ?>
+                            <span class="formation-player-meta formation-player-position" title="Posicion"><?= h($line) ?></span>
                             <?php if ($formationGoals > 0 || $formationAwards): ?>
                               <span>
                                 <?php if ($formationGoals > 0): ?>
-                                  <span class="formation-goals-badge"><?= h((string) $formationGoals) ?> goles</span>
+                                  <span class="formation-goals-badge"><?= h((string) $formationGoals) ?> <?= $formationGoals === 1 ? 'gol' : 'goles' ?></span>
                                 <?php endif; ?>
                                 <?php if ($formationGoals > 0 && $formationAwards): ?>
                                   <span class="formation-detail-separator">-</span>
@@ -1097,7 +1099,7 @@ require __DIR__ . '/includes/header.php';
     </div>
     <?php if ($headerHasSavedResult): ?>
       <div class="home-result-line">
-        <span>Resultado</span>
+        <span>Resultado final</span>
         <?= render_match_scoreboard($headerGoals, $headerTeamLabels) ?>
       </div>
     <?php elseif ($headerHasCaptains): ?>
@@ -1147,7 +1149,7 @@ require __DIR__ . '/includes/header.php';
         </p>
       </div>
       <div class="home-result-line">
-        <span>Resultado</span>
+        <span>Resultado final</span>
         <?= render_match_scoreboard($latestResultGoals, $latestResultLabels) ?>
       </div>
       <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $latestFinalizedMatch['id'] ?>" aria-label="Ver detalles de la ultima fecha">
@@ -1382,11 +1384,11 @@ require __DIR__ . '/includes/header.php';
                             $formationGoals = (int) ($player['goals'] ?? 0);
                             $formationRating = $player['rating'] !== null ? number_format((float) $player['rating'], 1) : '-';
                             $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
+                            $isPlayerOfMatch = (bool) array_filter($formationAwards, static fn(array $award): bool => ($award['code'] ?? '') === 'player_of_match');
                             $formationOverall = player_overall_rating($player);
-                            $formationCardRating = home_adjusted_position_rating($player, $line);
                           ?>
                           <div
-                            class="formation-player <?= (int) ($player['goals'] ?? 0) > 0 ? 'scored-player' : '' ?>"
+                            class="formation-player <?= (int) ($player['goals'] ?? 0) > 0 ? 'scored-player' : '' ?> <?= $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
                             draggable="false"
                             data-static-formation-player
                             data-static-player-key="<?= h((string) $player['id']) ?>"
@@ -1402,13 +1404,14 @@ require __DIR__ . '/includes/header.php';
                             data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
                             data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
                           >
-                            <?= render_player_card_rating($formationCardRating, $line) ?>
-                            <strong><?= h((string) $player['name']) ?><?php if ((string) $selectedMatch['status'] === 'finalizado'): ?> (<?= h($formationRating) ?>)<?php endif; ?></strong>
+                            <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
+                            <span class="player-card-rating formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
                             <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
+                              <span class="formation-player-meta formation-player-position" title="Posicion"><?= h($line) ?></span>
                               <?php if ($formationGoals > 0 || $formationAwards): ?>
                                 <span>
                                   <?php if ($formationGoals > 0): ?>
-                                    <span class="formation-goals-badge"><?= h((string) $formationGoals) ?> ⚽</span>
+                                    <span class="formation-goals-badge"><?= h((string) $formationGoals) ?> <?= $formationGoals === 1 ? 'gol' : 'goles' ?></span>
                                   <?php endif; ?>
                                   <?php if ($formationGoals > 0 && $formationAwards): ?>
                                     <span class="formation-detail-separator">-</span>

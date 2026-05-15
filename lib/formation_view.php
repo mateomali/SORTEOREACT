@@ -133,9 +133,9 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
     $cardClass = 'formation-player' . ($isHighlighted ? ' is-current-player' : '');
 
     $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-player-skill="' . h((string) $rating) . '">';
-    $html .= '<span class="player-card-rating" title="Puntaje tarjeta"><strong>' . h((string) formation_view_card_rating($rating)) . '</strong><span>' . h($position ?: 'GEN') . '</span></span>';
-    $html .= '<strong>' . h((string) ($player['name'] ?? 'Jugador')) . '</strong>';
-    $html .= '<span class="formation-player-meta">' . h(number_format($rating, 1)) . ' &#11088;</span>';
+    $html .= '<strong class="formation-player-name">' . h((string) ($player['name'] ?? 'Jugador')) . '</strong>';
+    $html .= '<span class="player-card-rating formation-player-match-rating" title="Nota del partido">' . h(number_format($rating, 1)) . '</span>';
+    $html .= '<span class="formation-player-meta formation-player-position" title="Posicion">' . h($position ?: 'GEN') . '</span>';
     $html .= '</div>';
 
     return $html;
