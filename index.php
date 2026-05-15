@@ -1306,7 +1306,7 @@ require __DIR__ . '/includes/header.php';
         && (int) $selectedMatchId === (int) $headerMatch['id'];
   ?>
   <?php if (!$hideDuplicateLiveCaptainDetail): ?>
-  <article class="card match-detail" id="homeMatchDetail" data-match-detail-panel hidden>
+  <article class="card match-detail match-history" id="homeMatchDetail" data-match-detail-panel hidden>
     <?php if (!$selectedMatch): ?>
       <h3>Detalle</h3>
       <p>No hay fechas para mostrar.</p>
