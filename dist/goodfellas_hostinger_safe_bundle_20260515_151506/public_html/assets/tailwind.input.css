@@ -533,38 +533,15 @@
   }
 
   .stat-rating-stars {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    min-width: 0;
     position: relative;
     z-index: 3;
   }
 
   .stat-rating-star {
-    appearance: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    min-width: 16px;
-    height: 24px;
-    min-height: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    line-height: 1;
     position: relative;
     z-index: 4;
     pointer-events: auto;
-  }
-
-  .stat-rating-star:focus-visible {
-    outline: 2px solid rgba(31, 90, 71, 0.28);
-    outline-offset: 1px;
+    min-width: 20px;
   }
 
   .stat-rating-bar {
@@ -11378,17 +11355,6 @@
       padding: 6px;
     }
 
-    .page-jugadores .player-admin-edit-panel .stat-rating-stars {
-      gap: 0;
-    }
-
-    .page-jugadores .player-admin-edit-panel .stat-rating-star {
-      width: 15px;
-      min-width: 15px;
-      height: 22px;
-      font-size: 0.9rem;
-    }
-
     .page-jugadores .player-admin-edit-panel .stat-rating-bar-shell {
       min-height: 20px;
     }
@@ -13865,17 +13831,13 @@
   }
 
   body.page-jugadores .content .players-desktop-table .player-table-stat .stat-rating-stars {
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: start;
-    gap: 0;
+    gap: 1px;
   }
 
   body.page-jugadores .content .players-desktop-table .player-table-stat .stat-rating-star {
-    width: 14px;
-    min-width: 14px;
-    height: 20px;
-    font-size: 0.88rem;
+    width: 16px;
+    height: 22px;
+    font-size: 1rem;
   }
 
   body.page-jugadores .content .players-desktop-table .player-table-stat .stat-rating-bar-shell {
@@ -15404,7 +15366,7 @@ body[class*="page-"] .content :is(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--gf-brand);
 }
 
-body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.captain-editor-line-control):not(.captain-editor-undo):not(.stat-rating-star) {
+body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.captain-editor-line-control):not(.captain-editor-undo) {
   min-height: 40px;
   border-radius: 10px;
   background-image: none;
@@ -15425,7 +15387,7 @@ body[class*="page-"] .content :is(.btn-primary, button[type="submit"]:not(.btn-m
   background: var(--gf-brand-soft);
 }
 
-body[class*="page-"] .content :is(.btn-muted, button[type="button"]:not(.btn-primary):not(.btn-danger):not(.btn-warning):not(.captain-editor-line-control):not(.captain-editor-undo):not(.stat-rating-star):not([class*="bg-"])) {
+body[class*="page-"] .content :is(.btn-muted, button[type="button"]:not(.btn-primary):not(.btn-danger):not(.btn-warning):not(.captain-editor-line-control):not(.captain-editor-undo):not([class*="bg-"])) {
   border-color: var(--gf-line-strong);
   background: var(--gf-surface);
   color: #12362a;
@@ -15456,7 +15418,7 @@ body[class*="page-"] .content :is(.badge, .chip, .mini-chip, .player-status-pill
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(.badge.done, .badge.ready, .is-active:not(.stat-rating-star), .status-active) {
+body[class*="page-"] .content :is(.badge.done, .badge.ready, .is-active, .status-active) {
   border-color: var(--gf-good-line);
   background: var(--gf-good-bg);
   color: var(--gf-brand);
@@ -15700,7 +15662,7 @@ body.page-estadisticas .content :is(.stats-player-search, .stats-search-card) {
     border-radius: 12px;
   }
 
-  body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.stat-rating-star) {
+  body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle) {
     min-height: 38px;
   }
 }
@@ -15938,20 +15900,6 @@ body.page-jugadores .content .player-admin-edit-panel .stat-rating-star.is-activ
   -webkit-text-fill-color: #d99a12;
 }
 
-body.page-jugadores .content .stat-rating-star.stat-rating-star {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-body.page-jugadores .content button.stat-rating-star[type="button"] {
-  background: transparent;
-  background-image: none;
-}
-
 @media (min-width: 901px) {
   body.page-jugadores .players-desktop-table {
     overflow: hidden;
@@ -16113,17 +16061,16 @@ body.page-jugadores .content button.stat-rating-star[type="button"] {
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-stars {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 1;
-    justify-self: start;
     gap: 0;
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-star {
-    width: 15px;
-    min-width: 15px;
-    height: 20px;
-    font-size: 0.86rem;
+    width: 20px;
+    min-width: 20px;
+    height: 24px;
+    font-size: 0.88rem;
   }
 
   body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-value {
