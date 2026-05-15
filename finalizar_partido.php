@@ -256,6 +256,47 @@ function finish_save_match_formations(int $matchId, array $participants, array $
     }
 }
 
+function finish_save_team_goals(int $matchId, array $teams, array $teamGoalsData): void
+{
+    $saveTeamGoals = db()->prepare(
+        'UPDATE match_teams
+         SET goals = :goals, updated_at = NOW()
+         WHERE match_id = :mid AND team_number = :team_number'
+    );
+    $verifyTeamGoals = db()->prepare(
+        'SELECT goals
+         FROM match_teams
+         WHERE match_id = :mid AND team_number = :team_number
+         LIMIT 1'
+    );
+
+    foreach ($teams as $team) {
+        $teamNumber = (int) ($team['team_number'] ?? 0);
+        if ($teamNumber <= 0) {
+            throw new RuntimeException('Hay un equipo invalido en la fecha.');
+        }
+        if (!array_key_exists($teamNumber, $teamGoalsData) && !array_key_exists((string) $teamNumber, $teamGoalsData)) {
+            throw new RuntimeException('Falta el resultado del equipo ' . $teamNumber . '.');
+        }
+
+        $goals = max(0, (int) ($teamGoalsData[$teamNumber] ?? $teamGoalsData[(string) $teamNumber] ?? 0));
+        $saveTeamGoals->execute([
+            'mid' => $matchId,
+            'team_number' => $teamNumber,
+            'goals' => $goals,
+        ]);
+
+        $verifyTeamGoals->execute([
+            'mid' => $matchId,
+            'team_number' => $teamNumber,
+        ]);
+        $savedGoals = $verifyTeamGoals->fetchColumn();
+        if ($savedGoals === false || (int) $savedGoals !== $goals) {
+            throw new RuntimeException('No se pudo guardar el resultado del equipo ' . $teamNumber . '.');
+        }
+    }
+}
+
 function ensure_round_robin_results_schema(): void
 {
     $pdo = db();
@@ -394,8 +435,8 @@ function finish_render_team_label(string $label): string
     $heartColor = finish_team_heart_color($color);
     return '<span class="team-label-with-heart" title="' . h($label) . '">' .
         '<span>' . h($name) . '</span>' .
-        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '">' .
-        '<path d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '" style="--team-heart-fill: ' . h($heartColor) . '">' .
+        '<path fill="' . h($heartColor) . '" style="fill: var(--team-heart-fill, ' . h($heartColor) . ')" d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
         '</svg>' .
         '</span>';
 }
@@ -714,19 +755,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     if ($detailFormError === '') {
         $pdo->beginTransaction();
         try {
-            $saveTeamGoals = $pdo->prepare(
-                'UPDATE match_teams
-                 SET goals = :goals
-                 WHERE match_id = :mid AND team_number = :team_number'
-            );
-            foreach ($teams as $team) {
-                $teamNumber = (int) $team['team_number'];
-                $saveTeamGoals->execute([
-                    'mid' => $matchId,
-                    'team_number' => $teamNumber,
-                    'goals' => max(0, (int) ($teamGoalsData[$teamNumber] ?? 0)),
-                ]);
-            }
+            finish_save_team_goals($matchId, $teams, is_array($teamGoalsData) ? $teamGoalsData : []);
 
             $upd = $pdo->prepare(
                 'UPDATE match_players
@@ -896,19 +925,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
     $pdo->beginTransaction();
     try {
-        $saveTeamGoals = $pdo->prepare(
-            'UPDATE match_teams
-             SET goals = :goals, updated_at = NOW()
-             WHERE match_id = :mid AND team_number = :team_number'
-        );
-        foreach ($teams as $team) {
-            $teamNumber = (int) $team['team_number'];
-            $saveTeamGoals->execute([
-                'mid' => $matchId,
-                'team_number' => $teamNumber,
-                'goals' => max(0, (int) ($teamGoalsData[$teamNumber] ?? 0)),
-            ]);
-        }
+        finish_save_team_goals($matchId, $teams, is_array($teamGoalsData) ? $teamGoalsData : []);
         $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW() WHERE id = :id');
         $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         $pdo->commit();
@@ -983,18 +1000,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
         save_round_robin_results($matchId, $fixtures, $scores);
 
         if ($shouldFinalizeRoundRobin) {
-            $saveTeamGoals = $pdo->prepare(
-                'UPDATE match_teams
-                 SET goals = :goals
-                 WHERE match_id = :mid AND team_number = :team_number'
-            );
+            $roundRobinTeamGoals = [];
             foreach ($table as $teamNumber => $row) {
-                $saveTeamGoals->execute([
-                    'mid' => $matchId,
-                    'team_number' => (int) $teamNumber,
-                    'goals' => (int) $row['gf'],
-                ]);
+                $roundRobinTeamGoals[(int) $teamNumber] = (int) $row['gf'];
             }
+            finish_save_team_goals($matchId, $teams, $roundRobinTeamGoals);
             $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW() WHERE id = :id');
             $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         }

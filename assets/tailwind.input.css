@@ -7871,6 +7871,14 @@
     color: var(--gf-ink-soft);
   }
 
+  .home-result-line > span {
+    color: #ffffff;
+    background: rgba(6, 17, 13, 0.36);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+  }
+
   .match-list-item,
   .encounter-card {
     border-radius: 14px;

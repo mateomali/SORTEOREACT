@@ -335,10 +335,12 @@ function profile_render_team_label(string $label): string
     if ($name === '') {
         $name = 'Equipo';
     }
+    $heartColor = profile_team_heart_color($color);
+
     return '<span class="team-label-with-heart" title="' . h($label) . '">' .
         '<span>' . h($name) . '</span>' .
-        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h(profile_team_heart_color($color)) . '">' .
-        '<path d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '" style="--team-heart-fill: ' . h($heartColor) . '">' .
+        '<path fill="' . h($heartColor) . '" style="fill: var(--team-heart-fill, ' . h($heartColor) . ')" d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
         '</svg>' .
         '</span>';
 }

@@ -260,7 +260,7 @@ $awardDescriptions = [
     'putita' => 'Jugador no comprometido o problematico.',
     'ghost' => 'Jugador que erro mucho o participo poco.',
     'keeper' => 'Mejor arquero de la fecha.',
-    'goodfellas' => 'Mejor actitud y buen compañero.',
+    'goodfellas' => 'Mejor actitud y buen compaÃ±ero.',
 ];
 $savedMatchAwards = $selectedMatchId > 0 ? repo_match_awards($selectedMatchId) : [];
 $playerAwardIcons = [];
@@ -451,8 +451,8 @@ function render_team_label(string $label, ?int $goals = null): string
     $heartColor = team_heart_color($color);
     return '<span class="team-label-with-heart" title="' . h($label) . '">' .
         '<span>' . h($name) . '</span>' .
-        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '" stroke="#0f172a" stroke-width="1.2">' .
-        '<path d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
+        '<svg class="team-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="' . h($heartColor) . '" style="--team-heart-fill: ' . h($heartColor) . '" stroke="#0f172a" stroke-width="1.2">' .
+        '<path fill="' . h($heartColor) . '" style="fill: var(--team-heart-fill, ' . h($heartColor) . ')" d="M8.2 3.5 12 5.1l3.8-1.6 4.2 3.1-2.2 3.5-1.6-.8V20H7.8V9.3l-1.6.8L4 6.6l4.2-3.1Z" />' .
         '</svg>' .
         '<span class="team-label-score">' . h($score) . '</span>' .
         '</span>';
@@ -507,11 +507,11 @@ function history_team_label_short(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => '💗',
-        'AZUL' => '💙',
-        'VERDE' => '💚',
-        'NEGRO' => '🖤',
-        'NARANJA' => '🧡',
+        'ROSA' => 'ðŸ’—',
+        'AZUL' => 'ðŸ’™',
+        'VERDE' => 'ðŸ’š',
+        'NEGRO' => 'ðŸ–¤',
+        'NARANJA' => 'ðŸ§¡',
         'CAMISADO' => 'C',
         'DESCAMISADO' => 'D',
     ];
@@ -790,7 +790,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     ob_start();
     ?>
     <?php if (!$groupedTeams): ?>
-      <p>Los equipos todavía no fueron formados. Cuando estén sorteados o elegidos por capitanes, se mostrará la formación acá.</p>
+      <p>Los equipos todavÃ­a no fueron formados. Cuando estÃ©n sorteados o elegidos por capitanes, se mostrarÃ¡ la formaciÃ³n acÃ¡.</p>
       <?php if ($participants): ?>
         <div class="selected-player-list public-player-list">
           <?php foreach ($participants as $player): ?>
@@ -911,7 +911,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                               </span>
                             <?php endif; ?>
                           <?php else: ?>
-                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> ⭐</span>
+                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> â­</span>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>
@@ -1333,195 +1333,8 @@ require __DIR__ . '/includes/header.php';
             <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="2"></div>
           </article>
         </div>
-      <?php elseif (!$groupedTeams): ?>
-        <p>Los equipos todavía no fueron formados. Cuando estén sorteados o elegidos por capitanes, se mostrará la formación acá.</p>
-        <?php if ($participants): ?>
-          <div class="selected-player-list public-player-list">
-            <?php foreach ($participants as $player): ?>
-              <div class="selected-player-item">
-                <span>
-                  <strong><?= h((string) $player['name']) ?></strong>
-                  <small><?= h((string) $player['positions']) ?> | <?= h(pace_label((string) $player['pace'])) ?> | <?= h(skill_label((float) $player['skill'])) ?></small>
-                </span>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        <?php endif; ?>
       <?php else: ?>
-        <div class="grid cols-2 public-teams">
-          <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
-            <?php
-              $teamPlayersForCharacteristics = public_team_players_from_lines($lines);
-              $teamTacticLabel = public_team_tactic_label($lines);
-            ?>
-            <article class="team-card">
-              <div class="team-head">
-                <h4>
-                  <?= render_team_label(
-                      $teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber),
-                      (string) $selectedMatch['status'] === 'finalizado' ? (int) ($teamGoals[(int) $teamNumber] ?? 0) : null
-                  ) ?>
-                </h4>
-                <span class="small-muted">
-                  <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
-                    <?= h((string) ($teamGoals[$teamNumber] ?? 0)) ?> goles
-                  <?php else: ?>
-                    Formacion base
-                  <?php endif; ?>
-                </span>
-              </div>
-              <?= render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $teamTacticLabel) ?>
-              <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
-                <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
-                  <div class="formation-line">
-                    <div class="line-label"><?= h($line) ?></div>
-                    <div class="line-players">
-                      <?php if (empty($lines[$line])): ?>
-                        <span class="formation-player empty-slot">-</span>
-                      <?php else: ?>
-                        <?php foreach ($lines[$line] as $player): ?>
-                          <?php
-                            $formationGoals = (int) ($player['goals'] ?? 0);
-                            $formationRating = $player['rating'] !== null ? number_format((float) $player['rating'], 1) : '-';
-                            $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
-                            $isPlayerOfMatch = (bool) array_filter($formationAwards, static fn(array $award): bool => ($award['code'] ?? '') === 'player_of_match');
-                            $formationOverall = player_overall_rating($player);
-                          ?>
-                          <div
-                            class="formation-player <?= (int) ($player['goals'] ?? 0) > 0 ? 'scored-player' : '' ?> <?= $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
-                            draggable="false"
-                            data-static-formation-player
-                            data-static-player-key="<?= h((string) $player['id']) ?>"
-                            data-assigned-position="<?= h($line) ?>"
-                            data-player-skill="<?= h(number_format($formationOverall, 1, '.', '')) ?>"
-                            data-player-positions="<?= h((string) ($player['positions'] ?? '')) ?>"
-                            data-player-technique="<?= h(number_format(player_effective_stat($player, 'technique'), 1, '.', '')) ?>"
-                            data-player-rhythm="<?= h(number_format(player_effective_stat($player, 'rhythm'), 1, '.', '')) ?>"
-                            data-player-defense-physical="<?= h(number_format(player_effective_stat($player, 'defense_physical'), 1, '.', '')) ?>"
-                            data-player-attack="<?= h(number_format(player_effective_stat($player, 'attack'), 1, '.', '')) ?>"
-                            data-player-teamwork="<?= h(number_format(player_effective_stat($player, 'teamwork'), 1, '.', '')) ?>"
-                            data-player-mentality="<?= h(number_format(player_effective_stat($player, 'mentality'), 1, '.', '')) ?>"
-                            data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
-                            data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
-                          >
-                            <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
-                            <span class="player-card-rating formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
-                            <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
-                              <span class="formation-player-meta formation-player-position" title="Posicion"><?= h($line) ?></span>
-                              <?php if ($formationGoals > 0 || $formationAwards): ?>
-                                <span>
-                                  <?php if ($formationGoals > 0): ?>
-                                    <span class="formation-goals-badge"><?= h((string) $formationGoals) ?> <?= $formationGoals === 1 ? 'gol' : 'goles' ?></span>
-                                  <?php endif; ?>
-                                  <?php if ($formationGoals > 0 && $formationAwards): ?>
-                                    <span class="formation-detail-separator">-</span>
-                                  <?php endif; ?>
-                                  <?php if ($formationAwards): ?>
-                                    <span class="formation-award-icons">
-                                      <?php foreach ($formationAwards as $awardIcon): ?>
-                                        <span title="<?= h($awardIcon['label']) ?>"><?= h($awardIcon['icon']) ?></span>
-                                      <?php endforeach; ?>
-                                    </span>
-                                  <?php endif; ?>
-                                </span>
-                              <?php endif; ?>
-                            <?php else: ?>
-                              <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> ⭐</span>
-                            <?php endif; ?>
-                          </div>
-                        <?php endforeach; ?>
-                      <?php endif; ?>
-                    </div>
-                  </div>
-                <?php endforeach; ?>
-              </div>
-              <?= render_public_team_characteristics($teamPlayersForCharacteristics) ?>
-            </article>
-          <?php endforeach; ?>
-        </div>
-
-        <?php if ((string) $selectedMatch['status'] === 'finalizado'): ?>
-          <?= render_public_round_robin_results($roundRobinResults, $teamLabels) ?>
-          <section class="match-results">
-            <h3>Resumen de la fecha</h3>
-            <div class="match-result-mobile-groups">
-              <?php foreach ($teamLabels as $teamNumber => $teamLabel): ?>
-                <?php
-                  $teamPlayers = array_values(array_filter(
-                      $resultParticipants,
-                      static fn(array $player): bool => (int) ($player['team_number'] ?? 0) === (int) $teamNumber
-                  ));
-                  if (!$teamPlayers) {
-                      continue;
-                  }
-                ?>
-                <section class="mobile-result-team">
-                  <h4><?= render_team_label($teamLabel, (int) ($teamGoals[(int) $teamNumber] ?? 0)) ?></h4>
-                  <div class="mobile-result-grid mobile-result-head">
-                    <span>Jugador</span>
-                    <span>Goles</span>
-                    <span>Puntaje</span>
-                    <span>Premios</span>
-                  </div>
-                  <?php foreach ($teamPlayers as $player): ?>
-                    <?php $playerGoals = (int) ($player['goals'] ?? 0); ?>
-                    <div class="mobile-result-grid <?= $playerGoals > 0 ? 'scored-row' : '' ?>">
-                      <span class="mobile-result-player">
-                        <?php if ($playerGoals > 0): ?>
-                          <strong><?= h((string) $player['name']) ?></strong>
-                        <?php else: ?>
-                          <?= h((string) $player['name']) ?>
-                        <?php endif; ?>
-                      </span>
-                      <span class="mobile-result-goals"><?= $playerGoals > 0 ? h((string) $playerGoals) : '' ?></span>
-                      <span class="mobile-result-rating">
-                        <?= $player['rating'] !== null ? h(number_format((float) $player['rating'], 1)) : '-' ?>
-                      </span>
-                      <span class="mobile-result-awards">
-                        <?php if (empty($playerAwardIcons[(int) $player['id']])): ?>
-                          <span class="award-empty">-</span>
-                        <?php else: ?>
-                          <?php foreach ($playerAwardIcons[(int) $player['id']] as $awardIcon): ?>
-                            <span class="award-count-chip award-icon-only" title="<?= h($awardIcon['label']) ?>">
-                              <span class="award-count-icon"><?= h($awardIcon['icon']) ?></span>
-                            </span>
-                          <?php endforeach; ?>
-                        <?php endif; ?>
-                      </span>
-                    </div>
-                  <?php endforeach; ?>
-                </section>
-              <?php endforeach; ?>
-            </div>
-
-            <?php if ($matchAwards): ?>
-              <h4 class="match-awards-title">Premios</h4>
-              <div class="grid cols-3 match-awards">
-                <?php foreach ($matchAwards as $award): ?>
-                  <article class="stat-box">
-                    <div class="label"><?= h($award['label']) ?></div>
-                    <div class="value"><?= h($award['value']) ?></div>
-                  </article>
-                <?php endforeach; ?>
-              </div>
-            <?php endif; ?>
-
-            <section class="award-legend-section match-award-legend">
-              <h4>Referencia de premios</h4>
-              <div class="award-legend-grid">
-                <?php foreach ($awardDefinitions as $code => $award): ?>
-                  <article class="award-legend-item">
-                    <span class="award-legend-icon"><?= h((string) $award['icon']) ?></span>
-                    <span>
-                      <strong><?= h((string) $award['label']) ?></strong>
-                      <small><?= h($awardDescriptions[$code] ?? 'Premio destacado de la fecha.') ?></small>
-                    </span>
-                  </article>
-                <?php endforeach; ?>
-              </div>
-            </section>
-          </section>
-        <?php endif; ?>
+        <?= render_public_match_detail_content($selectedMatch, $awardDefinitions, $awardDescriptions) ?>
       <?php endif; ?>
     <?php endif; ?>
   </article>
