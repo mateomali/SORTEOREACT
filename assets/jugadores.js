@@ -50,6 +50,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     const roleDisplayLabels = {
       arquero: 'arquero',
       defensor: 'defensor',
+      lateral: 'lateral',
       mediocampista: 'mediocampista',
       delantero: 'delantero',
       comodin: 'comodin',
@@ -571,7 +572,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         ? 'arquero'
         : (player.positions.includes('DEL') ? 'delantero'
           : (player.positions.includes('DEF') ? 'defensor'
-            : (player.positions.includes('MED') ? 'mediocampista' : 'comodin')));
+            : (player.positions.includes('LAT') ? 'lateral'
+              : (player.positions.includes('MED') ? 'mediocampista' : 'comodin'))));
       const overall = numberOr(player.skill, 3);
       const regularity = numberOr(player.regularity, 3.5);
       const spread = Math.max(...stats.map((stat) => stat.value)) - Math.min(...stats.map((stat) => stat.value));
@@ -651,6 +653,11 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           `${player.name} no necesita salir en la foto para pesar; si esta bien parado, el rival empieza a buscar otro camino.`,
           `Con ${player.name}, la pregunta no es si juega lindo: la pregunta es cuanto ensucia la tarde del que tiene enfrente.`,
         ],
+        lateral: [
+          `A ${player.name} lo tenes que mirar por la banda: ahi se nota si puede ir, volver y seguir pensando.`,
+          `${player.name} necesita metros para recorrer y criterio para no dejar la espalda regalada.`,
+          `Con ${player.name}, el carril puede ser salida o problema: depende de que tan ordenado quede el ida y vuelta.`,
+        ],
         mediocampista: [
           `A ${player.name} hay que mirarlo en el medio del quilombo: si logra jugar ahi, el equipo deja de correr atras de la pelota.`,
           `${player.name} puede ser termometro del partido: cuando participa bien, la jugada respira; cuando se apaga, todo se vuelve mas rustico.`,
@@ -679,6 +686,12 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           `Si el partido se pone de pierna fuerte y pelota dividida, ahi aparece la verdadera cara de ${player.name}.`,
           `A ${player.name} no lo vendes con highlights; lo vendes con esas jugadas donde el rival se queda sin ganas de encarar.`,
           `${player.name} juega con una idea bastante clara: que el otro no pase comodo, y si pasa, que se acuerde.`,
+        ],
+        lateral: [
+          `${player.name} por banda puede sumar recorrido si no lo dejan defendiendo solo dos canchas.`,
+          `A ${player.name} lo define el ida y vuelta: cerrar atras y aparecer cuando el equipo sale.`,
+          `Si el partido se abre por los costados, ${player.name} necesita elegir bien cuando pasar y cuando guardarse.`,
+          `${player.name} puede ser carrilero util si tiene cobertura y una salida simple cerca.`,
         ],
         mediocampista: [
           `${player.name} vive en la zona donde todos piden la pelota y nadie quiere perderla.`,
@@ -925,7 +938,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
         ? 'arquero'
         : (player.positions.includes('DEL') ? 'delantero'
           : (player.positions.includes('DEF') ? 'defensor'
-            : (player.positions.includes('MED') ? 'mediocampista' : 'comodin')));
+            : (player.positions.includes('LAT') ? 'lateral'
+              : (player.positions.includes('MED') ? 'mediocampista' : 'comodin'))));
       const visibleRules = scoutStatRules.filter((rule) => isGoalkeeper
         ? rule.field !== 'attack'
         : rule.field !== 'goalkeeper_skill');
@@ -937,6 +951,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const roleStrengthPriority = {
         arquero: ['goalkeeper_skill', 'regularity', 'mentality', 'teamwork', 'rhythm', 'defense_physical', 'technique'],
         defensor: ['defense_physical', 'rhythm', 'mentality', 'regularity', 'technique', 'teamwork', 'attack'],
+        lateral: ['rhythm', 'defense_physical', 'teamwork', 'technique', 'regularity', 'attack', 'mentality'],
         mediocampista: ['teamwork', 'technique', 'rhythm', 'regularity', 'mentality', 'attack', 'defense_physical'],
         delantero: ['attack', 'rhythm', 'technique', 'mentality', 'regularity', 'teamwork', 'defense_physical'],
         comodin: ['regularity', 'teamwork', 'rhythm', 'technique', 'mentality', 'defense_physical', 'attack'],
@@ -944,6 +959,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const roleWeaknessPriority = {
         arquero: ['goalkeeper_skill', 'teamwork', 'mentality', 'technique', 'rhythm', 'defense_physical', 'regularity'],
         defensor: ['defense_physical', 'teamwork', 'technique', 'rhythm', 'mentality', 'regularity', 'attack'],
+        lateral: ['rhythm', 'defense_physical', 'teamwork', 'technique', 'attack', 'regularity', 'mentality'],
         mediocampista: ['teamwork', 'technique', 'rhythm', 'mentality', 'regularity', 'defense_physical', 'attack'],
         delantero: ['attack', 'teamwork', 'rhythm', 'technique', 'mentality', 'regularity', 'defense_physical'],
         comodin: ['teamwork', 'regularity', 'technique', 'rhythm', 'mentality', 'defense_physical', 'attack'],
@@ -1095,6 +1111,10 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           `${player.name} es un defensor de rol claro: necesita una tarea concreta para rendir con sentido.`,
           `${player.name} puede sumar como defensor si el equipo le da orden y no lo usa como solucion para todo.`,
         ],
+        lateral: [
+          `${player.name} es un lateral para jugar con cobertura y recorridos medidos.`,
+          `${player.name} puede rendir por banda si el equipo le marca cuando pasar y cuando cerrar.`,
+        ],
         mediocampista: [
           `${player.name} es un mediocampista para jugar con apoyos cerca y una tarea bien definida.`,
           `${player.name} puede ordenar desde el medio si no lo obligan a resolver cada pelota como una emergencia.`,
@@ -1172,6 +1192,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       const balancedAdvice = {
         arquero: 'En el armado, le conviene una defensa ordenada y salidas simples para no convertir cada pelota en urgencia.',
         defensor: 'En el armado, conviene darle una funcion limpia y referencias cerca para que juegue sin sobreactuar.',
+        lateral: 'En el armado, conviene darle cobertura por dentro para que pueda recorrer la banda sin partir al equipo.',
         mediocampista: 'En el armado, suma mas si recibe con opciones cercanas y no con todo el equipo partido.',
         delantero: 'En el armado, rinde mejor con movimientos claros y companeros que le acerquen la jugada.',
         comodin: 'En el armado, necesita una consigna concreta para que su utilidad no quede repartida en demasiadas tareas.',
@@ -1394,53 +1415,85 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       return `${'\u2605'.repeat(filled)}${'\u2606'.repeat(Math.max(0, 6 - filled))}`;
     };
 
+    const weightsByPosition = {
+      ARQ: {
+        goalkeeper_skill: 0.42,
+        defense_physical: 0.14,
+        rhythm: 0.10,
+        technique: 0.10,
+        teamwork: 0.14,
+        mentality: 0.10,
+      },
+      DEF: {
+        defense_physical: 0.28,
+        rhythm: 0.20,
+        technique: 0.18,
+        teamwork: 0.13,
+        mentality: 0.13,
+        attack: 0.08,
+      },
+      LAT: {
+        rhythm: 0.24,
+        defense_physical: 0.22,
+        technique: 0.17,
+        teamwork: 0.15,
+        attack: 0.12,
+        mentality: 0.10,
+      },
+      MED: {
+        technique: 0.24,
+        rhythm: 0.23,
+        teamwork: 0.19,
+        mentality: 0.13,
+        defense_physical: 0.12,
+        attack: 0.09,
+      },
+      DEL: {
+        attack: 0.31,
+        rhythm: 0.20,
+        technique: 0.17,
+        teamwork: 0.14,
+        mentality: 0.10,
+        defense_physical: 0.08,
+      },
+    };
+
+    const positionRatingForScope = (scope, position) => {
+      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
+      const normalizedPosition = String(position || 'MED').toUpperCase();
+      const weights = weightsByPosition[normalizedPosition] || weightsByPosition.MED;
+      const raw = Object.entries(weights).reduce((total, [field, weight]) => total + (getValue(field) * weight), 0);
+      const regularityFactor = 1 + ((getValue('regularity') - 3.5) / 50);
+      return Math.max(1, Math.min(6, Math.round(raw * regularityFactor * 10) / 10));
+    };
+
+    const updatePositionSimulation = (scope) => {
+      const select = scope.querySelector('[data-position-simulation-select]');
+      if (!select) return;
+      const fallbackPosition = selectedPositionsInOrder(scope)[0] || 'MED';
+      const selectedPosition = select.value || fallbackPosition;
+      if (!select.value && fallbackPosition) {
+        select.value = fallbackPosition;
+      }
+      const rating = positionRatingForScope(scope, selectedPosition);
+      const ratingValue = scope.querySelector('[data-position-simulation-six]');
+      const cardValue = scope.querySelector('[data-position-simulation-card]');
+      const stars = scope.querySelector('[data-position-simulation-stars]');
+      if (ratingValue) ratingValue.textContent = `${formatRating(rating)}/6`;
+      if (cardValue) cardValue.textContent = String(cardOverallFromSix(rating));
+      if (stars) stars.textContent = ratingStars(rating);
+    };
+
     const updateGeneralRating = (scope) => {
       const general = scope.querySelector('[data-general-rating]');
       if (!general) {
+        updatePositionSimulation(scope);
         renderPlayerRadar(scope);
         return;
       }
 
-      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
       const primaryPosition = selectedPositionsInOrder(scope)[0] || (hasPrimaryGoalkeeper(scope) ? 'ARQ' : 'MED');
-      const weightsByPosition = {
-        ARQ: {
-          goalkeeper_skill: 0.42,
-          defense_physical: 0.14,
-          rhythm: 0.10,
-          technique: 0.10,
-          teamwork: 0.14,
-          mentality: 0.10,
-        },
-        DEF: {
-          defense_physical: 0.28,
-          rhythm: 0.20,
-          technique: 0.18,
-          teamwork: 0.13,
-          mentality: 0.13,
-          attack: 0.08,
-        },
-        MED: {
-          technique: 0.24,
-          rhythm: 0.23,
-          teamwork: 0.19,
-          mentality: 0.13,
-          defense_physical: 0.12,
-          attack: 0.09,
-        },
-        DEL: {
-          attack: 0.31,
-          rhythm: 0.20,
-          technique: 0.17,
-          teamwork: 0.14,
-          mentality: 0.10,
-          defense_physical: 0.08,
-        },
-      };
-      const weights = weightsByPosition[primaryPosition] || weightsByPosition.MED;
-      const raw = Object.entries(weights).reduce((total, [field, weight]) => total + (getValue(field) * weight), 0);
-      const regularityFactor = 1 + ((getValue('regularity') - 3.5) / 50);
-      const rounded = Math.max(1, Math.min(6, Math.round(raw * regularityFactor * 10) / 10));
+      const rounded = positionRatingForScope(scope, primaryPosition);
 
       const value = general.querySelector('[data-general-rating-value]');
       const stars = general.querySelector('[data-general-rating-stars]');
@@ -1448,6 +1501,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       if (stars) stars.textContent = ratingStars(rounded);
       const cardValue = scope.querySelector('[data-general-card-value]');
       if (cardValue) cardValue.textContent = String(cardOverallFromSix(rounded));
+      updatePositionSimulation(scope);
       renderPlayerRadar(scope);
     };
 
@@ -1590,6 +1644,9 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           syncGoalkeeperStats(scope);
           renderPlayerInfoScout(scope);
         });
+      });
+      scope.querySelectorAll('[data-position-simulation-select]').forEach((input) => {
+        input.addEventListener('change', () => updatePositionSimulation(scope));
       });
       scope.querySelectorAll('input[name="name"]').forEach((input) => {
         input.addEventListener('input', () => renderPlayerInfoScout(scope));

@@ -206,10 +206,10 @@ require __DIR__ . '/includes/header.php';
     <div id="success" class="hidden rounded-xl border border-lime-200 bg-lime-50 px-4 py-3 text-sm font-extrabold text-[#07130f]"></div>
     <div id="equipos-generados" class="grid gap-4"></div>
     <div class="mt-2 hidden" id="download-controls">
-      <div class="download-action-row hidden" data-feature-flag="BOTONES DE CAPTURA">
-        <button type="button" data-sorteo-action="copy-teams">📋 Copiar al Portapapeles</button>
-        <button type="button" data-sorteo-action="download-teams-jpg">📸 Descargar como JPG</button>
-        <button type="button" data-sorteo-action="download-teams-text">📝 Descargar como Texto</button>
+      <div class="download-action-row">
+        <button type="button" data-sorteo-action="download-teams-jpg">Exportar formaciones JPG</button>
+        <button type="button" data-sorteo-action="copy-teams">Copiar al portapapeles</button>
+        <button type="button" data-sorteo-action="download-teams-text">Descargar texto</button>
       </div>
       <?php if ($legacyMatch): ?>
         <div class="flex justify-center">
@@ -232,6 +232,7 @@ require __DIR__ . '/includes/header.php';
         <div class="position-checkboxes">
           <label><input type="checkbox" class="addPosicion" value="ARQ"> 🥅 ARQ</label>
           <label><input type="checkbox" class="addPosicion" value="DEF"> 🛡️ DEF</label>
+          <label><input type="checkbox" class="addPosicion" value="LAT"> ↔️ LAT</label>
           <label><input type="checkbox" class="addPosicion" value="MED"> 🎯 MED</label>
           <label><input type="checkbox" class="addPosicion" value="DEL"> ⚽ DEL</label>
         </div>
@@ -271,6 +272,7 @@ require __DIR__ . '/includes/header.php';
         <div class="position-checkboxes">
           <label><input type="checkbox" class="editPosicion" value="ARQ"> 🥅 ARQ</label>
           <label><input type="checkbox" class="editPosicion" value="DEF"> 🛡️ DEF</label>
+          <label><input type="checkbox" class="editPosicion" value="LAT"> ↔️ LAT</label>
           <label><input type="checkbox" class="editPosicion" value="MED"> 🎯 MED</label>
           <label><input type="checkbox" class="editPosicion" value="DEL"> ⚽ DEL</label>
         </div>
@@ -309,7 +311,7 @@ require __DIR__ . '/includes/header.php';
     'savedDrawSignature' => $legacySavedDrawSignature,
     'maxFieldPlayersPerLine' => 5,
   ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-  <script src="assets/sorteo-legacy.js?v=<?= h((string) (@filemtime(__DIR__ . '/assets/sorteo-legacy.js') ?: time())) ?>"></script>
+  <script src="assets/sorteo-legacy.js?v=<?= h((string) (@filemtime(__DIR__ . '/assets/sorteo-legacy.js') ?: time())) ?>" charset="utf-8"></script>
 </section>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -234,6 +234,14 @@ function player_field_stat_weights(?string $position = null): array
             'mentality' => 0.13,
             'attack' => 0.08,
         ],
+        'LAT' => [
+            'rhythm' => 0.24,
+            'defense_physical' => 0.22,
+            'technique' => 0.17,
+            'teamwork' => 0.15,
+            'attack' => 0.12,
+            'mentality' => 0.10,
+        ],
         'DEL' => [
             'attack' => 0.31,
             'rhythm' => 0.20,
@@ -309,8 +317,13 @@ function player_has_goalkeeper_position(array $player): bool
 
 function player_overall_rating(array $player): float
 {
-    $primaryPosition = player_primary_position($player);
-    if ($primaryPosition === 'ARQ') {
+    return player_position_rating($player, player_primary_position($player));
+}
+
+function player_position_rating(array $player, string $position): float
+{
+    $position = strtoupper(trim($position));
+    if ($position === 'ARQ') {
         $total = 0.0;
         foreach (player_goalkeeper_stat_weights() as $field => $weight) {
             $total += player_effective_stat($player, $field) * $weight;
@@ -319,10 +332,33 @@ function player_overall_rating(array $player): float
     }
 
     $total = 0.0;
-    foreach (player_field_stat_weights($primaryPosition) as $field => $weight) {
+    foreach (player_field_stat_weights($position) as $field => $weight) {
         $total += player_effective_stat($player, $field) * $weight;
     }
     return round(player_apply_regularity_adjustment($total, $player), 1);
+}
+
+function player_best_natural_position(array $player): string
+{
+    $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
+    if (!$positions) {
+        return 'MED';
+    }
+    usort($positions, static function (string $a, string $b) use ($player): int {
+        $ratingA = player_position_rating($player, $a);
+        $ratingB = player_position_rating($player, $b);
+        if ($ratingA !== $ratingB) {
+            return $ratingB <=> $ratingA;
+        }
+        $order = array_flip(allowed_positions());
+        return ($order[$a] ?? 99) <=> ($order[$b] ?? 99);
+    });
+    return $positions[0] ?? 'MED';
+}
+
+function player_best_natural_rating(array $player): float
+{
+    return player_position_rating($player, player_best_natural_position($player));
 }
 
 function player_apply_regularity_adjustment(float $baseRating, array $player): float
@@ -344,7 +380,44 @@ function player_pace_from_rhythm(float $rhythm): string
 
 function allowed_positions(): array
 {
+    return ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
+}
+
+function player_position_labels(): array
+{
+    return [
+        'ARQ' => 'Arquero',
+        'DEF' => 'Defensor',
+        'LAT' => 'Lateral',
+        'MED' => 'Mediocampista',
+        'DEL' => 'Delantero',
+    ];
+}
+
+function player_field_lines(): array
+{
+    return ['DEF', 'LAT', 'MED', 'DEL'];
+}
+
+function player_required_lines(): array
+{
     return ['ARQ', 'DEF', 'MED', 'DEL'];
+}
+
+function player_formation_lines(): array
+{
+    return array_merge(['ARQ'], player_field_lines());
+}
+
+function player_pitch_lines(): array
+{
+    return ['ARQ', 'DEF', 'MED', 'DEL'];
+}
+
+function player_pitch_line(string $position): string
+{
+    $position = strtoupper(trim($position));
+    return $position === 'LAT' ? 'DEF' : $position;
 }
 
 function parse_positions_csv(string $positions): array

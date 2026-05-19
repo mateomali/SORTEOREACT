@@ -349,7 +349,7 @@ function import_default_position(array $player): string
 {
     $positions = explode('/', (string) ($player['positions'] ?? 'MED'));
     $position = strtoupper(trim((string) ($positions[0] ?? 'MED')));
-    return in_array($position, ['ARQ', 'DEF', 'MED', 'DEL'], true) ? $position : 'MED';
+    return in_array($position, allowed_positions(), true) ? $position : 'MED';
 }
 
 $pdo = db();
@@ -559,7 +559,7 @@ try {
         foreach ($row['teams'] as $teamNumber => $team) {
             $totalSkill = 0.0;
             $formationData = [];
-            $lineOrders = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $lineOrders = array_fill_keys(player_formation_lines(), 0);
             foreach ($team['resolved_players'] as $lineupIndex => $entry) {
                 $player = $entry['player'];
                 $position = import_default_position($player);
@@ -578,7 +578,7 @@ try {
                     'rating' => (float) $entry['rating'],
                 ]);
             }
-            $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $counts = array_fill_keys(player_formation_lines(), 0);
             foreach ($formationData as $formationPlayer) {
                 $counts[(string) $formationPlayer['position']]++;
             }
@@ -587,7 +587,7 @@ try {
                 'team_number' => (int) $teamNumber,
                 'team_name' => 'Equipo ' . $teamNumber,
                 'total_skill' => $totalSkill,
-                'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]),
+                'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['LAT'], $counts['MED'], $counts['DEL']]),
                 'formation_data' => json_encode($formationData, JSON_UNESCAPED_UNICODE),
                 'color_name' => import_color_name((string) $team['label'], (int) $teamNumber),
                 'goals' => (int) $team['goals'],

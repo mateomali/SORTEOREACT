@@ -31,7 +31,7 @@ function parse_positions_legacy(string $positions): array
         explode('/', $positions)
     );
     $parts = array_values(array_filter($parts, static fn($p): bool => $p !== ''));
-    $allowed = ['ARQ', 'DEF', 'MED', 'DEL'];
+    $allowed = allowed_positions();
     $ordered = [];
     foreach ($parts as $pos) {
         if (in_array($pos, $allowed, true) && !in_array($pos, $ordered, true)) {
@@ -50,7 +50,7 @@ function get_primary_position_legacy(array $player): string
 function normalize_assigned_position_legacy(?string $assigned, array $player): string
 {
     $candidate = strtoupper(trim((string) $assigned));
-    $allowed = ['ARQ', 'DEF', 'MED', 'DEL'];
+    $allowed = allowed_positions();
     if ($candidate !== '' && in_array($candidate, $allowed, true)) {
         return $candidate;
     }
@@ -64,41 +64,15 @@ function position_base_rating_legacy(array $player, string $assigned): float
         return 2.0;
     }
 
-    return match ($assigned) {
-        'ARQ' => player_effective_stat($player, 'goalkeeper_skill'),
-        'DEF' => (
-            player_effective_stat($player, 'defense_physical') * 0.60
-            + player_effective_stat($player, 'rhythm') * 0.12
-            + player_effective_stat($player, 'technique') * 0.08
-            + player_effective_stat($player, 'teamwork') * 0.08
-            + player_effective_stat($player, 'mentality') * 0.08
-            + player_effective_stat($player, 'attack') * 0.04
-        ),
-        'DEL' => (
-            player_effective_stat($player, 'attack') * 0.60
-            + player_effective_stat($player, 'technique') * 0.12
-            + player_effective_stat($player, 'rhythm') * 0.10
-            + player_effective_stat($player, 'mentality') * 0.08
-            + player_effective_stat($player, 'teamwork') * 0.06
-            + player_effective_stat($player, 'defense_physical') * 0.04
-        ),
-        'MED' => (
-            player_effective_stat($player, 'defense_physical')
-            + player_effective_stat($player, 'attack')
-        ) / 2,
-        default => player_overall_rating($player),
-    };
+    return player_position_rating($player, $assigned);
 }
 
 function adjusted_position_rating_legacy(array $player, string $assigned): float
 {
-    $general = player_overall_rating($player);
-    $natural = parse_positions_legacy((string) ($player['positions'] ?? ''));
-    if ($assigned === '' || in_array($assigned, $natural, true)) {
-        return max(1.0, min(6.0, $general));
+    if ($assigned === '') {
+        return player_overall_rating($player);
     }
-    $base = position_base_rating_legacy($player, $assigned);
-    return max(1.0, min(6.0, $base));
+    return position_base_rating_legacy($player, $assigned);
 }
 
 function normalize_team_color_name_legacy(string $color): string
@@ -125,7 +99,7 @@ function validate_unique_team_colors_legacy(array $teamMeta, int $numTeams): ?st
 
 function team_formation_summary_legacy(array $team): string
 {
-    $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+    $counts = array_fill_keys(player_formation_lines(), 0);
     foreach ($team as $player) {
         $assigned = normalize_assigned_position_legacy(
             isset($player['assigned_position']) ? (string) $player['assigned_position'] : '',
@@ -133,7 +107,11 @@ function team_formation_summary_legacy(array $team): string
         );
         $counts[$assigned] = ($counts[$assigned] ?? 0) + 1;
     }
-    return implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]);
+    return implode('-', [
+        (int) ($counts['DEF'] ?? 0) + (int) ($counts['LAT'] ?? 0),
+        (int) ($counts['MED'] ?? 0),
+        (int) ($counts['DEL'] ?? 0),
+    ]);
 }
 
 header('Content-Type: application/json; charset=utf-8');
@@ -353,7 +331,8 @@ try {
         $teamNumber = $idx + 1;
         $totalSkill = 0.0;
         foreach ($team as $p) {
-            $totalSkill += player_overall_rating($p);
+            $assigned = normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p);
+            $totalSkill += adjusted_position_rating_legacy($p, $assigned);
         }
         $saveTeam->execute([
             'mid' => $matchId,
@@ -368,7 +347,7 @@ try {
             'color_name' => normalize_team_color_name_legacy((string) ($teamMeta[$idx]['color_name'] ?? '')),
         ]);
 
-        $lineOrder = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        $lineOrder = array_fill_keys(player_formation_lines(), 0);
         foreach ($team as $lineupIndex => $player) {
             $assigned = normalize_assigned_position_legacy(
                 isset($player['assigned_position']) ? (string) $player['assigned_position'] : '',

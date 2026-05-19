@@ -189,7 +189,7 @@ function multiple_draw_generate(int $matchId, int $count, bool $replace = false)
                 $teamNumber = (int) $team['team_number'];
                 $scores[] = (float) $team['total_skill'];
                 $playersPayload = [];
-                foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+                foreach (player_formation_lines() as $line) {
                     foreach (($team['line_players'][$line] ?? []) as $lineOrder => $player) {
                         $playersPayload[] = [
                             'id' => (int) $player['id'],
@@ -210,6 +210,7 @@ function multiple_draw_generate(int $matchId, int $count, bool $replace = false)
                     'formation_name' => implode('-', [
                         count($team['line_players']['ARQ'] ?? []),
                         count($team['line_players']['DEF'] ?? []),
+                        count($team['line_players']['LAT'] ?? []),
                         count($team['line_players']['MED'] ?? []),
                         count($team['line_players']['DEL'] ?? []),
                     ]),

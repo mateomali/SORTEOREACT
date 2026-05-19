@@ -36,7 +36,7 @@ function formation_view_card_rating(float $value): int
 
 function formation_view_group_players(array $players): array
 {
-    $lines = ['ARQ' => [], 'DEF' => [], 'MED' => [], 'DEL' => []];
+    $lines = array_fill_keys(player_formation_lines(), []);
     foreach ($players as $player) {
         if (!is_array($player)) {
             continue;
@@ -97,15 +97,24 @@ function formation_view_render_team(array $team, array $options = []): string
     $html .= '</div>';
     $html .= '<div class="' . h($pitchClasses) . '" data-static-team-formation data-static-formation-locked="1">';
 
-    foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+    foreach (player_pitch_lines() as $line) {
+        $linePlayers = $line === 'DEF'
+            ? array_merge($lines['LAT'] ?? [], $lines['DEF'] ?? [])
+            : ($lines[$line] ?? []);
+        if ($line === 'DEF' && count($lines['LAT'] ?? []) > 1) {
+            $latPlayers = $lines['LAT'] ?? [];
+            $defPlayers = $lines['DEF'] ?? [];
+            $linePlayers = array_merge(array_slice($latPlayers, 0, 1), $defPlayers, array_slice($latPlayers, 1));
+        }
         $html .= '<div class="formation-line">';
-        $html .= '<div class="line-label">' . h($line) . '</div>';
+        $html .= '<div class="line-label">' . h($line === 'DEF' && ($lines['LAT'] ?? []) ? 'DEF/LAT' : $line) . '</div>';
         $html .= '<div class="line-players">';
-        if (!$lines[$line]) {
+        if (!$linePlayers) {
             $html .= '<span class="formation-player empty-slot">-</span>';
         } else {
-            foreach ($lines[$line] as $player) {
-                $html .= formation_view_render_player($player, $highlightPlayerId, $line);
+            foreach ($linePlayers as $player) {
+                $assigned = strtoupper((string) ($player['assigned_position'] ?? $line));
+                $html .= formation_view_render_player($player, $highlightPlayerId, $assigned);
             }
         }
         $html .= '</div></div>';
@@ -119,7 +128,7 @@ function formation_view_render_team(array $team, array $options = []): string
 function formation_view_tactic_label(array $lines): string
 {
     return implode('-', [
-        count($lines['DEF'] ?? []),
+        count($lines['DEF'] ?? []) + count($lines['LAT'] ?? []),
         count($lines['MED'] ?? []),
         count($lines['DEL'] ?? []),
     ]);

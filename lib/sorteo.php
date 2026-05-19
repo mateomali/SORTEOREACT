@@ -5,7 +5,7 @@ require_once __DIR__ . '/helpers.php';
 
 function player_order(array $player): int
 {
-    $order = ['ARQ' => 1, 'DEF' => 2, 'MED' => 3, 'DEL' => 4];
+    $order = ['ARQ' => 1, 'DEF' => 2, 'LAT' => 3, 'MED' => 4, 'DEL' => 5];
     return $order[player_primary_position($player)] ?? 99;
 }
 
@@ -13,6 +13,68 @@ function ordered_player_positions(array $player): array
 {
     $positions = parse_positions_csv($player['positions'] ?? '');
     return $positions ?: ['MED'];
+}
+
+function draw_position_preferences(array $player): array
+{
+    $positions = ordered_player_positions($player);
+    usort($positions, static function (string $a, string $b) use ($player): int {
+        $ratingA = player_position_rating($player, $a);
+        $ratingB = player_position_rating($player, $b);
+        if ($ratingA !== $ratingB) {
+            return $ratingB <=> $ratingA;
+        }
+        $order = array_flip(allowed_positions());
+        return ($order[$a] ?? 99) <=> ($order[$b] ?? 99);
+    });
+    return $positions ?: ['MED'];
+}
+
+function draw_pitch_line(string $position): string
+{
+    return $position === 'LAT' ? 'DEF' : $position;
+}
+
+function draw_pitch_line_counts(array $logicalCounts): array
+{
+    return [
+        'ARQ' => (int) ($logicalCounts['ARQ'] ?? 0),
+        'DEF' => (int) ($logicalCounts['DEF'] ?? 0) + (int) ($logicalCounts['LAT'] ?? 0),
+        'MED' => (int) ($logicalCounts['MED'] ?? 0),
+        'DEL' => (int) ($logicalCounts['DEL'] ?? 0),
+    ];
+}
+
+function draw_main_field_line_limit(int $teamSize): int
+{
+    return max(0, intdiv($teamSize, 3));
+}
+
+function draw_defense_side_line_limit(int $teamSize): int
+{
+    return max(0, intdiv($teamSize, 4));
+}
+
+function draw_line_limit(string $position, int $teamSize): int
+{
+    $position = strtoupper(trim($position));
+    if ($position === 'ARQ') {
+        return 1;
+    }
+    if ($position === 'DEF' || $position === 'LAT') {
+        return draw_defense_side_line_limit($teamSize);
+    }
+    return draw_main_field_line_limit($teamSize);
+}
+
+function draw_line_counts_fit_limits(array $lineCounts, int $teamSize): bool
+{
+    foreach (player_field_lines() as $line) {
+        if ((int) ($lineCounts[$line] ?? 0) > draw_line_limit($line, $teamSize)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function is_pure_goalkeeper(array $player): bool
@@ -69,8 +131,9 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 
 function build_team_position_assignment(array $team): array
 {
-    $fieldLines = ['DEF', 'MED', 'DEL'];
-    $maxPerFieldLine = max(0, intdiv(count($team), 2));
+    $fieldLines = player_field_lines();
+    $teamSize = count($team);
+    $maxPerMainLine = draw_main_field_line_limit($teamSize);
 
     $candidates = array_values(array_filter($team, static fn(array $p): bool => player_primary_position($p) === 'ARQ' || is_emergency_goalkeeper($p)));
     usort($candidates, static function (array $a, array $b): int {
@@ -93,24 +156,12 @@ function build_team_position_assignment(array $team): array
     });
 
     $goalkeeperId = $candidates[0]['id'] ?? null;
-    if ($goalkeeperId === null && $team) {
-        $fallback = $team;
-        usort($fallback, static function (array $a, array $b): int {
-            $ratingA = player_overall_rating($a);
-            $ratingB = player_overall_rating($b);
-            if ($ratingA !== $ratingB) {
-                return $ratingA <=> $ratingB;
-            }
-            return strcmp((string) $a['name'], (string) $b['name']);
-        });
-        $goalkeeperId = $fallback[0]['id'] ?? null;
-    }
     $assignment = [];
     $preferences = [];
 
     foreach ($team as $player) {
         $id = (int) $player['id'];
-        $pos = ordered_player_positions($player);
+        $pos = draw_position_preferences($player);
         $pref = $pos;
 
         if ($goalkeeperId !== null && $id === (int) $goalkeeperId) {
@@ -127,7 +178,7 @@ function build_team_position_assignment(array $team): array
     }
 
     $countLines = static function (array $assigned): array {
-        $count = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        $count = array_fill_keys(player_formation_lines(), 0);
         foreach ($assigned as $line) {
             if (!isset($count[$line])) {
                 $count['MED']++;
@@ -142,24 +193,33 @@ function build_team_position_assignment(array $team): array
     while ($changed) {
         $changed = false;
         $lineCount = $countLines($assignment);
-        $overloaded = array_values(array_filter($fieldLines, static fn(string $line): bool => $lineCount[$line] > $maxPerFieldLine));
-        usort($overloaded, static fn(string $a, string $b): int => $lineCount[$b] <=> $lineCount[$a]);
+        $pitchCount = draw_pitch_line_counts($lineCount);
+        $overloaded = array_values(array_filter(['MED', 'DEL'], static fn(string $line): bool => $pitchCount[$line] > $maxPerMainLine));
+        usort($overloaded, static fn(string $a, string $b): int => $pitchCount[$b] <=> $pitchCount[$a]);
+        $logicalOverloaded = array_values(array_filter($fieldLines, static fn(string $line): bool => $lineCount[$line] > draw_line_limit($line, $teamSize)));
+        usort($logicalOverloaded, static fn(string $a, string $b): int => $lineCount[$b] <=> $lineCount[$a]);
+        foreach ($logicalOverloaded as $line) {
+            if (!in_array($line, $overloaded, true)) {
+                $overloaded[] = $line;
+            }
+        }
 
         if (!$overloaded) {
             break;
         }
 
         foreach ($overloaded as $fromLine) {
+            $fromLines = [$fromLine];
             $movable = [];
             foreach ($team as $player) {
                 $id = (int) $player['id'];
-                if (($assignment[$id] ?? '') !== $fromLine) {
+                if (!in_array(($assignment[$id] ?? ''), $fromLines, true)) {
                     continue;
                 }
                 $prefs = $preferences[$id] ?? [];
                 $hasAlt = false;
                 foreach ($prefs as $line) {
-                    if ($line !== $fromLine) {
+                    if (!in_array($line, $fromLines, true)) {
                         $hasAlt = true;
                         break;
                     }
@@ -182,12 +242,13 @@ function build_team_position_assignment(array $team): array
                 $id = (int) $player['id'];
                 $prefs = $preferences[$id] ?? [];
                 $currentCount = $countLines($assignment);
+                $currentPitchCount = draw_pitch_line_counts($currentCount);
                 $destinations = [];
                 foreach ($prefs as $line) {
-                    if ($line === $fromLine) {
+                    if (in_array($line, $fromLines, true)) {
                         continue;
                     }
-                    if ($line !== 'ARQ' && ($currentCount[$line] ?? 0) < $maxPerFieldLine) {
+                    if ($line !== 'ARQ' && ($currentCount[$line] ?? 0) < draw_line_limit($line, $teamSize)) {
                         $destinations[] = $line;
                     }
                 }
@@ -195,11 +256,16 @@ function build_team_position_assignment(array $team): array
                     continue;
                 }
 
-                usort($destinations, static function (string $a, string $b) use ($currentCount, $prefs): int {
-                    $missingA = ($currentCount[$a] ?? 0) === 0 ? 1 : 0;
-                    $missingB = ($currentCount[$b] ?? 0) === 0 ? 1 : 0;
+                usort($destinations, static function (string $a, string $b) use ($currentCount, $currentPitchCount, $prefs): int {
+                    $pitchA = draw_pitch_line($a);
+                    $pitchB = draw_pitch_line($b);
+                    $missingA = ($currentPitchCount[$pitchA] ?? 0) === 0 ? 1 : 0;
+                    $missingB = ($currentPitchCount[$pitchB] ?? 0) === 0 ? 1 : 0;
                     if ($missingA !== $missingB) {
                         return $missingB <=> $missingA;
+                    }
+                    if (($currentPitchCount[$pitchA] ?? 0) !== ($currentPitchCount[$pitchB] ?? 0)) {
+                        return ($currentPitchCount[$pitchA] ?? 0) <=> ($currentPitchCount[$pitchB] ?? 0);
                     }
                     if (($currentCount[$a] ?? 0) !== ($currentCount[$b] ?? 0)) {
                         return ($currentCount[$a] ?? 0) <=> ($currentCount[$b] ?? 0);
@@ -216,13 +282,7 @@ function build_team_position_assignment(array $team): array
 
     $finalCount = $countLines($assignment);
     $goalkeepers = $finalCount['ARQ'];
-    $lineValid = true;
-    foreach ($fieldLines as $line) {
-        if (($finalCount[$line] ?? 0) > $maxPerFieldLine) {
-            $lineValid = false;
-            break;
-        }
-    }
+    $lineValid = draw_line_counts_fit_limits($finalCount, $teamSize);
 
     return [
         'assignment' => $assignment,
@@ -249,8 +309,8 @@ function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
             return false;
         }
 
-        $lines = array_values(array_unique(array_values($data['assignment'])));
-        foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $required) {
+        $lines = array_values(array_unique(array_map('draw_pitch_line', array_values($data['assignment']))));
+        foreach (player_required_lines() as $required) {
             if (!in_array($required, $lines, true)) {
                 return false;
             }
@@ -259,7 +319,8 @@ function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
         $score = 0.0;
         $slow = 0;
         foreach ($team as $player) {
-            $score += player_overall_rating($player);
+            $assigned = $data['assignment'][(int) $player['id']] ?? player_best_natural_position($player);
+            $score += player_position_rating($player, $assigned);
             if (player_is_low_rhythm($player)) {
                 $slow++;
             }
@@ -283,8 +344,8 @@ function draw_player_band_ids(array $players, float $ratio = 0.25): array
     }
 
     usort($players, static function (array $a, array $b): int {
-        $ratingA = player_overall_rating($a);
-        $ratingB = player_overall_rating($b);
+        $ratingA = player_best_natural_rating($a);
+        $ratingB = player_best_natural_rating($b);
         if ($ratingA !== $ratingB) {
             return $ratingA <=> $ratingB;
         }
@@ -316,6 +377,43 @@ function draw_count_spread(array $counts): int
     return $counts ? (max($counts) - min($counts)) : 0;
 }
 
+function draw_team_floor_score(array $team, int $count = 2): float
+{
+    if (!$team) {
+        return 0.0;
+    }
+    $ratings = array_map(static fn(array $player): float => player_best_natural_rating($player), $team);
+    sort($ratings, SORT_NUMERIC);
+    return array_sum(array_slice($ratings, 0, max(1, min($count, count($ratings)))));
+}
+
+function draw_team_floor_spread(array $teams, int $count = 2): float
+{
+    $values = array_map(static fn(array $team): float => draw_team_floor_score($team, $count), $teams);
+    return $values ? (max($values) - min($values)) : 0.0;
+}
+
+function draw_player_low_liability(array $player): float
+{
+    $rating = player_best_natural_rating($player);
+    $liability = max(0.0, 2.5 - $rating) * 2.0;
+    if ($rating < 2.0) {
+        $liability += (2.0 - $rating) * 3.0;
+    }
+    return $liability;
+}
+
+function draw_team_low_liability_score(array $team): float
+{
+    return array_sum(array_map('draw_player_low_liability', $team));
+}
+
+function draw_team_low_liability_spread(array $teams): float
+{
+    $values = array_map('draw_team_low_liability_score', $teams);
+    return $values ? (max($values) - min($values)) : 0.0;
+}
+
 function draw_teams_quality_score(array $teams, array $bands): float
 {
     $drawWeights = player_draw_balance_weights();
@@ -325,10 +423,13 @@ function draw_teams_quality_score(array $teams, array $bands): float
     $statTotals = array_fill(0, count($teams), array_fill_keys($drawStatFields, 0.0));
 
     foreach ($teams as $teamIndex => $team) {
+        $assignmentData = build_team_position_assignment($team);
+        $assigned = $assignmentData['assignment'];
         $teamScore = 0.0;
         $lowRhythm = 0;
         foreach ($team as $player) {
-            $teamScore += player_overall_rating($player);
+            $line = $assigned[(int) $player['id']] ?? player_best_natural_position($player);
+            $teamScore += player_position_rating($player, $line);
             if (player_is_low_rhythm($player)) {
                 $lowRhythm++;
             }
@@ -359,6 +460,8 @@ function draw_teams_quality_score(array $teams, array $bands): float
     $cost += draw_count_spread($lowRhythmCounts) * 20.0;
     $cost += $lowBandSpread * 120.0;
     $cost += $highBandSpread * 90.0;
+    $cost += draw_team_floor_spread($teams, 2) * 55.0;
+    $cost += draw_team_low_liability_spread($teams) * 85.0;
 
     return $cost;
 }
@@ -376,7 +479,7 @@ function decorate_teams(array $teams): array
         });
         $assignmentData = build_team_position_assignment($team);
         $assigned = $assignmentData['assignment'];
-        $linePlayers = ['ARQ' => [], 'DEF' => [], 'MED' => [], 'DEL' => []];
+        $linePlayers = array_fill_keys(player_formation_lines(), []);
         foreach ($team as $player) {
             $pid = (int) $player['id'];
             $line = $assigned[$pid] ?? 'MED';
@@ -387,8 +490,8 @@ function decorate_teams(array $teams): array
         }
         foreach (array_keys($linePlayers) as $line) {
             usort($linePlayers[$line], static function (array $a, array $b): int {
-                $ratingA = player_overall_rating($a);
-                $ratingB = player_overall_rating($b);
+                $ratingA = player_position_rating($a, (string) ($a['assigned_position'] ?? player_best_natural_position($a)));
+                $ratingB = player_position_rating($b, (string) ($b['assigned_position'] ?? player_best_natural_position($b)));
                 if ($ratingB !== $ratingA) {
                     return $ratingB <=> $ratingA;
                 }
@@ -396,7 +499,11 @@ function decorate_teams(array $teams): array
             });
         }
 
-        $totalSkill = array_reduce($team, static fn(float $carry, array $p): float => $carry + player_overall_rating($p), 0.0);
+        $totalSkill = 0.0;
+        foreach ($team as $player) {
+            $pid = (int) $player['id'];
+            $totalSkill += player_position_rating($player, $assigned[$pid] ?? player_best_natural_position($player));
+        }
         $out[] = [
             'team_number' => $index + 1,
             'players' => $team,
@@ -439,7 +546,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
         $slowField = array_values(array_filter($fieldPool, static fn(array $p): bool => player_is_low_rhythm($p)));
         $fastField = array_values(array_filter($fieldPool, static fn(array $p): bool => !player_is_low_rhythm($p)));
         shuffle($slowField);
-        usort($fastField, static fn(array $a, array $b): int => player_overall_rating($b) <=> player_overall_rating($a));
+        usort($fastField, static fn(array $a, array $b): int => player_best_natural_rating($b) <=> player_best_natural_rating($a));
 
         $teams = array_fill(0, $numTeams, []);
         $teamPoints = array_fill(0, $numTeams, 0.0);
@@ -450,7 +557,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
 
         $addPlayerToTeam = static function (array $player, int $teamIndex) use (&$teams, &$teamPoints, &$teamStats, &$lowRhythmCounts, $drawStatFields): void {
             $teams[$teamIndex][] = $player;
-            $teamPoints[$teamIndex] += player_overall_rating($player);
+            $teamPoints[$teamIndex] += player_best_natural_rating($player);
             foreach ($drawStatFields as $field) {
                 if ($field === 'goalkeeper_skill' && !player_has_goalkeeper_position($player)) {
                     continue;
@@ -469,7 +576,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                 $projectedPoints = $teamPoints;
                 $projectedStats = $teamStats;
                 $projectedLowRhythm = $lowRhythmCounts;
-                $projectedPoints[$teamIndex] += player_overall_rating($player);
+                $projectedPoints[$teamIndex] += player_best_natural_rating($player);
                 foreach ($drawStatFields as $field) {
                     if ($field === 'goalkeeper_skill' && !player_has_goalkeeper_position($player)) {
                         continue;
@@ -500,6 +607,9 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                     $projectedHighBand[$teamIndex]++;
                     $cost += draw_count_spread($projectedHighBand) * 90.0;
                 }
+                $projectedTeams = $teams;
+                $projectedTeams[$teamIndex][] = $player;
+                $cost += draw_team_low_liability_spread($projectedTeams) * 85.0;
                 $cost += count($available) > 1 ? (mt_rand(0, 100) / 100000) : 0;
 
                 if ($bestCost === null || $cost < $bestCost) {
@@ -548,7 +658,9 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
             }
             $lowBandSpread = draw_count_spread(draw_team_band_counts($teams, $bands['low'] ?? []));
             $highBandSpread = draw_count_spread(draw_team_band_counts($teams, $bands['high'] ?? []));
-            if ($validCandidates >= max(1, $targetValidCandidates) && $lowBandSpread <= 1 && $highBandSpread <= 1) {
+            $floorSpread = draw_team_floor_spread($teams, 2);
+            $lowLiabilitySpread = draw_team_low_liability_spread($teams);
+            if ($validCandidates >= max(1, $targetValidCandidates) && $lowBandSpread <= 1 && $highBandSpread <= 1 && $floorSpread <= 1.0 && $lowLiabilitySpread <= 1.0) {
                 break;
             }
         }

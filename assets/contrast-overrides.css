@@ -566,7 +566,7 @@ html body main.content :is(.team-formation, .captain-formation-field, .profile-n
   border-color: rgba(255, 255, 255, .26);
 }
 
-html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.formation-player, .captain-formation-player):not(#gf-contrast-lock) :is(.formation-player-name, strong, span):not(.player-card-rating):not(.captain-position-pill):not(.formation-penalty-badge) {
+html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.formation-player, .captain-formation-player):not(#gf-contrast-lock) :is(.formation-player-name, strong, span):not(.player-card-rating):not(.captain-position-pill):not(.formation-penalty-badge):not(.formation-secondary-badge) {
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
 }
@@ -594,11 +594,19 @@ html body main.content :is(.team-formation, .captain-formation-field, .profile-n
   border-color: rgba(255, 255, 255, .28);
 }
 
-html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.captain-position-pill, .formation-penalty-badge):not(#gf-contrast-lock) {
+html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.captain-position-pill, .formation-penalty-badge, .formation-secondary-badge):not(#gf-contrast-lock) {
   background: var(--gf-primary-soft);
   background-color: var(--gf-primary-soft);
   color: var(--gf-ink);
   -webkit-text-fill-color: var(--gf-ink);
+}
+
+html body main.content :is(.team-formation, .captain-formation-field, .profile-next-team-formation) :is(.captain-position-pill.is-assigned-secondary, .formation-secondary-badge):not(#gf-contrast-lock) {
+  background: #fff4c7;
+  background-color: #fff4c7;
+  color: #3f2a00;
+  -webkit-text-fill-color: #3f2a00;
+  border-color: #f2c14e;
 }
 
 html body main.content :is(.captain-formation-tools, .captain-formation-title, .public-team-characteristics, .team-characteristics-card, .captain-team-characteristics):not(#gf-contrast-lock),

@@ -146,30 +146,39 @@
           + (cardStat(card, 'Mentality') * 0.10);
       } else if (position === 'DEF') {
         rating = weightedCardRating(card, {
-          DefensePhysical: 0.60,
-          Rhythm: 0.12,
-          Technique: 0.08,
-          Teamwork: 0.08,
-          Mentality: 0.08,
-          Attack: 0.04,
+          DefensePhysical: 0.28,
+          Rhythm: 0.20,
+          Technique: 0.18,
+          Teamwork: 0.13,
+          Mentality: 0.13,
+          Attack: 0.08,
+        });
+      } else if (position === 'LAT') {
+        rating = weightedCardRating(card, {
+          Rhythm: 0.24,
+          DefensePhysical: 0.22,
+          Technique: 0.17,
+          Teamwork: 0.15,
+          Attack: 0.12,
+          Mentality: 0.10,
         });
       } else if (position === 'MED') {
         rating = weightedCardRating(card, {
-          Technique: 0.22,
-          Teamwork: 0.20,
-          Rhythm: 0.18,
-          Mentality: 0.14,
-          DefensePhysical: 0.13,
-          Attack: 0.13,
+          Technique: 0.24,
+          Rhythm: 0.23,
+          Teamwork: 0.19,
+          Mentality: 0.13,
+          DefensePhysical: 0.12,
+          Attack: 0.09,
         });
       } else if (position === 'DEL') {
         rating = weightedCardRating(card, {
-          Attack: 0.60,
-          Technique: 0.12,
-          Rhythm: 0.10,
-          Mentality: 0.08,
-          Teamwork: 0.06,
-          DefensePhysical: 0.04,
+          Attack: 0.31,
+          Rhythm: 0.20,
+          Technique: 0.17,
+          Teamwork: 0.14,
+          Mentality: 0.10,
+          DefensePhysical: 0.08,
         });
       }
       return applyCardRegularity(rating, card);
@@ -222,7 +231,7 @@
         if (value) value.textContent = `${total.toFixed(1)} pts`;
         const tactic = titleContainer?.querySelector('[data-formation-tactic]') || externalTitle.querySelector('[data-formation-tactic]');
         if (tactic) {
-          const counts = ['DEF', 'MED', 'DEL'].map((line) => {
+          const counts = ['DEF', 'LAT', 'MED', 'DEL'].map((line) => {
             const formationLine = formationLines(formation).find((candidate) => lineKey(candidate) === line);
             return formationLine?.querySelectorAll('[data-static-formation-player]')?.length || 0;
           });
@@ -2699,7 +2708,7 @@
     const players = Array.isArray(config.players) ? config.players : [];
     const numTeams = Number(config.numTeams || 2);
     const playersPerTeam = Number(config.playersPerTeam || 1);
-    const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
+    const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
     const teamColors = [
       { name: 'ROSA', className: 'manual-team-rosa' },
       { name: 'AZUL', className: 'manual-team-azul' },

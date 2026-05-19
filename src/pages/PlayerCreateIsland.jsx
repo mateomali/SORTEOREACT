@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { StatRating } from '../components/StatRating.jsx';
 
-const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
+const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
 const positionLabels = {
   ARQ: 'Arquero',
   DEF: 'Defensor',
+  LAT: 'Lateral',
   MED: 'Mediocampista',
   DEL: 'Delantero',
 };
@@ -86,6 +87,14 @@ function overall(stats, selectedPositions) {
       teamwork: 0.13,
       mentality: 0.13,
       attack: 0.08,
+    },
+    LAT: {
+      rhythm: 0.24,
+      defense_physical: 0.22,
+      technique: 0.17,
+      teamwork: 0.15,
+      attack: 0.12,
+      mentality: 0.10,
     },
     MED: {
       technique: 0.24,

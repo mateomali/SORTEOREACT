@@ -240,7 +240,7 @@ function profile_next_match_grouped_players(int $matchId): array
          WHERE mp.match_id = :mid
            AND mp.team_number IS NOT NULL
          ORDER BY mp.team_number ASC,
-           FIELD(mp.assigned_position, 'ARQ', 'DEF', 'MED', 'DEL'),
+           FIELD(mp.assigned_position, 'ARQ', 'DEF', 'LAT', 'MED', 'DEL'),
            COALESCE(mp.formation_line_order, 99) ASC,
            COALESCE(mp.lineup_order, 99) ASC,
            p.name ASC"
@@ -251,7 +251,7 @@ function profile_next_match_grouped_players(int $matchId): array
         $teamNumber = (int) $row['team_number'];
         $line = (string) ($row['assigned_position'] ?: 'MED');
         if (!isset($grouped[$teamNumber])) {
-            $grouped[$teamNumber] = ['ARQ' => [], 'DEF' => [], 'MED' => [], 'DEL' => []];
+            $grouped[$teamNumber] = array_fill_keys(player_formation_lines(), []);
         }
         if (!isset($grouped[$teamNumber][$line])) {
             $line = 'MED';
@@ -279,7 +279,7 @@ function profile_render_next_match_formations(array $match, int $currentPlayerId
     foreach ($grouped as $teamNumber => $lines) {
         $label = $labels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber);
         $players = [];
-        foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+        foreach (player_formation_lines() as $line) {
             foreach (($lines[$line] ?? []) as $playerRow) {
                 $playerRow['assigned_position'] = $line;
                 $playerRow['rating'] = player_overall_rating($playerRow);
@@ -363,37 +363,32 @@ function profile_position_base_rating(array $player, string $position): float
         );
     }
     if ($position === 'DEF') {
-        return player_apply_regularity_adjustment(
-            (player_effective_stat($player, 'defense_physical') * 0.60)
-            + (player_effective_stat($player, 'rhythm') * 0.12)
-            + (player_effective_stat($player, 'technique') * 0.08)
-            + (player_effective_stat($player, 'teamwork') * 0.08)
-            + (player_effective_stat($player, 'mentality') * 0.08)
-            + (player_effective_stat($player, 'attack') * 0.04),
-            $player
-        );
+        return player_apply_regularity_adjustment(array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('DEF')),
+            player_field_stat_weights('DEF')
+        )), $player);
+    }
+    if ($position === 'LAT') {
+        return player_apply_regularity_adjustment(array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('LAT')),
+            player_field_stat_weights('LAT')
+        )), $player);
     }
     if ($position === 'MED') {
-        return player_apply_regularity_adjustment(
-            (player_effective_stat($player, 'technique') * 0.22)
-            + (player_effective_stat($player, 'teamwork') * 0.20)
-            + (player_effective_stat($player, 'rhythm') * 0.18)
-            + (player_effective_stat($player, 'mentality') * 0.14)
-            + (player_effective_stat($player, 'defense_physical') * 0.13)
-            + (player_effective_stat($player, 'attack') * 0.13),
-            $player
-        );
+        return player_apply_regularity_adjustment(array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('MED')),
+            player_field_stat_weights('MED')
+        )), $player);
     }
     if ($position === 'DEL') {
-        return player_apply_regularity_adjustment(
-            (player_effective_stat($player, 'attack') * 0.60)
-            + (player_effective_stat($player, 'technique') * 0.12)
-            + (player_effective_stat($player, 'rhythm') * 0.10)
-            + (player_effective_stat($player, 'mentality') * 0.08)
-            + (player_effective_stat($player, 'teamwork') * 0.06)
-            + (player_effective_stat($player, 'defense_physical') * 0.04),
-            $player
-        );
+        return player_apply_regularity_adjustment(array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('DEL')),
+            player_field_stat_weights('DEL')
+        )), $player);
     }
 
     return player_overall_rating($player);
@@ -402,9 +397,8 @@ function profile_position_base_rating(array $player, string $position): float
 function profile_adjusted_position_rating(array $player, string $position): float
 {
     $position = strtoupper($position);
-    $general = player_overall_rating($player);
-    if ($position === '' || in_array($position, parse_positions_csv((string) ($player['positions'] ?? '')), true)) {
-        return max(1.0, min(6.0, $general));
+    if ($position === '') {
+        return player_overall_rating($player);
     }
     return max(1.0, min(6.0, profile_position_base_rating($player, $position)));
 }
@@ -412,7 +406,7 @@ function profile_adjusted_position_rating(array $player, string $position): floa
 function profile_public_team_players_from_lines(array $lines): array
 {
     $players = [];
-    foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+    foreach (player_formation_lines() as $line) {
         foreach (($lines[$line] ?? []) as $playerRow) {
             $players[] = $playerRow;
         }
@@ -424,6 +418,7 @@ function profile_public_team_tactic_label(array $lines): string
 {
     return implode('-', [
         (string) count($lines['DEF'] ?? []),
+        (string) count($lines['LAT'] ?? []),
         (string) count($lines['MED'] ?? []),
         (string) count($lines['DEL'] ?? []),
     ]);
@@ -548,25 +543,32 @@ function profile_render_match_detail_content(array $match, int $currentPlayerId)
             </div>
             <?= profile_render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $tacticLabel) ?>
             <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
-              <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
+              <?php foreach (player_pitch_lines() as $line): ?>
+                <?php
+                  $linePlayers = $line === 'DEF'
+                      ? array_merge(array_slice($lines['LAT'] ?? [], 0, 1), $lines['DEF'] ?? [], array_slice($lines['LAT'] ?? [], 1))
+                      : ($lines[$line] ?? []);
+                  $lineLabel = $line === 'DEF' && !empty($lines['LAT']) ? 'DEF/LAT' : $line;
+                ?>
                 <div class="formation-line">
-                  <div class="line-label"><?= h($line) ?></div>
+                  <div class="line-label"><?= h($lineLabel) ?></div>
                   <div class="line-players">
-                    <?php if (empty($lines[$line])): ?>
+                    <?php if (empty($linePlayers)): ?>
                       <span class="formation-player empty-slot">-</span>
                     <?php else: ?>
-                      <?php foreach ($lines[$line] as $teamPlayer): ?>
+                      <?php foreach ($linePlayers as $teamPlayer): ?>
                         <?php
+                          $assignedLine = strtoupper((string) ($teamPlayer['assigned_position'] ?? $line));
                           $isCurrent = (int) $teamPlayer['id'] === $currentPlayerId;
                           $formationOverall = player_overall_rating($teamPlayer);
-                          $formationCardRating = profile_player_fifa_overall(profile_adjusted_position_rating($teamPlayer, $line));
+                          $formationCardRating = profile_player_fifa_overall(profile_adjusted_position_rating($teamPlayer, $assignedLine));
                         ?>
                         <div
                           class="formation-player profile-next-player-card<?= $isCurrent ? ' is-current-player' : '' ?>"
                           draggable="false"
                           data-static-formation-player
                           data-static-player-key="<?= h((string) $teamPlayer['id']) ?>"
-                          data-assigned-position="<?= h($line) ?>"
+                          data-assigned-position="<?= h($assignedLine) ?>"
                           data-player-skill="<?= h(number_format($formationOverall, 1, '.', '')) ?>"
                           data-player-positions="<?= h((string) ($teamPlayer['positions'] ?? '')) ?>"
                           data-player-technique="<?= h(number_format(player_effective_stat($teamPlayer, 'technique'), 1, '.', '')) ?>"
@@ -578,7 +580,7 @@ function profile_render_match_detail_content(array $match, int $currentPlayerId)
                           data-player-regularity="<?= h(number_format(player_effective_stat($teamPlayer, 'regularity'), 1, '.', '')) ?>"
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($teamPlayer, 'goalkeeper_skill'), 1, '.', '')) ?>"
                         >
-                          <span class="player-card-rating"><strong><?= h((string) $formationCardRating) ?></strong><span><?= h($line) ?></span></span>
+                          <span class="player-card-rating"><strong><?= h((string) $formationCardRating) ?></strong><span><?= h($assignedLine) ?></span></span>
                           <strong><?= h((string) $teamPlayer['name']) ?></strong>
                           <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> pts</span>
                         </div>

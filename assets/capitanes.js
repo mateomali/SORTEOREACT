@@ -8,8 +8,11 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       const captainToken = board.dataset.token || '';
       const viewMode = board.dataset.viewMode || '';
       const adminEditor = board.dataset.adminEditor === '1';
-      const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
-      const FORMATION_LINE_LIMITS = { ARQ: 1, DEF: 4, MED: 4, DEL: 4 };
+      const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
+      const pitchPositions = ['ARQ', 'DEF', 'MED', 'DEL'];
+      const fieldPositions = ['DEF', 'LAT', 'MED', 'DEL'];
+      const pitchFieldPositions = ['DEF', 'MED', 'DEL'];
+      const FORMATION_LINE_LIMITS = { ARQ: 1, DEF: 4, LAT: 4, MED: 4, DEL: 4 };
       let state = null;
       const formationDrafts = {};
       const formationOrders = {};
@@ -78,6 +81,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       const positionLabelMap = {
         ARQ: 'Arquero',
         DEF: 'Defensor',
+        LAT: 'Lateral',
         MED: 'Mediocampista',
         DEL: 'Delantero',
       };
@@ -91,6 +95,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         }).join('')}</span>`;
       };
       const primaryPositionOf = (player) => String(player.primary_position || playerPositions(player)[0] || 'MED').toUpperCase();
+      const pitchLineForPosition = (position) => String(position || '').toUpperCase() === 'LAT' ? 'DEF' : String(position || '').toUpperCase();
       const hasSecondaryPosition = (player, position) => playerPositions(player).slice(1).includes(position);
       const findFormationGoalkeeper = (players) => (
         players.find(player => primaryPositionOf(player) === 'ARQ')
@@ -99,8 +104,11 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       );
       const orderedLineCandidates = (players, line, assignments) => {
         const available = players.filter(player => !assignments[player.id]);
-        const primary = available.filter(player => primaryPositionOf(player) === line);
-        const secondary = available.filter(player => primaryPositionOf(player) !== line && hasSecondaryPosition(player, line));
+        const matchesLine = (player) => line === 'DEF'
+          ? ['DEF', 'LAT'].includes(primaryPositionOf(player)) || hasSecondaryPosition(player, 'DEF') || hasSecondaryPosition(player, 'LAT')
+          : primaryPositionOf(player) === line || hasSecondaryPosition(player, line);
+        const primary = available.filter(player => line === 'DEF' ? ['DEF', 'LAT'].includes(primaryPositionOf(player)) : primaryPositionOf(player) === line);
+        const secondary = available.filter(player => !primary.includes(player) && matchesLine(player));
         const used = new Set([...primary, ...secondary].map(player => Number(player.id)));
         const fallback = available.filter(player => !used.has(Number(player.id)));
         return [...primary, ...secondary, ...fallback];
@@ -334,11 +342,12 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const formationPresets = (playersCount) => {
         const fieldPlayers = Math.max(0, playersCount - 1);
-        const base = Math.floor(fieldPlayers / 3);
-        const remainder = fieldPlayers % 3;
-        const balancedDef = base + (remainder === 2 ? 1 : 0);
-        const balancedMed = base + (remainder === 1 ? 1 : 0);
-        const balancedDel = base + (remainder === 2 ? 1 : 0);
+        const base = Math.floor(fieldPlayers / pitchFieldPositions.length);
+        const remainder = fieldPlayers % pitchFieldPositions.length;
+        const balancedCounts = pitchFieldPositions.reduce((counts, line, index) => {
+          counts[line] = base + (index < remainder ? 1 : 0);
+          return counts;
+        }, { LAT: 0 });
         const shiftLine = (counts, fromLine, toLine) => {
           const next = { ...counts };
           if ((next[fromLine] || 0) > 0 && (next[toLine] || 0) < FORMATION_LINE_LIMITS[toLine]) {
@@ -347,7 +356,6 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           }
           return next;
         };
-        const balancedCounts = { DEF: balancedDef, MED: balancedMed, DEL: balancedDel };
         const defensiveCounts = shiftLine(balancedCounts, 'DEL', 'DEF');
         const offensiveCounts = shiftLine(balancedCounts, 'DEF', 'DEL');
         const fitCounts = (counts) => normalizeCustomCounts(counts, 'MED', counts.MED, fieldPlayers);
@@ -369,11 +377,13 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         if (goalkeeper) {
           assignments[goalkeeper.id] = 'ARQ';
         }
-        for (const line of ['DEF', 'MED', 'DEL']) {
+        for (const line of pitchFieldPositions) {
           let needed = preset.counts[line] || 0;
           for (const player of orderedLineCandidates(remaining, line, assignments)) {
             if (needed <= 0) break;
-            assignments[player.id] = line;
+            assignments[player.id] = line === 'DEF' && playerPositions(player).includes('LAT') && (!playerPositions(player).includes('DEF') || adjustedPositionRating(player, 'LAT') >= adjustedPositionRating(player, 'DEF'))
+              ? 'LAT'
+              : line;
             needed--;
           }
         }
@@ -388,7 +398,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       };
 
       const fieldLineCounts = (teamNumber, players) => {
-        const counts = { DEF: 0, MED: 0, DEL: 0 };
+        const counts = { DEF: 0, LAT: 0, MED: 0, DEL: 0 };
         players.forEach((player) => {
           const position = formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || 'MED';
           if (counts[position] !== undefined) {
@@ -399,14 +409,25 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       };
 
       const normalizeCustomCounts = (currentCounts, changedLine, nextValue, total) => {
-        const lines = ['DEF', 'MED', 'DEL'];
+        const lines = fieldPositions;
         const maxPerLine = FORMATION_LINE_LIMITS.DEF;
         const counts = {
           DEF: Math.max(0, Math.min(maxPerLine, Number(currentCounts.DEF) || 0)),
+          LAT: Math.max(0, Math.min(maxPerLine, Number(currentCounts.LAT) || 0)),
           MED: Math.max(0, Math.min(maxPerLine, Number(currentCounts.MED) || 0)),
           DEL: Math.max(0, Math.min(maxPerLine, Number(currentCounts.DEL) || 0)),
         };
         counts[changedLine] = Math.max(0, Math.min(maxPerLine, Number(nextValue) || 0));
+        const clampDefense = () => {
+          while ((counts.DEF + counts.LAT) > maxPerLine) {
+            const preferred = changedLine === 'DEF' ? 'LAT' : 'DEF';
+            const fallback = preferred === 'DEF' ? 'LAT' : 'DEF';
+            const line = counts[preferred] > 0 ? preferred : fallback;
+            if (counts[line] <= 0) break;
+            counts[line]--;
+          }
+        };
+        clampDefense();
         let remaining = total - counts[changedLine];
         const others = lines.filter(line => line !== changedLine);
         const originalOtherTotal = others.reduce((sum, line) => sum + (currentCounts[line] || 0), 0);
@@ -425,9 +446,10 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
         let sum = lines.reduce((totalCount, line) => totalCount + counts[line], 0);
         while (sum < total) {
-          const line = lines.find(candidate => counts[candidate] < maxPerLine);
+          const line = lines.find(candidate => counts[candidate] < maxPerLine && (['DEF', 'LAT'].includes(candidate) ? counts.DEF + counts.LAT < maxPerLine : true));
           if (!line) break;
           counts[line]++;
+          clampDefense();
           sum++;
         }
         while (sum > total) {
@@ -446,12 +468,23 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           const position = formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || 'MED';
           counts[position] = (counts[position] || 0) + 1;
           return counts;
-        }, { ARQ: 0, DEF: 0, MED: 0, DEL: 0 });
+        }, { ARQ: 0, DEF: 0, LAT: 0, MED: 0, DEL: 0 });
+      };
+
+      const formationPitchLineCounts = (teamNumber, players) => {
+        const counts = formationLineCounts(teamNumber, players);
+        return {
+          ARQ: counts.ARQ || 0,
+          DEF: (counts.DEF || 0) + (counts.LAT || 0),
+          MED: counts.MED || 0,
+          DEL: counts.DEL || 0,
+        };
       };
 
       const validateFormationMove = (teamNumber, players, playerId, nextPosition, currentPosition) => {
         const limits = FORMATION_LINE_LIMITS;
         const counts = formationLineCounts(teamNumber, players);
+        const pitchCounts = formationPitchLineCounts(teamNumber, players);
         if (nextPosition === currentPosition) return true;
         if (currentPosition === 'ARQ' && nextPosition !== 'ARQ') {
           showMessage('Cada equipo debe mantener un solo arquero. Para cambiarlo, intercambialo con otro jugador.', 'error');
@@ -461,8 +494,9 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           showMessage('Cada equipo puede tener un solo arquero.', 'error');
           return false;
         }
-        if (nextPosition !== 'ARQ' && (counts[nextPosition] || 0) >= limits[nextPosition]) {
-          showMessage(`Maximo ${limits[nextPosition]} jugadores por linea.`, 'error');
+        const nextPitchLine = pitchLineForPosition(nextPosition);
+        if (nextPosition !== 'ARQ' && (pitchCounts[nextPitchLine] || 0) >= limits[nextPitchLine]) {
+          showMessage(`Maximo ${limits[nextPitchLine]} jugadores por linea.`, 'error');
           return false;
         }
         return true;
@@ -475,6 +509,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         const currentGoalkeeper = players.find(player => formationDrafts[teamNumber]?.[player.id] === 'ARQ');
         const goalkeeper = currentGoalkeeper || findFormationGoalkeeper(players);
         const fieldPlayers = orderedFormationPlayers(teamNumber, players, 'DEF')
+          .concat(orderedFormationPlayers(teamNumber, players, 'LAT'))
           .concat(orderedFormationPlayers(teamNumber, players, 'MED'))
           .concat(orderedFormationPlayers(teamNumber, players, 'DEL'))
           .concat(players.filter(player => player.id !== goalkeeper?.id && formationDrafts[teamNumber]?.[player.id] === 'ARQ'))
@@ -485,10 +520,13 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         }
 
         let cursor = 0;
-        ['DEF', 'MED', 'DEL'].forEach((line) => {
+        pitchFieldPositions.forEach((line) => {
           const needed = counts[line] || 0;
           for (let i = 0; i < needed && cursor < fieldPlayers.length; i++, cursor++) {
-            formationDrafts[teamNumber][fieldPlayers[cursor].id] = line;
+            const player = fieldPlayers[cursor];
+            formationDrafts[teamNumber][player.id] = line === 'DEF' && playerPositions(player).includes('LAT') && (!playerPositions(player).includes('DEF') || adjustedPositionRating(player, 'LAT') >= adjustedPositionRating(player, 'DEF'))
+              ? 'LAT'
+              : line;
           }
         });
 
@@ -526,32 +564,41 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
             + (statValue(player, 'technique') * 0.10)
             + (statValue(player, 'teamwork') * 0.14)
             + (statValue(player, 'mentality') * 0.10);
-        } else if (position === 'DEF') {
+      } else if (position === 'DEF') {
+        rating = weightedPositionRating(player, {
+            defense_physical: 0.28,
+            rhythm: 0.20,
+            technique: 0.18,
+            teamwork: 0.13,
+            mentality: 0.13,
+            attack: 0.08,
+          });
+        } else if (position === 'LAT') {
           rating = weightedPositionRating(player, {
-            defense_physical: 0.60,
-            rhythm: 0.12,
-            technique: 0.08,
-            teamwork: 0.08,
-            mentality: 0.08,
-            attack: 0.04,
+            rhythm: 0.24,
+            defense_physical: 0.22,
+            technique: 0.17,
+            teamwork: 0.15,
+            attack: 0.12,
+            mentality: 0.10,
           });
         } else if (position === 'MED') {
           rating = weightedPositionRating(player, {
-            technique: 0.22,
-            teamwork: 0.20,
-            rhythm: 0.18,
-            mentality: 0.14,
-            defense_physical: 0.13,
-            attack: 0.13,
+            technique: 0.24,
+            rhythm: 0.23,
+            teamwork: 0.19,
+            mentality: 0.13,
+            defense_physical: 0.12,
+            attack: 0.09,
           });
         } else if (position === 'DEL') {
           rating = weightedPositionRating(player, {
-            attack: 0.60,
-            technique: 0.12,
-            rhythm: 0.10,
-            mentality: 0.08,
-            teamwork: 0.06,
-            defense_physical: 0.04,
+            attack: 0.31,
+            rhythm: 0.20,
+            technique: 0.17,
+            teamwork: 0.14,
+            mentality: 0.10,
+            defense_physical: 0.08,
           });
         }
         return applyRegularityAdjustment(rating, player);
@@ -559,9 +606,8 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const adjustedPositionRating = (player, assignedPosition) => {
         const position = String(assignedPosition || '').toUpperCase();
-        const generalRating = Number(player.skill || 0);
-        if (!position || playerPositions(player).includes(position)) {
-          return Math.max(1, Math.min(6, generalRating));
+        if (!position) {
+          return Math.max(1, Math.min(6, Number(player.skill || 0)));
         }
         const base = positionBaseRating(player, position);
         return Math.max(1, Math.min(6, base));
@@ -1006,37 +1052,50 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         if (totalTitle) {
           totalTitle.innerHTML = `<span>${readOnly ? 'Base' : 'Ajustada'}</span><strong>${(readOnly ? teamTotalSkill(teamNumber) : formationTotalSkill(teamNumber, players)).toFixed(1)} pts</strong>`;
         }
-        field.innerHTML = positions.map(pos => {
-          const linePlayers = orderedFormationPlayers(teamNumber, players, pos);
+        field.innerHTML = pitchPositions.map(pos => {
+          const linePlayers = pos === 'DEF'
+            ? orderedFormationPlayers(teamNumber, players, 'LAT').slice(0, 1)
+              .concat(orderedFormationPlayers(teamNumber, players, 'DEF'))
+              .concat(orderedFormationPlayers(teamNumber, players, 'LAT').slice(1))
+            : orderedFormationPlayers(teamNumber, players, pos);
           const canTuneLine = showLineControls && pos !== 'ARQ';
+          const lineControls = pos === 'DEF' ? ['DEF', 'LAT'] : [pos];
           const labelHtml = canTuneLine
-            ? `<div class="captain-editor-line-label has-line-controls">
-                <span><strong>${pos}</strong><small>${linePlayers.length}/${FORMATION_LINE_LIMITS[pos]}</small></span>
-                <button class="captain-editor-line-control is-minus" type="button" data-field-line="${pos}" data-field-line-delta="-1" aria-label="Quitar jugador de ${pos}">-</button>
+            ? `<div class="captain-editor-line-label captain-line-label line-label has-line-controls">
+                ${lineControls.map(controlLine => `
+                  ${pos === 'DEF' && controlLine === 'DEF' ? `<span><strong>DEF/LAT</strong><small>${linePlayers.length}/${FORMATION_LINE_LIMITS.DEF}</small></span>` : ''}
+                  ${pos !== 'DEF' ? `<span><strong>${controlLine}</strong><small>${orderedFormationPlayers(teamNumber, players, controlLine).length}/${FORMATION_LINE_LIMITS[controlLine]}</small></span>` : ''}
+                  <button class="captain-editor-line-control captain-line-control is-minus" type="button" data-field-line="${controlLine}" data-field-line-delta="-1" aria-label="Quitar jugador de ${controlLine}">-</button>
+                `).join('')}
               </div>`
-            : `<div class="captain-editor-line-label"><span><strong>${pos}</strong><small>${linePlayers.length}/${FORMATION_LINE_LIMITS[pos]}</small></span></div>`;
+            : `<div class="captain-editor-line-label captain-line-label line-label"><span><strong>${pos}</strong><small>${linePlayers.length}/${FORMATION_LINE_LIMITS[pos]}</small></span></div>`;
           const plusHtml = canTuneLine
-            ? `<button class="captain-editor-line-control is-plus" type="button" data-field-line="${pos}" data-field-line-delta="1" aria-label="Agregar jugador a ${pos}">+</button>`
+            ? lineControls.map(controlLine => `<button class="captain-editor-line-control captain-line-control is-plus" type="button" data-field-line="${controlLine}" data-field-line-delta="1" aria-label="Agregar jugador a ${controlLine}">+</button>`).join('')
             : '';
           return `
-            <div class="captain-editor-line">
+            <div class="captain-editor-line formation-line captain-formation-line ${canTuneLine ? 'has-line-tools' : ''} ${pos === 'DEF' ? 'is-defense-line' : ''}">
               ${labelHtml}
-              <div class="captain-editor-line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
+              <div class="captain-editor-line-players line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
                 ${linePlayers.length ? linePlayers.map(player => {
-                  const adjustedRating = adjustedPositionRating(player, pos);
+                  const assignedPosition = formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || pos;
+                  const naturalPositions = playerPositions(player);
+                  const primaryPosition = naturalPositions[0] || '';
+                  const adjustedRating = adjustedPositionRating(player, assignedPosition);
                   const generalRating = Number(player.skill || 0);
-                  const outOfPosition = !playerPositions(player).includes(pos);
-                  const penaltyPercent = positionPenaltyPercent(player, pos);
-                  const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${pos} ${formatSkill(adjustedRating)}`;
+                  const outOfPosition = !naturalPositions.includes(assignedPosition);
+                  const secondaryPosition = !outOfPosition && primaryPosition !== '' && assignedPosition !== primaryPosition;
+                  const penaltyPercent = positionPenaltyPercent(player, assignedPosition);
+                  const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${assignedPosition} ${formatSkill(adjustedRating)}${secondaryPosition ? ` | Secundaria: ${assignedPosition}. Primaria: ${primaryPosition}` : ''}`;
                   return `
-                  <div class="captain-editor-player ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${pos}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
-                    ${playerCardRatingHtml(adjustedRating, pos)}
-                    <strong>${escapeHtml(player.name)}</strong>
+                  <div class="captain-editor-player formation-player captain-formation-player ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${assignedPosition}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
+                    ${playerCardRatingHtml(adjustedRating, assignedPosition)}
+                    <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
+                    <span class="captain-position-pill ${secondaryPosition ? 'is-assigned-secondary' : 'is-primary'}">${escapeHtml(assignedPosition)}${secondaryPosition ? '<em class="formation-secondary-badge">2a</em>' : ''}</span>
                     ${playerPositionIconsHtml(player)}
-                    <span class="captain-editor-player-meta">${formatSkill(generalRating)}${penaltyPercent > 0 ? ` <em class="captain-editor-penalty">-${penaltyPercent}%</em>` : ''}</span>
+                    <span class="captain-editor-player-meta formation-player-meta">${formatSkill(generalRating)}${penaltyPercent > 0 ? ` <em class="captain-editor-penalty formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
                   </div>
                 `;
-                }).join('') : '<span class="captain-editor-empty">-</span>'}
+                }).join('') : '<span class="captain-editor-empty formation-player empty-slot">-</span>'}
               </div>
               ${plusHtml}
             </div>
@@ -1172,7 +1231,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           <div class="captain-custom-formation" data-custom-formation-panel></div>
         </div>
         <div class="captain-formation-title" data-formation-total-title="${teamNumber}"><span>Ajustada</span><strong>${formationTotalSkill(teamNumber, players).toFixed(1)} pts</strong></div>
-        <div class="captain-editor-field" data-captain-formation-field data-drop-team="${teamNumber}"></div>
+        <div class="captain-editor-field captain-formation-field" data-captain-formation-field data-drop-team="${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
         <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar cambios</button>
@@ -1180,7 +1239,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const renderReadonlyFormation = (teamNumber, players) => `
         <div class="captain-formation-title" data-formation-total-title="${teamNumber}"><span>Base</span><strong>${teamTotalSkill(teamNumber).toFixed(1)} pts</strong></div>
-        <div class="captain-editor-field captain-editor-field-readonly" data-captain-formation-field data-drop-team="${teamNumber}" aria-label="Formacion del equipo ${teamNumber}"></div>
+        <div class="captain-editor-field captain-formation-field captain-editor-field-readonly" data-captain-formation-field data-drop-team="${teamNumber}" aria-label="Formacion del equipo ${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
       `;
 

@@ -395,6 +395,7 @@ $ratingHelp = [
 ];
 $fieldWeightHelp = [
     'Defensor' => 'Solidez 28%, Ritmo 20%, Tecnica 18%, Juego en equipo 13%, Mentalidad 13%, Ataque 8%.',
+    'Lateral' => 'Ritmo 24%, Solidez 22%, Tecnica 17%, Juego en equipo 15%, Ataque 12%, Mentalidad 10%.',
     'Mediocampista' => 'Tecnica 24%, Ritmo 23%, Juego en equipo 19%, Mentalidad 13%, Solidez 12%, Ataque 9%.',
     'Delantero' => 'Ataque 31%, Ritmo 20%, Tecnica 17%, Juego en equipo 14%, Mentalidad 10%, Solidez 8%.',
     'Arquero' => 'Habilidad de arquero 42%, Solidez 14%, Juego en equipo 14%, Ritmo 10%, Tecnica 10%, Mentalidad 10%.',
@@ -503,12 +504,7 @@ function player_stats_radar_panel(bool $compact = false): string
 function player_position_selects(array $selectedPositions, ?string $formId = null, bool $disabled = false): string
 {
     $labels = ['Primaria', 'Secundaria'];
-    $positionLabels = [
-        'ARQ' => 'Arquero',
-        'DEF' => 'Defensor',
-        'MED' => 'Mediocampista',
-        'DEL' => 'Delantero',
-    ];
+    $positionLabels = player_position_labels();
     $formAttr = $formId !== null ? ' form="' . h($formId) . '"' : '';
     $disabledAttr = $disabled ? ' disabled' : '';
     $html = '<div class="player-position-selects" data-player-position-selects>';
@@ -527,6 +523,36 @@ function player_position_selects(array $selectedPositions, ?string $formId = nul
         $html .= '</select>';
         $html .= '</label>';
     }
+    $html .= '</div>';
+    return $html;
+}
+
+function player_position_simulation_control(array $player, array $selectedPositions): string
+{
+    $positionLabels = player_position_labels();
+    $selected = (string) ($selectedPositions[0] ?? player_primary_position($player));
+    if (!in_array($selected, allowed_positions(), true)) {
+        $selected = 'MED';
+    }
+    $rating = player_position_rating($player, $selected);
+    $html = '<div class="form-row player-position-simulation" data-position-simulation>';
+    $html .= '<label>Simular posicion</label>';
+    $html .= '<div class="player-position-simulation-body">';
+    $html .= '<select data-position-simulation-select aria-label="Simular posicion">';
+    foreach (allowed_positions() as $pos) {
+        $html .= '<option value="' . h($pos) . '"' . selected_attr($selected === $pos) . '>' . h($positionLabels[$pos] ?? $pos) . '</option>';
+    }
+    $html .= '</select>';
+    $html .= '<div class="player-position-simulation-result">';
+    $html .= '<span>Promedio general</span>';
+    $html .= '<strong data-position-simulation-six>' . h(number_format($rating, 1)) . '/6</strong>';
+    $html .= '<em data-position-simulation-stars>' . h(player_rating_stars($rating)) . '</em>';
+    $html .= '</div>';
+    $html .= '<div class="player-position-simulation-result">';
+    $html .= '<span>Puntaje general</span>';
+    $html .= '<strong data-position-simulation-card>' . h((string) shared_profile_player_fifa_overall($rating)) . '</strong>';
+    $html .= '</div>';
+    $html .= '</div>';
     $html .= '</div>';
     return $html;
 }
@@ -786,6 +812,7 @@ require __DIR__ . '/includes/header.php';
               <span data-general-rating-stars></span>
             </div>
           </div>
+          <?= player_position_simulation_control($player, $rowPositions) ?>
           <div class="form-row">
             <label>Estado</label>
             <label class="chip">
@@ -823,6 +850,7 @@ require __DIR__ . '/includes/header.php';
               <strong data-general-card-position><?= h(implode(' / ', $rowPositions)) ?></strong>
             </div>
           </article>
+          <?= player_position_simulation_control($player, $rowPositions) ?>
         </section>
         <?= player_scout_panel() ?>
       <?php endif; ?>

@@ -200,7 +200,7 @@ function repo_grouped_team_players(int $matchId): array
             continue;
         }
         if (!isset($grouped[$team])) {
-            $grouped[$team] = ['ARQ' => [], 'DEF' => [], 'MED' => [], 'DEL' => []];
+            $grouped[$team] = array_fill_keys(player_formation_lines(), []);
         }
         $line = $p['assigned_position'] ?: 'MED';
         if (!isset($grouped[$team][$line])) {

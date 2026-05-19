@@ -103,7 +103,7 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
 
     foreach ($groupedTeams as $teamNumber => $positionLines) {
         $lines[] = (string) ($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber));
-        foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+        foreach (player_formation_lines() as $line) {
             foreach ($positionLines[$line] as $player) {
                 $playerParts = ['- ' . (string) $player['name']];
                 $goals = (int) ($player['goals'] ?? 0);
@@ -161,6 +161,15 @@ function finish_player_position(array $player): string
     return player_primary_position($player);
 }
 
+function finish_formation_name_from_counts(array $counts): string
+{
+    return implode('-', [
+        (int) ($counts['DEF'] ?? 0) + (int) ($counts['LAT'] ?? 0),
+        (int) ($counts['MED'] ?? 0),
+        (int) ($counts['DEL'] ?? 0),
+    ]);
+}
+
 function finish_save_match_formations(int $matchId, array $participants, array $teams, array $teamColorData, array $teamAssignments, array $positionAssignments): void
 {
     $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], $teams);
@@ -207,7 +216,7 @@ function finish_save_match_formations(int $matchId, array $participants, array $
         foreach ($formationRows as $row) {
             $teamNumber = (int) $row['team_number'];
             $position = (string) $row['position'];
-            $lineOrder[$teamNumber] = $lineOrder[$teamNumber] ?? ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $lineOrder[$teamNumber] = $lineOrder[$teamNumber] ?? array_fill_keys(player_formation_lines(), 0);
             $lineupOrder[$teamNumber] = ($lineupOrder[$teamNumber] ?? 0) + 1;
             $lineOrder[$teamNumber][$position]++;
             $updateAssignment->execute([
@@ -228,7 +237,7 @@ function finish_save_match_formations(int $matchId, array $participants, array $
         );
         foreach ($teamNumbers as $teamNumber) {
             $teamRows = array_values(array_filter($formationRows, static fn(array $row): bool => (int) $row['team_number'] === (int) $teamNumber));
-            $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $counts = array_fill_keys(player_formation_lines(), 0);
             $totalSkill = 0.0;
             foreach ($teamRows as $row) {
                 $counts[(string) $row['position']]++;
@@ -239,7 +248,7 @@ function finish_save_match_formations(int $matchId, array $participants, array $
                 'team_number' => $teamNumber,
                 'color_name' => finish_normalize_shirt($teamColorData[$teamNumber] ?? '', $teamNumber),
                 'total_skill' => $totalSkill,
-                'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]),
+                'formation_name' => finish_formation_name_from_counts($counts),
                 'formation_data' => json_encode(array_map(static fn(array $row): array => [
                     'id' => (int) $row['id'],
                     'position' => (string) $row['position'],
@@ -786,7 +795,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
             $teamAssignments = is_array($_POST['player_team'] ?? null) ? $_POST['player_team'] : [];
             $positionAssignments = is_array($_POST['player_position'] ?? null) ? $_POST['player_position'] : [];
-            $allowedPositions = ['ARQ', 'DEF', 'MED', 'DEL'];
+            $allowedPositions = player_formation_lines();
             $participantIds = array_map(static fn(array $player): int => (int) $player['id'], $participants);
             $participantIdSet = array_flip($participantIds);
             $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], repo_match_teams($matchId));
@@ -826,7 +835,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                 foreach ($formationRows as $index => $row) {
                     $teamNumber = (int) $row['team_number'];
                     $position = (string) $row['position'];
-                    $lineOrder[$teamNumber] = $lineOrder[$teamNumber] ?? ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+                    $lineOrder[$teamNumber] = $lineOrder[$teamNumber] ?? array_fill_keys(player_formation_lines(), 0);
                     $lineupOrder[$teamNumber] = ($lineupOrder[$teamNumber] ?? 0) + 1;
                     $lineOrder[$teamNumber][$position]++;
                     $updateAssignment->execute([
@@ -847,7 +856,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                 );
                 foreach ($teamNumbers as $teamNumber) {
                     $teamRows = array_values(array_filter($formationRows, static fn(array $row): bool => (int) $row['team_number'] === (int) $teamNumber));
-                    $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+                    $counts = array_fill_keys(player_formation_lines(), 0);
                     $totalSkill = 0.0;
                     foreach ($teamRows as $row) {
                         $counts[(string) $row['position']]++;
@@ -857,7 +866,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                         'mid' => $matchId,
                         'team_number' => $teamNumber,
                         'total_skill' => $totalSkill,
-                        'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]),
+                        'formation_name' => finish_formation_name_from_counts($counts),
                         'formation_data' => json_encode(array_map(static fn(array $row): array => [
                             'id' => (int) $row['id'],
                             'position' => (string) $row['position'],
@@ -1264,7 +1273,7 @@ require __DIR__ . '/includes/header.php';
               $teamPlayerRows[(int) $team['team_number']] = [];
           }
           foreach ($groupedTeams as $teamNumber => $lines) {
-              foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line) {
+              foreach (player_formation_lines() as $line) {
                   foreach ($lines[$line] as $player) {
                       $teamPlayerRows[(int) $teamNumber][] = $player;
                   }
@@ -1411,7 +1420,7 @@ require __DIR__ . '/includes/header.php';
                       </tr>
                     </thead>
                     <tbody>
-                    <?php foreach (['ARQ', 'DEF', 'MED', 'DEL'] as $line): ?>
+                    <?php foreach (player_formation_lines() as $line): ?>
                       <?php foreach ($lines[$line] as $p): ?>
                         <?php
                           $playerId = (int) $p['id'];

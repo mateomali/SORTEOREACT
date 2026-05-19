@@ -223,6 +223,7 @@ LEFT JOIN (
     CONCAT(
       SUM(CASE WHEN assigned_position = 'ARQ' THEN 1 ELSE 0 END), '-',
       SUM(CASE WHEN assigned_position = 'DEF' THEN 1 ELSE 0 END), '-',
+      SUM(CASE WHEN assigned_position = 'LAT' THEN 1 ELSE 0 END), '-',
       SUM(CASE WHEN assigned_position = 'MED' THEN 1 ELSE 0 END), '-',
       SUM(CASE WHEN assigned_position = 'DEL' THEN 1 ELSE 0 END)
     ) AS formation_name
@@ -264,6 +265,15 @@ SET
          + (teamwork * 0.13)
          + (mentality * 0.13)
          + (attack * 0.08)
+        ) * (1 + ((regularity - 3.5) / 50.0))
+      WHEN positions = 'LAT' OR positions LIKE 'LAT/%' THEN
+       (
+         (rhythm * 0.24)
+         + (defense_physical * 0.22)
+         + (technique * 0.17)
+         + (teamwork * 0.15)
+         + (attack * 0.12)
+         + (mentality * 0.10)
         ) * (1 + ((regularity - 3.5) / 50.0))
       WHEN positions = 'DEL' OR positions LIKE 'DEL/%' THEN
        (

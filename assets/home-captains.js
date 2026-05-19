@@ -47,9 +47,12 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       </span>
     `;
 
-    const teamTotalSkill = (players) => players.reduce((total, player) => total + Number(player.skill || 0), 0);
+    const teamTotalSkill = (players) => players.reduce((total, player) => {
+      const position = player.assigned_position || player.primary_position || 'MED';
+      return total + adjustedPositionRating(player, position);
+    }, 0);
     const teamTacticLabel = (players) => {
-      const counts = ['DEF', 'MED', 'DEL'].map((position) => (
+      const counts = ['DEF', 'LAT', 'MED', 'DEL'].map((position) => (
         players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === position).length
       ));
       return counts.join('-');
@@ -78,7 +81,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
     const adjustedPositionRating = (player, assignedPosition) => {
       const position = String(assignedPosition || '').toUpperCase();
       const generalRating = Number(player.skill || 0);
-      if (!position || playerPositions(player).includes(position)) {
+      if (!position) {
         return Math.max(1, Math.min(6, generalRating));
       }
       let rating = generalRating;
@@ -92,30 +95,39 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
           + (statValue(player, 'mentality') * 0.10);
       } else if (position === 'DEF') {
         rating = weightedPositionRating(player, {
-          defense_physical: 0.60,
-          rhythm: 0.12,
-          technique: 0.08,
-          teamwork: 0.08,
-          mentality: 0.08,
-          attack: 0.04,
+          defense_physical: 0.28,
+          rhythm: 0.20,
+          technique: 0.18,
+          teamwork: 0.13,
+          mentality: 0.13,
+          attack: 0.08,
+        });
+      } else if (position === 'LAT') {
+        rating = weightedPositionRating(player, {
+          rhythm: 0.24,
+          defense_physical: 0.22,
+          technique: 0.17,
+          teamwork: 0.15,
+          attack: 0.12,
+          mentality: 0.10,
         });
       } else if (position === 'MED') {
         rating = weightedPositionRating(player, {
-          technique: 0.22,
-          teamwork: 0.20,
-          rhythm: 0.18,
-          mentality: 0.14,
-          defense_physical: 0.13,
-          attack: 0.13,
+          technique: 0.24,
+          rhythm: 0.23,
+          teamwork: 0.19,
+          mentality: 0.13,
+          defense_physical: 0.12,
+          attack: 0.09,
         });
       } else if (position === 'DEL') {
         rating = weightedPositionRating(player, {
-          attack: 0.60,
-          technique: 0.12,
-          rhythm: 0.10,
-          mentality: 0.08,
-          teamwork: 0.06,
-          defense_physical: 0.04,
+          attack: 0.31,
+          rhythm: 0.20,
+          technique: 0.17,
+          teamwork: 0.14,
+          mentality: 0.10,
+          defense_physical: 0.08,
         });
       }
       return applyRegularityAdjustment(rating, player);
@@ -147,13 +159,20 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
     const renderFormation = (players, teamNumber) => {
       const positions = ['ARQ', 'DEF', 'MED', 'DEL'];
       return positions.map((position) => {
-        const linePlayers = players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === position);
+        const linePlayers = position === 'DEF'
+          ? [
+              ...players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === 'LAT').slice(0, 1),
+              ...players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === 'DEF'),
+              ...players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === 'LAT').slice(1),
+            ]
+          : players.filter((player) => (player.assigned_position || player.primary_position || 'MED') === position);
         const playerHtml = linePlayers.length
           ? linePlayers.map((player) => {
-            const adjustedRating = adjustedPositionRating(player, position);
+            const assignedPosition = player.assigned_position || player.primary_position || position;
+            const adjustedRating = adjustedPositionRating(player, assignedPosition);
             return `
-              <div class="formation-player" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${position}" data-player-skill="${Number(player.skill || 0)}">
-                ${playerCardRatingHtml(adjustedRating, position)}
+              <div class="formation-player" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}">
+                ${playerCardRatingHtml(adjustedRating, assignedPosition)}
                 <strong>${escapeHtml(player.name)}</strong>
                 <span class="formation-player-meta">${ratingWithStar(player.skill)}</span>
               </div>
@@ -163,7 +182,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
 
         return `
           <div class="formation-line">
-            <div class="line-label">${position}</div>
+            <div class="line-label">${position === 'DEF' && linePlayers.some((player) => (player.assigned_position || player.primary_position || 'MED') === 'LAT') ? 'DEF/LAT' : position}</div>
             <div class="line-players">${playerHtml}</div>
           </div>
         `;

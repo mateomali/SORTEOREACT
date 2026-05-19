@@ -127,26 +127,29 @@ function captain_position_base_rating(array $player, string $position): float
             + (player_effective_stat($player, 'teamwork') * 0.14)
             + (player_effective_stat($player, 'mentality') * 0.10);
     } elseif ($position === 'DEF') {
-        $rating = (player_effective_stat($player, 'defense_physical') * 0.60)
-            + (player_effective_stat($player, 'rhythm') * 0.12)
-            + (player_effective_stat($player, 'technique') * 0.08)
-            + (player_effective_stat($player, 'teamwork') * 0.08)
-            + (player_effective_stat($player, 'mentality') * 0.08)
-            + (player_effective_stat($player, 'attack') * 0.04);
+        $rating = array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('DEF')),
+            player_field_stat_weights('DEF')
+        ));
+    } elseif ($position === 'LAT') {
+        $rating = array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('LAT')),
+            player_field_stat_weights('LAT')
+        ));
     } elseif ($position === 'MED') {
-        $rating = (player_effective_stat($player, 'technique') * 0.22)
-            + (player_effective_stat($player, 'teamwork') * 0.20)
-            + (player_effective_stat($player, 'rhythm') * 0.18)
-            + (player_effective_stat($player, 'mentality') * 0.14)
-            + (player_effective_stat($player, 'defense_physical') * 0.13)
-            + (player_effective_stat($player, 'attack') * 0.13);
+        $rating = array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('MED')),
+            player_field_stat_weights('MED')
+        ));
     } elseif ($position === 'DEL') {
-        $rating = (player_effective_stat($player, 'attack') * 0.60)
-            + (player_effective_stat($player, 'technique') * 0.12)
-            + (player_effective_stat($player, 'rhythm') * 0.10)
-            + (player_effective_stat($player, 'mentality') * 0.08)
-            + (player_effective_stat($player, 'teamwork') * 0.06)
-            + (player_effective_stat($player, 'defense_physical') * 0.04);
+        $rating = array_sum(array_map(
+            static fn(string $field, float $weight): float => player_effective_stat($player, $field) * $weight,
+            array_keys(player_field_stat_weights('DEL')),
+            player_field_stat_weights('DEL')
+        ));
     }
     return player_apply_regularity_adjustment($rating, $player);
 }
@@ -154,9 +157,8 @@ function captain_position_base_rating(array $player, string $position): float
 function captain_adjusted_position_rating(array $player, string $position): float
 {
     $position = strtoupper($position);
-    $general = player_overall_rating($player);
-    if ($position === '' || in_array($position, parse_positions_csv((string) ($player['positions'] ?? '')), true)) {
-        return max(1.0, min(6.0, $general));
+    if ($position === '') {
+        return player_overall_rating($player);
     }
     $base = captain_position_base_rating($player, $position);
     return max(1.0, min(6.0, $base));
@@ -259,11 +261,25 @@ function validate_captain_formation_line_counts(array $counts): void
         throw new RuntimeException('Cada equipo debe tener exactamente 1 arquero.');
     }
 
-    foreach (['DEF', 'MED', 'DEL'] as $line) {
-        if ((int) ($counts[$line] ?? 0) > 4) {
+    $pitchCounts = [
+        'DEF' => (int) ($counts['DEF'] ?? 0) + (int) ($counts['LAT'] ?? 0),
+        'MED' => (int) ($counts['MED'] ?? 0),
+        'DEL' => (int) ($counts['DEL'] ?? 0),
+    ];
+    foreach ($pitchCounts as $count) {
+        if ($count > 4) {
             throw new RuntimeException('Maximo 4 jugadores por linea en la formacion.');
         }
     }
+}
+
+function captain_formation_name_from_counts(array $counts): string
+{
+    return implode('-', [
+        (int) ($counts['DEF'] ?? 0) + (int) ($counts['LAT'] ?? 0),
+        (int) ($counts['MED'] ?? 0),
+        (int) ($counts['DEL'] ?? 0),
+    ]);
 }
 
 function captain_team_skill_totals(int $matchId): array
@@ -645,7 +661,7 @@ function finish_captain_draft(int $matchId): void
             $line = $assignmentData['assignment'][(int) $p['id']] ?? primary_position($p);
             $totalSkill += player_overall_rating($p);
         }
-        $lineCounts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        $lineCounts = array_fill_keys(player_formation_lines(), 0);
         foreach ($team as $p) {
             $line = $assignmentData['assignment'][(int) $p['id']] ?? primary_position($p);
             $lineCounts[$line] = ($lineCounts[$line] ?? 0) + 1;
@@ -656,14 +672,14 @@ function finish_captain_draft(int $matchId): void
             'team_name' => 'Equipo ' . $teamNumber,
             'captain_player_id' => $draft['captain' . $teamNumber . '_player_id'] ?? null,
             'total_skill' => $totalSkill,
-            'formation_name' => implode('-', [$lineCounts['ARQ'], $lineCounts['DEF'], $lineCounts['MED'], $lineCounts['DEL']]),
+            'formation_name' => captain_formation_name_from_counts($lineCounts),
             'formation_data' => json_encode(array_map(static function (array $p) use ($assignmentData): array {
                 $line = $assignmentData['assignment'][(int) $p['id']] ?? primary_position($p);
                 return ['id' => (int) $p['id'], 'position' => $line];
             }, $team), JSON_UNESCAPED_UNICODE),
             'color_name' => trim((string) ($draft['captain' . $teamNumber . '_color_name'] ?? '')),
         ]);
-        $lineOrder = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        $lineOrder = array_fill_keys(player_formation_lines(), 0);
         foreach ($team as $lineupIndex => $p) {
             $line = $assignmentData['assignment'][(int) $p['id']] ?? primary_position($p);
             $lineOrder[$line] = ($lineOrder[$line] ?? 0) + 1;
@@ -759,7 +775,7 @@ try {
         if (!is_array($teamsPayload) || !$teamsPayload) {
             throw new RuntimeException('Datos de formacion invalidos.');
         }
-        $allowed = ['ARQ', 'DEF', 'MED', 'DEL'];
+        $allowed = player_formation_lines();
         $matchTeams = repo_match_teams($matchId);
         $validTeams = array_flip(array_map(static fn(array $team): int => (int) $team['team_number'], $matchTeams));
         $participants = repo_match_participants($matchId);
@@ -809,7 +825,7 @@ try {
 
         $teamLineCounts = [];
         foreach (array_keys($validTeams) as $rowTeamNumber) {
-            $teamLineCounts[(int) $rowTeamNumber] = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $teamLineCounts[(int) $rowTeamNumber] = array_fill_keys(player_formation_lines(), 0);
         }
         foreach ($rows as $row) {
             $rowTeamNumber = (int) $row['team_number'];
@@ -831,7 +847,7 @@ try {
         foreach ($rows as $row) {
             $rowTeamNumber = (int) $row['team_number'];
             $position = (string) $row['position'];
-            $lineOrder[$rowTeamNumber] = $lineOrder[$rowTeamNumber] ?? ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $lineOrder[$rowTeamNumber] = $lineOrder[$rowTeamNumber] ?? array_fill_keys(player_formation_lines(), 0);
             $lineupOrder[$rowTeamNumber] = ($lineupOrder[$rowTeamNumber] ?? 0) + 1;
             $lineOrder[$rowTeamNumber][$position]++;
             $update->execute([
@@ -852,7 +868,7 @@ try {
         );
         foreach (array_keys($validTeams) as $rowTeamNumber) {
             $teamRows = array_values(array_filter($rows, static fn(array $row): bool => (int) $row['team_number'] === (int) $rowTeamNumber));
-            $counts = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+            $counts = array_fill_keys(player_formation_lines(), 0);
             $totalSkill = 0.0;
             foreach ($teamRows as $row) {
                 $counts[(string) $row['position']]++;
@@ -862,7 +878,7 @@ try {
                 'mid' => $matchId,
                 'team_number' => (int) $rowTeamNumber,
                 'total_skill' => $totalSkill,
-                'formation_name' => implode('-', [$counts['ARQ'], $counts['DEF'], $counts['MED'], $counts['DEL']]),
+                'formation_name' => captain_formation_name_from_counts($counts),
                 'formation_data' => json_encode(array_map(static fn(array $row): array => [
                     'id' => (int) $row['player_id'],
                     'position' => (string) $row['position'],
@@ -892,8 +908,8 @@ try {
         if (!is_array($assignments)) {
             throw new RuntimeException('Datos de formacion invalidos.');
         }
-        $allowed = ['ARQ', 'DEF', 'MED', 'DEL'];
-        $lineOrder = ['ARQ' => 0, 'DEF' => 0, 'MED' => 0, 'DEL' => 0];
+        $allowed = player_formation_lines();
+        $lineOrder = array_fill_keys(player_formation_lines(), 0);
         $formationData = [];
         $validRows = [];
         foreach ($assignments as $index => $row) {
@@ -959,7 +975,7 @@ try {
             'total_skill' => array_reduce($validRows, static function (float $sum, array $row) use ($teamPlayerLookup): float {
                 return $sum + player_overall_rating($teamPlayerLookup[(int) $row['player_id']]);
             }, 0.0),
-            'formation_name' => implode('-', [$lineOrder['ARQ'], $lineOrder['DEF'], $lineOrder['MED'], $lineOrder['DEL']]),
+            'formation_name' => captain_formation_name_from_counts($lineOrder),
             'formation_data' => json_encode($formationData, JSON_UNESCAPED_UNICODE),
         ]);
         $pdo->commit();
