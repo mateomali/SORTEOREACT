@@ -1405,6 +1405,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
           <?php elseif ($latestIsFinalized): ?>
             <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>">Ver resultado</a>
           <?php endif; ?>
+          <a class="btn btn-muted" href="exportar_fecha.php?match_id=<?= $latestId ?>&amp;mode=completo" data-no-partial>Exportar CSV</a>
         </div>
       </article>
     <?php endif; ?>
@@ -1507,6 +1508,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_multiple.php?match_id=<?= $matchId ?>">Multiple</a>
               <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
               <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Manual</a>
+              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=convocados" data-no-partial>CSV</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
               <span class="btn btn-disabled icon-dice" data-short=""><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
@@ -1530,6 +1532,10 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <a class="btn btn-muted" data-short="V" href="finalizar_partido.php?match_id=<?= $matchId ?>" title="Ver resultado">Ver</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-finish" data-short="" title="Primero hay que generar equipos por sorteo o capitanes">Finalizar</span>
+            <?php endif; ?>
+
+            <?php if (!$isScheduled): ?>
+              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=completo" data-no-partial>CSV</a>
             <?php endif; ?>
 
             <?php if ($isScheduled): ?>
@@ -1573,6 +1579,9 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <?php elseif ($isFinalized): ?>
                 <a class="btn btn-muted" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
               <?php endif; ?>
+
+              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=completo" data-no-partial>Exportar completa CSV</a>
+              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=convocados" data-no-partial>Exportar convocados CSV</a>
 
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">

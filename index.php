@@ -501,11 +501,11 @@ function history_team_label_short(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => 'ðŸ’—',
-        'AZUL' => 'ðŸ’™',
-        'VERDE' => 'ðŸ’š',
-        'NEGRO' => 'ðŸ–¤',
-        'NARANJA' => 'ðŸ§¡',
+        'ROSA' => '💗',
+        'AZUL' => '💙',
+        'VERDE' => '💚',
+        'NEGRO' => '🖤',
+        'NARANJA' => '🧡',
         'CAMISADO' => 'C',
         'DESCAMISADO' => 'D',
     ];
@@ -850,7 +850,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
               </span>
             </div>
             <?= render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $teamTacticLabel) ?>
-            <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
+            <?php $formationPitchClass = (string) $match['status'] === 'finalizado' ? 'is-result-formation' : 'is-base-formation'; ?>
+            <div class="team-formation <?= h($formationPitchClass) ?>" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
               <?php foreach (player_pitch_lines() as $line): ?>
                 <?php
                   $linePlayers = $line === 'DEF'
@@ -872,6 +873,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $formationAwards = $playerAwardIcons[(int) $player['id']] ?? [];
                           $isPlayerOfMatch = (bool) array_filter($formationAwards, static fn(array $award): bool => ($award['code'] ?? '') === 'player_of_match');
                           $formationOverall = player_overall_rating($player);
+                          $formationBaseRating = home_adjusted_position_rating($player, $assignedLine);
                         ?>
                         <div
                           class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?> <?= $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
@@ -891,8 +893,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
                         >
                           <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
-                          <span class="player-card-rating formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
                           <?php if ((string) $match['status'] === 'finalizado'): ?>
+                            <span class="player-card-rating formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
                             <span class="formation-player-meta formation-player-position" title="Posicion"><?= h($assignedLine) ?></span>
                             <?php if ($formationGoals > 0 || $formationAwards): ?>
                               <span>
@@ -912,7 +914,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                               </span>
                             <?php endif; ?>
                           <?php else: ?>
-                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> ⭐</span>
+                            <?= render_player_card_rating($formationBaseRating, $assignedLine) ?>
+                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> &#9733;</span>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>
@@ -1324,14 +1327,14 @@ require __DIR__ . '/includes/header.php';
               <h4>Equipo 1</h4>
               <span class="small-muted">Esperando datos...</span>
             </div>
-            <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="1"></div>
+            <div class="team-formation is-base-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="1"></div>
           </article>
           <article class="team-card">
             <div class="team-head">
               <h4>Equipo 2</h4>
               <span class="small-muted">Esperando datos...</span>
             </div>
-            <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="2"></div>
+            <div class="team-formation is-base-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="2"></div>
           </article>
         </div>
       <?php else: ?>
@@ -1383,3 +1386,4 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
+

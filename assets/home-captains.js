@@ -205,7 +205,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             <div class="formation-total-title" data-formation-total-title><span>Base</span><strong>${totalSkill.toFixed(1)} pts</strong></div>
             <div class="formation-total-title formation-tactic-title"><span>TACTICA</span><strong data-formation-tactic>${teamTacticLabel(players)}</strong></div>
           </div>
-          <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="${teamNumber}">${renderFormation(players, teamNumber)}</div>
+          <div class="team-formation is-base-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="${teamNumber}">${renderFormation(players, teamNumber)}</div>
           ${renderTeamCharacteristics(players)}
         </article>
       `;

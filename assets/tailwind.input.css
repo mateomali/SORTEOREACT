@@ -16348,9 +16348,10 @@ body.page-index .content .match-history .team-formation {
   border: 1px solid #9bcab4;
   border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(5, 39, 25, 0.08), rgba(5, 39, 25, 0.22)),
-    url("./images/captain-field-bg-vertical.jpg") center / cover no-repeat,
-    #173f25;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.10) 0 2px, transparent 2px 100%),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(160deg, #1e7d3f, #125f2f);
+  background-size: 45px 100%, 100% 27px, 100% 100%;
   box-shadow: none;
 }
 
@@ -16476,9 +16477,10 @@ body.page-historial .content .match-history .team-formation {
   border: 1px solid #9bcab4;
   border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(5, 39, 25, 0.08), rgba(5, 39, 25, 0.22)),
-    url("./images/captain-field-bg-vertical.jpg") center / cover no-repeat,
-    #173f25;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.10) 0 2px, transparent 2px 100%),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(160deg, #1e7d3f, #125f2f);
+  background-size: 45px 100%, 100% 27px, 100% 100%;
   box-shadow: none;
 }
 
@@ -16656,14 +16658,37 @@ body.page-index .content .match-history .team-formation,
 body.page-historial .content .match-history .team-formation {
   border-color: #7fb89c;
   background:
-    linear-gradient(180deg, rgba(3, 28, 17, 0.04), rgba(3, 28, 17, 0.18)),
-    url("./images/captain-field-bg-vertical.jpg") center / cover no-repeat,
-    #173f25;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.10) 0 2px, transparent 2px 100%),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(160deg, #1e7d3f, #125f2f);
+  background-size: 45px 100%, 100% 27px, 100% 100%;
 }
 
 body.page-index .content .match-history .team-formation::before,
 body.page-historial .content .match-history .team-formation::before {
   background: rgba(2, 18, 11, 0.08);
+}
+
+body.page-index .content .match-history .team-formation.is-base-formation,
+body.page-historial .content .match-history .team-formation.is-base-formation {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.10) 0 2px, transparent 2px 100%),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(160deg, #1e7d3f, #125f2f) !important;
+  background-size: 45px 100%, 100% 27px, 100% 100% !important;
+}
+
+body.page-index .content .match-history .team-formation.is-result-formation,
+body.page-historial .content .match-history .team-formation.is-result-formation {
+  background:
+    linear-gradient(180deg, rgba(5, 39, 25, 0.08), rgba(5, 39, 25, 0.22)),
+    url("./images/captain-field-bg-vertical.jpg") center / cover no-repeat,
+    #173f25;
+}
+
+body.page-index .content .match-history .team-formation.is-result-formation::before,
+body.page-historial .content .match-history .team-formation.is-result-formation::before {
+  background: rgba(5, 26, 16, 0.16);
 }
 
 body.page-index .content .match-history .line-label,
