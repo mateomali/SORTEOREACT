@@ -394,13 +394,11 @@ $ratingHelp = [
     '6 puntos' => 'Excelente.',
 ];
 $fieldWeightHelp = [
-    'Ataque 24%' => 'Premia al jugador que genera o define.',
-    'Tecnica 18%' => 'Mantiene valor para el que juega bien.',
-    'Ritmo 18%' => 'En futbol amateur pesa mucho: correr y volver cambia partidos.',
-    'Solidez 18%' => 'Evita que solo cuente atacar.',
-    'Juego en equipo 12%' => 'Mide generosidad y decisiones colectivas sin mezclarlo con caracter.',
-    'Mentalidad 10%' => 'Suma foco, temple y capacidad de sostenerse en partido.',
-    'Regularidad +/-5%' => 'Ajusta el promedio final: 6 suma 5%, 1 resta 5%, 3/4 quedan casi neutros.',
+    'Defensor' => 'Solidez 28%, Ritmo 20%, Tecnica 18%, Juego en equipo 13%, Mentalidad 13%, Ataque 8%.',
+    'Mediocampista' => 'Tecnica 24%, Ritmo 23%, Juego en equipo 19%, Mentalidad 13%, Solidez 12%, Ataque 9%.',
+    'Delantero' => 'Ataque 31%, Ritmo 20%, Tecnica 17%, Juego en equipo 14%, Mentalidad 10%, Solidez 8%.',
+    'Arquero' => 'Habilidad de arquero 42%, Solidez 14%, Juego en equipo 14%, Ritmo 10%, Tecnica 10%, Mentalidad 10%.',
+    'Regularidad +/-5%' => 'Ajusta la valoracion final segun constancia: 6 suma 5%, 1 resta 5%, 3/4 quedan casi neutros.',
 ];
 
 function stat_rating_control(string $name, float $value, ?string $formId = null, bool $compact = false, bool $readonly = false): string
@@ -417,12 +415,12 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
     $html .= '<div class="' . $starsClass . '" role="radiogroup" aria-label="' . h($name) . '">';
     for ($i = 1; $i <= 6; $i++) {
         $activeClass = $i <= $rating ? ' is-active text-[#f5b625]' : ' text-[#c6d3ce]';
-        $starClasses = 'stat-rating-star inline-flex h-6 w-4 items-center justify-center rounded-none bg-transparent p-0 text-lg leading-none shadow-none transition-colors' . $activeClass;
+        $starClasses = 'stat-rating-star inline-flex h-6 w-4 items-center justify-center rounded-none border-0 bg-transparent p-0 text-lg leading-none shadow-none transition-colors' . $activeClass;
         if ($readonly) {
             $html .= '<span class="' . $starClasses . '" aria-hidden="true">★</span>';
             continue;
         }
-        $html .= '<span class="' . $starClasses . ' cursor-pointer focus:outline-none focus:ring-2 focus:ring-lime-200/70" tabindex="0" data-stat-value="' . $i . '" role="radio" aria-checked="' . ($i === $rating ? 'true' : 'false') . '" aria-label="' . $i . ' de 6">★</span>';
+        $html .= '<button class="' . $starClasses . ' cursor-pointer focus:outline-none focus:ring-2 focus:ring-lime-200/70" type="button" data-stat-value="' . $i . '" role="radio" aria-checked="' . ($i === $rating ? 'true' : 'false') . '" aria-label="' . $i . ' de 6">★</button>';
     }
     $html .= '</div>';
     $html .= '<div class="stat-rating-bar-shell relative col-span-full row-start-2 grid min-h-3 min-w-0 flex-1 items-center">';
@@ -465,7 +463,7 @@ function player_stats_help_panel(array $statLabels, array $statHelp, array $rati
         $html .= '<p><strong>' . h((string) $label) . ':</strong> ' . h((string) $help) . '</p>';
     }
     $html .= '</section>';
-    $html .= '<section class="player-stat-help-wide"><h4>Promedio general</h4>';
+    $html .= '<section class="player-stat-help-wide"><h4>Valoracion general por posicion</h4>';
     foreach ($fieldWeightHelp as $label => $help) {
         $html .= '<p><strong>' . h((string) $label) . ':</strong> ' . h((string) $help) . '</p>';
     }
@@ -533,7 +531,7 @@ function player_position_selects(array $selectedPositions, ?string $formId = nul
     return $html;
 }
 
-$players = repo_all_players($isAdmin ? false : true);
+$players = repo_all_players(!$isAdmin || !$showInactive);
 $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores.php';
 $disableContrastOverrides = true;
@@ -547,7 +545,12 @@ require __DIR__ . '/includes/header.php';
     <p class="small-muted"><?= $isAdmin ? 'Alta, edicion y administracion general de la plantilla.' : 'Consulta de plantilla, posiciones y stats actuales.' ?></p>
   </div>
   <?php if ($isAdmin): ?>
-    <a class="btn btn-muted" href="migrar_csv.php">Migrar desde CSV</a>
+    <div class="btn-row">
+      <a class="btn btn-muted" href="<?= $showInactive ? 'jugadores.php' : 'jugadores.php?show_inactive=1' ?>">
+        <?= $showInactive ? 'Ver solo activos' : 'Mostrar inactivos' ?>
+      </a>
+      <a class="btn btn-muted" href="migrar_csv.php">Migrar desde CSV</a>
+    </div>
   <?php endif; ?>
 </section>
 
@@ -571,7 +574,7 @@ require __DIR__ . '/includes/header.php';
   <div class="section-toolbar">
     <div>
       <h3>Listado de jugadores</h3>
-      <p class="small-muted"><?= $isAdmin ? 'Mostrando todos los jugadores.' : 'Mostrando solo jugadores activos.' ?></p>
+      <p class="small-muted"><?= ($isAdmin && $showInactive) ? 'Mostrando activos e inactivos.' : 'Mostrando solo jugadores activos.' ?></p>
     </div>
     <div
       data-react-root

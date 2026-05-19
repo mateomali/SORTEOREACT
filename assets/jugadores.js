@@ -1402,20 +1402,43 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       }
 
       const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
-      const hasGoalkeeper = hasPrimaryGoalkeeper(scope);
-      const raw = hasGoalkeeper
-        ? (getValue('goalkeeper_skill') * 0.42)
-          + (getValue('defense_physical') * 0.14)
-          + (getValue('rhythm') * 0.10)
-          + (getValue('technique') * 0.10)
-          + (getValue('teamwork') * 0.14)
-          + (getValue('mentality') * 0.10)
-        : (getValue('technique') * 0.18)
-          + (getValue('rhythm') * 0.18)
-          + (getValue('defense_physical') * 0.18)
-          + (getValue('attack') * 0.24)
-          + (getValue('teamwork') * 0.12)
-          + (getValue('mentality') * 0.10);
+      const primaryPosition = selectedPositionsInOrder(scope)[0] || (hasPrimaryGoalkeeper(scope) ? 'ARQ' : 'MED');
+      const weightsByPosition = {
+        ARQ: {
+          goalkeeper_skill: 0.42,
+          defense_physical: 0.14,
+          rhythm: 0.10,
+          technique: 0.10,
+          teamwork: 0.14,
+          mentality: 0.10,
+        },
+        DEF: {
+          defense_physical: 0.28,
+          rhythm: 0.20,
+          technique: 0.18,
+          teamwork: 0.13,
+          mentality: 0.13,
+          attack: 0.08,
+        },
+        MED: {
+          technique: 0.24,
+          rhythm: 0.23,
+          teamwork: 0.19,
+          mentality: 0.13,
+          defense_physical: 0.12,
+          attack: 0.09,
+        },
+        DEL: {
+          attack: 0.31,
+          rhythm: 0.20,
+          technique: 0.17,
+          teamwork: 0.14,
+          mentality: 0.10,
+          defense_physical: 0.08,
+        },
+      };
+      const weights = weightsByPosition[primaryPosition] || weightsByPosition.MED;
+      const raw = Object.entries(weights).reduce((total, [field, weight]) => total + (getValue(field) * weight), 0);
       const regularityFactor = 1 + ((getValue('regularity') - 3.5) / 50);
       const rounded = Math.max(1, Math.min(6, Math.round(raw * regularityFactor * 10) / 10));
 

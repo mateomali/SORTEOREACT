@@ -69,20 +69,43 @@ function cardOverallFromSix(value) {
 }
 
 function overall(stats, selectedPositions) {
-  const hasGoalkeeper = selectedPositions[0] === 'ARQ';
-  const base = hasGoalkeeper
-    ? (stats.goalkeeper_skill * 0.42)
-      + (stats.defense_physical * 0.14)
-      + (stats.rhythm * 0.10)
-      + (stats.technique * 0.10)
-      + (stats.teamwork * 0.14)
-      + (stats.mentality * 0.10)
-    : (stats.technique * 0.18)
-      + (stats.rhythm * 0.18)
-      + (stats.defense_physical * 0.18)
-      + (stats.attack * 0.24)
-      + (stats.teamwork * 0.12)
-      + (stats.mentality * 0.10);
+  const primaryPosition = selectedPositions[0] || 'MED';
+  const weightsByPosition = {
+    ARQ: {
+      goalkeeper_skill: 0.42,
+      defense_physical: 0.14,
+      rhythm: 0.10,
+      technique: 0.10,
+      teamwork: 0.14,
+      mentality: 0.10,
+    },
+    DEF: {
+      defense_physical: 0.28,
+      rhythm: 0.20,
+      technique: 0.18,
+      teamwork: 0.13,
+      mentality: 0.13,
+      attack: 0.08,
+    },
+    MED: {
+      technique: 0.24,
+      rhythm: 0.23,
+      teamwork: 0.19,
+      mentality: 0.13,
+      defense_physical: 0.12,
+      attack: 0.09,
+    },
+    DEL: {
+      attack: 0.31,
+      rhythm: 0.20,
+      technique: 0.17,
+      teamwork: 0.14,
+      mentality: 0.10,
+      defense_physical: 0.08,
+    },
+  };
+  const weights = weightsByPosition[primaryPosition] || weightsByPosition.MED;
+  const base = Object.entries(weights).reduce((total, [field, weight]) => total + ((stats[field] || 3) * weight), 0);
   const regularityFactor = 1 + ((stats.regularity - 3.5) / 50);
   return Math.max(1, Math.min(6, Math.round(base * regularityFactor * 10) / 10));
 }
@@ -337,7 +360,7 @@ export function PlayerCreateIsland({ root }) {
               ))}
             </section>
             <section className="player-stat-help-wide md:col-span-2">
-              <h4 className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-200">Promedio general</h4>
+              <h4 className="mb-2 text-xs font-extrabold uppercase tracking-wide text-lime-200">Valoracion general por posicion</h4>
               {Object.entries(weightHelp).map(([label, text]) => (
                 <p className="m-0 text-xs leading-snug text-emerald-50/80" key={label}><strong className="text-lime-100">{label}:</strong> {text}</p>
               ))}

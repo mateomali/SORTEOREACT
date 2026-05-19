@@ -413,14 +413,32 @@ function backfill_control_schema(PDO $pdo): void
                       + (teamwork * 0.14)
                       + (mentality * 0.10)
                      ) * (1 + ((regularity - 3.5) / 50.0))
-                    ELSE
-                     (
-                      (technique * 0.18)
-                      + (rhythm * 0.18)
-                      + (defense_physical * 0.18)
-                      + (attack * 0.24)
-                      + (teamwork * 0.12)
+                   WHEN positions = 'DEF' OR positions LIKE 'DEF/%' THEN
+                    (
+                      (defense_physical * 0.28)
+                      + (rhythm * 0.20)
+                      + (technique * 0.18)
+                      + (teamwork * 0.13)
+                      + (mentality * 0.13)
+                      + (attack * 0.08)
+                     ) * (1 + ((regularity - 3.5) / 50.0))
+                   WHEN positions = 'DEL' OR positions LIKE 'DEL/%' THEN
+                    (
+                      (attack * 0.31)
+                      + (rhythm * 0.20)
+                      + (technique * 0.17)
+                      + (teamwork * 0.14)
                       + (mentality * 0.10)
+                      + (defense_physical * 0.08)
+                     ) * (1 + ((regularity - 3.5) / 50.0))
+                   ELSE
+                     (
+                      (technique * 0.24)
+                      + (rhythm * 0.23)
+                      + (teamwork * 0.19)
+                      + (mentality * 0.13)
+                      + (defense_physical * 0.12)
+                      + (attack * 0.09)
                      ) * (1 + ((regularity - 3.5) / 50.0))
                  END
                )),

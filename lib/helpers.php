@@ -223,16 +223,34 @@ function player_field_stat_fields(): array
     return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 }
 
-function player_field_stat_weights(): array
+function player_field_stat_weights(?string $position = null): array
 {
-    return [
-        'technique' => 0.18,
-        'rhythm' => 0.18,
-        'defense_physical' => 0.18,
-        'attack' => 0.24,
-        'teamwork' => 0.12,
-        'mentality' => 0.10,
-    ];
+    return match (strtoupper((string) ($position ?? 'MED'))) {
+        'DEF' => [
+            'defense_physical' => 0.28,
+            'rhythm' => 0.20,
+            'technique' => 0.18,
+            'teamwork' => 0.13,
+            'mentality' => 0.13,
+            'attack' => 0.08,
+        ],
+        'DEL' => [
+            'attack' => 0.31,
+            'rhythm' => 0.20,
+            'technique' => 0.17,
+            'teamwork' => 0.14,
+            'mentality' => 0.10,
+            'defense_physical' => 0.08,
+        ],
+        default => [
+            'technique' => 0.24,
+            'rhythm' => 0.23,
+            'teamwork' => 0.19,
+            'mentality' => 0.13,
+            'defense_physical' => 0.12,
+            'attack' => 0.09,
+        ],
+    };
 }
 
 function player_goalkeeper_stat_weights(): array
@@ -253,7 +271,7 @@ function player_draw_balance_weights(): array
         'general' => 50.0,
         'attack' => 15.0,
         'defense_physical' => 15.0,
-        'rhythm' => 10.0,
+        'rhythm' => 18.0,
         'technique' => 5.0,
         'teamwork' => 8.0,
         'mentality' => 10.0,
@@ -291,7 +309,8 @@ function player_has_goalkeeper_position(array $player): bool
 
 function player_overall_rating(array $player): float
 {
-    if (player_has_goalkeeper_position($player)) {
+    $primaryPosition = player_primary_position($player);
+    if ($primaryPosition === 'ARQ') {
         $total = 0.0;
         foreach (player_goalkeeper_stat_weights() as $field => $weight) {
             $total += player_effective_stat($player, $field) * $weight;
@@ -300,7 +319,7 @@ function player_overall_rating(array $player): float
     }
 
     $total = 0.0;
-    foreach (player_field_stat_weights() as $field => $weight) {
+    foreach (player_field_stat_weights($primaryPosition) as $field => $weight) {
         $total += player_effective_stat($player, $field) * $weight;
     }
     return round(player_apply_regularity_adjustment($total, $player), 1);
