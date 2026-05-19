@@ -625,6 +625,49 @@ function public_team_players_from_lines(array $lines): array
     return $players;
 }
 
+function public_base_display_position(array $player): string
+{
+    $assigned = strtoupper(trim((string) ($player['assigned_position'] ?? '')));
+    if ($assigned !== '' && in_array($assigned, allowed_positions(), true)) {
+        return $assigned;
+    }
+
+    $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
+    if ((int) ($player['is_goalkeeper'] ?? 0) === 1 || ($positions[0] ?? '') === 'ARQ') {
+        return 'ARQ';
+    }
+    if (in_array('LAT', $positions, true)) {
+        return 'LAT';
+    }
+
+    return $positions[0] ?? 'MED';
+}
+
+function public_base_display_lines(array $lines): array
+{
+    $displayLines = array_fill_keys(player_formation_lines(), []);
+    foreach (public_team_players_from_lines($lines) as $player) {
+        $position = public_base_display_position($player);
+        $player['assigned_position'] = $position;
+        $displayLines[$position][] = $player;
+    }
+
+    foreach ($displayLines as &$linePlayers) {
+        usort($linePlayers, static function (array $a, array $b): int {
+            $formationOrderA = $a['formation_line_order'] !== null ? (int) $a['formation_line_order'] : 999;
+            $formationOrderB = $b['formation_line_order'] !== null ? (int) $b['formation_line_order'] : 999;
+            $lineupOrderA = $a['lineup_order'] !== null ? (int) $a['lineup_order'] : 999;
+            $lineupOrderB = $b['lineup_order'] !== null ? (int) $b['lineup_order'] : 999;
+            return ($formationOrderA <=> $formationOrderB)
+                ?: ($lineupOrderA <=> $lineupOrderB)
+                ?: strcasecmp((string) $a['name'], (string) $b['name']);
+        });
+    }
+    unset($linePlayers);
+
+    return $displayLines;
+}
+
 function public_team_tactic_label(array $lines): string
 {
     $counts = [];
@@ -724,6 +767,9 @@ function render_public_match_detail_content(array $match, array $awardDefinition
 {
     $matchId = (int) $match['id'];
     $participants = repo_match_participants($matchId);
+    $isFinalized = (string) $match['status'] === 'finalizado';
+    $ratedPlayers = array_values(array_filter($participants, static fn(array $p): bool => $p['rating'] !== null));
+    $showResultFormation = $isFinalized && $ratedPlayers !== [];
     $resultParticipants = $participants;
     usort($resultParticipants, static function (array $a, array $b): int {
         $ratingA = $a['rating'] !== null ? (float) $a['rating'] : -1.0;
@@ -748,8 +794,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     $playerAwardIcons = match_player_award_icons($savedMatchAwards, $awardDefinitions);
     $matchAwards = [];
 
-    if ((string) $match['status'] === 'finalizado') {
-        $ratedPlayers = array_values(array_filter($participants, static fn(array $p): bool => $p['rating'] !== null));
+    if ($isFinalized) {
         usort($ratedPlayers, static fn(array $a, array $b): int => ((float) $b['rating'] <=> (float) $a['rating']) ?: strcasecmp((string) $a['name'], (string) $b['name']));
         if (!$savedMatchAwards && $ratedPlayers) {
             $matchAwards[] = ['label' => 'Figura', 'value' => (string) $ratedPlayers[0]['name'] . ' (' . number_format((float) $ratedPlayers[0]['rating'], 1) . ')'];
@@ -797,7 +842,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
-      <?php if ((string) $match['status'] === 'finalizado' && $matchAwards): ?>
+      <?php if ($isFinalized && $matchAwards): ?>
         <section class="match-results">
           <h3>Resumen de la fecha</h3>
           <h4 class="match-awards-title">Premios</h4>
@@ -830,19 +875,20 @@ function render_public_match_detail_content(array $match, array $awardDefinition
       <div class="grid cols-2 public-teams">
         <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
           <?php
-            $teamPlayersForCharacteristics = public_team_players_from_lines($lines);
-            $teamTacticLabel = public_team_tactic_label($lines);
+            $displayLines = $showResultFormation ? $lines : public_base_display_lines($lines);
+            $teamPlayersForCharacteristics = public_team_players_from_lines($displayLines);
+            $teamTacticLabel = public_team_tactic_label($displayLines);
           ?>
           <article class="team-card">
             <div class="team-head">
               <h4>
                 <?= render_team_label(
                     $teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber),
-                    (string) $match['status'] === 'finalizado' ? (int) ($teamGoals[(int) $teamNumber] ?? 0) : null
+                    $isFinalized ? (int) ($teamGoals[(int) $teamNumber] ?? 0) : null
                 ) ?>
               </h4>
               <span class="small-muted">
-                <?php if ((string) $match['status'] === 'finalizado'): ?>
+                <?php if ($isFinalized): ?>
                   <?= h((string) ($teamGoals[$teamNumber] ?? 0)) ?> goles
                 <?php else: ?>
                   Formacion base
@@ -850,14 +896,14 @@ function render_public_match_detail_content(array $match, array $awardDefinition
               </span>
             </div>
             <?= render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $teamTacticLabel) ?>
-            <?php $formationPitchClass = (string) $match['status'] === 'finalizado' ? 'is-result-formation' : 'is-base-formation'; ?>
+            <?php $formationPitchClass = $showResultFormation ? 'is-result-formation' : 'is-base-formation'; ?>
             <div class="team-formation <?= h($formationPitchClass) ?>" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
               <?php foreach (player_pitch_lines() as $line): ?>
                 <?php
                   $linePlayers = $line === 'DEF'
-                      ? array_merge(array_slice($lines['LAT'] ?? [], 0, 1), $lines['DEF'] ?? [], array_slice($lines['LAT'] ?? [], 1))
-                      : ($lines[$line] ?? []);
-                  $lineLabel = $line === 'DEF' && !empty($lines['LAT']) ? 'DEF/LAT' : $line;
+                      ? array_merge(array_slice($displayLines['LAT'] ?? [], 0, 1), $displayLines['DEF'] ?? [], array_slice($displayLines['LAT'] ?? [], 1))
+                      : ($displayLines[$line] ?? []);
+                  $lineLabel = $line === 'DEF' && !empty($displayLines['LAT']) ? 'DEF/LAT' : $line;
                 ?>
                 <div class="formation-line">
                   <div class="line-label"><?= h($lineLabel) ?></div>
@@ -874,9 +920,18 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $isPlayerOfMatch = (bool) array_filter($formationAwards, static fn(array $award): bool => ($award['code'] ?? '') === 'player_of_match');
                           $formationOverall = player_overall_rating($player);
                           $formationBaseRating = home_adjusted_position_rating($player, $assignedLine);
+                          $naturalPositions = parse_positions_csv((string) ($player['positions'] ?? ''));
+                          $primaryPosition = $naturalPositions[0] ?? '';
+                          $isOutOfPosition = $naturalPositions !== [] && !in_array($assignedLine, $naturalPositions, true);
+                          $isSecondaryPosition = !$isOutOfPosition && $primaryPosition !== '' && $assignedLine !== $primaryPosition;
+                          $baseFormationClass = !$showResultFormation
+                              ? ' captain-formation-player'
+                                  . ($isOutOfPosition ? ' is-out-of-position' : '')
+                                  . ($isSecondaryPosition ? ' is-secondary-position' : '')
+                              : '';
                         ?>
                         <div
-                          class="formation-player <?= $formationGoals > 0 ? 'scored-player' : '' ?> <?= $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
+                          class="formation-player<?= h($baseFormationClass) ?> <?= $showResultFormation && $formationGoals > 0 ? 'scored-player' : '' ?> <?= $showResultFormation && $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
                           draggable="false"
                           data-static-formation-player
                           data-static-player-key="<?= h((string) $player['id']) ?>"
@@ -892,8 +947,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
                         >
-                          <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
-                          <?php if ((string) $match['status'] === 'finalizado'): ?>
+                          <?php if ($showResultFormation): ?>
+                            <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
                             <span class="player-card-rating formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
                             <span class="formation-player-meta formation-player-position" title="Posicion"><?= h($assignedLine) ?></span>
                             <?php if ($formationGoals > 0 || $formationAwards): ?>
@@ -915,7 +970,11 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                             <?php endif; ?>
                           <?php else: ?>
                             <?= render_player_card_rating($formationBaseRating, $assignedLine) ?>
-                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> &#9733;</span>
+                            <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
+                            <span class="captain-position-pill <?= $isSecondaryPosition ? 'is-assigned-secondary' : '' ?>">
+                              <?= h($assignedLine) ?><?php if ($isSecondaryPosition): ?> <em class="formation-secondary-badge">2a</em><?php endif; ?>
+                            </span>
+                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?></span>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>
@@ -929,7 +988,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
         <?php endforeach; ?>
       </div>
 
-      <?php if ((string) $match['status'] === 'finalizado'): ?>
+      <?php if ($isFinalized): ?>
         <?= render_public_round_robin_results($roundRobinResults, $teamLabels) ?>
         <section class="match-results">
           <h3>Resumen de la fecha</h3>
