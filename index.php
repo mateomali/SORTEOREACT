@@ -51,7 +51,9 @@ function render_player_card_rating(float $value, string $label = 'GEN'): string
 {
     return '<span class="player-card-rating" title="Puntaje tarjeta"><strong>'
         . h((string) home_player_card_rating($value))
-        . '</strong><span>' . h(strtoupper($label)) . '</span></span>';
+        . '</strong>'
+        . ($label !== '' ? '<span>' . h(strtoupper($label)) . '</span>' : '')
+        . '</span>';
 }
 
 function home_position_base_rating(array $player, string $position): float
@@ -969,7 +971,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                               </span>
                             <?php endif; ?>
                           <?php else: ?>
-                            <?= render_player_card_rating($formationBaseRating, $assignedLine) ?>
+                            <?= render_player_card_rating($formationBaseRating, '') ?>
                             <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
                             <span class="captain-position-pill <?= $isSecondaryPosition ? 'is-assigned-secondary' : '' ?>">
                               <?= h($assignedLine) ?><?php if ($isSecondaryPosition): ?> <em class="formation-secondary-badge">2a</em><?php endif; ?>
