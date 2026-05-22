@@ -6,11 +6,6 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     window.goodfellasPlayersCleanup = () => playerPageAbortController.abort();
     document.addEventListener('goodfellas:before-partial-render', window.goodfellasPlayersCleanup, { once: true });
     const statNames = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
-    const normalizeSixRating = (value, fallback = 1) => {
-      const number = Number.parseFloat(String(value ?? ''));
-      const base = Number.isFinite(number) ? number : fallback;
-      return Math.max(1, Math.min(6, Math.round(base * 10) / 10));
-    };
     const formatRating = (rating) => Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
     const cardOverallFromSix = (value) => {
       const clamped = Math.max(1, Math.min(6, Number(value) || 1));
@@ -1305,7 +1300,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           <div class="player-radar-floating-stat rounded-xl border border-lime-200/30 bg-emerald-950/70 px-3 py-2">
             <div class="mb-1 flex items-center justify-between gap-2">
               <span class="text-[11px] font-extrabold uppercase text-lime-100">${radarLabels[field]}</span>
-              <strong class="rounded-full bg-lime-100 px-2 py-0.5 text-[10px] font-black text-[#07130f]" title="${formatRating(value)}/6">${cardOverallFromSix(value)}</strong>
+              <strong class="rounded-full bg-lime-100 px-2 py-0.5 text-[10px] font-black text-[#07130f]">${formatRating(value)}/6</strong>
             </div>
             <div class="h-1.5 overflow-hidden rounded-full bg-emerald-900">
               <span class="block h-full rounded-full" style="width:${percent}%; background-color:${statBarColor(value)}"></span>
@@ -1511,7 +1506,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
     };
 
     const setRating = (root, value) => {
-      const rating = normalizeSixRating(value);
+      const rating = Math.max(1, Math.min(6, Number(value) || 1));
       const input = root.querySelector('[data-stat-rating-input]');
       const label = root.querySelector('[data-stat-rating-value]');
       const previous = input?.value;
@@ -1522,10 +1517,7 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
           input.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
-      if (label) {
-        label.textContent = String(cardOverallFromSix(rating));
-        label.setAttribute('title', `${formatRating(rating)}/6`);
-      }
+      if (label) label.textContent = `${rating}/6`;
       const range = root.querySelector('[data-stat-rating-range]');
       if (range) range.value = String(rating);
       const bar = root.querySelector('[data-stat-rating-bar]');
@@ -1573,10 +1565,9 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
             ? 1
             : event.key === 'End'
               ? 6
-              : current + (['ArrowRight', 'ArrowUp'].includes(event.key) ? 0.1 : -0.1);
+              : current + (['ArrowRight', 'ArrowUp'].includes(event.key) ? 1 : -1);
           setRating(root, next);
-          const focusValue = Math.max(1, Math.min(6, Math.round(next)));
-          root.querySelector(`[data-stat-value="${focusValue}"]`)?.focus();
+          root.querySelector(`[data-stat-value="${Math.max(1, Math.min(6, next))}"]`)?.focus();
         });
       });
     });

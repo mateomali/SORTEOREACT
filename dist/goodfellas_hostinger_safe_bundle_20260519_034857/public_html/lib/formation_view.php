@@ -34,21 +34,6 @@ function formation_view_card_rating(float $value): int
     return 98;
 }
 
-function formation_view_card_tier(float $value): string
-{
-    $overall = formation_view_card_rating($value);
-    if ($overall >= 90) {
-        return 'elite';
-    }
-    if ($overall >= 80) {
-        return 'gold';
-    }
-    if ($overall >= 65) {
-        return 'silver';
-    }
-    return 'bronze';
-}
-
 function formation_view_group_players(array $players): array
 {
     $lines = array_fill_keys(player_formation_lines(), []);
@@ -154,12 +139,12 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
     $rating = (float) ($player['rating'] ?? 0);
     $isHighlighted = $highlightPlayerId > 0 && (int) ($player['id'] ?? 0) === $highlightPlayerId;
     $position = strtoupper($line !== '' ? $line : (string) ($player['assigned_position'] ?? 'MED'));
-    $cardClass = 'formation-player formation-card-sin-stat formation-card-tier-' . formation_view_card_tier($rating) . ($isHighlighted ? ' is-current-player' : '');
+    $cardClass = 'formation-player' . ($isHighlighted ? ' is-current-player' : '');
 
     $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-player-skill="' . h((string) $rating) . '">';
-    $html .= '<span class="player-card-rating" title="Puntaje general"><strong>' . h((string) formation_view_card_rating($rating)) . '</strong><span>GEN</span></span>';
     $html .= '<strong class="formation-player-name">' . h((string) ($player['name'] ?? 'Jugador')) . '</strong>';
-    $html .= '<span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada">' . h($position ?: 'GEN') . '</span>';
+    $html .= '<span class="player-card-rating formation-player-match-rating" title="Nota del partido">' . h(number_format($rating, 1)) . '</span>';
+    $html .= '<span class="formation-player-meta formation-player-position" title="Posicion">' . h($position ?: 'GEN') . '</span>';
     $html .= '</div>';
 
     return $html;

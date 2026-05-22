@@ -50,26 +50,6 @@ function shared_profile_player_fifa_overall(float $value): int
     return 98;
 }
 
-function shared_profile_fifa_overall_to_rating(float|int|string|null $value): float
-{
-    $overall = (float) ($value ?? 64);
-    $overall = max(35.0, min(98.0, $overall));
-    $anchors = [
-        [1.0, 35.0], [2.5, 54.0], [3.0, 64.0], [3.2, 69.0], [3.5, 74.0],
-        [3.8, 79.0], [4.0, 81.0], [4.4, 86.0], [4.5, 87.0], [5.0, 92.0],
-        [5.2, 93.0], [5.3, 94.0], [6.0, 98.0],
-    ];
-    for ($i = 0, $count = count($anchors) - 1; $i < $count; $i++) {
-        [$fromRating, $fromOverall] = $anchors[$i];
-        [$toRating, $toOverall] = $anchors[$i + 1];
-        if ($overall <= $toOverall) {
-            $ratio = ($overall - $fromOverall) / ($toOverall - $fromOverall);
-            return normalize_player_stat($fromRating + (($toRating - $fromRating) * $ratio));
-        }
-    }
-    return 6.0;
-}
-
 function shared_profile_stat_color(float $value): string
 {
     if ($value >= 5.95) {

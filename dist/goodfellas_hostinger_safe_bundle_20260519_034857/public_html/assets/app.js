@@ -97,10 +97,6 @@
     const formationLines = (formation) => Array.from(formation.querySelectorAll('.formation-line'));
     const formationLocked = (formation) => formation?.dataset?.staticFormationLocked === '1';
     const lineKey = (line) => line.querySelector('.line-label')?.textContent?.trim() || '';
-    const linePositions = (line) => lineKey(line)
-      .split('/')
-      .map((position) => position.trim().toUpperCase())
-      .filter(Boolean);
     const linePlayers = (line) => line.querySelector('.line-players');
     const clampRating = (value) => Math.max(1, Math.min(6, Number(value || 0)));
     const playerCardRating = (value) => {
@@ -119,25 +115,6 @@
         }
       }
       return 98;
-    };
-    const playerCardTier = (value) => {
-      const overall = playerCardRating(value);
-      if (overall >= 90) return 'elite';
-      if (overall >= 80) return 'gold';
-      if (overall >= 65) return 'silver';
-      return 'bronze';
-    };
-    const updatePlayerCardTier = (card, value) => {
-      if (!card?.classList?.contains('formation-card-sin-stat')) return;
-      ['bronze', 'silver', 'gold', 'elite'].forEach((tier) => {
-        card.classList.toggle(`formation-card-tier-${tier}`, playerCardTier(value) === tier);
-      });
-    };
-    const updatePlayerCardPositionState = (card, assignedPosition) => {
-      if (!card?.classList?.contains('formation-card-sin-stat')) return;
-      const positions = cardPositions(card);
-      const primary = positions[0] || '';
-      card.classList.toggle('is-position-changed', Boolean(primary && String(assignedPosition || '').toUpperCase() !== primary));
     };
     const cardPositions = (card) => String(card.dataset.playerPositions || '')
       .split('/')
@@ -210,24 +187,10 @@
       const ratingBox = card?.querySelector?.('.player-card-rating');
       if (!ratingBox) return;
       const position = String(card.dataset.assignedPosition || '').toUpperCase();
-      const adjustedRating = adjustedCardRating(card, position);
       const value = ratingBox.querySelector('strong');
       const label = ratingBox.querySelector('span');
-      if (value) value.textContent = String(playerCardRating(adjustedRating));
-      if (label) label.textContent = card.classList.contains('formation-card-sin-stat') ? 'GEN' : (position || 'GEN');
-      const positionLabel = card.querySelector('.formation-card-position');
-      if (positionLabel) positionLabel.textContent = position || 'GEN';
-      updatePlayerCardTier(card, adjustedRating);
-      updatePlayerCardPositionState(card, position);
-    };
-    const assignedPositionForLine = (card, line) => {
-      const positions = linePositions(line);
-      if (!positions.length) return '';
-      if (positions.length === 1) return positions[0];
-      const current = String(card.dataset.assignedPosition || '').toUpperCase();
-      if (positions.includes(current)) return current;
-      const natural = cardPositions(card).find((position) => positions.includes(position));
-      return natural || positions[0];
+      if (value) value.textContent = String(playerCardRating(adjustedCardRating(card, position)));
+      if (label) label.textContent = position || 'GEN';
     };
     const ensureUndoButton = (formation) => {
       if (formationLocked(formation)) return;
@@ -341,9 +304,8 @@
     };
     const syncAssignedPositions = (formation) => {
       formation.querySelectorAll('[data-static-formation-player]').forEach((card) => {
-        const line = card.closest('.formation-line');
-        const assigned = line ? assignedPositionForLine(card, line) : '';
-        if (assigned) card.dataset.assignedPosition = assigned;
+        const line = card.closest('.formation-line')?.querySelector('.line-label')?.textContent?.trim() || '';
+        if (line) card.dataset.assignedPosition = line;
         updatePlayerCardRating(card);
       });
     };

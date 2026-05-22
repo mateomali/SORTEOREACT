@@ -404,17 +404,14 @@ $fieldWeightHelp = [
 
 function stat_rating_control(string $name, float $value, ?string $formId = null, bool $compact = false, bool $readonly = false): string
 {
-    $rating = normalize_player_stat($value);
-    $ratingLabel = number_format($rating, 1, '.', '');
-    $ratingDisplay = rtrim(rtrim($ratingLabel, '0'), '.');
-    $overallDisplay = (string) shared_profile_player_fifa_overall($rating);
+    $rating = (int) max(1, min(6, round($value)));
     $formAttr = $formId !== null ? ' form="' . h($formId) . '"' : '';
     $classes = 'stat-rating' . ($compact ? ' stat-rating-compact' : '') . ($readonly ? ' stat-rating-readonly' : '');
     $readonlyAttr = $readonly ? ' data-stat-rating-readonly' : '';
     $barPercent = max(0, min(100, (int) round(($rating / 6) * 100)));
     $tone = $rating <= 2 ? 'low' : ($rating <= 3 ? 'medium' : ($rating <= 4 ? 'good' : 'elite'));
     $html = '<div class="' . $classes . '" data-stat-rating data-stat-rating-tone="' . h($tone) . '"' . $readonlyAttr . '>';
-    $html .= '<input type="hidden" name="' . h($name) . '" value="' . h($ratingLabel) . '"' . $formAttr . ' data-stat-rating-input>';
+    $html .= '<input type="hidden" name="' . h($name) . '" value="' . $rating . '"' . $formAttr . ' data-stat-rating-input>';
     $starsClass = 'stat-rating-stars inline-flex shrink-0 items-center gap-0.5 leading-none' . ($compact ? ' col-start-1 row-start-1 min-w-0' : '');
     $html .= '<div class="' . $starsClass . '" role="radiogroup" aria-label="' . h($name) . '">';
     for ($i = 1; $i <= 6; $i++) {
@@ -424,16 +421,16 @@ function stat_rating_control(string $name, float $value, ?string $formId = null,
             $html .= '<span class="' . $starClasses . '" aria-hidden="true">★</span>';
             continue;
         }
-        $html .= '<button class="' . $starClasses . ' cursor-pointer focus:outline-none focus:ring-2 focus:ring-lime-200/70" type="button" data-stat-value="' . $i . '" role="radio" aria-checked="' . ((float) $i === $rating ? 'true' : 'false') . '" aria-label="' . $i . ' de 6">★</button>';
+        $html .= '<button class="' . $starClasses . ' cursor-pointer focus:outline-none focus:ring-2 focus:ring-lime-200/70" type="button" data-stat-value="' . $i . '" role="radio" aria-checked="' . ($i === $rating ? 'true' : 'false') . '" aria-label="' . $i . ' de 6">★</button>';
     }
     $html .= '</div>';
     $html .= '<div class="stat-rating-bar-shell relative col-span-full row-start-2 grid min-h-3 min-w-0 flex-1 items-center">';
     $html .= '<div class="stat-rating-bar h-2.5 w-full overflow-hidden rounded-full bg-emerald-100" aria-hidden="true"><span class="block h-full rounded-full transition-[width,background-color]" data-stat-rating-bar style="width: ' . $barPercent . '%"></span></div>';
     if (!$readonly) {
-        $html .= '<input class="stat-rating-range" type="range" min="1" max="6" step="0.1" value="' . h($ratingLabel) . '" aria-label="' . h($name) . '" data-stat-rating-range>';
+        $html .= '<input class="stat-rating-range" type="range" min="1" max="6" step="1" value="' . $rating . '" aria-label="' . h($name) . '" data-stat-rating-range>';
     }
     $html .= '</div>';
-    $html .= '<span class="stat-rating-value" data-stat-rating-value title="' . h($ratingDisplay . '/6') . '">' . h($overallDisplay) . '</span>';
+    $html .= '<span class="stat-rating-value" data-stat-rating-value>' . $rating . '/6</span>';
     $html .= '</div>';
     return $html;
 }

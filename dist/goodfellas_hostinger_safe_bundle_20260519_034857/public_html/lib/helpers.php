@@ -294,7 +294,7 @@ function normalize_player_stat(float|string|int|null $value, float $fallback = 3
         $value = $fallback;
     }
     $stat = (float) $value;
-    return max(1.0, min(6.0, round($stat * 10) / 10));
+    return max(1.0, min(6.0, round($stat * 2) / 2));
 }
 
 function player_effective_stat(array $player, string $field): float

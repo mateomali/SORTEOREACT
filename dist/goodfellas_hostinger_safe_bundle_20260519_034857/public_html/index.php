@@ -56,21 +56,6 @@ function render_player_card_rating(float $value, string $label = 'GEN'): string
         . '</span>';
 }
 
-function home_player_card_tier(float $value): string
-{
-    $overall = home_player_card_rating($value);
-    if ($overall >= 90) {
-        return 'elite';
-    }
-    if ($overall >= 80) {
-        return 'gold';
-    }
-    if ($overall >= 65) {
-        return 'silver';
-    }
-    return 'bronze';
-}
-
 function home_position_base_rating(array $player, string $position): float
 {
     $position = strtoupper($position);
@@ -939,10 +924,12 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $formationBaseRating = home_adjusted_position_rating($player, $assignedLine);
                           $naturalPositions = parse_positions_csv((string) ($player['positions'] ?? ''));
                           $primaryPosition = $naturalPositions[0] ?? '';
-                          $isPositionChanged = $primaryPosition !== '' && $assignedLine !== $primaryPosition;
+                          $isOutOfPosition = $naturalPositions !== [] && !in_array($assignedLine, $naturalPositions, true);
+                          $isSecondaryPosition = !$isOutOfPosition && $primaryPosition !== '' && $assignedLine !== $primaryPosition;
                           $baseFormationClass = !$showResultFormation
-                              ? ' captain-formation-player formation-card-sin-stat formation-card-tier-' . home_player_card_tier($formationBaseRating)
-                                  . ($isPositionChanged ? ' is-position-changed' : '')
+                              ? ' captain-formation-player'
+                                  . ($isOutOfPosition ? ' is-out-of-position' : '')
+                                  . ($isSecondaryPosition ? ' is-secondary-position' : '')
                               : '';
                         ?>
                         <div
@@ -984,9 +971,12 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                               </span>
                             <?php endif; ?>
                           <?php else: ?>
-                            <?= render_player_card_rating($formationBaseRating, 'GEN') ?>
+                            <?= render_player_card_rating($formationBaseRating, '') ?>
                             <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
-                            <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>
+                            <span class="captain-position-pill <?= $isSecondaryPosition ? 'is-assigned-secondary' : '' ?>">
+                              <?= h($assignedLine) ?><?php if ($isSecondaryPosition): ?> <em class="formation-secondary-badge">2a</em><?php endif; ?>
+                            </span>
+                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?></span>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>

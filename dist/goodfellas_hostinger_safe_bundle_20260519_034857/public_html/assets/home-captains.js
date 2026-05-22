@@ -46,13 +46,6 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
         <span>${escapeHtml(label)}</span>
       </span>
     `;
-    const playerCardTier = (value) => {
-      const overall = playerCardRating(value);
-      if (overall >= 90) return 'elite';
-      if (overall >= 80) return 'gold';
-      if (overall >= 65) return 'silver';
-      return 'bronze';
-    };
 
     const teamTotalSkill = (players) => players.reduce((total, player) => {
       const position = player.assigned_position || player.primary_position || 'MED';
@@ -78,11 +71,6 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       .split('/')
       .map((pos) => pos.trim().toUpperCase())
       .filter(Boolean);
-    const primaryPosition = (player) => playerPositions(player)[0] || '';
-    const isPositionChanged = (player, assignedPosition) => {
-      const primary = primaryPosition(player);
-      return primary !== '' && String(assignedPosition || '').toUpperCase() !== primary;
-    };
     const weightedPositionRating = (player, weights) => (
       Object.entries(weights).reduce((total, [field, weight]) => total + (statValue(player, field) * weight), 0)
     );
@@ -182,12 +170,11 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
           ? linePlayers.map((player) => {
             const assignedPosition = player.assigned_position || player.primary_position || position;
             const adjustedRating = adjustedPositionRating(player, assignedPosition);
-            const changedClass = isPositionChanged(player, assignedPosition) ? ' is-position-changed' : '';
             return `
-              <div class="formation-player formation-card-sin-stat formation-card-tier-${playerCardTier(adjustedRating)}${changedClass}" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}" data-player-positions="${escapeHtml(player.positions || player.primary_position || '')}">
-                ${playerCardRatingHtml(adjustedRating, 'GEN')}
+              <div class="formation-player" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}">
+                ${playerCardRatingHtml(adjustedRating, assignedPosition)}
                 <strong>${escapeHtml(player.name)}</strong>
-                <span class="formation-player-meta formation-player-position formation-card-position">${escapeHtml(assignedPosition)}</span>
+                <span class="formation-player-meta">${ratingWithStar(player.skill)}</span>
               </div>
             `;
           }).join('')
