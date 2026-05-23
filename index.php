@@ -71,6 +71,62 @@ function home_player_card_tier(float $value): string
     return 'bronze';
 }
 
+function home_player_card_stat_value(array $player, string $field): int
+{
+    return home_player_card_rating(player_effective_stat($player, $field));
+}
+
+function home_player_card_regularity_form(array $player): array
+{
+    $rating = normalize_player_stat(player_effective_stat($player, 'regularity'), 3.5);
+    if ($rating >= 4.5) {
+        return ['up', 'Regularidad alta'];
+    }
+    if ($rating < 3.0) {
+        return ['down', 'Regularidad baja'];
+    }
+    return ['right', 'Regularidad normal'];
+}
+
+function home_player_card_stats(array $player, string $position): array
+{
+    if ($position === 'ARQ') {
+        return [
+            'ARQ' => home_player_card_stat_value($player, 'goalkeeper_skill'),
+            'RIT' => home_player_card_stat_value($player, 'rhythm'),
+            'DEF' => home_player_card_stat_value($player, 'defense_physical'),
+            'TEC' => home_player_card_stat_value($player, 'technique'),
+            'EQU' => home_player_card_stat_value($player, 'teamwork'),
+            'MEN' => home_player_card_stat_value($player, 'mentality'),
+        ];
+    }
+
+    return [
+        'TEC' => home_player_card_stat_value($player, 'technique'),
+        'RIT' => home_player_card_stat_value($player, 'rhythm'),
+        'DEF' => home_player_card_stat_value($player, 'defense_physical'),
+        'ATA' => home_player_card_stat_value($player, 'attack'),
+        'EQU' => home_player_card_stat_value($player, 'teamwork'),
+        'MEN' => home_player_card_stat_value($player, 'mentality'),
+    ];
+}
+
+function render_home_player_card_stats(array $player, string $position): string
+{
+    $html = '<span class="formation-card-stats" aria-label="Stats del jugador">';
+    foreach (home_player_card_stats($player, $position) as $label => $value) {
+        $html .= '<span class="formation-card-stat"><span>' . h($label) . '</span><strong>' . h((string) $value) . '</strong></span>';
+    }
+    $html .= '</span>';
+    return $html;
+}
+
+function render_home_player_card_regularity(array $player): string
+{
+    [$form, $label] = home_player_card_regularity_form($player);
+    return '<span class="formation-card-regularity is-' . h($form) . '" title="' . h($label) . '" aria-label="' . h($label) . '"></span>';
+}
+
 function home_position_base_rating(array $player, string $position): float
 {
     $position = strtoupper($position);
@@ -941,7 +997,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $primaryPosition = $naturalPositions[0] ?? '';
                           $isPositionChanged = $primaryPosition !== '' && $assignedLine !== $primaryPosition;
                           $baseFormationClass = !$showResultFormation
-                              ? ' captain-formation-player formation-card-sin-stat formation-card-tier-' . home_player_card_tier($formationBaseRating)
+                              ? ' captain-formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-' . home_player_card_tier($formationBaseRating)
                                   . ($isPositionChanged ? ' is-position-changed' : '')
                               : '';
                         ?>
@@ -985,8 +1041,11 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                             <?php endif; ?>
                           <?php else: ?>
                             <?= render_player_card_rating($formationBaseRating, 'GEN') ?>
+                            <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
                             <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
                             <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>
+                            <?= render_home_player_card_regularity($player) ?>
+                            <?= render_home_player_card_stats($player, $assignedLine) ?>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>
@@ -1420,7 +1479,7 @@ require __DIR__ . '/includes/header.php';
 <?php if (!$showHistoryPage): ?>
   <section class="home-welcome">
     <div class="home-section-grid" aria-label="Secciones principales">
-      <a class="home-section-card" href="jugadores.php">
+      <a class="home-section-card" href="jugadores2.php">
         <span class="home-section-visual">
           <img src="assets/home/home-jugadores.png" alt="Panel visual de gestion de jugadores" loading="lazy" width="1672" height="941">
         </span>

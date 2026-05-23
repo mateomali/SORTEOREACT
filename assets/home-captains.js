@@ -46,6 +46,16 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
         <span>${escapeHtml(label)}</span>
       </span>
     `;
+    const playerCardRegularityForm = (player) => {
+      const rating = Math.max(1, Math.min(6, statValue(player, 'regularity')));
+      if (rating >= 4.5) return ['up', 'Regularidad alta'];
+      if (rating < 3.0) return ['down', 'Regularidad baja'];
+      return ['right', 'Regularidad normal'];
+    };
+    const playerCardRegularityHtml = (player) => {
+      const [form, label] = playerCardRegularityForm(player);
+      return `<span class="formation-card-regularity is-${escapeHtml(form)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+    };
     const playerCardTier = (value) => {
       const overall = playerCardRating(value);
       if (overall >= 90) return 'elite';
@@ -53,6 +63,35 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       if (overall >= 65) return 'silver';
       return 'bronze';
     };
+    const playerCardStatValue = (player, field) => playerCardRating(statValue(player, field));
+    const playerCardStats = (player, assignedPosition) => {
+      const position = String(assignedPosition || '').toUpperCase();
+      if (position === 'ARQ') {
+        return [
+          ['ARQ', playerCardStatValue(player, 'goalkeeper_skill')],
+          ['RIT', playerCardStatValue(player, 'rhythm')],
+          ['DEF', playerCardStatValue(player, 'defense_physical')],
+          ['TEC', playerCardStatValue(player, 'technique')],
+          ['EQU', playerCardStatValue(player, 'teamwork')],
+          ['MEN', playerCardStatValue(player, 'mentality')],
+        ];
+      }
+      return [
+        ['TEC', playerCardStatValue(player, 'technique')],
+        ['RIT', playerCardStatValue(player, 'rhythm')],
+        ['DEF', playerCardStatValue(player, 'defense_physical')],
+        ['ATA', playerCardStatValue(player, 'attack')],
+        ['EQU', playerCardStatValue(player, 'teamwork')],
+        ['MEN', playerCardStatValue(player, 'mentality')],
+      ];
+    };
+    const playerCardStatsHtml = (player, assignedPosition) => `
+      <span class="formation-card-stats" aria-label="Stats del jugador">
+        ${playerCardStats(player, assignedPosition).map(([label, value]) => `
+          <span class="formation-card-stat"><span>${escapeHtml(label)}</span><strong>${value}</strong></span>
+        `).join('')}
+      </span>
+    `;
 
     const teamTotalSkill = (players) => players.reduce((total, player) => {
       const position = player.assigned_position || player.primary_position || 'MED';
@@ -184,10 +223,13 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             const adjustedRating = adjustedPositionRating(player, assignedPosition);
             const changedClass = isPositionChanged(player, assignedPosition) ? ' is-position-changed' : '';
             return `
-              <div class="formation-player formation-card-sin-stat formation-card-tier-${playerCardTier(adjustedRating)}${changedClass}" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}" data-player-positions="${escapeHtml(player.positions || player.primary_position || '')}">
+              <div class="formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)}${changedClass}" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}" data-player-positions="${escapeHtml(player.positions || player.primary_position || '')}">
                 ${playerCardRatingHtml(adjustedRating, 'GEN')}
-                <strong>${escapeHtml(player.name)}</strong>
+                <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
+                <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
                 <span class="formation-player-meta formation-player-position formation-card-position">${escapeHtml(assignedPosition)}</span>
+                ${playerCardRegularityHtml(player)}
+                ${playerCardStatsHtml(player, assignedPosition)}
               </div>
             `;
           }).join('')

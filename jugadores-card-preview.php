@@ -46,7 +46,7 @@ function card_preview_tier(int $overall): string
 }
 
 $title = 'Preview tarjetas | ' . APP_NAME;
-$activePage = 'jugadores.php';
+$activePage = 'jugadores2.php';
 $bodyClass = 'page-card-preview';
 require __DIR__ . '/includes/header.php';
 ?>
@@ -386,7 +386,7 @@ require __DIR__ . '/includes/header.php';
     <h1>Preview tarjetas</h1>
     <p>Cartas visuales usando los valores actuales de jugadores.</p>
   </div>
-  <a class="btn btn-muted" href="jugadores2.php">Volver a jugadores2</a>
+  <a class="btn btn-muted" href="jugadores2.php">Volver a jugadores</a>
 </section>
 
 <section class="player-card-grid" aria-label="Preview de tarjetas de jugadores">

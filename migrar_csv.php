@@ -276,7 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $path = __DIR__ . '/jugadores.csv';
             [$inserted, $updated, $skipped] = import_players_from_csv($path);
             flash('success', "Importacion finalizada. Nuevos: {$inserted}, actualizados desde backup: {$updated}, omitidos: {$skipped}.");
-            redirect('jugadores.php');
+            redirect('jugadores2.php');
         }
 
         if (($_POST['action'] ?? '') === 'import_upload' && isset($_FILES['csv_file'])) {
@@ -287,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             [$inserted, $updated, $skipped] = import_players_from_csv($tmp);
             flash('success', "Importacion finalizada. Nuevos: {$inserted}, actualizados desde backup: {$updated}, omitidos: {$skipped}.");
-            redirect('jugadores.php');
+            redirect('jugadores2.php');
         }
     } catch (Throwable $e) {
         flash('error', 'Error importando CSV: ' . $e->getMessage());
@@ -296,7 +296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $title = 'Migrar CSV | ' . APP_NAME;
-$activePage = 'jugadores.php';
+$activePage = 'jugadores2.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -305,7 +305,7 @@ require __DIR__ . '/includes/header.php';
     <h1>Migracion desde CSV</h1>
     <p class="small-muted">Importa jugadores desde el archivo historico al nuevo modelo en base de datos.</p>
   </div>
-  <a class="btn btn-muted" href="jugadores.php">Volver a jugadores</a>
+  <a class="btn btn-muted" href="jugadores2.php">Volver a jugadores</a>
 </section>
 
 <section class="grid cols-2">

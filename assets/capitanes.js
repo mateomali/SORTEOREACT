@@ -13,6 +13,8 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       const fieldPositions = ['DEF', 'LAT', 'MED', 'DEL'];
       const pitchFieldPositions = ['DEF', 'MED', 'DEL'];
       const FORMATION_LINE_LIMITS = { ARQ: 1, DEF: 4, LAT: 4, MED: 4, DEL: 4 };
+      const FORMATION_CARD_VIEW_STAT = 'carta-stat';
+      const FORMATION_CARD_VIEW_COMPACT = 'carta-compacta';
       let state = null;
       const formationDrafts = {};
       const formationOrders = {};
@@ -58,6 +60,52 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           <span>${escapeHtml(label)}</span>
         </span>
       `;
+      const playerCardTier = (value) => {
+        const overall = playerCardRating(value);
+        if (overall >= 90) return 'elite';
+        if (overall >= 80) return 'gold';
+        if (overall >= 65) return 'silver';
+        return 'bronze';
+      };
+      const playerCardStatValue = (player, field) => playerCardRating(statValue(player, field));
+      const playerCardStats = (player, assignedPosition) => {
+        const position = String(assignedPosition || '').toUpperCase();
+        if (position === 'ARQ') {
+          return [
+            ['ARQ', playerCardStatValue(player, 'goalkeeper_skill')],
+            ['RIT', playerCardStatValue(player, 'rhythm')],
+            ['DEF', playerCardStatValue(player, 'defense_physical')],
+            ['TEC', playerCardStatValue(player, 'technique')],
+            ['EQU', playerCardStatValue(player, 'teamwork')],
+            ['MEN', playerCardStatValue(player, 'mentality')],
+          ];
+        }
+        return [
+          ['TEC', playerCardStatValue(player, 'technique')],
+          ['RIT', playerCardStatValue(player, 'rhythm')],
+          ['DEF', playerCardStatValue(player, 'defense_physical')],
+          ['ATA', playerCardStatValue(player, 'attack')],
+          ['EQU', playerCardStatValue(player, 'teamwork')],
+          ['MEN', playerCardStatValue(player, 'mentality')],
+        ];
+      };
+      const playerCardStatsHtml = (player, assignedPosition) => `
+        <span class="formation-card-stats" aria-label="Stats del jugador">
+          ${playerCardStats(player, assignedPosition).map(([label, value]) => `
+            <span class="formation-card-stat"><span>${escapeHtml(label)}</span><strong>${value}</strong></span>
+          `).join('')}
+        </span>
+      `;
+      const playerCardRegularityForm = (player) => {
+        const rating = Math.max(1, Math.min(6, statValue(player, 'regularity')));
+        if (rating >= 4.5) return ['up', 'Regularidad alta'];
+        if (rating < 3.0) return ['down', 'Regularidad baja'];
+        return ['right', 'Regularidad normal'];
+      };
+      const playerCardRegularityHtml = (player) => {
+        const [form, label] = playerCardRegularityForm(player);
+        return `<span class="formation-card-regularity is-${escapeHtml(form)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+      };
       const playerMeta = (p) => `${escapeHtml(p.positions)} | ${escapeHtml(p.pace_label)} | ${formatSkill(p.skill)}`;
       const teamTotalSkill = (teamNumber) => {
         const players = state.teams[String(teamNumber)] || state.teams[teamNumber] || [];
@@ -1043,6 +1091,11 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         const field = container.querySelector('[data-captain-formation-field]');
         if (!field) return;
         const readOnly = options.readOnly === true;
+        const requestedCardView = options.cardView || container.dataset.cardView || board.dataset.cardView || '';
+        const cardView = requestedCardView === FORMATION_CARD_VIEW_COMPACT
+          ? FORMATION_CARD_VIEW_COMPACT
+          : FORMATION_CARD_VIEW_STAT;
+        const cardViewClass = cardView === FORMATION_CARD_VIEW_COMPACT ? 'formation-card-compacta' : '';
         const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
         ensureFormationState(teamNumber, players);
         field.dataset.dropTeam = String(teamNumber);
@@ -1086,13 +1139,16 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
                   const secondaryPosition = !outOfPosition && primaryPosition !== '' && assignedPosition !== primaryPosition;
                   const penaltyPercent = positionPenaltyPercent(player, assignedPosition);
                   const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${assignedPosition} ${formatSkill(adjustedRating)}${secondaryPosition ? ` | Secundaria: ${assignedPosition}. Primaria: ${primaryPosition}` : ''}`;
+                  const positionChanged = primaryPosition !== '' && assignedPosition !== primaryPosition;
                   return `
-                  <div class="captain-editor-player formation-player captain-formation-player ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${assignedPosition}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
-                    ${playerCardRatingHtml(adjustedRating, assignedPosition)}
+                  <div class="captain-editor-player formation-player captain-formation-player formation-card-sin-stat ${cardViewClass} formation-card-tier-${playerCardTier(adjustedRating)} ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${assignedPosition}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
+                    ${playerCardRatingHtml(adjustedRating, 'GEN')}
+                    <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
                     <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
-                    <span class="captain-position-pill ${secondaryPosition ? 'is-assigned-secondary' : 'is-primary'}">${escapeHtml(assignedPosition)}${secondaryPosition ? '<em class="formation-secondary-badge">2a</em>' : ''}</span>
-                    ${playerPositionIconsHtml(player)}
-                    <span class="captain-editor-player-meta formation-player-meta">${formatSkill(generalRating)}${penaltyPercent > 0 ? ` <em class="captain-editor-penalty formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
+                    <span class="captain-position-pill formation-player-meta formation-player-position formation-card-position ${secondaryPosition ? 'is-assigned-secondary' : 'is-primary'}">${escapeHtml(assignedPosition)}${secondaryPosition ? '<em class="formation-secondary-badge">2a</em>' : ''}</span>
+                    ${playerCardRegularityHtml(player)}
+                    ${penaltyPercent > 0 ? `<span class="captain-editor-penalty formation-penalty-badge formation-card-penalty">-${penaltyPercent}%</span>` : ''}
+                    ${playerCardStatsHtml(player, assignedPosition)}
                   </div>
                 `;
                 }).join('') : '<span class="captain-editor-empty formation-player empty-slot">-</span>'}

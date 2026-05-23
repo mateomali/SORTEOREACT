@@ -518,6 +518,62 @@ function playerCardRatingHtml(value, label = 'GEN') {
   `;
 }
 
+function playerCardTier(value) {
+  const overall = playerCardRating(value);
+  if (overall >= 90) return 'elite';
+  if (overall >= 80) return 'gold';
+  if (overall >= 65) return 'silver';
+  return 'bronze';
+}
+
+function playerCardStatValue(jugador, campo) {
+  return playerCardRating(statValue(jugador, campo));
+}
+
+function playerCardStats(jugador, assignedPosition) {
+  const position = String(assignedPosition || '').toUpperCase();
+  if (position === 'ARQ') {
+    return [
+      ['ARQ', playerCardStatValue(jugador, 'habilidad_arquero')],
+      ['RIT', playerCardStatValue(jugador, 'ritmo_stat')],
+      ['DEF', playerCardStatValue(jugador, 'solidez')],
+      ['TEC', playerCardStatValue(jugador, 'tecnica')],
+      ['EQU', playerCardStatValue(jugador, 'compromiso')],
+      ['MEN', playerCardStatValue(jugador, 'mentalidad')],
+    ];
+  }
+  return [
+    ['TEC', playerCardStatValue(jugador, 'tecnica')],
+    ['RIT', playerCardStatValue(jugador, 'ritmo_stat')],
+    ['DEF', playerCardStatValue(jugador, 'solidez')],
+    ['ATA', playerCardStatValue(jugador, 'ataque')],
+    ['EQU', playerCardStatValue(jugador, 'compromiso')],
+    ['MEN', playerCardStatValue(jugador, 'mentalidad')],
+  ];
+}
+
+function playerCardStatsHtml(jugador, assignedPosition) {
+  return `
+    <span class="formation-card-stats" aria-label="Stats del jugador">
+      ${playerCardStats(jugador, assignedPosition).map(([label, value]) => `
+        <span class="formation-card-stat"><span>${escapeHtml(label)}</span><strong>${value}</strong></span>
+      `).join('')}
+    </span>
+  `;
+}
+
+function playerCardRegularityForm(jugador) {
+  const rating = Math.max(1, Math.min(6, statValue(jugador, 'regularidad')));
+  if (rating >= 4.5) return ['up', 'Regularidad alta'];
+  if (rating < 3.0) return ['down', 'Regularidad baja'];
+  return ['right', 'Regularidad normal'];
+}
+
+function playerCardRegularityHtml(jugador) {
+  const [form, label] = playerCardRegularityForm(jugador);
+  return `<span class="formation-card-regularity is-${escapeHtml(form)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+}
+
 function playerPositionPillsHtml(jugador) {
   return `
     <span class="captain-player-position-icons" aria-label="Posiciones naturales">
@@ -2272,17 +2328,21 @@ function mostrarEquipos(equipos) {
                 const primaryPosition = naturalPositions[0] || '';
                 const outOfPosition = !naturalPositions.includes(assignedPosition);
                 const secondaryPosition = !outOfPosition && assignedPosition !== primaryPosition;
+                const positionChanged = outOfPosition || secondaryPosition;
                 const penaltyPercent = positionPenaltyPercent(j, assignedPosition);
                 const roleNote = secondaryPosition
                   ? ` | Secundaria: ${assignedPosition}. Primaria: ${primaryPosition}`
                   : (outOfPosition ? ' | Fuera de posicion natural' : '');
                 const cardTitle = `General ${formatRating(generalRating)} | Ajustada ${assignedPosition} ${formatRating(adjustedRating)}${roleNote}`;
                 return `
-                <div class="formation-player captain-formation-player ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}" title="${escapeHtml(cardTitle)}">
-                  ${playerCardRatingHtml(adjustedRating, assignedPosition)}
-                  <strong>${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
-                  <span class="captain-position-pill ${secondaryPosition ? 'is-assigned-secondary' : ''}">${assignedPosition}${secondaryPosition ? ' <em class="formation-secondary-badge">2a</em>' : ''}</span>
-                  <span class="formation-player-meta">${formatRating(generalRating)}${penaltyPercent > 0 ? ` <em class="formation-penalty-badge">-${penaltyPercent}%</em>` : ''}</span>
+                <div class="formation-player captain-formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}" title="${escapeHtml(cardTitle)}">
+                  ${playerCardRatingHtml(adjustedRating, 'GEN')}
+                  <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
+                  <strong class="formation-player-name">${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
+                  <span class="captain-position-pill formation-player-meta formation-player-position formation-card-position ${secondaryPosition ? 'is-assigned-secondary' : ''}">${assignedPosition}${secondaryPosition ? ' <em class="formation-secondary-badge">2a</em>' : ''}</span>
+                  ${playerCardRegularityHtml(j)}
+                  ${penaltyPercent > 0 ? `<span class="formation-penalty-badge formation-card-penalty">-${penaltyPercent}%</span>` : ''}
+                  ${playerCardStatsHtml(j, assignedPosition)}
                 </div>
               `}).join('')}
             </div>
@@ -2343,24 +2403,44 @@ function descargarEquiposJPG() {
         .team-head h4 { margin: 0; font-size: 17px; font-weight: 900; }
         .formation-total-badge { border-radius: 7px; background: #dff7e9; padding: 5px 8px; font-size: 13px; font-weight: 900; }
         .formation-total-title, .captain-formation-tools, .formation-undo-button, .captain-line-control, .totals { display: none !important; }
-        .captain-formation-field { display: grid; grid-template-rows: repeat(4, minmax(132px, 1fr)); gap: 10px; min-height: 610px; border: 1px solid #7fb89c; border-radius: 10px; background: linear-gradient(180deg, rgba(9,74,41,.96), rgba(13,70,42,.98)); padding: 14px; color: #f2fff7; }
-        .captain-formation-line { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 132px; }
+        .captain-formation-field { display: grid; grid-template-rows: repeat(4, minmax(172px, 1fr)); gap: 10px; min-height: 760px; border: 1px solid #7fb89c; border-radius: 10px; background: linear-gradient(180deg, rgba(9,74,41,.96), rgba(13,70,42,.98)); padding: 14px; color: #f2fff7; }
+        .captain-formation-line { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 172px; }
         .captain-line-label { color: #f4fff8; text-align: center; font-size: 10px; font-weight: 900; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
         .captain-line-label span { display: grid; gap: 2px; }
         .captain-line-label strong, .captain-line-label small { display: block; color: #f4fff8; }
-        .line-players { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; min-height: 132px; overflow: visible; }
-        .captain-formation-player { display: grid; grid-template-rows: 46px 40px 20px 14px; align-items: center; justify-items: center; gap: 5px; width: 108px; height: 136px; border: 1px solid rgba(210,238,224,.34); border-radius: 8px; background: rgba(4,30,21,.9); color: #f2fff7; padding: 8px 7px; overflow: hidden; }
-        .captain-formation-player > strong { display: flex; align-items: center; justify-content: center; width: 100%; height: 40px; overflow: hidden; color: #f7fff9; font-size: 12px; line-height: 1.12; text-align: center; text-overflow: clip; white-space: normal; }
-        .player-card-rating { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 44px; min-width: 44px; height: 44px; margin: 0 auto; border: 1px solid #b7d9ca; border-radius: 7px; background: #f2fbf6; color: #063d2b; }
-        .player-card-rating strong { display: block; max-width: none; min-height: 0; overflow: visible; color: #063d2b; font-size: 17px; line-height: .95; text-align: center; white-space: normal; }
-        .player-card-rating span { display: block; color: #063d2b; font-size: 8px; font-weight: 900; line-height: 1; text-align: center; }
-        .captain-position-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 18px; border: 1px solid #c6ead9; border-radius: 6px; background: #effbf4; color: #063d2b; padding: 2px 7px; font-size: 9px; font-weight: 900; line-height: 1; white-space: nowrap; }
-        .captain-position-pill.is-assigned-secondary { border-color: #f2c14e; background: #fff4c7; color: #3f2a00; }
-        .formation-secondary-badge { display: inline-flex; align-items: center; border-radius: 5px; background: #f2c14e; color: #2f2100; padding: 1px 4px; font-size: 8px; font-style: normal; font-weight: 900; line-height: 1; }
-        .formation-player-meta { display: block; min-height: 12px; color: #d9f5e7; font-size: 10px; font-weight: 800; line-height: 1; }
-        .formation-penalty-badge { border-radius: 5px; background: #fff4c7; color: #3f2a00; padding: 1px 4px; font-size: 9px; font-style: normal; font-weight: 900; }
-        .captain-formation-player.is-secondary-position { border-color: #f2c14e; }
-        .captain-formation-player.is-out-of-position { border-color: #f2c14e; background: rgba(7,40,27,.95); }
+        .line-players { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; min-height: 172px; overflow: visible; }
+        .captain-formation-player.formation-card-sin-stat { --formation-card-image: url("assets/card-backgrounds/clean-bronze.png"); --formation-slot-bg: rgba(245,240,229,.78); --formation-slot-line: rgba(7,19,15,.28); position: relative; display: block; flex: 0 0 118px; width: 118px; min-width: 118px; aspect-ratio: 409 / 710; border: 0; border-radius: 0; background: var(--formation-card-image) center / contain no-repeat; color: #07130f; padding: 0; overflow: hidden; filter: drop-shadow(0 4px 8px rgba(2,14,9,.24)); }
+        .captain-formation-player.formation-card-tier-bronze { --formation-card-image: url("assets/card-backgrounds/clean-bronze.png"); --formation-slot-bg: rgba(248,217,155,.78); }
+        .captain-formation-player.formation-card-tier-silver { --formation-card-image: url("assets/card-backgrounds/clean-silver.png"); --formation-slot-bg: rgba(249,255,251,.74); }
+        .captain-formation-player.formation-card-tier-gold { --formation-card-image: url("assets/card-backgrounds/clean-gold.png"); --formation-slot-bg: rgba(255,240,157,.72); }
+        .captain-formation-player.formation-card-tier-elite { --formation-card-image: url("assets/card-backgrounds/clean-elite.png"); --formation-slot-bg: rgba(247,241,255,.34); --formation-slot-line: rgba(243,237,255,.5); }
+        .captain-formation-player.formation-card-sin-stat .player-card-rating { position: absolute; z-index: 2; top: 12%; left: 14%; display: grid; place-items: center; width: 23%; height: 16%; border: 1px solid var(--formation-slot-line); border-radius: 5px; background: var(--formation-slot-bg); color: #07130f; line-height: 1; }
+        .captain-formation-player.formation-card-sin-stat .player-card-rating strong { display: block; color: #07130f; font-size: 14px; font-weight: 950; line-height: 1; text-align: center; white-space: nowrap; }
+        .captain-formation-player.formation-card-sin-stat .player-card-rating span { display: block; color: #07130f; font-size: 6px; font-weight: 950; line-height: 1; text-align: center; white-space: nowrap; }
+        .captain-formation-player.formation-card-sin-stat > .formation-card-position { position: absolute; z-index: 2; top: 14%; right: 15%; display: grid; place-items: center; width: 26%; height: 9%; border: 1px solid var(--formation-slot-line); border-radius: 5px; background: var(--formation-slot-bg); color: #07130f; padding: 0; font-size: 8px; font-weight: 950; line-height: 1; text-transform: uppercase; }
+        .captain-formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position { border-color: #07130f; background: #f2c14e; box-shadow: 0 0 0 1px rgba(255,250,206,.95), 0 0 0 3px rgba(7,19,15,.38), inset 0 -1px 0 rgba(7,19,15,.18); }
+        .captain-formation-player.formation-card-sin-stat > .formation-player-name { position: absolute; z-index: 3; top: 58.8%; left: 14%; right: 14%; display: grid; place-items: center; width: 72%; height: 8%; overflow: hidden; border: 1px solid var(--formation-slot-line); border-radius: 5px; background: var(--formation-slot-bg); color: #07130f; padding: 0 3px; font-size: 8px; font-weight: 950; line-height: 1; text-align: center; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+        .formation-card-photo { position: absolute; z-index: 1; top: 27.5%; left: 18%; right: 18%; display: flex; align-items: flex-end; justify-content: center; height: 34%; overflow: hidden; }
+        .formation-card-photo img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; opacity: .62; filter: drop-shadow(0 5px 6px rgba(0,0,0,.2)); }
+        .formation-card-regularity { position: absolute; z-index: 4; right: 14%; top: 25%; width: 11%; height: 6.4%; border: 1px solid var(--formation-slot-line); border-radius: 4px; background: var(--formation-slot-bg); }
+        .formation-card-regularity::before, .formation-card-regularity::after { content: ""; position: absolute; left: 50%; background: currentColor; transform: translateX(-50%); }
+        .formation-card-regularity::before { top: 26%; width: 15%; height: 48%; }
+        .formation-card-regularity::after { top: 17%; width: 44%; height: 44%; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+        .formation-card-regularity.is-up { color: #0d6b3e; }
+        .formation-card-regularity.is-right { color: #5b6370; transform: rotate(90deg); }
+        .formation-card-regularity.is-down { color: #8a1f1f; transform: rotate(180deg); }
+        .formation-card-stats { position: absolute; z-index: 3; top: 68.8%; left: 17%; right: 17%; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(3,1fr); gap: 4.5% 6%; height: 17.8%; overflow: hidden; }
+        .formation-card-stat { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 2px; overflow: hidden; border: 1px solid var(--formation-slot-line); border-radius: 4px; background: var(--formation-slot-bg); color: #07130f; padding: 0 2px; font-size: 6px; font-weight: 950; line-height: 1; }
+        .formation-card-stat span, .formation-card-stat strong { display: block; min-width: 0; overflow: hidden; color: #07130f; font-size: inherit; font-weight: 950; line-height: 1; white-space: nowrap; }
+        .formation-card-penalty { position: absolute; z-index: 4; top: 24.5%; left: 14%; display: grid; place-items: center; min-width: 24%; height: 8%; border: 1px solid rgba(127,29,29,.42); border-radius: 5px; background: rgba(255,232,232,.86); color: #7f1d1d; font-size: 7px; font-style: normal; font-weight: 950; line-height: 1; }
+        .formation-secondary-badge { display: inline-flex; align-items: center; border-radius: 5px; background: #f2c14e; color: #2f2100; padding: 1px 3px; font-size: 6px; font-style: normal; font-weight: 900; line-height: 1; }
+        .captain-formation-player.formation-card-compacta { flex-basis: 96px; width: 96px; min-width: 96px; aspect-ratio: 409 / 710; background-size: contain; background-position: center; }
+        .captain-formation-player.formation-card-compacta .formation-card-stats { display: none; }
+        .captain-formation-player.formation-card-compacta .player-card-rating { top: 13.5%; left: 15%; width: 24%; height: 16%; }
+        .captain-formation-player.formation-card-compacta > .formation-card-position { top: 15%; right: 15%; width: 30%; height: 9%; border-color: #07130f; }
+        .captain-formation-player.formation-card-compacta .formation-card-photo { top: 31%; left: 19%; right: 19%; height: 31%; }
+        .captain-formation-player.formation-card-compacta > .formation-player-name { top: 65.5%; left: 14%; right: 14%; width: 72%; height: 8.5%; font-size: 8px; }
+        .captain-formation-player.formation-card-compacta .formation-card-regularity { top: 26%; right: 24%; bottom: auto; width: 11%; height: 6%; }
       `;
       clonedDocument.head.appendChild(exportStyles);
       clonedDocument.body.classList.add('is-exporting-formations');
@@ -2527,6 +2607,22 @@ function isFormationPointerDragEnabled() {
 function clearSorteoFormationDragHighlights(root = document) {
   root.querySelectorAll('.is-team-drag-over, .is-drag-over')
     .forEach(el => el.classList.remove('is-team-drag-over', 'is-drag-over'));
+}
+
+function setCleanSorteoDragPayload(event, playerCard) {
+  if (!event.dataTransfer) return;
+  const playerName = playerCard.querySelector('.formation-player-name')?.textContent.trim() || 'Jugador';
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('application/json', JSON.stringify({
+    teamIndex: Number(playerCard.dataset.teamIndex),
+    playerKey: playerCard.dataset.playerKey || ''
+  }));
+  event.dataTransfer.setData('text/plain', playerName);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  event.dataTransfer.setDragImage(canvas, 0, 0);
 }
 
 function formationDropTargetFromPoint(clientX, clientY, ghost = null) {
@@ -2729,11 +2825,7 @@ function bindSorteoLegacyEvents() {
       return;
     }
     playerCard.classList.add('is-dragging');
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('application/json', JSON.stringify({
-      teamIndex: Number(playerCard.dataset.teamIndex),
-      playerKey: playerCard.dataset.playerKey || ''
-    }));
+    setCleanSorteoDragPayload(event, playerCard);
   });
 
   root.addEventListener('dragend', (event) => {

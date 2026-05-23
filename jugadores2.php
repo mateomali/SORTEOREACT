@@ -342,8 +342,8 @@ foreach ($overallRatings as $rating) {
     $topOverall = max($topOverall, $rating);
 }
 
-$title = 'Jugadores 2 | ' . APP_NAME;
-$activePage = 'jugadores.php';
+$title = 'Jugadores | ' . APP_NAME;
+$activePage = 'jugadores2.php';
 $bodyClass = 'page-jugadores2';
 require __DIR__ . '/includes/header.php';
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.css') ?: time());
@@ -381,9 +381,9 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
   <div class="j2-admin-links">
     <?php if ($isAdmin): ?>
       <a href="<?= $showInactive ? 'jugadores2.php' : 'jugadores2.php?show_inactive=1' ?>"><?= $showInactive ? 'Ver solo activos' : 'Ver inactivos' ?></a>
-      <a href="jugadores.php<?= $showInactive ? '?show_inactive=1' : '' ?>">Gestionar jugadores</a>
+      <a href="jugadores.php<?= $showInactive ? '?show_inactive=1' : '' ?>">Backup jugadores</a>
     <?php else: ?>
-      <a href="jugadores.php">Vista clasica</a>
+      <a href="jugadores.php">Backup jugadores</a>
     <?php endif; ?>
   </div>
 </section>
@@ -403,14 +403,23 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
       $overall = shared_profile_player_fifa_overall($rating);
       $group = jugadores2_position_group($positions);
       $search = strtolower(trim($name . ' ' . $positions . ' ' . number_format($rating, 1) . ' ' . $overall . ' ' . implode(' ', array_values($statLabels))));
-      $cardStats = [
-          'RIT' => jugadores2_card_stat($player, 'rhythm'),
-          'TEC' => jugadores2_card_stat($player, 'technique'),
-          'SOL' => jugadores2_card_stat($player, 'defense_physical'),
-          'ATA' => jugadores2_card_stat($player, 'attack'),
-          'EQU' => jugadores2_card_stat($player, 'teamwork'),
-          'MEN' => jugadores2_card_stat($player, 'mentality'),
-      ];
+      $cardStats = $primaryPosition === 'ARQ'
+          ? [
+              'ARQ' => jugadores2_card_stat($player, 'goalkeeper_skill'),
+              'RIT' => jugadores2_card_stat($player, 'rhythm'),
+              'DEF' => jugadores2_card_stat($player, 'defense_physical'),
+              'TEC' => jugadores2_card_stat($player, 'technique'),
+              'EQU' => jugadores2_card_stat($player, 'teamwork'),
+              'MEN' => jugadores2_card_stat($player, 'mentality'),
+          ]
+          : [
+              'TEC' => jugadores2_card_stat($player, 'technique'),
+              'RIT' => jugadores2_card_stat($player, 'rhythm'),
+              'DEF' => jugadores2_card_stat($player, 'defense_physical'),
+              'ATA' => jugadores2_card_stat($player, 'attack'),
+              'EQU' => jugadores2_card_stat($player, 'teamwork'),
+              'MEN' => jugadores2_card_stat($player, 'mentality'),
+          ];
       $tier = jugadores2_card_tier($overall);
       $cardPhoto = jugadores2_card_photo($player);
       $isActive = (int) ($player['active'] ?? 0) === 1;
@@ -425,38 +434,28 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
       data-j2-overall="<?= h((string) $overall) ?>"
       data-j2-rating="<?= h(number_format($rating, 3, '.', '')) ?>"
     >
-      <button class="j2-fut-card tier-<?= h($tier) ?>" type="button" data-j2-open="<?= h((string) $id) ?>" aria-label="Ver ficha de <?= h($name) ?>">
-        <span class="j2-fut-card-top">
-          <span class="j2-fut-overall">
-            <strong><?= h((string) $overall) ?></strong>
-            <span>GEN</span>
-            <span class="j2-fut-position"><?= h($primaryPosition) ?></span>
-            <?php if ($secondaryPosition !== ''): ?>
-              <span class="j2-fut-position-secondary"><?= h($secondaryPosition) ?></span>
-            <?php endif; ?>
-          </span>
-          <span></span>
-          <span class="j2-fut-card-flags">
-            <span class="j2-form-arrow is-<?= h($regularityForm) ?>" title="<?= h($regularityLabel) ?>" aria-label="<?= h($regularityLabel) ?>"></span>
-            <span class="j2-fut-badge<?= $isActive ? '' : ' is-inactive' ?>"><?= $isActive ? 'ACT' : 'INA' ?></span>
-          </span>
+      <button class="j2-fut-card formation-player formation-card-sin-stat formation-card-tier-<?= h($tier) ?> tier-<?= h($tier) ?>" type="button" data-j2-open="<?= h((string) $id) ?>" aria-label="Ver ficha de <?= h($name) ?>">
+        <span class="player-card-rating" title="Puntaje general">
+          <strong><?= h((string) $overall) ?></strong>
+          <span>GEN</span>
         </span>
-        <span class="j2-fut-player-mark">
-          <span class="j2-fut-avatar<?= str_contains($cardPhoto, 'default-player-silhouette') ? ' is-default' : '' ?>">
-            <?php if ($cardPhoto !== ''): ?>
-              <img src="<?= h($cardPhoto) ?>" alt="">
-            <?php else: ?>
-              <?= h(jugadores2_player_initials($name)) ?>
-            <?php endif; ?>
-          </span>
+        <span class="formation-card-photo" aria-hidden="true">
+          <?php if ($cardPhoto !== ''): ?>
+            <img src="<?= h($cardPhoto) ?>" alt="">
+          <?php else: ?>
+            <?= h(jugadores2_player_initials($name)) ?>
+          <?php endif; ?>
         </span>
-        <span class="j2-fut-detail">
-          <strong class="j2-fut-name"><?= h($name) ?></strong>
-          <span class="j2-fut-stats">
-            <?php foreach ($cardStats as $label => $value): ?>
-              <span><b><?= h((string) $value) ?></b><?= h($label) ?></span>
-            <?php endforeach; ?>
-          </span>
+        <strong class="formation-player-name"><?= h($name) ?></strong>
+        <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion principal"><?= h($primaryPosition) ?></span>
+        <?php if ($secondaryPosition !== ''): ?>
+          <span class="formation-card-secondary-position" title="Posicion secundaria"><?= h($secondaryPosition) ?></span>
+        <?php endif; ?>
+        <span class="formation-card-regularity is-<?= h($regularityForm) ?>" title="<?= h($regularityLabel) ?>" aria-label="<?= h($regularityLabel) ?>"></span>
+        <span class="formation-card-stats" aria-label="Stats del jugador">
+          <?php foreach ($cardStats as $label => $value): ?>
+            <span class="formation-card-stat"><span><?= h($label) ?></span><strong><?= h((string) $value) ?></strong></span>
+          <?php endforeach; ?>
         </span>
       </button>
     </article>

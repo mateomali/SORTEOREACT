@@ -7,7 +7,7 @@ const publicPages = [
   ['index.php', 'Inicio'],
   ['historial.php', 'Historial'],
   ['estadisticas.php', 'Estadisticas'],
-  ['jugadores.php', 'Jugadores'],
+  ['jugadores2.php', 'Jugadores'],
   ['login.php', 'Ingreso'],
 ];
 

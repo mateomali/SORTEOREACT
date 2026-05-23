@@ -9602,13 +9602,14 @@
   }
 
   .page-editar-partidos .encounter-card {
-    grid-template-columns: minmax(210px, 0.9fr) minmax(260px, 1fr) minmax(260px, 0.9fr) auto;
+    grid-template-columns: minmax(210px, 0.9fr) minmax(260px, 1fr) minmax(260px, 0.9fr);
     grid-template-areas:
-      "head score status actions";
-    align-items: center;
-    gap: 10px 14px;
+      "head score status"
+      "actions actions actions";
+    align-items: start;
+    gap: 10px 16px;
     border-radius: 14px;
-    padding: 10px 12px;
+    padding: 12px 14px;
   }
 
   .page-editar-partidos .encounter-card h4 {
@@ -9650,13 +9651,21 @@
   .page-editar-partidos .encounter-actions {
     grid-area: actions;
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 5px;
+    gap: 7px;
     min-width: 0;
-    width: auto;
-    padding-top: 0;
+    width: 100%;
+    padding-top: 2px;
+  }
+
+  .page-editar-partidos .encounter-actions form {
+    display: flex;
+    flex: 0 0 auto;
+    margin: 0;
+    min-height: 0;
+    padding: 0;
   }
 
   .page-editar-partidos .encounter-actions .btn,
@@ -9669,7 +9678,7 @@
   }
 
   .page-editar-partidos .encounter-actions .btn {
-    max-width: 104px;
+    max-width: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -10240,7 +10249,7 @@
       width: 100%;
       flex-wrap: wrap;
       justify-content: flex-end;
-      gap: 6px;
+      gap: 7px;
       padding-top: 2px;
     }
 
@@ -16687,6 +16696,33 @@ body.page-historial .content .match-history .team-formation.is-result-formation:
   background: rgba(5, 26, 16, 0.16);
 }
 
+body.page-index .content .home-captain-live-teams .team-formation {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #7fb89c;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(5, 39, 25, 0.08), rgba(5, 39, 25, 0.22)),
+    url("./images/captain-field-bg-vertical.jpg") center / cover no-repeat,
+    #173f25;
+}
+
+body.page-index .content .home-captain-live-teams .team-formation::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(5, 26, 16, 0.16);
+}
+
+body.page-index .content .home-captain-live-teams .formation-line,
+body.page-index .content .home-captain-live-teams .line-players {
+  position: relative;
+  z-index: 1;
+  border-color: transparent;
+  background: transparent;
+}
+
 body.page-index .content .match-history .line-label,
 body.page-historial .content .match-history .line-label {
   align-self: center;
@@ -16697,6 +16733,35 @@ body.page-historial .content .match-history .line-label {
   font-size: 0.66rem;
   line-height: 1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+body.page-index .content .match-history .team-formation .formation-line,
+body.page-historial .content .match-history .team-formation .formation-line,
+body.page-perfil .content .public-teams .team-formation .formation-line,
+body.page-index .content .home-captain-live-teams .team-formation .formation-line {
+  position: relative;
+}
+
+body.page-index .content .match-history .team-formation .formation-line + .formation-line,
+body.page-historial .content .match-history .team-formation .formation-line + .formation-line,
+body.page-perfil .content .public-teams .team-formation .formation-line + .formation-line,
+body.page-index .content .home-captain-live-teams .team-formation .formation-line + .formation-line {
+  padding-top: 9px;
+}
+
+body.page-index .content .match-history .team-formation .formation-line + .formation-line::before,
+body.page-historial .content .match-history .team-formation .formation-line + .formation-line::before,
+body.page-perfil .content .public-teams .team-formation .formation-line + .formation-line::before,
+body.page-index .content .home-captain-live-teams .team-formation .formation-line + .formation-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 42px;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(244, 255, 248, 0.72) 12%, rgba(244, 255, 248, 0.72) 88%, transparent);
+  box-shadow: 0 1px 0 rgba(2, 18, 11, 0.24);
 }
 
 body.page-index .content .match-history .formation-player,
@@ -17293,6 +17358,831 @@ body.page-historial .content .match-history .is-base-formation .formation-player
   }
 }
 
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(245, 240, 229, 0.78);
+  --formation-slot-line: rgba(7, 19, 15, 0.28);
+  position: relative;
+  display: block;
+  aspect-ratio: 409 / 710;
+  flex: 0 0 124px;
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--formation-card-image) center / contain no-repeat;
+  clip-path: none;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  filter: drop-shadow(0 4px 8px rgba(2, 14, 9, 0.24));
+  padding: 0;
+  box-shadow: none;
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-bronze,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-bronze {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(248, 217, 155, 0.78);
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-silver,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-silver {
+  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-slot-bg: rgba(249, 255, 251, 0.74);
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-gold,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-gold {
+  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-slot-bg: rgba(255, 240, 157, 0.72);
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-elite,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-elite {
+  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-slot-bg: rgba(247, 241, 255, 0.34);
+  --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating {
+  position: absolute;
+  z-index: 2;
+  top: 12%;
+  left: 14%;
+  display: grid;
+  place-items: center;
+  width: 23%;
+  min-width: 0;
+  height: 16%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  text-align: center;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong {
+  display: block;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span {
+  display: block;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.34rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-card-position,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-card-position {
+  position: absolute;
+  z-index: 2;
+  top: 14%;
+  right: 15%;
+  display: grid;
+  place-items: center;
+  width: 26%;
+  min-width: 0;
+  height: 9%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.5rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-player-name,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-player-name {
+  position: absolute;
+  z-index: 3;
+  top: 58.8%;
+  left: 14%;
+  right: 14%;
+  display: grid;
+  place-items: center;
+  width: auto;
+  height: 8%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0 3px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.53rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.public-teams .is-base-formation .formation-card-photo,
+.home-captain-live-teams .is-base-formation .formation-card-photo {
+  position: absolute;
+  z-index: 1;
+  top: 27.5%;
+  left: 18%;
+  right: 18%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 34%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.public-teams .is-base-formation .formation-card-photo img,
+.home-captain-live-teams .is-base-formation .formation-card-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0.62;
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.2));
+}
+
+.public-teams .is-base-formation .formation-card-tier-elite .formation-card-photo img,
+.home-captain-live-teams .is-base-formation .formation-card-tier-elite .formation-card-photo img {
+  opacity: 0.5;
+  filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.32));
+}
+
+.public-teams .is-base-formation .formation-card-stats,
+.home-captain-live-teams .is-base-formation .formation-card-stats {
+  position: absolute;
+  z-index: 3;
+  top: 68.8%;
+  left: 16%;
+  right: 16%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4.5% 6%;
+  height: 17.8%;
+  min-width: 0;
+}
+
+.public-teams .is-base-formation .formation-card-stat,
+.home-captain-live-teams .is-base-formation .formation-card-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 4px;
+  background: var(--formation-slot-bg);
+  padding: 0 2px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.36rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.public-teams .is-base-formation .formation-card-stat span,
+.public-teams .is-base-formation .formation-card-stat strong,
+.home-captain-live-teams .is-base-formation .formation-card-stat span,
+.home-captain-live-teams .is-base-formation .formation-card-stat strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: inherit;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.public-teams .is-base-formation .formation-card-stat span,
+.home-captain-live-teams .is-base-formation .formation-card-stat span {
+  opacity: 0.84;
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat.is-position-changed,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat.is-position-changed {
+  filter:
+    drop-shadow(1px 0 0 #f2c14e)
+    drop-shadow(-1px 0 0 #f2c14e)
+    drop-shadow(0 1px 0 #f2c14e)
+    drop-shadow(0 -1px 0 #f2c14e)
+    drop-shadow(0 4px 8px rgba(2, 14, 9, 0.28));
+  box-shadow: none;
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat.is-position-changed::after,
+.home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat.is-position-changed::after {
+  content: none;
+}
+
+@media (max-width: 760px) {
+  .public-teams .is-base-formation .formation-player.formation-card-sin-stat,
+  .home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat {
+    flex-basis: 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+  }
+
+  .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong,
+  .home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong {
+    font-size: 0.7rem;
+  }
+
+  .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span,
+  .home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span {
+    font-size: 0.28rem;
+  }
+
+  .public-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-card-position,
+  .home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-card-position {
+    font-size: 0.4rem;
+  }
+
+  .public-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-player-name,
+  .home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat > .formation-player-name {
+    font-size: 0.41rem;
+  }
+
+  .public-teams .is-base-formation .formation-card-stat,
+  .home-captain-live-teams .is-base-formation .formation-card-stat {
+    gap: 2px;
+    padding: 0 2px;
+    font-size: 0.28rem;
+  }
+
+}
+
+body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat,
+body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat {
+  flex: 0 0 124px;
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  min-height: auto;
+  padding: 0;
+}
+
+body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong,
+body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span,
+body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .formation-card-stat strong,
+body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong,
+body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span,
+body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .formation-card-stat strong {
+  display: inline;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong,
+body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating strong {
+  display: block;
+}
+
+body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span,
+body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating span {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  body.page-index .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat,
+  body.page-historial .content .match-history .public-teams .is-base-formation .formation-player.formation-card-sin-stat {
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+    min-height: auto;
+    padding: 0;
+  }
+}
+
+.public-teams .formation-player.formation-card-sin-stat {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(245, 240, 229, 0.78);
+  --formation-slot-line: rgba(7, 19, 15, 0.28);
+  position: relative;
+  display: block;
+  aspect-ratio: 409 / 710;
+  flex: 0 0 124px;
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--formation-card-image) center / contain no-repeat;
+  clip-path: none;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  filter: drop-shadow(0 4px 8px rgba(2, 14, 9, 0.24));
+  padding: 0;
+  box-shadow: none;
+}
+
+.public-teams .formation-player.formation-card-sin-stat.formation-card-tier-bronze {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(248, 217, 155, 0.78);
+}
+
+.public-teams .formation-player.formation-card-sin-stat.formation-card-tier-silver {
+  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-slot-bg: rgba(249, 255, 251, 0.74);
+}
+
+.public-teams .formation-player.formation-card-sin-stat.formation-card-tier-gold {
+  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-slot-bg: rgba(255, 240, 157, 0.72);
+}
+
+.public-teams .formation-player.formation-card-sin-stat.formation-card-tier-elite {
+  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-slot-bg: rgba(247, 241, 255, 0.34);
+  --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+.public-teams .formation-player.formation-card-sin-stat .player-card-rating {
+  position: absolute;
+  z-index: 2;
+  top: 12%;
+  left: 14%;
+  display: grid;
+  place-items: center;
+  width: 23%;
+  min-width: 0;
+  height: 16%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  text-align: center;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.public-teams .formation-player.formation-card-sin-stat .player-card-rating strong {
+  display: block;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.public-teams .formation-player.formation-card-sin-stat .player-card-rating span {
+  display: block;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.34rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.public-teams .formation-player.formation-card-sin-stat > .formation-card-position {
+  position: absolute;
+  z-index: 2;
+  top: 14%;
+  right: 15%;
+  display: grid;
+  place-items: center;
+  width: 26%;
+  min-width: 0;
+  height: 9%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.5rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.public-teams .formation-card-regularity,
+.home-captain-live-teams .formation-card-regularity,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity {
+  --arrow-color: #a7ec35;
+  position: absolute;
+  z-index: 3;
+  top: 25%;
+  right: 18%;
+  display: block;
+  width: 18%;
+  max-width: 22px;
+  min-width: 16px;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.75));
+  pointer-events: none;
+}
+
+.public-teams .formation-card-regularity::before,
+.public-teams .formation-card-regularity::after,
+.home-captain-live-teams .formation-card-regularity::before,
+.home-captain-live-teams .formation-card-regularity::after,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::before,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::after {
+  content: "";
+  position: absolute;
+  clip-path: polygon(50% 0, 100% 48%, 70% 48%, 70% 100%, 30% 100%, 30% 48%, 0 48%);
+}
+
+.public-teams .formation-card-regularity::before,
+.home-captain-live-teams .formation-card-regularity::before,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::before {
+  inset: 1px;
+  background: #07130f;
+}
+
+.public-teams .formation-card-regularity::after,
+.home-captain-live-teams .formation-card-regularity::after,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::after {
+  inset: 4px;
+  background: var(--arrow-color);
+}
+
+.public-teams .formation-card-regularity.is-up,
+.home-captain-live-teams .formation-card-regularity.is-up,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity.is-up {
+  --arrow-color: #1ec7f2;
+}
+
+.public-teams .formation-card-regularity.is-right,
+.home-captain-live-teams .formation-card-regularity.is-right,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity.is-right {
+  --arrow-color: #a7ec35;
+  transform: rotate(90deg);
+}
+
+.public-teams .formation-card-regularity.is-down,
+.home-captain-live-teams .formation-card-regularity.is-down,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity.is-down {
+  --arrow-color: #ef2b2b;
+  transform: rotate(180deg);
+}
+
+.public-teams .formation-player.formation-card-sin-stat > .formation-player-name {
+  position: absolute;
+  z-index: 3;
+  top: 58.8%;
+  left: 14%;
+  right: 14%;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 72%;
+  max-width: 72%;
+  height: 8%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0 3px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.53rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat > .formation-player-name,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat > .formation-player-name,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat > .formation-player-name {
+  box-sizing: border-box;
+  width: 72%;
+  max-width: 72%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat .formation-card-stats,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stats,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stats,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat .formation-card-stats,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stats {
+  box-sizing: border-box;
+  left: 17%;
+  right: 17%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4.5% 6%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat .formation-card-stat,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stat,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stat,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat .formation-card-stat,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stat {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 2px;
+}
+
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat .formation-card-stat strong,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stat strong,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat .formation-card-stat strong,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat .formation-card-stat strong,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stat strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.public-teams .formation-card-photo {
+  position: absolute;
+  z-index: 1;
+  top: 27.5%;
+  left: 18%;
+  right: 18%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 34%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.public-teams .formation-card-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0.62;
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.2));
+}
+
+.public-teams .formation-card-tier-elite .formation-card-photo img {
+  opacity: 0.5;
+  filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.32));
+}
+
+.public-teams .formation-card-stats {
+  position: absolute;
+  z-index: 3;
+  top: 68.8%;
+  left: 16%;
+  right: 16%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4.5% 6%;
+  height: 17.8%;
+  min-width: 0;
+}
+
+.public-teams .formation-card-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 4px;
+  background: var(--formation-slot-bg);
+  padding: 0 2px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.36rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.public-teams .formation-card-stat span,
+.public-teams .formation-card-stat strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: inherit;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.public-teams .formation-card-stat span {
+  opacity: 0.84;
+}
+
+.public-teams .formation-player.formation-card-sin-stat.is-position-changed {
+  filter:
+    drop-shadow(1px 0 0 #f2c14e)
+    drop-shadow(-1px 0 0 #f2c14e)
+    drop-shadow(0 1px 0 #f2c14e)
+    drop-shadow(0 -1px 0 #f2c14e)
+    drop-shadow(0 4px 8px rgba(2, 14, 9, 0.28));
+}
+
+.public-teams .formation-player.formation-card-sin-stat.is-position-changed::after {
+  content: none;
+}
+
+@media (max-width: 760px) {
+  .public-teams .formation-player.formation-card-sin-stat {
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+  }
+
+  .public-teams .formation-player.formation-card-sin-stat .player-card-rating strong {
+    font-size: 0.7rem;
+  }
+
+  .public-teams .formation-player.formation-card-sin-stat .player-card-rating span {
+    font-size: 0.28rem;
+  }
+
+  .public-teams .formation-player.formation-card-sin-stat > .formation-card-position {
+    font-size: 0.4rem;
+  }
+
+  .public-teams .formation-player.formation-card-sin-stat > .formation-player-name {
+    font-size: 0.41rem;
+  }
+
+  .public-teams .formation-card-stat {
+    gap: 2px;
+    padding: 0 2px;
+    font-size: 0.28rem;
+  }
+}
+
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat {
+  position: relative;
+  display: block;
+  aspect-ratio: 409 / 710;
+  flex: 0 0 124px;
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--formation-card-image) center / contain no-repeat;
+  clip-path: none;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  padding: 0;
+  box-shadow: none;
+}
+
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-bronze,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-bronze,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-bronze {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(248, 217, 155, 0.78);
+}
+
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-silver,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-silver,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-silver {
+  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-slot-bg: rgba(249, 255, 251, 0.74);
+}
+
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-gold,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-gold,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-gold {
+  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-slot-bg: rgba(255, 240, 157, 0.72);
+}
+
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-elite,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-elite,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-elite {
+  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-slot-bg: rgba(247, 241, 255, 0.34);
+  --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.is-position-changed,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.is-position-changed,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.is-position-changed {
+  border-color: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 4px 8px rgba(2, 14, 9, 0.24));
+}
+
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.is-position-changed::after,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed::after,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed::after,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.is-position-changed::after,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.is-position-changed::after {
+  content: none;
+}
+
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position,
+body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position {
+  border-color: #07130f;
+  background: #f2c14e;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  box-shadow:
+    0 0 0 1px rgba(255, 250, 206, 0.95),
+    0 0 0 3px rgba(7, 19, 15, 0.38),
+    inset 0 -1px 0 rgba(7, 19, 15, 0.18);
+}
+
+@media (max-width: 760px) {
+  body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat,
+  body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat {
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+    min-height: auto;
+    padding: 0;
+  }
+}
+
+
 /* Crear partido participant palette */
 body.page-crear-partido .content [data-player-row][data-player-row] {
   border-color: #dbe7e2;
@@ -17427,6 +18317,29 @@ body.page-sorteo-legacy .content .captain-formation-line,
 body.page-sorteo-legacy .content .team-formation .line-players {
   border-color: transparent;
   background: transparent;
+}
+
+body.page-sorteo-legacy .content .captain-formation-line,
+body.page-capitanes .content .captain-formation-line {
+  position: relative;
+}
+
+body.page-sorteo-legacy .content .captain-formation-line + .captain-formation-line,
+body.page-capitanes .content .captain-formation-line + .captain-formation-line {
+  padding-top: 9px;
+}
+
+body.page-sorteo-legacy .content .captain-formation-line + .captain-formation-line::before,
+body.page-capitanes .content .captain-formation-line + .captain-formation-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 60px;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(244, 255, 248, 0.72) 12%, rgba(244, 255, 248, 0.72) 88%, transparent);
+  box-shadow: 0 1px 0 rgba(2, 18, 11, 0.24);
 }
 
 body.page-sorteo-legacy .content .captain-line-label {
@@ -17755,6 +18668,820 @@ body.page-capitanes .content .captain-line-control {
   color: #063d2b;
   -webkit-text-fill-color: #063d2b;
   box-shadow: 0 2px 6px rgba(2, 14, 9, 0.18);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(245, 240, 229, 0.78);
+  --formation-slot-line: rgba(7, 19, 15, 0.28);
+  position: relative;
+  display: block;
+  aspect-ratio: 409 / 710;
+  flex: 0 0 124px;
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--formation-card-image) center / contain no-repeat;
+  clip-path: none;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  filter: drop-shadow(0 4px 8px rgba(2, 14, 9, 0.24));
+  padding: 0;
+  box-shadow: none;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-tier-bronze {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(248, 217, 155, 0.78);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-tier-silver {
+  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-slot-bg: rgba(249, 255, 251, 0.74);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-tier-gold {
+  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-slot-bg: rgba(255, 240, 157, 0.72);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-tier-elite {
+  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-slot-bg: rgba(247, 241, 255, 0.34);
+  --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .player-card-rating {
+  position: absolute;
+  z-index: 2;
+  top: 12%;
+  left: 14%;
+  display: grid;
+  place-items: center;
+  width: 23%;
+  min-width: 0;
+  height: 16%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  text-align: center;
+  line-height: 1;
+  box-shadow: none;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .player-card-rating strong {
+  display: block;
+  max-width: none;
+  overflow: visible;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: clip;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .player-card-rating span {
+  display: block;
+  max-width: none;
+  overflow: visible;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.34rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: clip;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat > .formation-card-position {
+  position: absolute;
+  z-index: 2;
+  top: 14%;
+  right: 15%;
+  display: grid;
+  place-items: center;
+  width: 26%;
+  min-width: 0;
+  height: 9%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.5rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat > .formation-player-name {
+  position: absolute;
+  z-index: 3;
+  top: 58.8%;
+  left: 14%;
+  right: 14%;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 72%;
+  max-width: 72%;
+  height: 8%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0 3px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.53rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-photo {
+  position: absolute;
+  z-index: 1;
+  top: 27.5%;
+  left: 18%;
+  right: 18%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 34%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0.62;
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.2));
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stats {
+  position: absolute;
+  z-index: 3;
+  top: 68.8%;
+  left: 17%;
+  right: 17%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4.5% 6%;
+  height: 17.8%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 4px;
+  background: var(--formation-slot-bg);
+  padding: 0 2px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.36rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stat strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: inherit;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-penalty {
+  position: absolute;
+  z-index: 4;
+  top: 24.5%;
+  left: 14%;
+  display: grid;
+  place-items: center;
+  min-width: 24%;
+  height: 8%;
+  border: 1px solid rgba(127, 29, 29, 0.42);
+  border-radius: 5px;
+  background: rgba(255, 232, 232, 0.86);
+  color: #7f1d1d;
+  -webkit-text-fill-color: #7f1d1d;
+  font-size: 0.42rem;
+  font-style: normal;
+  font-weight: 950;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat {
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+  }
+
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .player-card-rating strong {
+    font-size: 0.7rem;
+  }
+
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .player-card-rating span {
+    font-size: 0.28rem;
+  }
+
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat > .formation-card-position {
+    font-size: 0.4rem;
+  }
+
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat > .formation-player-name {
+    font-size: 0.41rem;
+  }
+
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .formation-card-stat {
+    font-size: 0.28rem;
+  }
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(245, 240, 229, 0.78);
+  --formation-slot-line: rgba(7, 19, 15, 0.28);
+  position: relative;
+  display: block;
+  aspect-ratio: 409 / 710;
+  flex: 0 0 124px;
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--formation-card-image) center / contain no-repeat;
+  clip-path: none;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  filter: drop-shadow(0 4px 8px rgba(2, 14, 9, 0.24));
+  padding: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.is-dragging,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.is-pointer-drag-ghost {
+  overflow: hidden;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-tier-bronze {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(248, 217, 155, 0.78);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-tier-silver {
+  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-slot-bg: rgba(249, 255, 251, 0.74);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-tier-gold {
+  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-slot-bg: rgba(255, 240, 157, 0.72);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-tier-elite {
+  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-slot-bg: rgba(247, 241, 255, 0.34);
+  --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.is-position-changed {
+  border-color: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 4px 8px rgba(2, 14, 9, 0.24));
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.is-position-changed::after {
+  content: none;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .player-card-rating {
+  position: absolute;
+  z-index: 2;
+  top: 12%;
+  left: 14%;
+  display: grid;
+  place-items: center;
+  width: 23%;
+  min-width: 0;
+  height: 16%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  text-align: center;
+  line-height: 1;
+  box-shadow: none;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .player-card-rating strong {
+  display: block;
+  max-width: none;
+  overflow: visible;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: clip;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .player-card-rating span {
+  display: block;
+  max-width: none;
+  overflow: visible;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.34rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: clip;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat > .formation-card-position {
+  position: absolute;
+  z-index: 2;
+  top: 14%;
+  right: 15%;
+  display: grid;
+  place-items: center;
+  width: 26%;
+  min-width: 0;
+  height: 9%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.5rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position {
+  border-color: #07130f;
+  background: #f2c14e;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  box-shadow:
+    0 0 0 1px rgba(255, 250, 206, 0.95),
+    0 0 0 3px rgba(7, 19, 15, 0.38),
+    inset 0 -1px 0 rgba(7, 19, 15, 0.18);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat > .formation-player-name {
+  position: absolute;
+  z-index: 3;
+  top: 58.8%;
+  left: 14%;
+  right: 14%;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 72%;
+  max-width: 72%;
+  height: 8%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0 3px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.53rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-photo {
+  position: absolute;
+  z-index: 1;
+  top: 27.5%;
+  left: 18%;
+  right: 18%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 34%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0.62;
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.2));
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity {
+  position: absolute;
+  z-index: 4;
+  right: 14%;
+  top: 25%;
+  width: 11%;
+  height: 6.4%;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 4px;
+  background: var(--formation-slot-bg);
+  box-shadow: none;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::before,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::before {
+  top: 26%;
+  width: 15%;
+  height: 48%;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity::after {
+  top: 17%;
+  width: 44%;
+  height: 44%;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity.is-up {
+  color: #0d6b3e;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity.is-right {
+  color: #5b6370;
+  transform: rotate(90deg);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-regularity.is-down {
+  color: #8a1f1f;
+  transform: rotate(180deg);
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-stats {
+  position: absolute;
+  z-index: 3;
+  top: 68.8%;
+  left: 17%;
+  right: 17%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4.5% 6%;
+  height: 17.8%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 4px;
+  background: var(--formation-slot-bg);
+  padding: 0 2px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.36rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-stat span,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-stat strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: inherit;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-penalty {
+  position: absolute;
+  z-index: 4;
+  top: 24.5%;
+  left: 14%;
+  display: grid;
+  place-items: center;
+  min-width: 24%;
+  height: 8%;
+  border: 1px solid rgba(127, 29, 29, 0.42);
+  border-radius: 5px;
+  background: rgba(255, 232, 232, 0.86);
+  color: #7f1d1d;
+  -webkit-text-fill-color: #7f1d1d;
+  font-size: 0.42rem;
+  font-style: normal;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.has-formation-card-preview {
+  overflow: hidden;
+}
+
+.formation-card-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 14, 9, 0.68);
+  padding: 22px;
+}
+
+.formation-card-preview-stage {
+  display: grid;
+  place-items: center;
+  width: min(72vw, 260px);
+  min-height: min(78vh, 460px);
+  overflow: visible;
+}
+
+.formation-card-preview-stage .formation-player.formation-card-sin-stat.formation-card-preview-stat {
+  flex: 0 0 min(72vw, 220px);
+  width: min(72vw, 220px);
+  min-width: 0;
+  max-width: 220px;
+  cursor: default;
+  pointer-events: none;
+  filter: drop-shadow(0 14px 26px rgba(2, 14, 9, 0.42));
+}
+
+.formation-card-preview-stage .formation-player.formation-card-sin-stat.formation-card-preview-stat .formation-card-stats {
+  display: grid;
+}
+
+.formation-card-preview-close {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 121;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(7, 19, 15, 0.9);
+  color: #f4fff8;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.formation-card-preview-close:hover,
+.formation-card-preview-close:focus-visible {
+  background: #f4fff8;
+  color: #07130f;
+  outline: none;
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta {
+  aspect-ratio: 409 / 710;
+  flex-basis: 96px;
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
+  overflow: hidden;
+  background-size: contain;
+  background-position: center;
+  cursor: pointer;
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats {
+  display: none;
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating {
+  top: 13.5%;
+  left: 15%;
+  width: 24%;
+  height: 16%;
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position {
+  top: 15%;
+  right: 15%;
+  width: 30%;
+  height: 9%;
+  border-color: #07130f;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 250, 206, 0.62),
+    0 0 0 1px rgba(7, 19, 15, 0.18);
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo {
+  top: 31%;
+  left: 19%;
+  right: 19%;
+  height: 31%;
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+  top: 65.5%;
+  left: 14%;
+  right: 14%;
+  width: 72%;
+  max-width: 72%;
+  height: 8.5%;
+  font-size: 0.47rem;
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity,
+body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity {
+  top: 26%;
+  right: 24%;
+  bottom: auto;
+  width: 11%;
+  height: 6%;
+}
+
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-penalty,
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-penalty,
+body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-penalty {
+  top: 25%;
+  min-width: 24%;
+  height: 7.5%;
+}
+
+@media (max-width: 760px) {
+  .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta {
+    flex-basis: 86px;
+    width: 86px;
+    min-width: 86px;
+    max-width: 86px;
+  }
+
+  .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+  body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+  body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+    font-size: 0.39rem;
+  }
+}
+
+@media (max-width: 760px) {
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat:not(.formation-card-compacta) {
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+  }
+
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .player-card-rating strong {
+    font-size: 0.7rem;
+  }
+
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .player-card-rating span {
+    font-size: 0.28rem;
+  }
+
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat > .formation-card-position {
+    font-size: 0.4rem;
+  }
+
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat > .formation-player-name {
+    font-size: 0.41rem;
+  }
+
+  body.page-sorteo-legacy .content .captain-formation-player.formation-card-sin-stat .formation-card-stat {
+    font-size: 0.28rem;
+  }
 }
 
 body.page-crear-partido .content [data-selected-participants] > div {

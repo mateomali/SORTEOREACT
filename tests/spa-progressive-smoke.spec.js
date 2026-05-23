@@ -14,7 +14,7 @@ test('main PHP pages avoid executable inline handlers/scripts', async () => {
     'equipos_manual.php',
     'finalizar_partido.php',
     'index.php',
-    'jugadores.php',
+    'jugadores2.php',
     'sorteo_legacy_csv.php',
   ];
 
@@ -80,7 +80,7 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
   await adminLogin(page);
 
   const checks = [];
-  checks.push(await clickAndCheckPartial(page, 'nav a[href="jugadores.php"]', 'jugadores.php', 'text=Listado de jugadores'));
+  checks.push(await clickAndCheckPartial(page, 'nav a[href="jugadores2.php"]', 'jugadores2.php', 'text=Plantilla, posiciones y rendimiento actual.'));
   checks.push(await clickAndCheckPartial(page, 'nav a[href="estadisticas.php"]', 'estadisticas.php'));
   checks.push(await clickAndCheckPartial(page, 'nav a[href="editar_partidos.php"]', 'editar_partidos.php'));
 

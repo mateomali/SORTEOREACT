@@ -513,6 +513,84 @@
 
   bindStaticTeamFormationDrag();
 
+  const bindCompactFormationCardPreview = (root = document) => {
+    root.querySelectorAll?.('.formation-card-compacta.formation-card-sin-stat').forEach((card) => {
+      if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '0');
+      if (!card.hasAttribute('role')) card.setAttribute('role', 'button');
+      if (!card.hasAttribute('aria-label')) {
+        const name = card.querySelector('.formation-player-name')?.textContent?.trim() || 'jugador';
+        card.setAttribute('aria-label', `Ver carta stat de ${name}`);
+      }
+    });
+
+    if (document.documentElement.dataset.compactFormationPreviewBound === '1') return;
+    document.documentElement.dataset.compactFormationPreviewBound = '1';
+    let activePreview = null;
+
+    const closePreview = () => {
+      activePreview?.remove();
+      activePreview = null;
+      document.body.classList.remove('has-formation-card-preview');
+    };
+
+    const openPreview = (sourceCard) => {
+      if (!sourceCard?.classList?.contains('formation-card-compacta')) return;
+      closePreview();
+
+      const preview = document.createElement('div');
+      preview.className = 'formation-card-preview-overlay';
+      preview.setAttribute('role', 'dialog');
+      preview.setAttribute('aria-modal', 'true');
+      preview.setAttribute('aria-label', 'Carta stat del jugador');
+      preview.innerHTML = `
+        <button class="formation-card-preview-close" type="button" aria-label="Cerrar carta">×</button>
+        <div class="formation-card-preview-stage team-formation"></div>
+      `;
+
+      const card = sourceCard.cloneNode(true);
+      card.classList.remove('formation-card-compacta', 'is-dragging', 'is-drag-over');
+      card.classList.add('formation-card-preview-stat');
+      card.setAttribute('draggable', 'false');
+      card.removeAttribute('data-static-formation-player');
+      card.removeAttribute('data-sorteo-drag-player');
+      card.removeAttribute('data-drag-player-id');
+      preview.querySelector('.formation-card-preview-stage')?.appendChild(card);
+      document.body.appendChild(preview);
+      document.body.classList.add('has-formation-card-preview');
+      activePreview = preview;
+      preview.querySelector('.formation-card-preview-close')?.focus({ preventScroll: true });
+    };
+
+    document.addEventListener('click', (event) => {
+      const closeButton = event.target.closest?.('.formation-card-preview-close');
+      if (closeButton) {
+        event.preventDefault();
+        closePreview();
+        return;
+      }
+      if (activePreview && event.target === activePreview) {
+        closePreview();
+        return;
+      }
+      const card = event.target.closest?.('.formation-card-compacta.formation-card-sin-stat');
+      if (!card || !root.contains(card)) return;
+      event.preventDefault();
+      openPreview(card);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && activePreview) {
+        closePreview();
+        return;
+      }
+      if (!['Enter', ' '].includes(event.key)) return;
+      const card = event.target.closest?.('.formation-card-compacta.formation-card-sin-stat');
+      if (!card) return;
+      event.preventDefault();
+      openPreview(card);
+    });
+  };
+
   const updateStatsPlayerSearch = (input = document.querySelector('[data-stats-player-search]')) => {
     const statsPlayerSearch = input;
     const statsPlayerResult = document.querySelector('[data-stats-player-result]');
@@ -968,6 +1046,7 @@
     bindSortableStatsPlayerGrids(root);
     bindStatsRowDetailToggles(root);
     bindExpandablePanelScroll(root);
+    bindCompactFormationCardPreview(root);
     bindMatchDetailToggles(root);
     bindDismissibleAlerts(root);
     bindMultiDrawPitchToggles(root);

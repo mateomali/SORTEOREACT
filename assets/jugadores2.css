@@ -11,6 +11,326 @@ body.page-jugadores2 {
   --j2-red: #dc3d3d;
 }
 
+/* Carta stat: shared player card presentation */
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(245, 240, 229, 0.78);
+  --formation-slot-line: rgba(7, 19, 15, 0.28);
+  position: relative;
+  display: block !important;
+  aspect-ratio: 409 / 710;
+  width: 168px !important;
+  min-width: 168px;
+  max-width: 168px;
+  min-height: auto !important;
+  margin: 0 auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--formation-card-image) center / contain no-repeat !important;
+  clip-path: none;
+  color: #07130f !important;
+  -webkit-text-fill-color: #07130f !important;
+  filter: drop-shadow(0 7px 12px rgba(2, 14, 9, 0.22));
+  padding: 0 !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat::before,
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat::after {
+  content: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-tier-bronze {
+  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-slot-bg: rgba(248, 217, 155, 0.78);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-tier-silver {
+  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-slot-bg: rgba(249, 255, 251, 0.74);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-tier-gold {
+  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-slot-bg: rgba(255, 240, 157, 0.72);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-tier-elite {
+  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-slot-bg: rgba(247, 241, 255, 0.34);
+  --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .player-card-rating {
+  position: absolute;
+  z-index: 2;
+  top: 12%;
+  left: 14%;
+  display: grid;
+  place-items: center;
+  width: 23%;
+  min-width: 0;
+  height: 16%;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  text-align: center;
+  line-height: 1;
+  box-shadow: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .player-card-rating strong,
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .player-card-rating span {
+  display: block;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .player-card-rating strong {
+  font-size: 1.02rem;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .player-card-rating span {
+  font-size: 0.39rem;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-position {
+  position: absolute;
+  z-index: 2;
+  top: 14%;
+  right: 15%;
+  display: grid;
+  place-items: center;
+  width: 26%;
+  min-width: 0;
+  height: 9%;
+  margin: 0;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-secondary-position,
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-status {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  min-width: 22%;
+  height: 7.5%;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.46rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-secondary-position {
+  top: 24.5%;
+  right: 15%;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-status {
+  top: 24.5%;
+  left: 14%;
+  margin: 0;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-status.is-inactive {
+  border-color: rgba(127, 29, 29, 0.42);
+  background: rgba(255, 232, 232, 0.86);
+  color: #7f1d1d;
+  -webkit-text-fill-color: #7f1d1d;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-photo {
+  position: absolute;
+  z-index: 1;
+  top: 27.5%;
+  left: 18%;
+  right: 18%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 34%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0.62;
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.2));
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-player-name {
+  position: absolute;
+  z-index: 3;
+  top: 58.8%;
+  left: 14%;
+  right: 14%;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 72%;
+  max-width: 72%;
+  height: 8%;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 5px;
+  background: var(--formation-slot-bg);
+  padding: 0 4px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.62rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity {
+  --arrow-color: #a7ec35;
+  position: absolute;
+  z-index: 3;
+  top: 35%;
+  right: 18%;
+  display: block;
+  width: 18%;
+  max-width: 25px;
+  min-width: 18px;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.75));
+  pointer-events: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity::before,
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity::after {
+  content: "";
+  position: absolute;
+  clip-path: polygon(50% 0, 100% 48%, 70% 48%, 70% 100%, 30% 100%, 30% 48%, 0 48%);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity::before {
+  inset: 1px;
+  background: #07130f;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity::after {
+  inset: 4px;
+  background: var(--arrow-color);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity.is-up {
+  --arrow-color: #1ec7f2;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity.is-right {
+  --arrow-color: #a7ec35;
+  transform: rotate(90deg);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-regularity.is-down {
+  --arrow-color: #ef2b2b;
+  transform: rotate(180deg);
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-stats {
+  position: absolute;
+  z-index: 3;
+  top: 68.8%;
+  left: 17%;
+  right: 17%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4.5% 6%;
+  height: 17.8%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--formation-slot-line);
+  border-radius: 4px;
+  background: var(--formation-slot-bg);
+  padding: 0 2px;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: 0.42rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-stat span,
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-stat strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #07130f;
+  -webkit-text-fill-color: #07130f;
+  font-size: inherit;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat {
+    width: 154px !important;
+    min-width: 154px;
+    max-width: 154px;
+  }
+
+  body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .player-card-rating strong {
+    font-size: 0.92rem;
+  }
+
+  body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-player-name {
+    font-size: 0.56rem;
+  }
+
+  body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-stat {
+    font-size: 0.38rem;
+  }
+}
+
 body.page-jugadores2 .content {
   display: grid;
   gap: 14px;
@@ -1601,5 +1921,40 @@ body.page-jugadores2 .content .j2-modal-close-icon {
   .j2-close-button,
   .j2-modal-help {
     display: none;
+  }
+}
+
+/* Final override: keep jugadores2 cards on the shared carta stat frame. */
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat {
+  display: block !important;
+  aspect-ratio: 409 / 710 !important;
+  width: 168px !important;
+  min-width: 168px !important;
+  max-width: 168px !important;
+  min-height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--formation-card-image) center / contain no-repeat !important;
+  background-color: transparent !important;
+  background-image: var(--formation-card-image) !important;
+  background-position: center !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  clip-path: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat::before,
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat::after {
+  content: none !important;
+}
+
+@media (max-width: 560px) {
+  body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat {
+    width: clamp(122px, calc((100vw - 36px) / 2), 154px) !important;
+    min-width: 0 !important;
+    max-width: 154px !important;
   }
 }

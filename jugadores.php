@@ -562,7 +562,7 @@ function player_position_simulation_control(array $player, array $selectedPositi
 
 $players = repo_all_players(!$isAdmin || !$showInactive);
 $title = 'Jugadores | ' . APP_NAME;
-$activePage = 'jugadores.php';
+$activePage = 'jugadores2.php';
 $disableContrastOverrides = true;
 $bodyClass = $isAdmin ? 'page-jugadores page-jugadores-admin' : 'page-jugadores';
 require __DIR__ . '/includes/header.php';

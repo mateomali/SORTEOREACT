@@ -26,7 +26,7 @@ $disableContrastOverrides = (bool) ($disableContrastOverrides ?? true);
 $brandLogoPath = __DIR__ . '/../assets/goodfellas-logo.png';
 $publicMenu = [
     'index.php' => 'Inicio',
-    'jugadores.php' => 'Jugadores',
+    'jugadores2.php' => 'Jugadores',
     'estadisticas.php' => 'Estadisticas',
     'historial.php' => 'Historial',
 ];

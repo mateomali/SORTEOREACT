@@ -49,6 +49,46 @@ function formation_view_card_tier(float $value): string
     return 'bronze';
 }
 
+function formation_view_card_stat_value(array $player, string $field): int
+{
+    return formation_view_card_rating(player_effective_stat($player, $field));
+}
+
+function formation_view_card_regularity_form(array $player): array
+{
+    $rating = normalize_player_stat(player_effective_stat($player, 'regularity'), 3.5);
+    if ($rating >= 4.5) {
+        return ['up', 'Regularidad alta'];
+    }
+    if ($rating < 3.0) {
+        return ['down', 'Regularidad baja'];
+    }
+    return ['right', 'Regularidad normal'];
+}
+
+function formation_view_card_stats(array $player, string $position): array
+{
+    if ($position === 'ARQ') {
+        return [
+            'ARQ' => formation_view_card_stat_value($player, 'goalkeeper_skill'),
+            'RIT' => formation_view_card_stat_value($player, 'rhythm'),
+            'DEF' => formation_view_card_stat_value($player, 'defense_physical'),
+            'TEC' => formation_view_card_stat_value($player, 'technique'),
+            'EQU' => formation_view_card_stat_value($player, 'teamwork'),
+            'MEN' => formation_view_card_stat_value($player, 'mentality'),
+        ];
+    }
+
+    return [
+        'TEC' => formation_view_card_stat_value($player, 'technique'),
+        'RIT' => formation_view_card_stat_value($player, 'rhythm'),
+        'DEF' => formation_view_card_stat_value($player, 'defense_physical'),
+        'ATA' => formation_view_card_stat_value($player, 'attack'),
+        'EQU' => formation_view_card_stat_value($player, 'teamwork'),
+        'MEN' => formation_view_card_stat_value($player, 'mentality'),
+    ];
+}
+
 function formation_view_group_players(array $players): array
 {
     $lines = array_fill_keys(player_formation_lines(), []);
@@ -154,12 +194,21 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
     $rating = (float) ($player['rating'] ?? 0);
     $isHighlighted = $highlightPlayerId > 0 && (int) ($player['id'] ?? 0) === $highlightPlayerId;
     $position = strtoupper($line !== '' ? $line : (string) ($player['assigned_position'] ?? 'MED'));
+    $stats = formation_view_card_stats($player, $position);
     $cardClass = 'formation-player formation-card-sin-stat formation-card-tier-' . formation_view_card_tier($rating) . ($isHighlighted ? ' is-current-player' : '');
 
     $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-player-skill="' . h((string) $rating) . '">';
     $html .= '<span class="player-card-rating" title="Puntaje general"><strong>' . h((string) formation_view_card_rating($rating)) . '</strong><span>GEN</span></span>';
+    $html .= '<span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>';
     $html .= '<strong class="formation-player-name">' . h((string) ($player['name'] ?? 'Jugador')) . '</strong>';
     $html .= '<span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada">' . h($position ?: 'GEN') . '</span>';
+    [$regularityForm, $regularityLabel] = formation_view_card_regularity_form($player);
+    $html .= '<span class="formation-card-regularity is-' . h($regularityForm) . '" title="' . h($regularityLabel) . '" aria-label="' . h($regularityLabel) . '"></span>';
+    $html .= '<span class="formation-card-stats" aria-label="Stats del jugador">';
+    foreach ($stats as $label => $value) {
+        $html .= '<span class="formation-card-stat"><span>' . h($label) . '</span><strong>' . h((string) $value) . '</strong></span>';
+    }
+    $html .= '</span>';
     $html .= '</div>';
 
     return $html;
