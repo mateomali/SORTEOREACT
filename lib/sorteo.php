@@ -466,6 +466,102 @@ function draw_teams_quality_score(array $teams, array $bands): float
     return $cost;
 }
 
+function draw_optimized_team_swap(array $teams, int $teamSize, float $maxDiff, array $bands): ?array
+{
+    $currentScore = draw_teams_quality_score($teams, $bands);
+    $best = null;
+    $bestScore = $currentScore;
+    $teamCount = count($teams);
+
+    for ($leftTeam = 0; $leftTeam < $teamCount - 1; $leftTeam++) {
+        for ($rightTeam = $leftTeam + 1; $rightTeam < $teamCount; $rightTeam++) {
+            foreach ($teams[$leftTeam] as $leftIndex => $_leftPlayer) {
+                foreach ($teams[$rightTeam] as $rightIndex => $_rightPlayer) {
+                    $candidate = $teams;
+                    $candidate[$leftTeam][$leftIndex] = $teams[$rightTeam][$rightIndex];
+                    $candidate[$rightTeam][$rightIndex] = $teams[$leftTeam][$leftIndex];
+
+                    if (!validate_teams($candidate, $teamSize, $maxDiff)) {
+                        continue;
+                    }
+
+                    $score = draw_teams_quality_score($candidate, $bands);
+                    if ($score + 0.0001 < $bestScore) {
+                        $bestScore = $score;
+                        $best = $candidate;
+                    }
+                }
+            }
+        }
+    }
+
+    return $best;
+}
+
+function draw_optimize_teams(array $teams, int $teamSize, float $maxDiff, array $bands, int $passes = 3): array
+{
+    for ($pass = 0; $pass < $passes; $pass++) {
+        $next = draw_optimized_team_swap($teams, $teamSize, $maxDiff, $bands);
+        if ($next === null) {
+            break;
+        }
+        $teams = $next;
+    }
+
+    return $teams;
+}
+
+function draw_exact_two_team_candidate(array $players, int $teamSize, float $maxDiff, array $bands): ?array
+{
+    $totalPlayers = count($players);
+    if ($teamSize < 2 || $totalPlayers !== ($teamSize * 2) || $totalPlayers > 20) {
+        return null;
+    }
+
+    $bestTeams = null;
+    $bestScore = null;
+    $selected = [0];
+    $candidateIndexes = range(1, $totalPlayers - 1);
+    $targetPicks = $teamSize - 1;
+
+    $visit = static function (int $start, int $remaining) use (&$visit, &$selected, $candidateIndexes, $players, $teamSize, $maxDiff, $bands, &$bestTeams, &$bestScore): void {
+        if ($remaining === 0) {
+            $selectedSet = array_flip($selected);
+            $left = [];
+            $right = [];
+            foreach ($players as $index => $player) {
+                if (isset($selectedSet[$index])) {
+                    $left[] = $player;
+                } else {
+                    $right[] = $player;
+                }
+            }
+
+            $teams = [$left, $right];
+            if (!validate_teams($teams, $teamSize, $maxDiff)) {
+                return;
+            }
+
+            $score = draw_teams_quality_score($teams, $bands);
+            if ($bestScore === null || $score < $bestScore) {
+                $bestScore = $score;
+                $bestTeams = $teams;
+            }
+            return;
+        }
+
+        $lastStart = count($candidateIndexes) - $remaining;
+        for ($i = $start; $i <= $lastStart; $i++) {
+            $selected[] = $candidateIndexes[$i];
+            $visit($i + 1, $remaining - 1);
+            array_pop($selected);
+        }
+    };
+
+    $visit(0, $targetPicks);
+    return $bestTeams;
+}
+
 function decorate_teams(array $teams): array
 {
     $out = [];
@@ -525,8 +621,8 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
         return null;
     }
     $teamSize = (int) ($totalPlayers / $numTeams);
-    $players = prepare_emergency_goalkeepers($players, $numTeams);
     $bands = draw_player_band_ids($players);
+    $players = prepare_emergency_goalkeepers($players, $numTeams);
 
     $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => player_primary_position($p) === 'ARQ' || is_emergency_goalkeeper($p)));
     $bestTeams = null;
@@ -546,7 +642,20 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
         $slowField = array_values(array_filter($fieldPool, static fn(array $p): bool => player_is_low_rhythm($p)));
         $fastField = array_values(array_filter($fieldPool, static fn(array $p): bool => !player_is_low_rhythm($p)));
         shuffle($slowField);
-        usort($fastField, static fn(array $a, array $b): int => player_best_natural_rating($b) <=> player_best_natural_rating($a));
+        shuffle($fastField);
+        $fieldOrder = match ($try % 4) {
+            0 => array_merge($slowField, $fastField),
+            1 => $fieldPool,
+            2 => $fieldPool,
+            default => array_merge($fastField, $slowField),
+        };
+        if (($try % 4) === 1) {
+            usort($fieldOrder, static fn(array $a, array $b): int => player_best_natural_rating($b) <=> player_best_natural_rating($a));
+        } elseif (($try % 4) === 2) {
+            usort($fieldOrder, static fn(array $a, array $b): int => player_best_natural_rating($a) <=> player_best_natural_rating($b));
+        } else {
+            shuffle($fieldOrder);
+        }
 
         $teams = array_fill(0, $numTeams, []);
         $teamPoints = array_fill(0, $numTeams, 0.0);
@@ -569,7 +678,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
             }
         };
 
-        $chooseBestTeam = static function (array $player, array $available) use (&$teamPoints, &$teamStats, &$lowRhythmCounts, $drawWeights, $drawStatFields, $bands, &$teams): int {
+        $chooseBestTeam = static function (array $player, array $available) use (&$teamPoints, &$teamStats, &$lowRhythmCounts, $drawWeights, $drawStatFields, $bands, &$teams, $try): int {
             $bestTeam = $available[0];
             $bestCost = null;
             foreach ($available as $teamIndex) {
@@ -610,7 +719,14 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                 $projectedTeams = $teams;
                 $projectedTeams[$teamIndex][] = $player;
                 $cost += draw_team_low_liability_spread($projectedTeams) * 85.0;
-                $cost += count($available) > 1 ? (mt_rand(0, 100) / 100000) : 0;
+                if (count($available) > 1) {
+                    $exploration = match ($try % 6) {
+                        0 => 30.0,
+                        3 => 12.0,
+                        default => 0.05,
+                    };
+                    $cost += (mt_rand(0, 1000) / 1000) * $exploration;
+                }
 
                 if ($bestCost === null || $cost < $bestCost) {
                     $bestCost = $cost;
@@ -624,7 +740,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
             $addPlayerToTeam($starterGk[$i], $i);
         }
 
-        foreach (array_merge($slowField, $fastField) as $player) {
+        foreach ($fieldOrder as $player) {
             $available = [];
             for ($t = 0; $t < $numTeams; $t++) {
                 if (count($teams[$t]) < $teamSize) {
@@ -653,6 +769,11 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
             $validCandidates++;
             $qualityScore = draw_teams_quality_score($teams, $bands);
             if ($bestScore === null || $qualityScore < $bestScore) {
+                $teams = draw_optimize_teams($teams, $teamSize, $maxDiff, $bands);
+                if (!validate_teams($teams, $teamSize, $maxDiff)) {
+                    continue;
+                }
+                $qualityScore = draw_teams_quality_score($teams, $bands);
                 $bestScore = $qualityScore;
                 $bestTeams = $teams;
             }
@@ -662,6 +783,16 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
             $lowLiabilitySpread = draw_team_low_liability_spread($teams);
             if ($validCandidates >= max(1, $targetValidCandidates) && $lowBandSpread <= 1 && $highBandSpread <= 1 && $floorSpread <= 1.0 && $lowLiabilitySpread <= 1.0) {
                 break;
+            }
+        }
+    }
+
+    if ($numTeams === 2 && $totalPlayers <= 20) {
+        $exactTeams = draw_exact_two_team_candidate($players, $teamSize, $maxDiff, $bands);
+        if ($exactTeams !== null) {
+            $exactScore = draw_teams_quality_score($exactTeams, $bands);
+            if ($bestScore === null || $exactScore < $bestScore) {
+                $bestTeams = $exactTeams;
             }
         }
     }

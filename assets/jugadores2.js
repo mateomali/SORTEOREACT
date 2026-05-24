@@ -5,9 +5,10 @@
   const sortButton = document.querySelector('[data-j2-sort="overall"]');
   const empty = document.querySelector('[data-j2-empty]');
   const backdrop = document.querySelector('.j2-modal-backdrop');
+  let radarOverlay = null;
   let activeFilter = 'all';
   let topSort = false;
-  const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 98]];
+  const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 99]];
 
   const normalizeSixRating = (value, fallback = 1) => {
     const number = Number.parseFloat(String(value ?? ''));
@@ -27,11 +28,11 @@
         return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
       }
     }
-    return 98;
+    return 99;
   };
 
   const sixFromOverall = (value) => {
-    const overall = Math.max(35, Math.min(98, Math.round(Number(value) || 64)));
+    const overall = Math.max(35, Math.min(99, Math.round(Number(value) || 64)));
     for (let index = 0; index < anchors.length - 1; index += 1) {
       const [fromRating, fromOverall] = anchors[index];
       const [toRating, toOverall] = anchors[index + 1];
@@ -44,11 +45,52 @@
   };
 
   const toneFromOverall = (overall) => {
+    if (overall >= 94) return '#38bdf8';
     if (overall >= 88) return '#16a34a';
     if (overall >= 76) return '#65a30d';
     if (overall >= 65) return '#d97706';
     if (overall >= 52) return '#ea580c';
     return '#dc2626';
+  };
+
+  const positionWeights = {
+    ARQ: { goalkeeper_skill: 0.42, defense_physical: 0.14, rhythm: 0.10, technique: 0.10, teamwork: 0.14, mentality: 0.10 },
+    DEF: { defense_physical: 0.28, rhythm: 0.20, technique: 0.18, teamwork: 0.13, mentality: 0.13, attack: 0.08 },
+    LAT: { rhythm: 0.24, defense_physical: 0.22, technique: 0.17, teamwork: 0.15, attack: 0.12, mentality: 0.10 },
+    DEL: { attack: 0.31, rhythm: 0.20, technique: 0.17, teamwork: 0.14, mentality: 0.10, defense_physical: 0.08 },
+    MED: { technique: 0.24, rhythm: 0.23, teamwork: 0.19, mentality: 0.13, defense_physical: 0.12, attack: 0.09 },
+  };
+
+  const statFallback = (field, form) => {
+    if (['technique', 'attack', 'teamwork', 'goalkeeper_skill'].includes(field)) return 3;
+    if (field === 'regularity') return 3.5;
+    if (field === 'rhythm') {
+      const pace = String(form.querySelector('select[name="pace"]')?.value || '').toLowerCase();
+      return pace === 'lento' ? 2 : 4;
+    }
+    return 3;
+  };
+
+  const formStatRating = (form, field) => {
+    const hidden = form.querySelector(`input[name="${CSS.escape(field)}"][data-j2-six-input]`);
+    return normalizeSixRating(hidden?.value, statFallback(field, form));
+  };
+
+  const recalculateFormOverall = (form) => {
+    if (!form) return;
+    const modal = form.closest('[data-j2-modal]');
+    const primaryPosition = String(form.querySelector('[data-j2-position-select]')?.value || 'MED').toUpperCase();
+    const weights = positionWeights[primaryPosition] || positionWeights.MED;
+    let rating = Object.entries(weights).reduce((total, [field, weight]) => total + (formStatRating(form, field) * weight), 0);
+    const regularity = formStatRating(form, 'regularity');
+    rating = Math.max(1, Math.min(6, rating * (1 + ((regularity - 3.5) / 50))));
+    const overall = overallFromSix(Math.round(rating * 10) / 10);
+    modal?.querySelectorAll('.j2-modal-rating b').forEach((node) => {
+      node.textContent = String(overall);
+    });
+    modal?.querySelectorAll('.j2-admin-story .j2-modal-summary article:first-child strong').forEach((node) => {
+      node.textContent = String(overall);
+    });
   };
 
   const syncDirtyStatRow = (row) => {
@@ -75,12 +117,12 @@
     const rawOverall = Number(sourceValue);
 
     if (!isRange && !commit) {
-      if (sourceValue === '' || !Number.isFinite(rawOverall) || rawOverall < 35 || rawOverall > 98) {
+      if (sourceValue === '' || !Number.isFinite(rawOverall) || rawOverall < 35 || rawOverall > 99) {
         return;
       }
     }
 
-    const overall = Math.max(35, Math.min(98, Math.round(Number.isFinite(rawOverall) ? rawOverall : 64)));
+    const overall = Math.max(35, Math.min(99, Math.round(Number.isFinite(rawOverall) ? rawOverall : 64)));
     const rating = sixFromOverall(overall);
     if (numberInput) numberInput.value = String(overall);
     if (rangeInput) rangeInput.value = String(overall);
@@ -96,6 +138,7 @@
       rangeInput.style.setProperty('--j2-range-color', toneFromOverall(overall));
     }
     syncDirtyStatRow(row);
+    recalculateFormOverall(input.closest('[data-j2-edit-form]'));
   };
 
   const syncEditForm = (form) => {
@@ -116,6 +159,61 @@
     }
     form.querySelectorAll('[data-j2-stat-overall-input], [data-j2-stat-range]').forEach((input) => syncStatControl(input, true));
     form.querySelectorAll('[data-j2-edit-stat]').forEach((row) => syncDirtyStatRow(row));
+    recalculateFormOverall(form);
+  };
+
+  const syncPhotoPreview = (input) => {
+    const file = input.files?.[0];
+    const form = input.closest('[data-j2-edit-form]');
+    const preview = form?.querySelector('[data-j2-photo-preview]');
+    const image = preview?.querySelector('img');
+    const filename = form?.querySelector('[data-j2-photo-filename]');
+    if (!file || !preview || !image || !file.type.startsWith('image/')) {
+      return;
+    }
+    image.src = URL.createObjectURL(file);
+    preview.classList.remove('is-default');
+    preview.classList.add('is-custom');
+    if (filename) {
+      filename.textContent = file.name;
+    }
+  };
+
+  const closeRadarOverlay = () => {
+    radarOverlay?.remove();
+    radarOverlay = null;
+    document.body.classList.remove('j2-radar-viewer-open');
+  };
+
+  const openRadarOverlay = (source) => {
+    const svg = source?.querySelector?.('.j2-radar-svg');
+    if (!svg) return;
+    closeRadarOverlay();
+    const modal = source.closest('[data-j2-modal]');
+    const name = modal?.querySelector('.j2-modal-head h2')?.textContent?.trim() || 'Jugador';
+    radarOverlay = document.createElement('div');
+    radarOverlay.className = 'j2-radar-viewer';
+    const panel = document.createElement('div');
+    panel.className = 'j2-radar-viewer-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-label', `Radar completo de ${name}`);
+    const closeButton = document.createElement('button');
+    closeButton.className = 'j2-radar-viewer-close';
+    closeButton.type = 'button';
+    closeButton.setAttribute('aria-label', 'Cerrar radar');
+    closeButton.dataset.j2RadarClose = '1';
+    const title = document.createElement('div');
+    title.className = 'j2-radar-viewer-title';
+    title.textContent = name;
+    const stage = document.createElement('div');
+    stage.className = 'j2-radar-viewer-stage';
+    stage.appendChild(svg.cloneNode(true));
+    panel.append(closeButton, title, stage);
+    radarOverlay.appendChild(panel);
+    document.body.appendChild(radarOverlay);
+    document.body.classList.add('j2-radar-viewer-open');
+    radarOverlay.querySelector('[data-j2-radar-close]')?.focus();
   };
 
   const applyView = () => {
@@ -178,6 +276,22 @@
   };
 
   document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-j2-radar-close]')) {
+      closeRadarOverlay();
+      return;
+    }
+
+    if (event.target.classList?.contains('j2-radar-viewer')) {
+      closeRadarOverlay();
+      return;
+    }
+
+    const radarCard = event.target.closest('.j2-profile-card');
+    if (radarCard?.querySelector('.j2-radar-svg')) {
+      openRadarOverlay(radarCard);
+      return;
+    }
+
     const statInfoToggle = event.target.closest('[data-j2-stat-info-toggle]');
     if (statInfoToggle) {
       event.preventDefault();
@@ -216,11 +330,17 @@
     }
 
     if (event.key === 'Escape') {
+      if (radarOverlay) {
+        closeRadarOverlay();
+        return;
+      }
       closeModal();
     }
   });
 
-  document.querySelectorAll('[data-j2-edit-form]').forEach((form) => {
+  const bindEditForm = (form) => {
+    if (!form || form.dataset.j2EditFormBound === '1') return;
+    form.dataset.j2EditFormBound = '1';
     syncEditForm(form);
     form.querySelectorAll('[data-j2-stat-overall-input]').forEach((input) => {
       input.addEventListener('input', () => syncStatControl(input));
@@ -234,5 +354,26 @@
     form.querySelectorAll('[data-j2-position-select]').forEach((select) => {
       select.addEventListener('change', () => syncEditForm(form));
     });
+    form.querySelectorAll('[data-j2-photo-input]').forEach((input) => {
+      input.addEventListener('change', () => syncPhotoPreview(input));
+    });
+  };
+
+  document.addEventListener('input', (event) => {
+    const range = event.target.closest?.('[data-j2-stat-range]');
+    if (range) {
+      syncStatControl(range, true);
+    }
+  });
+
+  document.addEventListener('change', (event) => {
+    const range = event.target.closest?.('[data-j2-stat-range]');
+    if (range) {
+      syncStatControl(range, true);
+    }
+  });
+
+  document.querySelectorAll('[data-j2-edit-form]').forEach((form) => {
+    bindEditForm(form);
   });
 })();

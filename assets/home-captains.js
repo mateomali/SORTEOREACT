@@ -28,7 +28,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       const anchors = [
         [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
         [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-        [5.2, 93], [5.3, 94], [6.0, 98],
+        [5.2, 93], [5.3, 94], [6.0, 99],
       ];
       for (let i = 0; i < anchors.length - 1; i += 1) {
         const [fromRating, fromOverall] = anchors[i];
@@ -38,7 +38,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
           return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
         }
       }
-      return 98;
+      return 99;
     };
     const playerCardRatingHtml = (value, label = 'GEN') => `
       <span class="player-card-rating" title="Puntaje tarjeta">
@@ -46,6 +46,17 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
         <span>${escapeHtml(label)}</span>
       </span>
     `;
+    const playerCardPhotoPath = (player) => {
+      const path = String(player.photo_path || '');
+      return path.startsWith('uploads/players/') && !path.includes('..')
+        ? path
+        : 'assets/players/default-player-silhouette.png';
+    };
+    const playerCardPhotoHtml = (player) => {
+      const path = playerCardPhotoPath(player);
+      const photoClass = path.startsWith('uploads/players/') ? ' is-custom' : ' is-default';
+      return `<span class="formation-card-photo${photoClass}" aria-hidden="true"><img src="${escapeHtml(path)}" alt=""></span>`;
+    };
     const playerCardRegularityForm = (player) => {
       const rating = Math.max(1, Math.min(6, statValue(player, 'regularity')));
       if (rating >= 4.5) return ['up', 'Regularidad alta'];
@@ -225,7 +236,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             return `
               <div class="formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)}${changedClass}" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}" data-player-positions="${escapeHtml(player.positions || player.primary_position || '')}">
                 ${playerCardRatingHtml(adjustedRating, 'GEN')}
-                <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
+                ${playerCardPhotoHtml(player)}
                 <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
                 <span class="formation-player-meta formation-player-position formation-card-position">${escapeHtml(assignedPosition)}</span>
                 ${playerCardRegularityHtml(player)}

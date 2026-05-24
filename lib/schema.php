@@ -264,6 +264,7 @@ function ensure_control_schema(): array
         ['players', 'mentality', 'mentality DECIMAL(3,1) NOT NULL DEFAULT 3.0 AFTER teamwork'],
         ['players', 'regularity', 'regularity DECIMAL(3,1) NULL AFTER mentality'],
         ['players', 'goalkeeper_skill', 'goalkeeper_skill DECIMAL(3,1) NULL AFTER regularity'],
+        ['players', 'photo_path', 'photo_path VARCHAR(255) NULL AFTER goalkeeper_skill'],
     ];
 
     foreach ($columns as [$table, $column, $definition]) {

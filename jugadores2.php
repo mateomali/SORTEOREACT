@@ -20,6 +20,97 @@ function jugadores2_normalize_player_name(string $name): string
     return strtoupper($name);
 }
 
+function jugadores2_upload_dir(): string
+{
+    return __DIR__ . '/uploads/players';
+}
+
+function jugadores2_photo_public_path(string $path): string
+{
+    $path = trim(str_replace('\\', '/', $path));
+    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/')) {
+        return '';
+    }
+    return $path;
+}
+
+function jugadores2_has_player_photo(array $player): bool
+{
+    return jugadores2_photo_public_path((string) ($player['photo_path'] ?? '')) !== '';
+}
+
+function jugadores2_delete_player_photo(string $path): void
+{
+    $publicPath = jugadores2_photo_public_path($path);
+    if ($publicPath === '') {
+        return;
+    }
+
+    $fullPath = __DIR__ . '/' . $publicPath;
+    $uploadRoot = realpath(jugadores2_upload_dir());
+    $resolved = realpath($fullPath);
+    if ($uploadRoot !== false && $resolved !== false && str_starts_with($resolved, $uploadRoot) && is_file($resolved)) {
+        @unlink($resolved);
+    }
+}
+
+function jugadores2_uploaded_photo_path(array $file, int $playerId, string $previousPath): ?string
+{
+    $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($error === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($error !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('No se pudo subir la imagen del jugador.');
+    }
+
+    $tmpName = (string) ($file['tmp_name'] ?? '');
+    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+        throw new RuntimeException('La imagen subida no es valida.');
+    }
+
+    $maxBytes = 3 * 1024 * 1024;
+    if ((int) ($file['size'] ?? 0) > $maxBytes) {
+        throw new RuntimeException('La imagen no puede superar 3 MB.');
+    }
+
+    $mime = '';
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo !== false) {
+            $mime = (string) finfo_file($finfo, $tmpName);
+            finfo_close($finfo);
+        }
+    }
+    if ($mime === '') {
+        $imageInfo = @getimagesize($tmpName);
+        $mime = is_array($imageInfo) ? (string) ($imageInfo['mime'] ?? '') : '';
+    }
+
+    $extensions = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+    if (!isset($extensions[$mime])) {
+        throw new RuntimeException('Usa una imagen JPG, PNG o WEBP.');
+    }
+
+    $dir = jugadores2_upload_dir();
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException('No se pudo crear la carpeta uploads/players.');
+    }
+
+    $filename = 'player-' . $playerId . '-' . bin2hex(random_bytes(8)) . '.' . $extensions[$mime];
+    $target = $dir . '/' . $filename;
+    if (!move_uploaded_file($tmpName, $target)) {
+        throw new RuntimeException('No se pudo guardar la imagen del jugador.');
+    }
+
+    jugadores2_delete_player_photo($previousPath);
+    return 'uploads/players/' . $filename;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$isAdmin) {
         flash('error', 'Solo un administrador puede modificar jugadores.');
@@ -31,12 +122,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save') {
         $id = (int) ($_POST['id'] ?? 0);
+        $existingPlayer = $id > 0 ? repo_player_by_id($id) : null;
         $name = jugadores2_normalize_player_name((string) ($_POST['name'] ?? ''));
         $positionsCsv = join_positions(array_map('strval', $_POST['positions'] ?? []));
         $active = isset($_POST['active']) ? 1 : 0;
 
-        if ($id <= 0 || $name === '' || $positionsCsv === '') {
+        if ($id <= 0 || !$existingPlayer || $name === '' || $positionsCsv === '') {
             flash('error', 'Nombre y posicion son obligatorios.');
+            redirect($returnUrl);
+        }
+
+        $photoPath = jugadores2_photo_public_path((string) ($existingPlayer['photo_path'] ?? ''));
+        try {
+            if (isset($_FILES['player_photo']) && is_array($_FILES['player_photo'])) {
+                $uploadedPath = jugadores2_uploaded_photo_path($_FILES['player_photo'], $id, $photoPath);
+                if ($uploadedPath !== null) {
+                    $photoPath = $uploadedPath;
+                }
+            }
+        } catch (Throwable $e) {
+            flash('error', $e->getMessage());
             redirect($returnUrl);
         }
 
@@ -76,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              SET name = :name, positions = :positions, pace = :pace, skill = :skill,
                  technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
                  attack = :attack, teamwork = :teamwork, mentality = :mentality, regularity = :regularity,
-                 goalkeeper_skill = :goalkeeper_skill, active = :active
+                 goalkeeper_skill = :goalkeeper_skill, photo_path = :photo_path, active = :active
              WHERE id = :id'
         );
         $stmt->execute([
@@ -93,6 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'mentality' => $mentality,
             'regularity' => $regularity,
             'goalkeeper_skill' => $goalkeeperSkill,
+            'photo_path' => $photoPath !== '' ? $photoPath : null,
             'active' => $active,
         ]);
         flash('success', 'Jugador actualizado desde jugadores2.');
@@ -165,6 +271,10 @@ function jugadores2_card_tier(int $overall): string
 
 function jugadores2_card_photo(array $player): string
 {
+    $photoPath = jugadores2_photo_public_path((string) ($player['photo_path'] ?? ''));
+    if ($photoPath !== '') {
+        return $photoPath;
+    }
     return 'assets/players/default-player-silhouette.png';
 }
 
@@ -326,9 +436,9 @@ function jugadores2_admin_stat_control(string $field, float $value, array $statL
     return '<label class="j2-edit-stat" data-j2-edit-stat="' . h($field) . '" data-j2-initial-overall="' . h((string) $overall) . '">'
         . '<span class="j2-edit-stat-info" role="button" tabindex="0" aria-expanded="false" data-j2-stat-info-toggle><b>' . h($label) . '</b><em>' . h($help) . '</em></span>'
         . '<input type="hidden" name="' . h($field) . '" value="' . h($ratingLabel) . '" data-j2-six-input>'
-        . '<input class="j2-stat-number" type="number" name="' . h($field) . '_overall" min="35" max="98" step="1" inputmode="numeric" value="' . h((string) $overall) . '" data-j2-stat-overall-input aria-label="' . h($label . ' en escala 1 a 99') . '">'
+        . '<input class="j2-stat-number" type="number" name="' . h($field) . '_overall" min="35" max="99" step="1" inputmode="numeric" value="' . h((string) $overall) . '" data-j2-stat-overall-input aria-label="' . h($label . ' en escala 1 a 99') . '">'
         . '<button class="j2-stat-row-save" type="submit" data-j2-stat-row-save hidden aria-label="' . h('Guardar ' . $label) . '"></button>'
-        . '<div class="j2-stat-range-wrap"><input class="j2-stat-range" type="range" min="35" max="98" step="1" value="' . h((string) $overall) . '" data-j2-stat-range aria-label="' . h('Ajustar ' . $label . ' en escala 1 a 99') . '"><i><u data-j2-stat-fill style="width:' . h(number_format($percent, 2, '.', '')) . '%"></u></i></div>'
+        . '<div class="j2-stat-range-wrap"><input class="j2-stat-range" type="range" min="35" max="99" step="1" value="' . h((string) $overall) . '" data-j2-stat-range aria-label="' . h('Ajustar ' . $label . ' en escala 1 a 99') . '"><i><u data-j2-stat-fill style="width:' . h(number_format($percent, 2, '.', '')) . '%"></u></i></div>'
         . '<small class="j2-stat-six" data-j2-stat-six hidden>' . h($ratingDisplay) . '/6</small>'
         . '</label>';
 }
@@ -422,6 +532,7 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
           ];
       $tier = jugadores2_card_tier($overall);
       $cardPhoto = jugadores2_card_photo($player);
+      $hasCustomPhoto = jugadores2_has_player_photo($player);
       $isActive = (int) ($player['active'] ?? 0) === 1;
       [$regularityForm, $regularityLabel] = jugadores2_regularidad_form(player_effective_stat($player, 'regularity'));
     ?>
@@ -434,12 +545,12 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
       data-j2-overall="<?= h((string) $overall) ?>"
       data-j2-rating="<?= h(number_format($rating, 3, '.', '')) ?>"
     >
-      <button class="j2-fut-card formation-player formation-card-sin-stat formation-card-tier-<?= h($tier) ?> tier-<?= h($tier) ?>" type="button" data-j2-open="<?= h((string) $id) ?>" aria-label="Ver ficha de <?= h($name) ?>">
+      <button class="j2-fut-card card-pro-relieve formation-player formation-card-sin-stat formation-card-tier-<?= h($tier) ?> tier-<?= h($tier) ?>" type="button" data-j2-open="<?= h((string) $id) ?>" aria-label="Ver ficha de <?= h($name) ?>">
         <span class="player-card-rating" title="Puntaje general">
           <strong><?= h((string) $overall) ?></strong>
           <span>GEN</span>
         </span>
-        <span class="formation-card-photo" aria-hidden="true">
+        <span class="formation-card-photo<?= $hasCustomPhoto ? ' is-custom' : ' is-default' ?>" aria-hidden="true">
           <?php if ($cardPhoto !== ''): ?>
             <img src="<?= h($cardPhoto) ?>" alt="">
           <?php else: ?>
@@ -447,9 +558,9 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
           <?php endif; ?>
         </span>
         <strong class="formation-player-name"><?= h($name) ?></strong>
-        <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion principal"><?= h($primaryPosition) ?></span>
+        <span class="formation-player-meta formation-player-position formation-card-position<?= $secondaryPosition !== '' ? ' has-secondary' : '' ?>" title="<?= h($secondaryPosition !== '' ? ('Primaria: ' . $primaryPosition . ' · Secundaria: ' . $secondaryPosition) : ('Primaria: ' . $primaryPosition)) ?>"><?= h($primaryPosition) ?></span>
         <?php if ($secondaryPosition !== ''): ?>
-          <span class="formation-card-secondary-position" title="Posicion secundaria"><?= h($secondaryPosition) ?></span>
+          <span class="formation-card-secondary-position" title="<?= h('Secundaria: ' . $secondaryPosition) ?>"><?= h($secondaryPosition) ?></span>
         <?php endif; ?>
         <span class="formation-card-regularity is-<?= h($regularityForm) ?>" title="<?= h($regularityLabel) ?>" aria-label="<?= h($regularityLabel) ?>"></span>
         <span class="formation-card-stats" aria-label="Stats del jugador">
@@ -530,6 +641,8 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
     $allStats = jugadores2_all_stats($player, $statLabels, $statShortLabels);
     [$bestStat, $weakStat] = jugadores2_best_and_weak_stats($allStats);
     $description = shared_profile_player_description($player, $statLabels);
+    $cardPhoto = jugadores2_card_photo($player);
+    $hasCustomPhoto = jugadores2_has_player_photo($player);
   ?>
   <section class="j2-player-modal" data-j2-modal="<?= h((string) $id) ?>" hidden>
     <div class="j2-modal-head">
@@ -570,7 +683,7 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
       </div>
       <?php endif; ?>
       <?php if ($isAdmin): ?>
-        <form class="j2-admin-edit" method="post" data-j2-edit-form>
+        <form class="j2-admin-edit" method="post" enctype="multipart/form-data" data-j2-edit-form>
           <input type="hidden" name="action" value="save">
           <input type="hidden" name="id" value="<?= h((string) $id) ?>">
           <div class="j2-admin-edit-head">
@@ -593,10 +706,28 @@ $jsVersion = (string) (@filemtime(__DIR__ . '/assets/jugadores2.js') ?: time());
               <input type="checkbox" name="active" value="1" <?= checked_attr((int) ($player['active'] ?? 0) === 1) ?>>
               <span>Activo</span>
             </label>
+            <label class="j2-edit-photo">
+              <span>Rostro</span>
+              <span class="j2-upload-control">
+                <input type="file" name="player_photo" accept="image/png,image/jpeg,image/webp" data-j2-photo-input>
+                <span class="j2-upload-icon" aria-hidden="true"></span>
+                <span class="j2-upload-copy">
+                  <strong>Subir foto del jugador</strong>
+                  <em data-j2-photo-filename><?= $hasCustomPhoto ? 'Foto actual cargada. Elegi otra para reemplazarla.' : 'JPG, PNG o WEBP hasta 3 MB' ?></em>
+                </span>
+                <span class="j2-upload-action"><?= $hasCustomPhoto ? 'Cambiar foto' : 'Elegir foto' ?></span>
+              </span>
+            </label>
           </div>
           <div class="j2-admin-context">
             <aside class="j2-profile-card" aria-label="Radar de <?= h($name) ?>">
               <?= jugadores2_radar_svg($allStats) ?>
+            </aside>
+            <aside class="j2-photo-preview" aria-label="Foto de <?= h($name) ?>">
+              <span class="j2-photo-frame<?= $hasCustomPhoto ? ' is-custom' : ' is-default' ?>" data-j2-photo-preview>
+                <img src="<?= h($cardPhoto) ?>" alt="">
+              </span>
+              <p><?= $hasCustomPhoto ? 'Foto cargada para la tarjeta.' : 'Sin foto cargada: se usa la silueta.' ?></p>
             </aside>
             <div class="j2-admin-story">
               <strong>Relato</strong>

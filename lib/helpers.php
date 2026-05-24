@@ -13,6 +13,20 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function player_photo_path(array $player): string
+{
+    $path = trim(str_replace('\\', '/', (string) ($player['photo_path'] ?? '')));
+    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/')) {
+        return 'assets/players/default-player-silhouette.png';
+    }
+    return $path;
+}
+
+function player_has_custom_photo(array $player): bool
+{
+    return player_photo_path($player) !== 'assets/players/default-player-silhouette.png';
+}
+
 function redirect(string $url): void
 {
     header('Location: ' . $url);

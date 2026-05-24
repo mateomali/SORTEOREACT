@@ -30,6 +30,7 @@ var generatedOnceThisSession = false;
 var seenDrawSignatures = new Set();
 var formationPointerDragState = null;
 var formationPointerDragTarget = null;
+var formationCardPreviewOverlay = null;
 if (typeof sorteoLegacyConfig.savedDrawSignature === 'string' && sorteoLegacyConfig.savedDrawSignature !== '') {
   seenDrawSignatures.add(sorteoLegacyConfig.savedDrawSignature);
 }
@@ -496,7 +497,7 @@ function playerCardRating(value) {
   const anchors = [
     [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
     [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-    [5.2, 93], [5.3, 94], [6.0, 98],
+    [5.2, 93], [5.3, 94], [6.0, 99],
   ];
   for (let i = 0; i < anchors.length - 1; i += 1) {
     const [fromRating, fromOverall] = anchors[i];
@@ -506,7 +507,7 @@ function playerCardRating(value) {
       return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
     }
   }
-  return 98;
+  return 99;
 }
 
 function playerCardRatingHtml(value, label = 'GEN') {
@@ -516,6 +517,19 @@ function playerCardRatingHtml(value, label = 'GEN') {
       <span>${escapeHtml(label)}</span>
     </span>
   `;
+}
+
+function playerCardPhotoPath(jugador) {
+  const path = String(jugador.photo_path || '');
+  return path.startsWith('uploads/players/') && !path.includes('..')
+    ? path
+    : 'assets/players/default-player-silhouette.png';
+}
+
+function playerCardPhotoHtml(jugador) {
+  const path = playerCardPhotoPath(jugador);
+  const photoClass = path.startsWith('uploads/players/') ? ' is-custom' : ' is-default';
+  return `<span class="formation-card-photo${photoClass}" aria-hidden="true"><img src="${escapeHtml(path)}" alt=""></span>`;
 }
 
 function playerCardTier(value) {
@@ -2335,9 +2349,9 @@ function mostrarEquipos(equipos) {
                   : (outOfPosition ? ' | Fuera de posicion natural' : '');
                 const cardTitle = `General ${formatRating(generalRating)} | Ajustada ${assignedPosition} ${formatRating(adjustedRating)}${roleNote}`;
                 return `
-                <div class="formation-player captain-formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}" title="${escapeHtml(cardTitle)}">
+                <div class="formation-player captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}" title="${escapeHtml(cardTitle)}">
                   ${playerCardRatingHtml(adjustedRating, 'GEN')}
-                  <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
+                  ${playerCardPhotoHtml(j)}
                   <strong class="formation-player-name">${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
                   <span class="captain-position-pill formation-player-meta formation-player-position formation-card-position ${secondaryPosition ? 'is-assigned-secondary' : ''}">${assignedPosition}${secondaryPosition ? ' <em class="formation-secondary-badge">2a</em>' : ''}</span>
                   ${playerCardRegularityHtml(j)}
@@ -2414,33 +2428,35 @@ function descargarEquiposJPG() {
         .captain-formation-player.formation-card-tier-silver { --formation-card-image: url("assets/card-backgrounds/clean-silver.png"); --formation-slot-bg: rgba(249,255,251,.74); }
         .captain-formation-player.formation-card-tier-gold { --formation-card-image: url("assets/card-backgrounds/clean-gold.png"); --formation-slot-bg: rgba(255,240,157,.72); }
         .captain-formation-player.formation-card-tier-elite { --formation-card-image: url("assets/card-backgrounds/clean-elite.png"); --formation-slot-bg: rgba(247,241,255,.34); --formation-slot-line: rgba(243,237,255,.5); }
-        .captain-formation-player.formation-card-sin-stat .player-card-rating { position: absolute; z-index: 2; top: 12%; left: 14%; display: grid; place-items: center; width: 23%; height: 16%; border: 1px solid var(--formation-slot-line); border-radius: 5px; background: var(--formation-slot-bg); color: #07130f; line-height: 1; }
-        .captain-formation-player.formation-card-sin-stat .player-card-rating strong { display: block; color: #07130f; font-size: 14px; font-weight: 950; line-height: 1; text-align: center; white-space: nowrap; }
-        .captain-formation-player.formation-card-sin-stat .player-card-rating span { display: block; color: #07130f; font-size: 6px; font-weight: 950; line-height: 1; text-align: center; white-space: nowrap; }
-        .captain-formation-player.formation-card-sin-stat > .formation-card-position { position: absolute; z-index: 2; top: 14%; right: 15%; display: grid; place-items: center; width: 26%; height: 9%; border: 1px solid var(--formation-slot-line); border-radius: 5px; background: var(--formation-slot-bg); color: #07130f; padding: 0; font-size: 8px; font-weight: 950; line-height: 1; text-transform: uppercase; }
+        .captain-formation-player.formation-card-sin-stat .player-card-rating { position: absolute; z-index: 2; top: 12.9%; left: 14%; display: grid; place-items: center; width: 23.5%; height: 12.8%; border: 0; border-radius: 0; background: transparent; color: #07130f; line-height: 1; }
+        .captain-formation-player.formation-card-sin-stat .player-card-rating::before { content: ""; position: absolute; z-index: -1; top: -18%; left: -8.1%; width: 108.1%; height: 285%; border: 1px solid rgba(44,22,9,.2); border-radius: 8px; background: rgba(255,240,157,.28); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(7,19,15,.1); }
+        .captain-formation-player.formation-card-sin-stat .player-card-rating strong { display: block; color: #07130f; font-size: 16px; font-weight: 950; line-height: 1; text-align: center; white-space: nowrap; text-shadow: 0 1px 0 rgba(255,255,255,.52), 1px 0 0 rgba(255,255,255,.34), -1px 0 0 rgba(255,255,255,.26); }
+        .captain-formation-player.formation-card-sin-stat .player-card-rating span { display: none; }
+        .captain-formation-player.formation-card-sin-stat > .formation-card-position { position: absolute; z-index: 2; top: 24.6%; left: 14%; right: auto; display: grid; place-items: center; width: 23.5%; height: 6.6%; border: 0; border-radius: 0; background: transparent; color: #07130f; padding: 0; font-size: 8px; font-weight: 950; line-height: 1; text-transform: uppercase; text-shadow: 0 1px 0 rgba(255,255,255,.52), 1px 0 0 rgba(255,255,255,.34), -1px 0 0 rgba(255,255,255,.26); }
         .captain-formation-player.formation-card-sin-stat.is-position-changed > .formation-card-position { border-color: #07130f; background: #f2c14e; box-shadow: 0 0 0 1px rgba(255,250,206,.95), 0 0 0 3px rgba(7,19,15,.38), inset 0 -1px 0 rgba(7,19,15,.18); }
-        .captain-formation-player.formation-card-sin-stat > .formation-player-name { position: absolute; z-index: 3; top: 58.8%; left: 14%; right: 14%; display: grid; place-items: center; width: 72%; height: 8%; overflow: hidden; border: 1px solid var(--formation-slot-line); border-radius: 5px; background: var(--formation-slot-bg); color: #07130f; padding: 0 3px; font-size: 8px; font-weight: 950; line-height: 1; text-align: center; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
-        .formation-card-photo { position: absolute; z-index: 1; top: 27.5%; left: 18%; right: 18%; display: flex; align-items: flex-end; justify-content: center; height: 34%; overflow: hidden; }
-        .formation-card-photo img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; opacity: .62; filter: drop-shadow(0 5px 6px rgba(0,0,0,.2)); }
-        .formation-card-regularity { position: absolute; z-index: 4; right: 14%; top: 25%; width: 11%; height: 6.4%; border: 1px solid var(--formation-slot-line); border-radius: 4px; background: var(--formation-slot-bg); }
+        .captain-formation-player.formation-card-sin-stat > .formation-player-name { position: absolute; z-index: 3; top: 47.2%; left: 11.5%; right: 8%; display: grid; place-items: center; width: auto; height: 12.4%; overflow: hidden; border: 0; border-radius: 8px; background: rgba(255,240,157,.64); color: #07130f; padding: 0 3px; font-size: 9px; font-weight: 950; line-height: 1; text-align: center; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; text-shadow: 0 1px 0 rgba(255,255,255,.52), 1px 0 0 rgba(255,255,255,.34), -1px 0 0 rgba(255,255,255,.26); }
+        .formation-card-photo { position: absolute; z-index: 1; top: 8.8%; left: 36%; right: 8.5%; display: flex; align-items: flex-start; justify-content: center; height: 37.6%; overflow: hidden; border-radius: 8px; background: linear-gradient(180deg, transparent 0 74%, rgba(7,19,15,.08) 100%); }
+        .formation-card-photo img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center top; opacity: .62; border-radius: 8px; filter: drop-shadow(0 5px 6px rgba(0,0,0,.2)); }
+        .formation-card-photo.is-custom img { opacity: 1; }
+        .formation-card-regularity { position: absolute; z-index: 4; left: 20.7%; right: auto; top: 32.8%; width: 11.8%; height: 7.8%; border: 0; border-radius: 0; background: transparent; }
         .formation-card-regularity::before, .formation-card-regularity::after { content: ""; position: absolute; left: 50%; background: currentColor; transform: translateX(-50%); }
         .formation-card-regularity::before { top: 26%; width: 15%; height: 48%; }
         .formation-card-regularity::after { top: 17%; width: 44%; height: 44%; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
         .formation-card-regularity.is-up { color: #0d6b3e; }
         .formation-card-regularity.is-right { color: #5b6370; transform: rotate(90deg); }
         .formation-card-regularity.is-down { color: #8a1f1f; transform: rotate(180deg); }
-        .formation-card-stats { position: absolute; z-index: 3; top: 68.8%; left: 17%; right: 17%; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(3,1fr); gap: 4.5% 6%; height: 17.8%; overflow: hidden; }
-        .formation-card-stat { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 2px; overflow: hidden; border: 1px solid var(--formation-slot-line); border-radius: 4px; background: var(--formation-slot-bg); color: #07130f; padding: 0 2px; font-size: 6px; font-weight: 950; line-height: 1; }
+        .formation-card-stats { position: absolute; z-index: 3; top: 61.8%; left: 11.5%; right: 8%; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(3,1fr); gap: 8% 8%; height: 24.2%; overflow: hidden; border-top: 1px solid rgba(44,22,9,.2); border-bottom: 1px solid rgba(44,22,9,.18); border-radius: 8px; background: rgba(255,240,157,.2); padding: 4% 6% 3.5%; }
+        .formation-card-stat { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 2px; overflow: hidden; border: 0; border-radius: 0; background: transparent; color: #07130f; padding: 0; font-size: 7px; font-weight: 950; line-height: 1; text-shadow: 0 1px 0 rgba(255,255,255,.52), 1px 0 0 rgba(255,255,255,.34), -1px 0 0 rgba(255,255,255,.26); }
         .formation-card-stat span, .formation-card-stat strong { display: block; min-width: 0; overflow: hidden; color: #07130f; font-size: inherit; font-weight: 950; line-height: 1; white-space: nowrap; }
         .formation-card-penalty { position: absolute; z-index: 4; top: 24.5%; left: 14%; display: grid; place-items: center; min-width: 24%; height: 8%; border: 1px solid rgba(127,29,29,.42); border-radius: 5px; background: rgba(255,232,232,.86); color: #7f1d1d; font-size: 7px; font-style: normal; font-weight: 950; line-height: 1; }
         .formation-secondary-badge { display: inline-flex; align-items: center; border-radius: 5px; background: #f2c14e; color: #2f2100; padding: 1px 3px; font-size: 6px; font-style: normal; font-weight: 900; line-height: 1; }
         .captain-formation-player.formation-card-compacta { flex-basis: 96px; width: 96px; min-width: 96px; aspect-ratio: 409 / 710; background-size: contain; background-position: center; }
         .captain-formation-player.formation-card-compacta .formation-card-stats { display: none; }
-        .captain-formation-player.formation-card-compacta .player-card-rating { top: 13.5%; left: 15%; width: 24%; height: 16%; }
-        .captain-formation-player.formation-card-compacta > .formation-card-position { top: 15%; right: 15%; width: 30%; height: 9%; border-color: #07130f; }
-        .captain-formation-player.formation-card-compacta .formation-card-photo { top: 31%; left: 19%; right: 19%; height: 31%; }
-        .captain-formation-player.formation-card-compacta > .formation-player-name { top: 65.5%; left: 14%; right: 14%; width: 72%; height: 8.5%; font-size: 8px; }
-        .captain-formation-player.formation-card-compacta .formation-card-regularity { top: 26%; right: 24%; bottom: auto; width: 11%; height: 6%; }
+        .captain-formation-player.formation-card-compacta .player-card-rating { top: 12.9%; left: 14%; width: 23.5%; height: 12.8%; }
+        .captain-formation-player.formation-card-compacta > .formation-card-position { top: 24.6%; left: 14%; right: auto; width: 23.5%; height: 6.6%; border: 0; }
+        .captain-formation-player.formation-card-compacta .formation-card-photo { top: 8.8%; left: 36%; right: 8.5%; height: 37.6%; }
+        .captain-formation-player.formation-card-compacta > .formation-player-name { top: 47.2%; left: 11.5%; right: 8%; width: auto; height: 12.4%; font-size: 8px; }
+        .captain-formation-player.formation-card-compacta .formation-card-regularity { top: 32.8%; left: 20.7%; right: auto; bottom: auto; width: 11.8%; height: 7.8%; }
       `;
       clonedDocument.head.appendChild(exportStyles);
       clonedDocument.body.classList.add('is-exporting-formations');
@@ -2604,6 +2620,34 @@ function isFormationPointerDragEnabled() {
   return window.matchMedia('(min-width: 761px)').matches;
 }
 
+function closeFormationCardPreview() {
+  formationCardPreviewOverlay?.remove();
+  formationCardPreviewOverlay = null;
+  document.body.classList.remove('has-formation-card-preview');
+}
+
+function openFormationCardPreview(card) {
+  if (!card) return;
+  closeFormationCardPreview();
+  const clone = card.cloneNode(true);
+  clone.classList.remove('formation-card-compacta', 'is-dragging', 'is-drag-over', 'is-pointer-drag-ghost');
+  clone.classList.add('formation-card-preview-stat');
+  clone.removeAttribute('data-sorteo-drag-player');
+  clone.removeAttribute('draggable');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'formation-card-preview-overlay';
+  overlay.innerHTML = `
+    <button class="formation-card-preview-close" type="button" aria-label="Cerrar carta" data-formation-card-preview-close>&times;</button>
+    <div class="formation-card-preview-stage team-formation"></div>
+  `;
+  overlay.querySelector('.formation-card-preview-stage')?.appendChild(clone);
+  (card.closest('.content') || document.body).appendChild(overlay);
+  document.body.classList.add('has-formation-card-preview');
+  formationCardPreviewOverlay = overlay;
+  overlay.querySelector('[data-formation-card-preview-close]')?.focus();
+}
+
 function clearSorteoFormationDragHighlights(root = document) {
   root.querySelectorAll('.is-team-drag-over, .is-drag-over')
     .forEach(el => el.classList.remove('is-team-drag-over', 'is-drag-over'));
@@ -2742,7 +2786,11 @@ function startSorteoFormationPointerDrag(event, card, root) {
     const target = hasMoved
       ? formationDropTargetFromPoint(upEvent.clientX, upEvent.clientY, ghost) || formationPointerDragTarget
       : null;
-    if (target) handleSorteoFormationDrop(formationPointerDragState, target);
+    if (target) {
+      handleSorteoFormationDrop(formationPointerDragState, target);
+    } else if (!hasMoved) {
+      openFormationCardPreview(card);
+    }
 
     card.classList.remove('is-dragging');
     ghost?.remove();
@@ -2765,7 +2813,14 @@ function bindSorteoLegacyEvents() {
 
   root.addEventListener('click', (event) => {
     const control = event.target.closest('[data-sorteo-action]');
-    if (!control || !root.contains(control)) return;
+    if (!control) {
+      const card = event.target.closest('[data-sorteo-drag-player].formation-card-compacta');
+      if (card && root.contains(card)) {
+        openFormationCardPreview(card);
+      }
+      return;
+    }
+    if (!root.contains(control)) return;
     const action = control.dataset.sorteoAction;
 
     if (control.matches('a[href="#"]')) event.preventDefault();
@@ -2878,6 +2933,19 @@ function bindSorteoLegacyEvents() {
     if (!source) return;
     handleSorteoFormationDrop(source, targetCard || targetLine || targetField);
   });
+
+  document.addEventListener('click', (event) => {
+    if (!formationCardPreviewOverlay) return;
+    if (event.target.closest('[data-formation-card-preview-close]') || event.target.classList.contains('formation-card-preview-overlay')) {
+      closeFormationCardPreview();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && formationCardPreviewOverlay) {
+      closeFormationCardPreview();
+    }
+  });
 }
 // Lista inicial de jugadores según lo solicitado
 if (MATCH_ID > 0) {
@@ -2886,6 +2954,8 @@ if (MATCH_ID > 0) {
     nombre: j.nombre,
     posicion: normalizarPosiciones(j.posicion),
     ritmo: normalizarRitmo(j.ritmo),
+    photo_path: j.photo_path || '',
+    has_custom_photo: !!j.has_custom_photo,
     puntuacion: parseFloat(j.puntuacion),
     tecnica: parseFloat(j.tecnica),
     ritmo_stat: parseFloat(j.ritmo_stat),

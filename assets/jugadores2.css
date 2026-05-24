@@ -65,13 +65,13 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-tier-elite {
 body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .player-card-rating {
   position: absolute;
   z-index: 2;
-  top: 12%;
+  top: 13%;
   left: 14%;
   display: grid;
   place-items: center;
   width: 23%;
   min-width: 0;
-  height: 16%;
+  height: 14%;
   min-height: 0;
   margin: 0;
   border: 1px solid var(--formation-slot-line);
@@ -105,12 +105,12 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-
   position: absolute;
   z-index: 2;
   top: 14%;
-  right: 15%;
+  right: 13%;
   display: grid;
   place-items: center;
-  width: 26%;
+  width: 25%;
   min-width: 0;
-  height: 9%;
+  height: 8%;
   margin: 0;
   border: 1px solid var(--formation-slot-line);
   border-radius: 5px;
@@ -144,8 +144,10 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-
 }
 
 body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-secondary-position {
-  top: 24.5%;
-  right: 15%;
+  top: 23%;
+  right: 13%;
+  width: 25%;
+  height: 8%;
 }
 
 body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-card-status {
@@ -164,13 +166,13 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-
 body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-photo {
   position: absolute;
   z-index: 1;
-  top: 27.5%;
-  left: 18%;
-  right: 18%;
+  top: 31%;
+  left: 22%;
+  right: 24%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  height: 34%;
+  height: 28%;
   overflow: hidden;
   pointer-events: none;
 }
@@ -181,14 +183,28 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-ca
   height: 100%;
   object-fit: contain;
   object-position: center bottom;
-  opacity: 0.62;
   filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.2));
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-photo.is-default img {
+  opacity: 0.62;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-photo.is-custom {
+  top: 31%;
+  left: 22%;
+  right: 24%;
+  height: 28%;
+}
+
+body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-photo.is-custom img {
+  opacity: 1;
 }
 
 body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat > .formation-player-name {
   position: absolute;
   z-index: 3;
-  top: 58.8%;
+  top: 62%;
   left: 14%;
   right: 14%;
   display: grid;
@@ -218,12 +234,12 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-ca
   --arrow-color: #a7ec35;
   position: absolute;
   z-index: 3;
-  top: 35%;
-  right: 18%;
+  top: 39%;
+  right: 4%;
   display: block;
-  width: 18%;
+  width: 10%;
   max-width: 25px;
-  min-width: 18px;
+  min-width: 14px;
   aspect-ratio: 1;
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.75));
   pointer-events: none;
@@ -263,7 +279,7 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-ca
 body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-card-stats {
   position: absolute;
   z-index: 3;
-  top: 68.8%;
+  top: 71%;
   left: 17%;
   right: 17%;
   box-sizing: border-box;
@@ -271,7 +287,7 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat .formation-ca
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(3, 1fr);
   gap: 4.5% 6%;
-  height: 17.8%;
+  height: 15.8%;
   min-width: 0;
   overflow: hidden;
 }
@@ -1064,7 +1080,9 @@ body.page-jugadores2 .content .j2-fut-card.card-sin-stat {
 }
 
 .j2-modal-head {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 40px;
   gap: 10px;
@@ -1162,6 +1180,10 @@ body.page-jugadores2 .content .j2-modal-close-icon {
     #f7fbf9;
 }
 
+.j2-profile-card:has(.j2-radar-svg) {
+  cursor: zoom-in;
+}
+
 .j2-radar-svg {
   width: min(100%, 270px);
   height: auto;
@@ -1201,6 +1223,92 @@ body.page-jugadores2 .content .j2-modal-close-icon {
   color: var(--j2-muted);
   font-size: .85rem;
   font-weight: 900;
+}
+
+body.j2-radar-viewer-open {
+  overflow: hidden;
+}
+
+.j2-radar-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(6, 17, 13, .68);
+}
+
+.j2-radar-viewer-panel {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  width: min(560px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  padding: 14px;
+  border: 1px solid var(--j2-line-strong);
+  background: #f7fbf9;
+  box-shadow: 0 18px 44px rgba(6, 17, 13, .28);
+}
+
+.j2-radar-viewer-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #73c69b;
+  background: #e7f8ef;
+  color: #008b4a;
+  cursor: pointer;
+}
+
+.j2-radar-viewer-close::before,
+.j2-radar-viewer-close::after {
+  content: "";
+  position: absolute;
+  width: 15px;
+  height: 2px;
+  background: currentColor;
+}
+
+.j2-radar-viewer-close::before {
+  transform: rotate(45deg);
+}
+
+.j2-radar-viewer-close::after {
+  transform: rotate(-45deg);
+}
+
+.j2-radar-viewer-title {
+  min-height: 40px;
+  padding-right: 48px;
+  color: var(--j2-ink);
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+}
+
+.j2-radar-viewer-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--j2-line);
+  background:
+    linear-gradient(90deg, transparent 49.8%, #d8e9e0 50%, transparent 50.2%),
+    linear-gradient(0deg, transparent 49.8%, #d8e9e0 50%, transparent 50.2%),
+    #fff;
+}
+
+.j2-radar-viewer-stage .j2-radar-svg {
+  width: min(100%, 480px, 82vh);
 }
 
 .j2-profile-copy {
@@ -1290,7 +1398,7 @@ body.page-jugadores2 .content .j2-modal-close-icon {
 
 .j2-admin-context {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
+  grid-template-columns: 230px 136px minmax(0, 1fr);
   gap: 12px;
   align-items: stretch;
 }
@@ -1311,6 +1419,46 @@ body.page-jugadores2 .content .j2-modal-close-icon {
   padding: 10px;
   border: 1px solid var(--j2-line);
   background: #fff;
+}
+
+.j2-photo-preview {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--j2-line);
+  background: #fff;
+}
+
+.j2-photo-frame {
+  display: grid;
+  place-items: end center;
+  width: 100%;
+  aspect-ratio: 1 / 1.12;
+  overflow: hidden;
+  border: 1px solid var(--j2-line-strong);
+  background: #f6faf8;
+}
+
+.j2-photo-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.j2-photo-frame.is-default img {
+  width: 76%;
+  opacity: .58;
+}
+
+.j2-photo-preview p {
+  margin: 0;
+  color: var(--j2-muted);
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .j2-admin-story > strong {
@@ -1366,12 +1514,14 @@ body.page-jugadores2 .content .j2-modal-close-icon {
 }
 
 .j2-edit-field,
+.j2-edit-photo,
 .j2-edit-active {
   display: grid;
   gap: 5px;
 }
 
 .j2-edit-field span,
+.j2-edit-photo span,
 .j2-edit-active span {
   color: var(--j2-muted);
   font-size: .76rem;
@@ -1387,6 +1537,105 @@ body.page-jugadores2 .content .j2-modal-close-icon {
   color: var(--j2-ink);
   padding: 0 10px;
   font-weight: 850;
+}
+
+.j2-edit-photo {
+  grid-column: 1 / -1;
+}
+
+.j2-upload-control {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  border: 2px solid #7fb89c;
+  background: #f7fbf9;
+  padding: 10px;
+  color: var(--j2-ink);
+}
+
+.j2-upload-control:hover,
+.j2-upload-control:focus-within {
+  border-color: var(--j2-green);
+  background: #f6faf8;
+}
+
+.j2-upload-control input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.j2-upload-icon {
+  width: 42px;
+  height: 42px;
+  position: relative;
+  border: 1px solid #9fcfbb;
+  background: #ffffff;
+}
+
+.j2-upload-icon::before {
+  content: "";
+  position: absolute;
+  inset: 10px 8px 8px;
+  border: 2px solid var(--j2-green);
+  border-radius: 2px;
+}
+
+.j2-upload-icon::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 8px;
+  width: 12px;
+  height: 8px;
+  border: 2px solid var(--j2-green);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  box-shadow: 4px 13px 0 -2px var(--j2-green);
+}
+
+.j2-upload-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.j2-upload-copy strong {
+  color: var(--j2-ink);
+  font-size: .94rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.j2-upload-copy em {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--j2-muted);
+  font-size: .76rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.j2-upload-action {
+  border: 1px solid var(--j2-green);
+  background: var(--j2-green);
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  padding: 10px 13px;
+  font-size: .82rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  min-width: 112px;
 }
 
 .j2-edit-active {
@@ -1507,24 +1756,15 @@ body.page-jugadores2 .content .j2-modal-close-icon {
 
 .j2-stat-row-save::before {
   content: "";
-  width: 18px;
-  height: 18px;
-  border: 2px solid currentColor;
-  background:
-    linear-gradient(currentColor, currentColor) 50% 13px / 9px 2px no-repeat,
-    linear-gradient(currentColor, currentColor) 12px 3px / 3px 5px no-repeat,
-    linear-gradient(transparent 0 0);
-  box-shadow: inset 0 -6px 0 rgba(255,255,255,.18);
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z'/%3E%3Cpath d='M17 21v-7H7v7'/%3E%3Cpath d='M7 3v5h8'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z'/%3E%3Cpath d='M17 21v-7H7v7'/%3E%3Cpath d='M7 3v5h8'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .j2-stat-row-save::after {
-  content: "";
-  position: absolute;
-  width: 8px;
-  height: 4px;
-  top: 7px;
-  left: 11px;
-  background: currentColor;
+  content: none;
 }
 
 .j2-stat-row-save[hidden] {
@@ -1788,7 +2028,7 @@ body.page-jugadores2 .content .j2-modal-close-icon {
 
   .j2-admin-context {
     order: 2;
-    grid-template-columns: 118px minmax(0, 1fr);
+    grid-template-columns: 92px 78px minmax(0, 1fr);
     gap: 8px;
     align-items: stretch;
   }
@@ -1802,12 +2042,21 @@ body.page-jugadores2 .content .j2-modal-close-icon {
   }
 
   .j2-admin-context .j2-profile-card {
-    min-height: 132px;
+    min-height: 108px;
     padding: 4px;
   }
 
   .j2-admin-context .j2-radar-svg {
-    width: min(100%, 132px);
+    width: min(100%, 108px);
+  }
+
+  .j2-photo-preview {
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .j2-photo-preview p {
+    display: none;
   }
 
   .j2-admin-story {
@@ -1872,6 +2121,27 @@ body.page-jugadores2 .content .j2-modal-close-icon {
     min-height: 38px;
     padding: 0 9px;
     font-size: .9rem;
+  }
+
+  .j2-edit-photo {
+    grid-column: 1 / -1;
+  }
+
+  .j2-upload-control {
+    grid-template-columns: 36px minmax(0, 1fr);
+    min-height: 52px;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .j2-upload-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .j2-upload-action {
+    grid-column: 1 / -1;
+    text-align: center;
   }
 
   .j2-edit-stats {
@@ -1956,5 +2226,191 @@ body.page-jugadores2 .content .j2-fut-card.formation-card-sin-stat::after {
     width: clamp(122px, calc((100vw - 36px) / 2), 154px) !important;
     min-width: 0 !important;
     max-width: 154px !important;
+  }
+}
+
+/* Card Pro Relieve: final shared player-card design. */
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve {
+  --formation-slot-bg: color-mix(in srgb, #f2c783 58%, transparent);
+  --formation-slot-line: rgba(44, 22, 9, 0.2);
+  width: 170px !important;
+  min-width: 170px !important;
+  max-width: 170px !important;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve.formation-card-tier-silver {
+  --formation-slot-bg: color-mix(in srgb, #f5fbf8 58%, transparent);
+  --formation-slot-line: rgba(22, 35, 31, 0.18);
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve.formation-card-tier-gold {
+  --formation-slot-bg: color-mix(in srgb, #fff09d 54%, transparent);
+  --formation-slot-line: rgba(50, 34, 4, 0.2);
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve.formation-card-tier-elite {
+  --formation-slot-bg: color-mix(in srgb, #f7f1ff 34%, transparent);
+  --formation-slot-line: rgba(243, 237, 255, 0.38);
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .player-card-rating {
+  top: 12.9%;
+  left: 14%;
+  width: 23.5%;
+  height: 12.8%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .player-card-rating::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -18%;
+  left: -8.1%;
+  width: 108.1%;
+  height: 285%;
+  border: 1px solid color-mix(in srgb, var(--formation-slot-line) 72%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--formation-slot-bg) 50%, rgba(255, 255, 255, 0.18)), color-mix(in srgb, var(--formation-slot-bg) 30%, transparent)),
+    rgba(7, 19, 15, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(7, 19, 15, 0.1);
+  pointer-events: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .player-card-rating strong {
+  font-size: 1.53rem;
+  text-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.42),
+    1px 1px 0 rgba(255, 255, 255, 0.34),
+    -1px 1px 0 rgba(255, 255, 255, 0.28),
+    0 -1px 0 rgba(7, 19, 15, 0.22),
+    0 3px 2px rgba(7, 19, 15, 0.24);
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .player-card-rating span {
+  display: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve > .formation-card-position {
+  top: 24.6%;
+  left: 14%;
+  right: auto;
+  width: 23.5%;
+  height: 6.6%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.645rem;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve > .formation-card-secondary-position {
+  top: 31.4%;
+  left: 14%;
+  right: auto;
+  width: 23.5%;
+  height: 6.2%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.52rem;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve:has(> .formation-card-secondary-position) .formation-card-regularity {
+  top: 39.2%;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .formation-card-regularity {
+  top: 32.8%;
+  left: 20.7%;
+  right: auto;
+  width: 11.8%;
+  height: 7.8%;
+  background: transparent;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .formation-card-photo,
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .formation-card-photo.is-custom {
+  top: 8.8%;
+  left: 36%;
+  right: 8.5%;
+  align-items: flex-start;
+  height: 37.6%;
+  border: 0;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.12), transparent 48%),
+    linear-gradient(180deg, transparent 0 74%, rgba(7, 19, 15, 0.08) 100%);
+  box-shadow: inset 0 -10px 14px rgba(7, 19, 15, 0.08);
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .formation-card-photo img {
+  object-fit: contain;
+  object-position: center top;
+  border-radius: 8px;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve > .formation-player-name {
+  top: 47.2%;
+  left: 11.5%;
+  right: 8%;
+  width: auto;
+  max-width: none;
+  height: 12.4%;
+  border-radius: 8px;
+  font-size: 0.785rem;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .formation-card-stats {
+  top: 61.8%;
+  left: 11.5%;
+  right: 8%;
+  gap: 8% 8%;
+  height: 24.2%;
+  border-top: 1px solid color-mix(in srgb, var(--formation-slot-line) 70%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--formation-slot-line) 60%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--formation-slot-bg) 28%, transparent);
+  padding: 4% 6% 3.5%;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .formation-card-stat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 0.555rem;
+  box-shadow: none;
+}
+
+body.page-jugadores2 .content .j2-fut-card.card-pro-relieve :is(.player-card-rating strong, .player-card-rating span, .formation-card-position, .formation-card-secondary-position, .formation-player-name, .formation-card-stat span, .formation-card-stat strong) {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.52),
+    1px 0 0 rgba(255, 255, 255, 0.34),
+    -1px 0 0 rgba(255, 255, 255, 0.26),
+    0 -1px 0 rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 560px) {
+  body.page-jugadores2 .content .j2-fut-card.card-pro-relieve {
+    width: clamp(126px, calc((100vw - 36px) / 2), 156px) !important;
+    min-width: 0 !important;
+    max-width: 156px !important;
+  }
+
+  body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .player-card-rating strong {
+    font-size: 1.32rem;
+  }
+
+  body.page-jugadores2 .content .j2-fut-card.card-pro-relieve > .formation-player-name {
+    font-size: 0.7rem;
+  }
+
+  body.page-jugadores2 .content .j2-fut-card.card-pro-relieve .formation-card-stat {
+    font-size: 0.5rem;
   }
 }

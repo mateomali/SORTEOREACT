@@ -1464,6 +1464,7 @@ CREATE TABLE `players` (
   `mentality` decimal(3,1) NOT NULL DEFAULT 3.0,
   `regularity` decimal(3,1) DEFAULT NULL,
   `goalkeeper_skill` decimal(3,1) DEFAULT NULL,
+  `photo_path` varchar(255) DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),

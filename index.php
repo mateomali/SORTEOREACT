@@ -996,8 +996,10 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $naturalPositions = parse_positions_csv((string) ($player['positions'] ?? ''));
                           $primaryPosition = $naturalPositions[0] ?? '';
                           $isPositionChanged = $primaryPosition !== '' && $assignedLine !== $primaryPosition;
+                          $formationPhotoPath = player_photo_path($player);
+                          $formationPhotoClass = player_has_custom_photo($player) ? ' is-custom' : ' is-default';
                           $baseFormationClass = !$showResultFormation
-                              ? ' captain-formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-' . home_player_card_tier($formationBaseRating)
+                              ? ' captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-' . home_player_card_tier($formationBaseRating)
                                   . ($isPositionChanged ? ' is-position-changed' : '')
                               : '';
                         ?>
@@ -1041,7 +1043,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                             <?php endif; ?>
                           <?php else: ?>
                             <?= render_player_card_rating($formationBaseRating, 'GEN') ?>
-                            <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
+                            <span class="formation-card-photo<?= h($formationPhotoClass) ?>" aria-hidden="true"><img src="<?= h($formationPhotoPath) ?>" alt=""></span>
                             <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
                             <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>
                             <?= render_home_player_card_regularity($player) ?>

@@ -10,7 +10,7 @@ if (!function_exists('repo_match_participants_basic')) {
     function repo_match_participants_basic(int $matchId): array
     {
         $stmt = db()->prepare(
-            'SELECT p.id, p.name, p.positions, p.pace, p.skill,
+            'SELECT p.id, p.name, p.positions, p.pace, p.skill, p.photo_path,
                     p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
              FROM match_players mp
              INNER JOIN players p ON p.id = mp.player_id
@@ -41,6 +41,8 @@ try {
                 'nombre' => (string) $p['name'],
                 'posicion' => (string) $p['positions'],
                 'ritmo' => ((string) $p['pace'] === 'lento') ? 'lento' : 'rápido',
+                'photo_path' => player_photo_path($p),
+                'has_custom_photo' => player_has_custom_photo($p),
                 'puntuacion' => player_overall_rating($p),
                 'tecnica' => player_effective_stat($p, 'technique'),
                 'ritmo_stat' => player_effective_stat($p, 'rhythm'),

@@ -42,7 +42,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         const anchors = [
           [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
           [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-          [5.2, 93], [5.3, 94], [6.0, 98],
+          [5.2, 93], [5.3, 94], [6.0, 99],
         ];
         for (let i = 0; i < anchors.length - 1; i += 1) {
           const [fromRating, fromOverall] = anchors[i];
@@ -52,7 +52,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
             return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
           }
         }
-        return 98;
+        return 99;
       };
       const playerCardRatingHtml = (value, label = 'GEN') => `
         <span class="player-card-rating" title="Puntaje tarjeta">
@@ -60,6 +60,17 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           <span>${escapeHtml(label)}</span>
         </span>
       `;
+      const playerCardPhotoPath = (player) => {
+        const path = String(player.photo_path || '');
+        return path.startsWith('uploads/players/') && !path.includes('..')
+          ? path
+          : 'assets/players/default-player-silhouette.png';
+      };
+      const playerCardPhotoHtml = (player) => {
+        const path = playerCardPhotoPath(player);
+        const photoClass = path.startsWith('uploads/players/') ? ' is-custom' : ' is-default';
+        return `<span class="formation-card-photo${photoClass}" aria-hidden="true"><img src="${escapeHtml(path)}" alt=""></span>`;
+      };
       const playerCardTier = (value) => {
         const overall = playerCardRating(value);
         if (overall >= 90) return 'elite';
@@ -1141,9 +1152,9 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
                   const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${assignedPosition} ${formatSkill(adjustedRating)}${secondaryPosition ? ` | Secundaria: ${assignedPosition}. Primaria: ${primaryPosition}` : ''}`;
                   const positionChanged = primaryPosition !== '' && assignedPosition !== primaryPosition;
                   return `
-                  <div class="captain-editor-player formation-player captain-formation-player formation-card-sin-stat ${cardViewClass} formation-card-tier-${playerCardTier(adjustedRating)} ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${assignedPosition}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
+                  <div class="captain-editor-player formation-player captain-formation-player card-pro-relieve formation-card-sin-stat ${cardViewClass} formation-card-tier-${playerCardTier(adjustedRating)} ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${assignedPosition}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
                     ${playerCardRatingHtml(adjustedRating, 'GEN')}
-                    <span class="formation-card-photo" aria-hidden="true"><img src="assets/players/default-player-silhouette.png" alt=""></span>
+                    ${playerCardPhotoHtml(player)}
                     <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
                     <span class="captain-position-pill formation-player-meta formation-player-position formation-card-position ${secondaryPosition ? 'is-assigned-secondary' : 'is-primary'}">${escapeHtml(assignedPosition)}${secondaryPosition ? '<em class="formation-secondary-badge">2a</em>' : ''}</span>
                     ${playerCardRegularityHtml(player)}
