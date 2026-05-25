@@ -1103,9 +1103,9 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
         if (!field) return;
         const readOnly = options.readOnly === true;
         const requestedCardView = options.cardView || container.dataset.cardView || board.dataset.cardView || '';
-        const cardView = requestedCardView === FORMATION_CARD_VIEW_COMPACT
-          ? FORMATION_CARD_VIEW_COMPACT
-          : FORMATION_CARD_VIEW_STAT;
+        const cardView = requestedCardView === FORMATION_CARD_VIEW_STAT
+          ? FORMATION_CARD_VIEW_STAT
+          : FORMATION_CARD_VIEW_COMPACT;
         const cardViewClass = cardView === FORMATION_CARD_VIEW_COMPACT ? 'formation-card-compacta' : '';
         const teamNumber = parseInt(container.dataset.formationTeam || '0', 10);
         ensureFormationState(teamNumber, players);

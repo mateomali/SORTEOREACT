@@ -271,11 +271,7 @@ function jugadores2_card_tier(int $overall): string
 
 function jugadores2_card_photo(array $player): string
 {
-    $photoPath = jugadores2_photo_public_path((string) ($player['photo_path'] ?? ''));
-    if ($photoPath !== '') {
-        return $photoPath;
-    }
-    return 'assets/players/default-player-silhouette.png';
+    return player_photo_path($player);
 }
 
 function jugadores2_regularidad_form(float $value): array

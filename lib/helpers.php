@@ -19,6 +19,12 @@ function player_photo_path(array $player): string
     if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/')) {
         return 'assets/players/default-player-silhouette.png';
     }
+    if (!str_starts_with($path, 'uploads/players/transparent/')) {
+        $transparentPath = 'uploads/players/transparent/' . basename($path);
+        if (is_file(__DIR__ . '/../' . $transparentPath)) {
+            return $transparentPath;
+        }
+    }
     return $path;
 }
 

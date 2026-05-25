@@ -195,7 +195,7 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
     $isHighlighted = $highlightPlayerId > 0 && (int) ($player['id'] ?? 0) === $highlightPlayerId;
     $position = strtoupper($line !== '' ? $line : (string) ($player['assigned_position'] ?? 'MED'));
     $stats = formation_view_card_stats($player, $position);
-    $cardClass = 'formation-player card-pro-relieve formation-card-sin-stat formation-card-tier-' . formation_view_card_tier($rating) . ($isHighlighted ? ' is-current-player' : '');
+    $cardClass = 'formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-' . formation_view_card_tier($rating) . ($isHighlighted ? ' is-current-player' : '');
     $photoPath = player_photo_path($player);
     $photoClass = player_has_custom_photo($player) ? ' is-custom' : ' is-default';
 

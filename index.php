@@ -998,13 +998,11 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           $isPositionChanged = $primaryPosition !== '' && $assignedLine !== $primaryPosition;
                           $formationPhotoPath = player_photo_path($player);
                           $formationPhotoClass = player_has_custom_photo($player) ? ' is-custom' : ' is-default';
-                          $baseFormationClass = !$showResultFormation
-                              ? ' captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-' . home_player_card_tier($formationBaseRating)
-                                  . ($isPositionChanged ? ' is-position-changed' : '')
-                              : '';
+                          $formationCardClass = ' captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-' . home_player_card_tier($formationBaseRating)
+                              . ($isPositionChanged ? ' is-position-changed' : '');
                         ?>
                         <div
-                          class="formation-player<?= h($baseFormationClass) ?> <?= $showResultFormation && $formationGoals > 0 ? 'scored-player' : '' ?> <?= $showResultFormation && $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
+                          class="formation-player<?= h($formationCardClass) ?> <?= $showResultFormation && $formationGoals > 0 ? 'scored-player' : '' ?> <?= $showResultFormation && $isPlayerOfMatch ? 'is-player-of-match' : '' ?>"
                           draggable="false"
                           data-static-formation-player
                           data-static-player-key="<?= h((string) $player['id']) ?>"
@@ -1020,12 +1018,15 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
                         >
+                          <?= render_player_card_rating($formationBaseRating, 'GEN') ?>
+                          <span class="formation-card-photo<?= h($formationPhotoClass) ?>" aria-hidden="true"><img src="<?= h($formationPhotoPath) ?>" alt=""></span>
+                          <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
+                          <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>
+                          <?= render_home_player_card_regularity($player) ?>
                           <?php if ($showResultFormation): ?>
-                            <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
-                            <span class="player-card-rating formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
-                            <span class="formation-player-meta formation-player-position" title="Posicion"><?= h($assignedLine) ?></span>
+                            <span class="formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
                             <?php if ($formationGoals > 0 || $formationAwards): ?>
-                              <span>
+                              <span class="formation-result-badges">
                                 <?php if ($formationGoals > 0): ?>
                                   <span class="formation-goals-badge"><?= h((string) $formationGoals) ?> <?= $formationGoals === 1 ? 'gol' : 'goles' ?></span>
                                 <?php endif; ?>
@@ -1041,12 +1042,6 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                                 <?php endif; ?>
                               </span>
                             <?php endif; ?>
-                          <?php else: ?>
-                            <?= render_player_card_rating($formationBaseRating, 'GEN') ?>
-                            <span class="formation-card-photo<?= h($formationPhotoClass) ?>" aria-hidden="true"><img src="<?= h($formationPhotoPath) ?>" alt=""></span>
-                            <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
-                            <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>
-                            <?= render_home_player_card_regularity($player) ?>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>

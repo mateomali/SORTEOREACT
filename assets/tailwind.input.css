@@ -21416,3 +21416,429 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
     display: none !important;
   }
 }
+
+/* Carta compacta: final card format used by every cancha view. */
+.formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-sorteo-legacy > .captain-formation-player.formation-card-sin-stat.formation-card-compacta.is-pointer-drag-ghost {
+  --formation-compact-card-width: 86px;
+  --formation-card-image: url("./card-backgrounds/reference-bronze.png") !important;
+  --formation-card-text: #f0b170 !important;
+  --formation-card-separator: rgba(240, 177, 112, 0.34) !important;
+  position: relative !important;
+  display: block !important;
+  aspect-ratio: 409 / 710 !important;
+  flex: 0 0 var(--formation-compact-card-width) !important;
+  width: var(--formation-compact-card-width) !important;
+  min-width: var(--formation-compact-card-width) !important;
+  max-width: var(--formation-compact-card-width) !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--formation-card-image) center / contain no-repeat !important;
+  clip-path: none !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  filter: drop-shadow(0 5px 9px rgba(2, 14, 9, 0.28));
+  font-family: "Barlow Condensed", Poppins, ui-sans-serif, system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze,
+body.page-sorteo-legacy > .captain-formation-player.formation-card-sin-stat.formation-card-compacta.is-pointer-drag-ghost.formation-card-tier-bronze {
+  --formation-card-image: url("./card-backgrounds/reference-bronze.png") !important;
+  --formation-card-text: #f0b170 !important;
+  --formation-card-separator: rgba(240, 177, 112, 0.34) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver,
+body.page-sorteo-legacy > .captain-formation-player.formation-card-sin-stat.formation-card-compacta.is-pointer-drag-ghost.formation-card-tier-silver {
+  --formation-card-image: url("./card-backgrounds/reference-silver.png") !important;
+  --formation-card-text: #e8eeea !important;
+  --formation-card-separator: rgba(232, 238, 234, 0.32) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold,
+body.page-sorteo-legacy > .captain-formation-player.formation-card-sin-stat.formation-card-compacta.is-pointer-drag-ghost.formation-card-tier-gold {
+  --formation-card-image: url("./card-backgrounds/reference-gold.png") !important;
+  --formation-card-text: #f5d867 !important;
+  --formation-card-separator: rgba(245, 216, 103, 0.34) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite,
+body.page-sorteo-legacy > .captain-formation-player.formation-card-sin-stat.formation-card-compacta.is-pointer-drag-ghost.formation-card-tier-elite {
+  --formation-card-image: url("./card-backgrounds/reference-elite.png") !important;
+  --formation-card-text: #a5fff0 !important;
+  --formation-card-separator: rgba(165, 255, 240, 0.34) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 8.8%;
+  left: 9%;
+  right: 8%;
+  height: 49%;
+  background: linear-gradient(180deg, transparent, rgba(7, 19, 15, 0.06), rgba(7, 19, 15, 0.34));
+  pointer-events: none;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating {
+  position: absolute !important;
+  z-index: 4 !important;
+  top: 13.8% !important;
+  left: 14.2% !important;
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  align-content: start !important;
+  justify-items: center !important;
+  width: 23.2% !important;
+  height: 26% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-shadow: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating::before,
+.formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating::after {
+  content: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong {
+  display: block !important;
+  max-width: none !important;
+  overflow: visible !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  font-size: clamp(0.74rem, 1.05vw, 1rem) !important;
+  font-weight: 900 !important;
+  line-height: 0.8 !important;
+  text-align: center !important;
+  text-overflow: clip !important;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+  white-space: nowrap !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating span {
+  display: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position {
+  position: absolute !important;
+  z-index: 4 !important;
+  top: 25.5% !important;
+  left: 14.2% !important;
+  right: auto !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 23.2% !important;
+  height: 7% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  font-size: clamp(0.35rem, 0.58vw, 0.54rem) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position .formation-secondary-badge {
+  position: absolute !important;
+  top: 120% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  font-size: 0.3rem !important;
+  line-height: 1 !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity {
+  position: absolute !important;
+  z-index: 5 !important;
+  top: 34.2% !important;
+  left: 19.6% !important;
+  right: auto !important;
+  bottom: auto !important;
+  display: block !important;
+  width: 11.5% !important;
+  height: 6.7% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity::before,
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity::after {
+  content: "" !important;
+  position: absolute !important;
+  clip-path: polygon(50% 0, 100% 48%, 70% 48%, 70% 100%, 30% 100%, 30% 48%, 0 48%) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity::before {
+  inset: 0 !important;
+  background: #07130f !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity::after {
+  inset: 3px !important;
+  background: var(--arrow-color, #a7ec35) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity.is-up {
+  --arrow-color: #1ec7f2;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity.is-right {
+  --arrow-color: #a7ec35;
+  transform: rotate(90deg) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity.is-down {
+  --arrow-color: #ef2b2b;
+  transform: rotate(180deg) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo {
+  position: absolute !important;
+  z-index: 1 !important;
+  top: 12.9% !important;
+  left: 36.4% !important;
+  right: 13.3% !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  height: 36.8% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.1), transparent 50%) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  -webkit-mask-image: linear-gradient(180deg, #000 0 74%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0 74%, transparent 100%);
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  filter: none !important;
+  object-fit: contain !important;
+  object-position: center top !important;
+  opacity: 0.56;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo.is-custom img {
+  object-fit: contain !important;
+  object-position: center top !important;
+  opacity: 1 !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+  position: absolute !important;
+  z-index: 4 !important;
+  top: 53.3% !important;
+  left: 12.1% !important;
+  right: 10.9% !important;
+  display: grid !important;
+  place-items: center !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  max-width: none !important;
+  height: 7.8% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 2px !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  font-size: clamp(0.46rem, 0.82vw, 0.68rem) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  overflow: hidden !important;
+  text-align: center !important;
+  text-overflow: ellipsis !important;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta::after {
+  pointer-events: none;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats,
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stat {
+  display: none !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-player-match-rating {
+  position: absolute !important;
+  z-index: 5 !important;
+  top: 62.4% !important;
+  left: 17.3% !important;
+  display: grid !important;
+  min-width: 18% !important;
+  height: 6.2% !important;
+  place-items: center !important;
+  border: 1px solid var(--formation-card-separator) !important;
+  border-radius: 4px !important;
+  background: rgba(7, 19, 15, 0.34) !important;
+  padding: 0 2px !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  font-size: clamp(0.34rem, 0.52vw, 0.48rem) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-result-badges {
+  position: absolute !important;
+  z-index: 5 !important;
+  top: 69.6% !important;
+  left: 13.5% !important;
+  right: 11.5% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  font-size: clamp(0.32rem, 0.5vw, 0.46rem) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-goals-badge,
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-award-icons,
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-detail-separator {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+  font: inherit !important;
+  box-shadow: none !important;
+}
+
+body.page-index .content .match-history .formation-player.formation-card-sin-stat.formation-card-compacta.is-player-of-match::after,
+body.page-historial .content .match-history .formation-player.formation-card-sin-stat.formation-card-compacta.is-player-of-match::after {
+  top: 7.3% !important;
+  right: 12.5% !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: var(--formation-card-text) !important;
+  -webkit-text-fill-color: var(--formation-card-text) !important;
+  font-family: "Barlow Condensed", Poppins, ui-sans-serif, system-ui, sans-serif !important;
+  font-size: clamp(0.34rem, 0.52vw, 0.48rem) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta.is-position-changed > .formation-card-position,
+.formation-player.formation-card-sin-stat.formation-card-compacta.is-secondary-position > .formation-card-position {
+  color: #ffe9a6 !important;
+  -webkit-text-fill-color: #ffe9a6 !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta.is-out-of-position > .formation-card-position {
+  color: #ffb4a8 !important;
+  -webkit-text-fill-color: #ffb4a8 !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-penalty {
+  position: absolute !important;
+  z-index: 5 !important;
+  top: 40.5% !important;
+  left: 16.4% !important;
+  display: grid !important;
+  min-width: 18% !important;
+  height: 5.8% !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: #ffb4a8 !important;
+  -webkit-text-fill-color: #ffb4a8 !important;
+  font-size: clamp(0.28rem, 0.46vw, 0.42rem) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+  box-shadow: none !important;
+}
+
+body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta {
+  --formation-compact-card-width: 68px;
+}
+
+body.page-index .content #homeMatchDetail .public-teams .line-players,
+body.page-index .content .match-history .public-teams .line-players,
+body.page-historial .content .match-history .public-teams .line-players {
+  gap: 7px;
+  min-height: 116px;
+}
+
+@media (max-width: 760px) {
+  .formation-player.formation-card-sin-stat.formation-card-compacta {
+    --formation-compact-card-width: 76px;
+  }
+
+  body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta {
+    --formation-compact-card-width: 60px;
+  }
+
+  body.page-index .content #homeMatchDetail .public-teams .line-players,
+  body.page-index .content .match-history .public-teams .line-players,
+  body.page-historial .content .match-history .public-teams .line-players {
+    gap: 5px;
+    min-height: 102px;
+  }
+}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const cardBackgrounds = {
   bronze: 'assets/card-backgrounds/reference-bronze.png',
@@ -35,6 +35,25 @@ const positionWeights = {
   DEL: { attack: 0.31, rhythm: 0.2, technique: 0.17, teamwork: 0.14, mentality: 0.1, defense_physical: 0.08 },
   MED: { technique: 0.24, rhythm: 0.23, teamwork: 0.19, mentality: 0.13, defense_physical: 0.12, attack: 0.09 },
 };
+
+const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
+const toolbarLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#c9d8d1] bg-white px-3 text-xs font-extrabold text-[#063d2b] no-underline transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
+const quietLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-transparent bg-transparent px-2 text-xs font-extrabold text-[#526b62] no-underline transition-colors hover:bg-[#eef7f2] hover:text-[#063d2b] ${focusRing}`;
+const primaryIconButtonClass = `grid min-h-11 w-11 place-items-center rounded-lg border border-[#063d2b] bg-[#063d2b] text-white transition-colors hover:bg-[#082f23] ${focusRing}`;
+const rowCredentialButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f7fbf9] hover:text-[#063d2b] ${focusRing}`;
+const rowEditButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
+const rowEditWideButtonClass = `grid h-10 w-full place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
+const modalCloseButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#d7e6df] bg-white text-xl font-black text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b] ${focusRing}`;
+const modalSecondaryButtonClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#c9d8d1] bg-white px-4 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
+const fileButtonClass = `grid cursor-pointer gap-1 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-3 py-2 text-center text-xs font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
+const textActionButtonClass = `!border-0 !bg-transparent !p-0 !text-left !shadow-none text-sm font-black text-[#063d2b] underline-offset-4 transition-colors hover:!bg-transparent hover:text-[#07130f] hover:underline ${focusRing}`;
+const playerNameButtonClass = `!grid !w-full min-w-0 !justify-start !justify-self-stretch !justify-items-start !border-0 !bg-transparent !p-0 !text-left !shadow-none ${focusRing}`;
+const fieldControlClass = 'min-h-10 rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+const numberControlClass = 'h-10 rounded-lg border border-[#c9d8d1] bg-white px-2 text-center text-base font-black text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+
+function filterButtonClass(active) {
+  return `min-h-10 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#063d2b] bg-[#063d2b] text-white' : 'border-[#c9d8d1] bg-white text-[#07130f] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'}`;
+}
 
 function parsePayload(root) {
   try {
@@ -92,16 +111,19 @@ function overallFromSix(value) {
   return 99;
 }
 
-function formatSix(value) {
-  const rating = normalizeSix(value);
-  return Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
-}
-
 function toneClass(overall) {
   if (overall >= 88) return 'bg-emerald-600';
   if (overall >= 76) return 'bg-lime-600';
   if (overall >= 65) return 'bg-amber-600';
   return 'bg-red-600';
+}
+
+function statTone(overall) {
+  const value = Number(overall) || 64;
+  if (value >= 88) return { color: '#008c5f', border: 'border-emerald-300', bg: 'bg-emerald-50' };
+  if (value >= 76) return { color: '#65a30d', border: 'border-lime-300', bg: 'bg-lime-50' };
+  if (value >= 65) return { color: '#d97706', border: 'border-amber-300', bg: 'bg-amber-50' };
+  return { color: '#dc2626', border: 'border-red-300', bg: 'bg-red-50' };
 }
 
 function Arrow({ form }) {
@@ -115,22 +137,25 @@ function Arrow({ form }) {
   );
 }
 
-function PlayerCard({ player, onOpen }) {
+function PlayerCard({ player, onOpen, size = 'compact' }) {
   const cardImage = cardBackgrounds[player.tier] || cardBackgrounds.bronze;
   const palette = cardPalettes[player.tier] || cardPalettes.bronze;
   const cardTextClass = palette.text;
   const separatorClass = palette.separator;
   const integratedTintClass = 'from-transparent via-[#07130f]/6 to-[#07130f]/34';
   const isLongName = player.name.length > 12;
+  const widthClass = size === 'preview' ? 'w-[168px]' : 'w-[clamp(126px,calc((100vw-36px)/2),156px)] sm:w-[168px]';
+  const Shell = onOpen ? 'button' : 'div';
+  const shellProps = onOpen
+    ? { type: 'button', onClick: () => onOpen(player.id), 'aria-label': `Ver ficha de ${player.name}` }
+    : { role: 'img', 'aria-label': `Credencial de ${player.name}` };
 
   return (
-    <button
-      type="button"
-      className="relative mx-auto block aspect-[409/710] w-[clamp(126px,calc((100vw-36px)/2),156px)] overflow-visible border-0 bg-transparent p-0 text-[#07130f] drop-shadow-[0_7px_12px_rgba(2,14,9,0.22)] sm:w-[168px]"
+    <Shell
+      {...shellProps}
+      className={`relative mx-auto block aspect-[409/710] ${widthClass} overflow-visible border-0 bg-transparent p-0 text-[#07130f] drop-shadow-[0_7px_12px_rgba(2,14,9,0.22)] ${onOpen ? '' : 'cursor-default'}`}
       style={{ background: `url("${cardImage}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
       data-j2-card-tier={player.tier}
-      onClick={() => onOpen(player.id)}
-      aria-label={`Ver ficha de ${player.name}`}
     >
       <span className={`absolute left-[9%] right-[8%] top-[8.8%] z-20 h-[49%] bg-gradient-to-b ${integratedTintClass}`} aria-hidden="true" />
 
@@ -151,11 +176,11 @@ function PlayerCard({ player, onOpen }) {
       </span>
 
       <span
-        className="absolute left-[33.6%] right-[10.5%] top-[10.9%] z-10 flex h-[40.9%] items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
+        className="absolute left-[36.4%] right-[13.3%] top-[12.9%] z-10 flex h-[36.8%] items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
         style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
       >
         {player.photo ? (
-          <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" />
+          <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-contain object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" />
         ) : null}
       </span>
 
@@ -174,7 +199,39 @@ function PlayerCard({ player, onOpen }) {
           </span>
         ))}
       </span>
-    </button>
+    </Shell>
+  );
+}
+
+function CredentialIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M8 9h3" />
+      <path d="M14 9h2" />
+      <path d="M14 13h2" />
+      <circle cx="9.5" cy="13" r="1.8" />
+      <path d="M7 17c.6-1 1.4-1.5 2.5-1.5S11.4 16 12 17" />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function SaveIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+      <path d="M17 21v-8H7v8" />
+      <path d="M7 3v5h8" />
+    </svg>
   );
 }
 
@@ -183,7 +240,7 @@ function PositionChips({ positions }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {visible.map((position) => (
-        <span key={position} className="inline-flex min-h-6 items-center border border-emerald-100 bg-emerald-50 px-2 text-[11px] font-extrabold text-[#07130f]">
+        <span key={position} className="inline-flex min-h-6 items-center rounded-md border border-[#c9d8d1] bg-[#eef7f2] px-2 text-[11px] font-extrabold text-[#063d2b]">
           {position}
         </span>
       ))}
@@ -193,7 +250,7 @@ function PositionChips({ positions }) {
 
 function OverallBadge({ value }) {
   return (
-    <span className="inline-grid min-h-10 min-w-11 place-items-center border border-emerald-100 bg-white px-2 text-center text-[#07130f]">
+    <span className="inline-grid min-h-10 min-w-11 place-items-center rounded-md border border-[#c9d8d1] bg-white px-2 text-center text-[#07130f]">
       <b className="text-base font-black leading-none">{value}</b>
       <em className="not-italic text-[10px] font-extrabold leading-none text-slate-500">GEN</em>
     </span>
@@ -267,22 +324,22 @@ function ReadonlyProfile({ player, onRadarOpen }) {
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <button type="button" className="border border-emerald-100 bg-white p-4 text-left" onClick={() => onRadarOpen(player)} aria-label={`Ver radar completo de ${player.name}`}>
+        <button type="button" className={`rounded-lg border border-[#c9d8d1] bg-white p-4 text-left transition-colors hover:border-[#9fc8b5] hover:bg-[#f8fbfa] ${focusRing}`} onClick={() => onRadarOpen(player)} aria-label={`Ver radar completo de ${player.name}`}>
           <RadarSvg stats={player.allStats} />
         </button>
         <div className="grid content-start gap-3">
           <PositionChips positions={player.positions} />
           <p className="m-0 border border-emerald-100 bg-emerald-50/50 p-3 text-sm font-semibold leading-relaxed text-slate-700">{player.description}</p>
           <div className="grid gap-2 sm:grid-cols-3">
-            <article className="border border-emerald-100 bg-white p-3"><span className="text-xs font-extrabold text-slate-500">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{player.overall}</strong></article>
-            <article className="border border-emerald-100 bg-white p-3"><span className="text-xs font-extrabold text-slate-500">Fuerte</span><strong className="block text-sm font-black text-[#07130f]">{player.bestStat?.label || '-'}</strong></article>
-            <article className="border border-emerald-100 bg-white p-3"><span className="text-xs font-extrabold text-slate-500">A cuidar</span><strong className="block text-sm font-black text-[#07130f]">{player.weakStat?.label || '-'}</strong></article>
+            <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{player.overall}</strong></article>
+            <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Fuerte</span><strong className="block text-sm font-black text-[#07130f]">{player.bestStat?.label || '-'}</strong></article>
+            <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">A cuidar</span><strong className="block text-sm font-black text-[#07130f]">{player.weakStat?.label || '-'}</strong></article>
           </div>
         </div>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
         {player.allStats.map((stat) => (
-          <article key={stat.field} className="border border-emerald-100 bg-white p-3">
+          <article key={stat.field} className="rounded-lg border border-[#d7e6df] bg-white p-3">
             <StatLine stat={stat} />
             <p className="m-0 mt-2 text-xs font-semibold leading-relaxed text-slate-500">{stat.help || 'Sin descripcion disponible.'}</p>
           </article>
@@ -292,7 +349,7 @@ function ReadonlyProfile({ player, onRadarOpen }) {
   );
 }
 
-function AdminEditForm({ player, positions }) {
+function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   const initialOveralls = useMemo(() => Object.fromEntries(player.allStats.map((stat) => [stat.field, Number(stat.overall) || 64])), [player]);
   const [name, setName] = useState(player.name);
   const [primary, setPrimary] = useState(player.primaryPosition || '');
@@ -301,6 +358,7 @@ function AdminEditForm({ player, positions }) {
   const [overallValues, setOverallValues] = useState(initialOveralls);
   const [photoUrl, setPhotoUrl] = useState(player.photo);
   const [photoName, setPhotoName] = useState(player.hasCustomPhoto ? 'Foto actual cargada. Elegi otra para reemplazarla.' : 'JPG, PNG o WEBP hasta 3 MB');
+  const [photoDirty, setPhotoDirty] = useState(false);
   const [openHelp, setOpenHelp] = useState(null);
 
   const displayedOverall = useMemo(() => {
@@ -311,6 +369,10 @@ function AdminEditForm({ player, positions }) {
     return overallFromSix(Math.round(rating * 10) / 10);
   }, [overallValues, primary]);
 
+  useEffect(() => {
+    onOverallPreviewChange?.(player.id, displayedOverall);
+  }, [displayedOverall, onOverallPreviewChange, player.id]);
+
   const setOverall = (field, value) => {
     const next = Math.max(35, Math.min(99, Math.round(Number(value) || 64)));
     setOverallValues((current) => ({ ...current, [field]: next }));
@@ -318,9 +380,15 @@ function AdminEditForm({ player, positions }) {
 
   const selected = [primary, secondary].filter(Boolean);
   const visibleFields = primary === 'ARQ' ? [...statFields, 'goalkeeper_skill'] : statFields;
+  const hasChanges = name !== player.name
+    || primary !== (player.primaryPosition || '')
+    || secondary !== (player.secondaryPosition || '')
+    || active !== player.isActive
+    || photoDirty
+    || Object.keys(initialOveralls).some((field) => (overallValues[field] || 64) !== initialOveralls[field]);
 
   return (
-    <form className="grid gap-4 border border-emerald-100 bg-white p-4" method="post" encType="multipart/form-data">
+    <form className="grid gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4" method="post" encType="multipart/form-data">
       <input type="hidden" name="action" value="save" />
       <input type="hidden" name="id" value={player.id} />
 
@@ -332,11 +400,11 @@ function AdminEditForm({ player, positions }) {
       <div className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_1fr_1fr_auto]">
         <label className="grid gap-1 text-xs font-extrabold text-slate-600">
           Nombre
-          <input className="min-h-10 border border-emerald-100 bg-white px-3 text-sm font-bold text-[#07130f] outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" type="text" name="name" required value={name} onChange={(event) => setName(event.target.value)} />
+          <input className={fieldControlClass} type="text" name="name" required value={name} onChange={(event) => setName(event.target.value)} />
         </label>
         <label className="grid gap-1 text-xs font-extrabold text-slate-600">
           Primaria
-          <select className="min-h-10 border border-emerald-100 bg-white px-3 text-sm font-bold text-[#07130f] outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" name="positions[]" required value={primary} onChange={(event) => setPrimary(event.target.value)}>
+          <select className={fieldControlClass} name="positions[]" required value={primary} onChange={(event) => setPrimary(event.target.value)}>
             <option value="" disabled>Elegir</option>
             {positions.map((position) => (
               <option key={position.value} value={position.value} disabled={position.value !== primary && selected.includes(position.value)}>{position.label}</option>
@@ -345,25 +413,25 @@ function AdminEditForm({ player, positions }) {
         </label>
         <label className="grid gap-1 text-xs font-extrabold text-slate-600">
           Secundaria
-          <select className="min-h-10 border border-emerald-100 bg-white px-3 text-sm font-bold text-[#07130f] outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" name="positions[]" value={secondary} onChange={(event) => setSecondary(event.target.value)}>
+          <select className={fieldControlClass} name="positions[]" value={secondary} onChange={(event) => setSecondary(event.target.value)}>
             <option value="">Sin posicion</option>
             {positions.map((position) => (
               <option key={position.value} value={position.value} disabled={position.value !== secondary && selected.includes(position.value)}>{position.label}</option>
             ))}
           </select>
         </label>
-        <label className="flex min-h-10 items-center gap-2 self-end border border-emerald-100 bg-emerald-50 px-3 text-sm font-extrabold text-[#07130f]">
+        <label className="flex min-h-10 items-center gap-2 self-end rounded-lg border border-[#c9d8d1] bg-[#eef7f2] px-3 text-sm font-extrabold text-[#063d2b]">
           <input type="checkbox" name="active" value="1" checked={active} onChange={(event) => setActive(event.target.checked)} />
           Activo
         </label>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="grid gap-2 border border-emerald-100 bg-emerald-50/50 p-3 text-center">
-          <span className="mx-auto grid h-40 w-36 place-items-center overflow-hidden border border-emerald-100 bg-white">
+        <aside className="grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3 text-center">
+          <span className="mx-auto grid h-40 w-36 place-items-center overflow-hidden rounded-lg border border-[#d7e6df] bg-white">
             <img className={`h-full w-full object-contain ${player.hasCustomPhoto ? '' : 'opacity-60'}`} src={photoUrl} alt="" />
           </span>
-          <label className="grid cursor-pointer gap-1 border border-emerald-900 bg-emerald-950 px-3 py-2 text-center text-xs font-black text-white">
+          <label className={fileButtonClass}>
             <span>{player.hasCustomPhoto ? 'Cambiar foto' : 'Elegir foto'}</span>
             <input
               className="sr-only"
@@ -375,6 +443,7 @@ function AdminEditForm({ player, positions }) {
                 if (!file || !file.type.startsWith('image/')) return;
                 setPhotoUrl(URL.createObjectURL(file));
                 setPhotoName(file.name);
+                setPhotoDirty(true);
               }}
             />
           </label>
@@ -387,18 +456,34 @@ function AdminEditForm({ player, positions }) {
             if (!stat) return null;
             const overall = overallValues[field] || Number(stat.overall) || 64;
             const dirty = overall !== initialOveralls[field];
+            const tone = statTone(overall);
+            const percent = Math.max(0, Math.min(100, ((overall - 35) / 64) * 100));
             return (
-              <label key={field} className={`grid gap-2 border p-3 ${dirty ? 'border-amber-300 bg-amber-50' : 'border-emerald-100 bg-white'}`}>
+              <label key={field} className={`grid gap-2 rounded-lg border p-3 ${dirty ? `${tone.border} ${tone.bg}` : 'border-[#d7e6df] bg-white'}`}>
                 <span className="grid gap-1">
-                  <button type="button" className="text-left text-sm font-black text-[#07130f]" onClick={() => setOpenHelp(openHelp === field ? null : field)} aria-expanded={openHelp === field}>{stat.label}</button>
+                  <button type="button" className={textActionButtonClass} onClick={() => setOpenHelp(openHelp === field ? null : field)} aria-expanded={openHelp === field}>{stat.label}</button>
                   {openHelp === field ? <em className="not-italic text-xs font-semibold leading-relaxed text-slate-500">{stat.help}</em> : null}
                 </span>
                 <input type="hidden" name={field} value={sixFromOverall(overall).toFixed(1)} />
                 <div className="grid grid-cols-[70px_minmax(0,1fr)] items-center gap-3">
-                  <input className="h-10 border border-emerald-100 bg-white px-2 text-center text-base font-black text-[#07130f] outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" type="number" name={`${field}_overall`} min="35" max="99" step="1" inputMode="numeric" value={overall} onChange={(event) => setOverall(field, event.target.value)} aria-label={`${stat.label} en escala 1 a 99`} />
-                  <input className="w-full accent-emerald-800" type="range" min="35" max="99" step="1" value={overall} onChange={(event) => setOverall(field, event.target.value)} aria-label={`Ajustar ${stat.label} en escala 1 a 99`} />
+                  <input className={numberControlClass} type="number" name={`${field}_overall`} min="35" max="99" step="1" inputMode="numeric" value={overall} onChange={(event) => setOverall(field, event.target.value)} aria-label={`${stat.label} en escala 1 a 99`} />
+                  <span className="relative grid h-10 items-center">
+                    <span className="pointer-events-none absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 bg-slate-200">
+                      <span className="block h-full" style={{ width: `${percent}%`, backgroundColor: tone.color }} />
+                    </span>
+                    <input
+                      className="relative z-10 h-10 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 [accent-color:var(--stat-color)] [&::-moz-range-progress]:h-2 [&::-moz-range-progress]:bg-[var(--stat-color)] [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-[var(--stat-color)] [&::-moz-range-track]:h-2 [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-[var(--stat-color)] [&::-webkit-slider-thumb]:shadow-[0_1px_3px_rgba(7,19,15,.22)]"
+                      style={{ '--stat-color': tone.color }}
+                      type="range"
+                      min="35"
+                      max="99"
+                      step="1"
+                      value={overall}
+                      onChange={(event) => setOverall(field, event.target.value)}
+                      aria-label={`Ajustar ${stat.label} en escala 1 a 99`}
+                    />
+                  </span>
                 </div>
-                <small className="text-xs font-extrabold text-slate-500">{formatSix(sixFromOverall(overall))}/6</small>
               </label>
             );
           })}
@@ -406,7 +491,8 @@ function AdminEditForm({ player, positions }) {
       </div>
 
       <div className="flex justify-end">
-        <button className="min-h-11 border border-emerald-950 bg-emerald-950 px-5 text-sm font-black text-white hover:bg-emerald-900 focus:outline-none focus:ring-4 focus:ring-emerald-100" type="submit">
+        <button className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-5 text-sm font-black transition-colors ${focusRing} ${hasChanges ? 'border-[#063d2b] bg-[#063d2b] text-white hover:bg-[#082f23]' : 'border-[#c9d8d1] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b]'}`} type="submit">
+          {hasChanges ? <SaveIcon /> : null}
           Guardar todo
         </button>
       </div>
@@ -414,31 +500,31 @@ function AdminEditForm({ player, positions }) {
   );
 }
 
-function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen }) {
+function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overallValue, onOverallPreviewChange }) {
   if (!player) return null;
   return (
     <>
       <button className="fixed inset-0 z-40 block bg-black/55" type="button" aria-label="Cerrar ficha" onClick={onClose} />
-      <section className="fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden border border-emerald-100 bg-white shadow-[0_18px_55px_rgba(7,19,15,.22)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
-        <header className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-emerald-100 bg-emerald-50/70 p-4">
+      <section className="fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[#c9d8d1] bg-white shadow-[0_12px_28px_rgba(7,19,15,.18)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
+        <header className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-[#d7e6df] bg-[#f8fbfa] p-4">
           <div className="min-w-0">
             <h2 className="m-0 truncate text-xl font-black text-[#07130f]">{player.name}</h2>
             <p className="m-0 text-sm font-semibold text-slate-500">{player.positionsText || 'Sin posicion'} | {player.isActive ? 'Activo' : 'Inactivo'}</p>
           </div>
-          <OverallBadge value={player.overall} />
-          <button className="grid h-10 w-10 place-items-center border border-emerald-100 bg-white text-xl font-black text-[#07130f]" type="button" onClick={onClose} aria-label="Cerrar ficha">x</button>
+          <OverallBadge value={overallValue ?? player.overall} />
+          <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar ficha">x</button>
         </header>
         <div className="grid gap-4 overflow-auto p-4">
           {isAdmin ? (
-            <AdminEditForm key={player.id} player={player} positions={positions} />
+            <AdminEditForm key={player.id} player={player} positions={positions} onOverallPreviewChange={onOverallPreviewChange} />
           ) : (
             <ReadonlyProfile player={player} onRadarOpen={onRadarOpen} />
           )}
-          <details className="border border-emerald-100 bg-emerald-50/50 p-3">
+          <details className="rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3">
             <summary className="cursor-pointer text-sm font-black text-[#07130f]">Ver ayuda de stats</summary>
             <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat. Esta pagina usa React y Tailwind para la interfaz.</p>
           </details>
-          <button className="min-h-10 border border-emerald-100 bg-white px-4 text-sm font-black text-[#07130f]" type="button" onClick={onClose}>Cerrar</button>
+          <button className={modalSecondaryButtonClass} type="button" onClick={onClose}>Cerrar</button>
         </div>
       </section>
     </>
@@ -450,12 +536,29 @@ function RadarOverlay({ player, onClose }) {
   return (
     <>
       <button className="fixed inset-0 z-[60] bg-black/60" type="button" aria-label="Cerrar radar" onClick={onClose} />
-      <section className="fixed inset-x-4 top-10 z-[70] mx-auto max-w-md border border-emerald-100 bg-white p-4 shadow-[0_18px_55px_rgba(7,19,15,.24)]" role="dialog" aria-modal="true" aria-label={`Radar completo de ${player.name}`}>
+      <section className="fixed inset-x-4 top-10 z-[70] mx-auto max-w-md rounded-lg border border-[#c9d8d1] bg-white p-4 shadow-[0_12px_28px_rgba(7,19,15,.18)]" role="dialog" aria-modal="true" aria-label={`Radar completo de ${player.name}`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <strong className="text-base font-black text-[#07130f]">{player.name}</strong>
-          <button className="grid h-9 w-9 place-items-center border border-emerald-100 bg-white text-lg font-black text-[#07130f]" type="button" onClick={onClose} aria-label="Cerrar radar">x</button>
+          <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar radar">x</button>
         </div>
         <RadarSvg stats={player.allStats} />
+      </section>
+    </>
+  );
+}
+
+function CardPreviewModal({ player, onClose }) {
+  if (!player) return null;
+  return (
+    <>
+      <button className="fixed inset-0 z-[80] bg-black/70" type="button" aria-label="Cerrar credencial" onClick={onClose} />
+      <section className="fixed inset-0 z-[90] grid place-items-center overflow-auto p-4" role="dialog" aria-modal="true" aria-label={`Credencial de ${player.name}`}>
+        <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible">
+          <div className="origin-center scale-[1.72] sm:scale-[1.9]">
+            <PlayerCard player={player} size="preview" />
+          </div>
+        </div>
+        <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-lg border border-white/20 bg-black/70 text-xl font-black text-white transition-colors hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" type="button" onClick={onClose} aria-label="Cerrar credencial">x</button>
       </section>
     </>
   );
@@ -467,7 +570,26 @@ export function Jugadores2PageIsland({ root }) {
   const [filter, setFilter] = useState('all');
   const [topSort, setTopSort] = useState(false);
   const [activeId, setActiveId] = useState(null);
+  const [cardId, setCardId] = useState(null);
   const [radarId, setRadarId] = useState(null);
+  const [modalOverall, setModalOverall] = useState(null);
+
+  const openPlayerModal = useCallback((playerId) => {
+    setModalOverall(null);
+    setActiveId(playerId);
+  }, []);
+
+  const closePlayerModal = useCallback(() => {
+    setActiveId(null);
+    setModalOverall(null);
+  }, []);
+
+  const handleOverallPreviewChange = useCallback((playerId, value) => {
+    const id = String(playerId);
+    setModalOverall((current) => (
+      current?.id === id && current.value === value ? current : { id, value }
+    ));
+  }, []);
 
   const visiblePlayers = useMemo(() => {
     const normalizedQuery = normalize(query);
@@ -481,26 +603,28 @@ export function Jugadores2PageIsland({ root }) {
   }, [filter, payload.players, query, topSort]);
 
   const activePlayer = payload.players.find((player) => String(player.id) === String(activeId)) || null;
+  const cardPlayer = payload.players.find((player) => String(player.id) === String(cardId)) || null;
   const radarPlayer = payload.players.find((player) => String(player.id) === String(radarId)) || null;
+  const activeOverall = activePlayer && modalOverall?.id === String(activePlayer.id) ? modalOverall.value : activePlayer?.overall;
 
   return (
     <div className="grid gap-4">
-      <section className="grid items-end gap-4 border border-emerald-100 bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+      <section className="grid items-end gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
         <div>
           <h1 className="m-0 text-2xl font-black text-[#07130f]">Jugadores</h1>
           <p className="m-0 mt-1 text-sm font-semibold text-slate-500">Plantilla, posiciones y rendimiento actual.</p>
         </div>
         <div className="grid grid-cols-3 gap-2" aria-label="Resumen de jugadores">
-          <article className="min-w-20 border border-emerald-100 bg-emerald-50 p-2"><span className="block text-[11px] font-extrabold text-slate-500">Activos</span><strong className="block text-lg font-black text-[#07130f]">{payload.summary.active}</strong></article>
-          <article className="min-w-20 border border-emerald-100 bg-emerald-50 p-2"><span className="block text-[11px] font-extrabold text-slate-500">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{payload.summary.average}</strong></article>
-          <article className="min-w-20 border border-emerald-100 bg-emerald-50 p-2"><span className="block text-[11px] font-extrabold text-slate-500">Top</span><strong className="block text-lg font-black text-[#07130f]">{payload.summary.top}</strong></article>
+          <article className="min-w-20 rounded-lg border border-[#d7e6df] bg-[#f4fbf7] p-2"><span className="block text-[11px] font-extrabold text-[#526b62]">Activos</span><strong className="block text-lg font-black text-[#07130f]">{payload.summary.active}</strong></article>
+          <article className="min-w-20 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2"><span className="block text-[11px] font-extrabold text-[#526b62]">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{payload.summary.average}</strong></article>
+          <article className="min-w-20 rounded-lg border border-[#d7e6df] bg-white p-2"><span className="block text-[11px] font-extrabold text-[#526b62]">Top</span><strong className="block text-lg font-black text-[#063d2b]">{payload.summary.top}</strong></article>
         </div>
       </section>
 
-      <section className="grid gap-3 border border-emerald-100 bg-emerald-50/70 p-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]" aria-label="Controles de jugadores">
+      <section className="grid gap-3 rounded-lg border border-[#c9d8d1] bg-[#f8fbfa] p-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]" aria-label="Controles de jugadores">
         <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
-          <input className="min-h-11 w-full border border-emerald-100 bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-slate-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
-          <button className="grid min-h-11 place-items-center border border-emerald-950 bg-emerald-950 text-sm font-black text-white" type="button" onClick={() => setQuery(query.trim())} aria-label="Buscar">
+          <input className="min-h-11 w-full rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <button className={primaryIconButtonClass} type="button" onClick={() => setQuery(query.trim())} aria-label="Buscar">
             <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-4-4" />
@@ -515,13 +639,13 @@ export function Jugadores2PageIsland({ root }) {
             ['med', 'Med'],
             ['del', 'Del'],
           ].map(([key, label]) => (
-            <button key={key} className={`min-h-9 border px-2 text-xs font-black ${filter === key ? 'border-emerald-950 bg-emerald-950 text-white' : 'border-emerald-100 bg-white text-[#07130f]'}`} type="button" onClick={() => setFilter(key)}>{label}</button>
+            <button key={key} className={filterButtonClass(filter === key)} type="button" onClick={() => setFilter(key)}>{label}</button>
           ))}
-          <button className={`min-h-9 border px-2 text-xs font-black ${topSort ? 'border-emerald-950 bg-emerald-950 text-white' : 'border-emerald-100 bg-white text-[#07130f]'}`} type="button" onClick={() => setTopSort((current) => !current)}>Top</button>
+          <button className={filterButtonClass(topSort)} type="button" onClick={() => setTopSort((current) => !current)}>Top</button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {payload.isAdmin && payload.links.toggleInactive ? <a className="inline-flex min-h-9 items-center border border-emerald-100 bg-white px-3 text-xs font-black text-[#07130f] no-underline" href={payload.links.toggleInactive}>{payload.showInactive ? 'Ver solo activos' : 'Ver inactivos'}</a> : null}
-          <a className="inline-flex min-h-9 items-center border border-emerald-100 bg-white px-3 text-xs font-black text-[#07130f] no-underline" href={payload.links.backup || 'jugadores.php'}>Backup jugadores</a>
+          {payload.isAdmin && payload.links.toggleInactive ? <a className={toolbarLinkClass} href={payload.links.toggleInactive}>{payload.showInactive ? 'Ver solo activos' : 'Ver inactivos'}</a> : null}
+          <a className={quietLinkClass} href={payload.links.backup || 'jugadores.php'}>Backup jugadores</a>
         </div>
       </section>
 
@@ -529,31 +653,48 @@ export function Jugadores2PageIsland({ root }) {
         <p className="m-0 border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">No hay jugadores que coincidan con la busqueda.</p>
       ) : null}
 
-      <section className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" aria-label="Tarjetas de jugadores">
+      <section className="grid gap-2 md:hidden" aria-label="Lista de jugadores">
         {visiblePlayers.map((player) => (
-          <article key={player.id} data-j2-player-id={player.id}>
-            <PlayerCard player={player} onOpen={setActiveId} />
+          <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border border-[#d7e6df] bg-white p-3">
+            <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
+              <span className="min-w-0 w-full">
+                <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-500">
+                  <span>{player.isActive ? 'Activo' : 'Inactivo'}</span>
+                  <span>GEN {player.overall}</span>
+                </span>
+                <span className="mt-2 block"><PositionChips positions={player.positions} /></span>
+              </span>
+            </button>
+            <div className="grid shrink-0 grid-cols-[44px_44px] items-start gap-2">
+              <OverallBadge value={player.overall} />
+              <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
+                <CredentialIcon />
+              </button>
+              <button className={`col-span-2 ${rowEditWideButtonClass}`} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`Editar ficha de ${player.name}`}>
+                <PencilIcon />
+              </button>
+            </div>
           </article>
         ))}
       </section>
 
-      <section className="overflow-hidden border border-emerald-100 bg-white" aria-label="Tabla de jugadores">
+      <section className="hidden overflow-x-auto rounded-lg border border-[#c9d8d1] bg-white md:block" aria-label="Tabla de jugadores">
         <table className="w-full border-collapse text-sm">
-          <thead className="bg-emerald-50">
+          <thead className="bg-[#f2f6f4]">
             <tr>
-              <th className="border-b border-emerald-100 px-3 py-2 text-left text-xs font-black text-slate-500">Jugador</th>
-              <th className="border-b border-emerald-100 px-3 py-2 text-left text-xs font-black text-slate-500">Posicion</th>
-              <th className="border-b border-emerald-100 px-3 py-2 text-left text-xs font-black text-slate-500">Media</th>
-              <th className="border-b border-emerald-100 px-3 py-2 text-right text-xs font-black text-slate-500">Ficha</th>
+              <th className="border-b border-[#c9d8d1] px-3 py-2 text-left text-xs font-black text-[#526b62]">Jugador</th>
+              <th className="border-b border-[#c9d8d1] px-3 py-2 text-left text-xs font-black text-[#526b62]">Posicion</th>
+              <th className="border-b border-[#c9d8d1] px-3 py-2 text-left text-xs font-black text-[#526b62]">Media</th>
+              <th className="border-b border-[#c9d8d1] px-3 py-2 text-right text-xs font-black text-[#526b62]">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {visiblePlayers.map((player) => (
-              <tr key={player.id} className="border-b border-emerald-50 last:border-b-0">
+              <tr key={player.id} className="border-b border-[#e0ebe6] transition-colors last:border-b-0 hover:bg-[#f8fbfa]">
                 <td className="px-3 py-2">
-                  <button className="grid grid-cols-[34px_minmax(0,1fr)] items-center gap-2 border-0 bg-transparent p-0 text-left" type="button" onClick={() => setActiveId(player.id)}>
-                    <span className="grid h-8 w-8 place-items-center bg-emerald-50 text-xs font-black text-emerald-950">{player.initials}</span>
-                    <span className="min-w-0">
+                  <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
+                    <span className="min-w-0 w-full">
                       <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
                       <small className="text-xs font-bold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'} | GEN {player.overall}</small>
                     </span>
@@ -561,14 +702,24 @@ export function Jugadores2PageIsland({ root }) {
                 </td>
                 <td className="px-3 py-2"><PositionChips positions={player.positions} /></td>
                 <td className="px-3 py-2"><OverallBadge value={player.overall} /></td>
-                <td className="px-3 py-2 text-right"><button className="min-h-9 border border-emerald-100 bg-white px-3 text-xs font-black text-[#07130f]" type="button" onClick={() => setActiveId(player.id)}>Ver ficha</button></td>
+                <td className="px-3 py-2 text-right">
+                  <div className="inline-flex items-center justify-end gap-2">
+                    <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
+                      <CredentialIcon />
+                    </button>
+                    <button className={rowEditButtonClass} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`Editar ficha de ${player.name}`}>
+                      <PencilIcon />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
 
-      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} positions={payload.positions} onClose={() => setActiveId(null)} onRadarOpen={(player) => setRadarId(player.id)} />
+      <CardPreviewModal player={cardPlayer} onClose={() => setCardId(null)} />
+      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} overallValue={activeOverall} onOverallPreviewChange={handleOverallPreviewChange} />
       <RadarOverlay player={radarPlayer} onClose={() => setRadarId(null)} />
     </div>
   );
