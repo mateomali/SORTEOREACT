@@ -14831,8 +14831,438 @@ body.page-jugadores .player-info-dialog {
     font-size: 0.72rem;
   }
 
-  body.page-jugadores .player-delete-icon {
+body.page-jugadores .player-delete-icon {
     font-size: 0;
+  }
+}
+
+/* Jugadores stable layout: one surface, table-first, no nested card chrome. */
+body.page-jugadores {
+  background: #f4f8f6;
+}
+
+body.page-jugadores .content {
+  display: grid;
+  gap: 16px;
+}
+
+body.page-jugadores .players-page-head {
+  padding: 0 4px 8px;
+  border: 0;
+  border-bottom: 1px solid #cbdad3;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.page-jugadores .players-page-head h1 {
+  margin: 0;
+  font-size: 1.65rem;
+  line-height: 1.15;
+}
+
+body.page-jugadores .players-list-card {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #cbdad3;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+body.page-jugadores .content .players-list-card > .section-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.42fr) minmax(360px, 1fr);
+  gap: 16px;
+  align-items: end;
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  border-bottom: 1px solid #d8e5df;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+body.page-jugadores .section-toolbar h3 {
+  margin: 0 0 3px;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+body.page-jugadores .section-toolbar .small-muted {
+  margin: 0;
+}
+
+body.page-jugadores .content .players-list-card .player-list-react-controls,
+body.page-jugadores .player-list-react-controls {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.page-jugadores .player-list-search-shell {
+  gap: 6px;
+}
+
+body.page-jugadores .player-list-search-shell label {
+  margin: 0;
+  color: #4d635b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  -webkit-text-fill-color: #4d635b;
+}
+
+body.page-jugadores .player-list-search-input {
+  min-height: 42px;
+  border-radius: 7px;
+}
+
+body.page-jugadores .content .players-list-card .player-list-search-shell button {
+  min-height: 42px;
+  border-radius: 7px;
+}
+
+body.page-jugadores .content .players-list-card .player-count-filter,
+body.page-jugadores .player-count-filter {
+  min-height: 42px;
+  align-items: center;
+  border-radius: 7px;
+}
+
+body.page-jugadores .players-desktop-help {
+  margin: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid #d8e5df;
+  background: #f8fbfa;
+}
+
+body.page-jugadores .players-desktop-help .player-stat-help {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.page-jugadores .players-desktop-table {
+  margin: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+}
+
+body.page-jugadores .players-desktop-table table {
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+body.page-jugadores .players-desktop-table .editable-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 12px;
+  border-right: 0;
+  border-bottom: 1px solid #cbdad3;
+  background: #f2f6f4;
+  color: #293d35;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  -webkit-text-fill-color: #293d35;
+}
+
+body.page-jugadores .players-desktop-table .editable-table tbody tr {
+  box-shadow: none;
+}
+
+body.page-jugadores .players-desktop-table .editable-table tbody tr:nth-child(even) td {
+  background: #fbfdfc;
+}
+
+body.page-jugadores .players-desktop-table .editable-table tbody tr:hover td {
+  background: #f4faf7;
+}
+
+body.page-jugadores .players-desktop-table .editable-table tbody td {
+  padding: 12px;
+  border-right: 0;
+  border-bottom: 1px solid #e0ebe6;
+  vertical-align: middle;
+}
+
+body.page-jugadores .players-desktop-table .editable-table tbody td:first-child {
+  border-left: 3px solid transparent;
+}
+
+body.page-jugadores .players-desktop-table .editable-table tbody tr.is-current-player-row td:first-child {
+  border-left-color: #063d2b;
+}
+
+body.page-jugadores .players-desktop-table .table-input,
+body.page-jugadores .players-desktop-table .player-readonly-name {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #07130f;
+  font-weight: 900;
+  box-shadow: none;
+}
+
+body.page-jugadores .players-desktop-table .player-active-inline {
+  margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #567168;
+  font-size: 0.72rem;
+  box-shadow: none;
+}
+
+body.page-jugadores .players-desktop-table .player-position-selects {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body.page-jugadores .players-desktop-table .player-position-select {
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.page-jugadores .players-desktop-table .player-position-select > span {
+  color: #567168;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.page-jugadores .players-desktop-table .player-position-select select {
+  min-height: 38px;
+  border-radius: 7px;
+}
+
+body.page-jugadores .players-desktop-table .player-general-rating-compact,
+body.page-jugadores .players-desktop-table .player-radar-card-compact {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.page-jugadores .players-desktop-table .player-general-rating-compact {
+  display: grid;
+  gap: 2px;
+}
+
+body.page-jugadores .players-desktop-table .player-general-rating-compact strong {
+  color: #07130f;
+  font-size: 0.95rem;
+}
+
+body.page-jugadores .players-desktop-table .player-radar-card-compact .player-radar-canvas {
+  max-width: 92px;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 0 22px;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #edf3f0;
+  border-radius: 0;
+  background: transparent;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat .player-stat-info-trigger {
+  justify-content: flex-start;
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #07130f;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  box-shadow: none;
+  text-align: left;
+  -webkit-text-fill-color: #07130f;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-compact {
+  display: grid;
+  grid-template-columns: minmax(78px, auto) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-stars {
+  min-width: 76px;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-star {
+  width: 12px;
+  min-width: 12px;
+  height: 18px;
+  font-size: 0.78rem;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-value {
+  min-width: 38px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-bar-shell {
+  grid-column: auto;
+  grid-row: auto;
+  min-height: 4px;
+}
+
+body.page-jugadores .players-desktop-table .player-table-stat .stat-rating-bar {
+  height: 4px;
+  border-radius: 999px;
+}
+
+body.page-jugadores .mobile-full-player-list {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+body.page-jugadores .mobile-full-player-list summary {
+  border-bottom: 1px solid #d8e5df;
+  border-radius: 0;
+}
+
+body.page-jugadores .mobile-player-list-body {
+  gap: 0;
+  padding: 0;
+}
+
+body.page-jugadores .mobile-player-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 0;
+  border-bottom: 1px solid #e0ebe6;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+body.page-jugadores .mobile-player-list-item:last-child {
+  border-bottom: 0;
+}
+
+body.page-jugadores .mobile-player-list-item strong {
+  color: #07130f;
+}
+
+body.page-jugadores .mobile-player-list-score-card {
+  display: grid;
+  min-width: 58px;
+  justify-items: center;
+  padding: 4px 6px;
+  border: 1px solid #cbdad3;
+  border-radius: 7px;
+  background: #f8fbfa;
+}
+
+body.page-jugadores .player-edit-dialog {
+  padding: 16px;
+}
+
+body.page-jugadores .player-admin-edit-panel,
+body.page-jugadores .player-info-panel {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+body.page-jugadores .player-info-overview,
+body.page-jugadores .player-edit-top-grid {
+  gap: 12px;
+}
+
+body.page-jugadores .player-info-main-card,
+body.page-jugadores .player-info-general-card,
+body.page-jugadores .player-edit-general-card,
+body.page-jugadores .stat-form-row,
+body.page-jugadores .player-position-simulation,
+body.page-jugadores [data-player-info-scout] {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  body.page-jugadores .content .players-list-card > .section-toolbar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  body.page-jugadores .players-desktop-table {
+    display: none;
+  }
+
+  body.page-jugadores .mobile-full-player-list {
+    display: block;
+  }
+}
+
+@media (max-width: 760px) {
+  body.page-jugadores {
+    background: #f4f8f6;
+  }
+
+  body.page-jugadores .content {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  body.page-jugadores .players-page-head,
+  body.page-jugadores .players-list-card,
+  body.page-jugadores .mobile-full-player-list {
+    border-radius: 8px;
+  }
+
+  body.page-jugadores .players-page-head {
+    padding: 0 0 10px;
+  }
+
+  body.page-jugadores .content .players-list-card > .section-toolbar {
+    padding: 12px;
+  }
+
+  body.page-jugadores .player-list-react-controls {
+    gap: 10px;
+  }
+
+  body.page-jugadores .player-mobile-sort-strip {
+    padding: 0;
   }
 }
 
@@ -20719,4 +21149,270 @@ body.page-crear-partido .content [data-selected-participants] > div button {
   background: #fff7f7;
   color: #8a1f1f;
   -webkit-text-fill-color: #8a1f1f;
+}
+
+/* Match detail/history views use compact no-stat player cards. */
+body.page-index .content #homeMatchDetail .public-teams .team-formation,
+body.page-historial .content .match-history .public-teams .team-formation {
+  row-gap: 5px;
+}
+
+body.page-index .content #homeMatchDetail .public-teams .line-players,
+body.page-historial .content .match-history .public-teams .line-players {
+  gap: 6px;
+  min-height: 104px;
+}
+
+body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta {
+  flex-basis: 64px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+}
+
+body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-stats {
+  display: none !important;
+}
+
+body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong {
+  font-size: 0.6rem;
+}
+
+body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+  top: 54.5%;
+  height: 10.6%;
+  font-size: 0.29rem;
+}
+
+@media (max-width: 760px) {
+  body.page-index .content #homeMatchDetail .public-teams .line-players,
+  body.page-historial .content .match-history .public-teams .line-players {
+    gap: 5px;
+    min-height: 92px;
+  }
+
+  body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta {
+    flex-basis: 58px;
+    width: 58px;
+    min-width: 58px;
+    max-width: 58px;
+  }
+
+  body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong {
+    font-size: 0.54rem;
+  }
+
+  body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+    top: 55%;
+    height: 10.2%;
+    font-size: 0.26rem;
+  }
+}
+
+/* Final jugadores stable pass. Keep one structural frame and flatten everything inside it. */
+body.page-jugadores .content .players-page-head {
+  padding: 0 0 14px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #c9d8d1 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-page-head h1 {
+  margin: 0 0 3px !important;
+  font-size: 1.7rem !important;
+  line-height: 1.1 !important;
+}
+
+body.page-jugadores .content .players-list-card {
+  padding: 0 !important;
+  border: 1px solid #c9d8d1 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-list-card > .section-toolbar {
+  margin: 0 !important;
+  padding: 16px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #dbe7e2 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-list-card .players-desktop-help {
+  margin: 0 !important;
+  padding: 10px 16px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #dbe7e2 !important;
+  border-radius: 0 !important;
+  background: #f8fbfa !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-list-card .players-desktop-help :is(.player-stat-help, details, summary) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-list-card .players-desktop-help summary {
+  padding: 0 !important;
+}
+
+body.page-jugadores .content .players-list-card .player-list-react-controls,
+body.page-jugadores .content .players-list-card .player-count-filter,
+body.page-jugadores .content .players-list-card .player-list-search-shell {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-list-card .player-list-react-controls {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+body.page-jugadores .content .players-list-card .player-list-search-input,
+body.page-jugadores .content .players-list-card .player-list-search-shell button,
+body.page-jugadores .content .players-list-card .player-count-filter,
+body.page-jugadores .content .players-list-card .player-mobile-sort-strip button,
+body.page-jugadores .content .mobile-full-player-list,
+body.page-jugadores .content .mobile-player-list-score-card,
+body.page-jugadores .content .mobile-player-info-button,
+body.page-jugadores .content .player-icon-button,
+body.page-jugadores .content .player-status-pill {
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-desktop-table,
+body.page-jugadores .content .players-desktop-table table,
+body.page-jugadores .content .players-desktop-table .editable-table tbody tr,
+body.page-jugadores .content .players-desktop-table .editable-table tbody td,
+body.page-jugadores .content .players-desktop-table .player-table-stat,
+body.page-jugadores .content .players-desktop-table .stat-rating,
+body.page-jugadores .content .players-desktop-table .stat-rating-bar-shell,
+body.page-jugadores .content .players-desktop-table .player-general-rating-compact,
+body.page-jugadores .content .players-desktop-table .player-radar-card-compact,
+body.page-jugadores .content .players-desktop-table .player-position-select,
+body.page-jugadores .content .players-desktop-table .player-active-inline {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .players-desktop-table {
+  margin: 0 !important;
+  border: 0 !important;
+  background: #ffffff !important;
+}
+
+body.page-jugadores .content .players-desktop-table .editable-table thead th {
+  padding: 10px 12px !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid #c9d8d1 !important;
+  background: #f2f6f4 !important;
+}
+
+body.page-jugadores .content .players-desktop-table .player-sort-head {
+  justify-content: flex-start !important;
+  width: 100% !important;
+  min-height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #07130f !important;
+  box-shadow: none !important;
+  -webkit-text-fill-color: #07130f !important;
+}
+
+body.page-jugadores .content .players-desktop-table .editable-table tbody td {
+  padding: 12px !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid #e0ebe6 !important;
+}
+
+body.page-jugadores .content .players-desktop-table .table-input,
+body.page-jugadores .content .players-desktop-table .player-readonly-name,
+body.page-jugadores .content .players-desktop-table .player-active-inline,
+body.page-jugadores .content .players-desktop-table .player-position-select,
+body.page-jugadores .content .players-desktop-table .player-table-stat,
+body.page-jugadores .content .players-desktop-table .stat-rating,
+body.page-jugadores .content .players-desktop-table .player-general-rating-compact,
+body.page-jugadores .content .players-desktop-table .player-radar-card-compact {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+body.page-jugadores .content .players-desktop-table .player-table-stat {
+  border-bottom: 1px solid #edf3f0 !important;
+}
+
+body.page-jugadores .content .players-desktop-table .player-table-stat:nth-last-child(-n + 2) {
+  border-bottom: 0 !important;
+}
+
+body.page-jugadores .content .players-desktop-table .player-stat-info-trigger {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .mobile-full-player-list {
+  margin: 0 !important;
+  border: 1px solid #c9d8d1 !important;
+  background: #ffffff !important;
+}
+
+body.page-jugadores .content .mobile-full-player-list summary {
+  border-radius: 0 !important;
+  background: #f8fbfa !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .mobile-player-list-body {
+  gap: 0 !important;
+  padding: 0 !important;
+}
+
+body.page-jugadores .content .mobile-player-list-item {
+  border: 0 !important;
+  border-bottom: 1px solid #e0ebe6 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.page-jugadores .content .mobile-player-list-item:last-child {
+  border-bottom: 0 !important;
+}
+
+@media (max-width: 900px) {
+  body.page-jugadores .content .players-list-card {
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  body.page-jugadores .content .players-list-card > .section-toolbar {
+    border: 1px solid #c9d8d1 !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+  }
+
+  body.page-jugadores .content .players-list-card .players-desktop-help {
+    display: none !important;
+  }
 }

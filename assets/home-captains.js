@@ -240,7 +240,6 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
                 <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
                 <span class="formation-player-meta formation-player-position formation-card-position">${escapeHtml(assignedPosition)}</span>
                 ${playerCardRegularityHtml(player)}
-                ${playerCardStatsHtml(player, assignedPosition)}
               </div>
             `;
           }).join('')

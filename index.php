@@ -1047,7 +1047,6 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                             <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
                             <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>
                             <?= render_home_player_card_regularity($player) ?>
-                            <?= render_home_player_card_stats($player, $assignedLine) ?>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>

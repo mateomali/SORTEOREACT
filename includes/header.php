@@ -6,6 +6,7 @@ require_once __DIR__ . '/../lib/helpers.php';
 $title = $title ?? APP_NAME;
 $activePage = $activePage ?? '';
 $bodyClass = trim((string) ($bodyClass ?? ''));
+$headExtraHtml = (string) ($headExtraHtml ?? '');
 if ($bodyClass === '') {
     $classSource = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
     if ($classSource === '') {
@@ -89,6 +90,7 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <?= $headExtraHtml ?>
   <link rel="stylesheet" href="assets/tailwind.css?v=<?= h($tailwindVersion) ?>">
   <?php if (!$disableContrastOverrides): ?>
     <link rel="stylesheet" href="assets/contrast-overrides.css?v=<?= h($contrastVersion) ?>">

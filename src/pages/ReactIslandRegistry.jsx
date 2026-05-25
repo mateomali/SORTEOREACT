@@ -8,12 +8,14 @@ import { FinishValuationControlsIsland } from './FinishValuationControlsIsland.j
 import { CaptainTokensIsland } from './CaptainTokensIsland.jsx';
 import { ManualTeamsSearchAssistIsland } from './ManualTeamsSearchAssistIsland.jsx';
 import { StatsPlayerSearchIsland } from './StatsPlayerSearchIsland.jsx';
+import { Jugadores2PageIsland } from './Jugadores2PageIsland.jsx';
 
 const registry = {
   captain_tokens: CaptainTokensIsland,
   encounter_history_controls: EncounterHistoryControlsIsland,
   finish_valuation_controls: FinishValuationControlsIsland,
   home_history_search: HistorySearchIsland,
+  jugadores2_page: Jugadores2PageIsland,
   manual_teams_search_assist: ManualTeamsSearchAssistIsland,
   participant_controls: ParticipantControlsIsland,
   player_create: PlayerCreateIsland,
