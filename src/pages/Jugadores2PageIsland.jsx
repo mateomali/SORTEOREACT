@@ -120,6 +120,7 @@ function toneClass(overall) {
 
 function statTone(overall) {
   const value = Number(overall) || 64;
+  if (value > 95) return { color: '#1ec7f2', border: 'border-sky-300', bg: 'bg-sky-50' };
   if (value >= 88) return { color: '#008c5f', border: 'border-emerald-300', bg: 'bg-emerald-50' };
   if (value >= 76) return { color: '#65a30d', border: 'border-lime-300', bg: 'bg-lime-50' };
   if (value >= 65) return { color: '#d97706', border: 'border-amber-300', bg: 'bg-amber-50' };
@@ -221,6 +222,16 @@ function PencilIcon() {
     <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 10v6" />
+      <path d="M12 7h.01" />
     </svg>
   );
 }
@@ -465,7 +476,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
                   {openHelp === field ? <em className="not-italic text-xs font-semibold leading-relaxed text-slate-500">{stat.help}</em> : null}
                 </span>
                 <input type="hidden" name={field} value={sixFromOverall(overall).toFixed(1)} />
-                <div className="grid grid-cols-[70px_minmax(0,1fr)] items-center gap-3">
+                <div className="grid grid-cols-[70px_minmax(0,1fr)_32px] items-center gap-3">
                   <input className={numberControlClass} type="number" name={`${field}_overall`} min="35" max="99" step="1" inputMode="numeric" value={overall} onChange={(event) => setOverall(field, event.target.value)} aria-label={`${stat.label} en escala 1 a 99`} />
                   <span className="relative grid h-10 items-center">
                     <span className="pointer-events-none absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 bg-slate-200">
@@ -483,6 +494,18 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
                       aria-label={`Ajustar ${stat.label} en escala 1 a 99`}
                     />
                   </span>
+                  {dirty ? (
+                    <button
+                      className={`grid h-8 w-8 place-items-center rounded-md border border-[#063d2b] bg-[#063d2b] text-white transition-colors hover:bg-[#082f23] ${focusRing}`}
+                      type="submit"
+                      aria-label={`Guardar cambios de ${stat.label}`}
+                      title="Guardar"
+                    >
+                      <SaveIcon />
+                    </button>
+                  ) : (
+                    <span className="block h-8 w-8" aria-hidden="true" />
+                  )}
                 </div>
               </label>
             );
@@ -671,8 +694,8 @@ export function Jugadores2PageIsland({ root }) {
               <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
                 <CredentialIcon />
               </button>
-              <button className={`col-span-2 ${rowEditWideButtonClass}`} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`Editar ficha de ${player.name}`}>
-                <PencilIcon />
+              <button className={`col-span-2 ${rowEditWideButtonClass}`} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
+                {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}
               </button>
             </div>
           </article>
@@ -707,8 +730,8 @@ export function Jugadores2PageIsland({ root }) {
                     <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
                       <CredentialIcon />
                     </button>
-                    <button className={rowEditButtonClass} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`Editar ficha de ${player.name}`}>
-                      <PencilIcon />
+                    <button className={rowEditButtonClass} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
+                      {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}
                     </button>
                   </div>
                 </td>

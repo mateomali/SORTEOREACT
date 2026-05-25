@@ -1298,7 +1298,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           <div class="captain-custom-formation" data-custom-formation-panel></div>
         </div>
         <div class="captain-formation-title" data-formation-total-title="${teamNumber}"><span>Ajustada</span><strong>${formationTotalSkill(teamNumber, players).toFixed(1)} pts</strong></div>
-        <div class="captain-editor-field captain-formation-field" data-captain-formation-field data-drop-team="${teamNumber}"></div>
+        <div class="team-formation is-base-formation captain-editor-field captain-formation-field" data-captain-formation-field data-drop-team="${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
         <div class="captain-formation-message hidden" data-formation-message="${teamNumber}"></div>
         <button class="btn btn-primary captain-save-formation" type="button" data-save-formation="${teamNumber}">Guardar cambios</button>
@@ -1306,7 +1306,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
 
       const renderReadonlyFormation = (teamNumber, players) => `
         <div class="captain-formation-title" data-formation-total-title="${teamNumber}"><span>Base</span><strong>${teamTotalSkill(teamNumber).toFixed(1)} pts</strong></div>
-        <div class="captain-editor-field captain-formation-field captain-editor-field-readonly" data-captain-formation-field data-drop-team="${teamNumber}" aria-label="Formacion del equipo ${teamNumber}"></div>
+        <div class="team-formation is-base-formation captain-editor-field captain-formation-field captain-editor-field-readonly" data-captain-formation-field data-drop-team="${teamNumber}" aria-label="Formacion del equipo ${teamNumber}"></div>
         ${teamCharacteristicsHtml(teamNumber, players)}
       `;
 

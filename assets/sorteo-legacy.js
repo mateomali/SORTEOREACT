@@ -588,6 +588,16 @@ function playerCardRegularityHtml(jugador) {
   return `<span class="formation-card-regularity is-${escapeHtml(form)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
 }
 
+function playerCardReferenceStatsHtml(jugador, primaryPosition) {
+  return `
+    <span class="formation-card-stats" aria-label="Stats del jugador">
+      ${playerCardStats(jugador, primaryPosition).map(([label, value]) => `
+        <span class="formation-card-stat"><strong>${value}</strong><span>${escapeHtml(label)}</span></span>
+      `).join('')}
+    </span>
+  `;
+}
+
 function playerPositionPillsHtml(jugador) {
   return `
     <span class="captain-player-position-icons" aria-label="Posiciones naturales">
@@ -2349,7 +2359,7 @@ function mostrarEquipos(equipos) {
                   : (outOfPosition ? ' | Fuera de posicion natural' : '');
                 const cardTitle = `General ${formatRating(generalRating)} | Ajustada ${assignedPosition} ${formatRating(adjustedRating)}${roleNote}`;
                 return `
-                <div class="formation-player captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}" title="${escapeHtml(cardTitle)}">
+                <div class="formation-player captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}" title="${escapeHtml(cardTitle)}">
                   ${playerCardRatingHtml(adjustedRating, 'GEN')}
                   ${playerCardPhotoHtml(j)}
                   <strong class="formation-player-name">${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
@@ -2617,7 +2627,7 @@ function guardarSorteoEnBD() {
 }
 
 function isFormationPointerDragEnabled() {
-  return window.matchMedia('(min-width: 761px)').matches;
+  return true;
 }
 
 function closeFormationCardPreview() {
@@ -2626,22 +2636,64 @@ function closeFormationCardPreview() {
   document.body.classList.remove('has-formation-card-preview');
 }
 
+function sorteoPlayerContextFromCard(card) {
+  const teamIndex = Number(card?.dataset?.teamIndex);
+  const key = String(card?.dataset?.playerKey || '');
+  const team = Number.isInteger(teamIndex) && lastEquipos ? lastEquipos[teamIndex] : null;
+  const player = Array.isArray(team) ? team.find(jugador => playerKey(jugador) === key) : null;
+  if (!player) return null;
+  const assignment = buildFormationAssignment(team, teamIndex);
+  const assignedPosition = String(card?.dataset?.assignedPosition || getPrimaryPosition(player, assignment) || getPrimaryPlayerPosition(player)).toUpperCase();
+  return { player, assignedPosition };
+}
+
+function sorteoFullPlayerCardHtml(player, assignedPosition) {
+  const naturalPositions = getOrderedPlayerPositions(player);
+  const primaryPosition = naturalPositions[0] || 'MED';
+  const secondaryPosition = naturalPositions[1] || '';
+  const overall = playerCardRating(player.puntuacion);
+  const tier = playerCardTier(player.puntuacion);
+  const penaltyPercent = positionPenaltyPercent(player, assignedPosition);
+  const positionChanged = assignedPosition && !naturalPositions.includes(assignedPosition);
+  const secondaryAssigned = assignedPosition && !positionChanged && assignedPosition !== primaryPosition;
+  const longNameClass = String(player.nombre || '').length > 12 ? ' is-long-name' : '';
+
+  return `
+    <div class="formation-player card-pro-relieve formation-card-sin-stat formation-card-preview-stat formation-card-reference-full formation-card-tier-${tier}${positionChanged ? ' is-out-of-position is-position-changed' : ''}${secondaryAssigned ? ' is-secondary-position is-position-changed' : ''}${longNameClass}" role="img" aria-label="Credencial de ${escapeHtml(player.nombre || 'Jugador')}" title="General ${overall} | Posiciones ${escapeHtml(naturalPositions.join('/'))}${assignedPosition ? ` | En cancha ${escapeHtml(assignedPosition)}` : ''}">
+      <span class="formation-card-reference-tint" aria-hidden="true"></span>
+      <span class="player-card-rating" title="Puntaje general">
+        <strong>${overall}</strong>
+        <span class="formation-card-rating-positions">
+          <span>${escapeHtml(primaryPosition)}</span>
+          ${secondaryPosition ? `<span>${escapeHtml(secondaryPosition)}</span>` : ''}
+          ${playerCardRegularityHtml(player)}
+        </span>
+      </span>
+      ${playerCardPhotoHtml(player)}
+      <strong class="formation-player-name">${escapeHtml(player.nombre || 'Jugador')}</strong>
+      <span class="formation-card-reference-separator" aria-hidden="true"></span>
+      ${playerCardReferenceStatsHtml(player, primaryPosition)}
+      ${penaltyPercent > 0 ? `<span class="formation-penalty-badge formation-card-penalty">-${penaltyPercent}%</span>` : ''}
+    </div>
+  `;
+}
+
 function openFormationCardPreview(card) {
   if (!card) return;
   closeFormationCardPreview();
-  const clone = card.cloneNode(true);
-  clone.classList.remove('formation-card-compacta', 'is-dragging', 'is-drag-over', 'is-pointer-drag-ghost');
-  clone.classList.add('formation-card-preview-stat');
-  clone.removeAttribute('data-sorteo-drag-player');
-  clone.removeAttribute('draggable');
+  const context = sorteoPlayerContextFromCard(card);
+  if (!context) return;
 
   const overlay = document.createElement('div');
   overlay.className = 'formation-card-preview-overlay';
   overlay.innerHTML = `
     <button class="formation-card-preview-close" type="button" aria-label="Cerrar carta" data-formation-card-preview-close>&times;</button>
-    <div class="formation-card-preview-stage team-formation"></div>
+    <div class="formation-card-preview-stage">
+      <div class="formation-card-preview-scale">
+        ${sorteoFullPlayerCardHtml(context.player, context.assignedPosition)}
+      </div>
+    </div>
   `;
-  overlay.querySelector('.formation-card-preview-stage')?.appendChild(clone);
   (card.closest('.content') || document.body).appendChild(overlay);
   document.body.classList.add('has-formation-card-preview');
   formationCardPreviewOverlay = overlay;
@@ -2743,11 +2795,19 @@ function startSorteoFormationPointerDrag(event, card, root) {
   }
 
   event.preventDefault();
+  try {
+    card.setPointerCapture?.(event.pointerId);
+  } catch (error) {
+    // Pointer capture is best-effort; window listeners keep the drag working.
+  }
   const sourceRect = card.getBoundingClientRect();
   const offsetX = event.clientX - sourceRect.left;
   const offsetY = event.clientY - sourceRect.top;
+  const moveThreshold = event.pointerType === 'mouse' ? 4 : 8;
+  const playerName = card.querySelector('.formation-player-name')?.textContent.trim() || 'Jugador';
   let hasMoved = false;
   let ghost = null;
+  let trail = null;
 
   formationPointerDragState = {
     teamIndex: Number(card.dataset.teamIndex),
@@ -2756,25 +2816,37 @@ function startSorteoFormationPointerDrag(event, card, root) {
   formationPointerDragTarget = null;
   card.classList.add('is-dragging');
 
-  const moveGhost = (moveEvent) => {
+  const moveDragVisuals = (moveEvent) => {
     if (!ghost) return;
     ghost.style.left = `${moveEvent.clientX - offsetX}px`;
     ghost.style.top = `${moveEvent.clientY - offsetY}px`;
+    if (trail) {
+      trail.style.left = `${moveEvent.clientX}px`;
+      trail.style.top = `${moveEvent.clientY}px`;
+    }
   };
 
   const onPointerMove = (moveEvent) => {
     const distance = Math.hypot(moveEvent.clientX - event.clientX, moveEvent.clientY - event.clientY);
-    if (!hasMoved && distance < 4) return;
+    if (!hasMoved && distance < moveThreshold) return;
     if (!hasMoved) {
       hasMoved = true;
       ghost = card.cloneNode(true);
       ghost.classList.add('is-pointer-drag-ghost');
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.removeAttribute('data-sorteo-drag-player');
+      ghost.removeAttribute('draggable');
       ghost.style.width = `${sourceRect.width}px`;
       ghost.style.height = `${sourceRect.height}px`;
       document.body.appendChild(ghost);
+
+      trail = document.createElement('div');
+      trail.className = 'formation-pointer-drag-trail';
+      trail.textContent = playerName;
+      document.body.appendChild(trail);
     }
     moveEvent.preventDefault();
-    moveGhost(moveEvent);
+    moveDragVisuals(moveEvent);
     markSorteoFormationDragTarget(formationDropTargetFromPoint(moveEvent.clientX, moveEvent.clientY, ghost), root);
   };
 
@@ -2792,8 +2864,14 @@ function startSorteoFormationPointerDrag(event, card, root) {
       openFormationCardPreview(card);
     }
 
+    try {
+      card.releasePointerCapture?.(event.pointerId);
+    } catch (error) {
+      // Ignore browsers that already released capture.
+    }
     card.classList.remove('is-dragging');
     ghost?.remove();
+    trail?.remove();
     formationPointerDragState = null;
     formationPointerDragTarget = null;
     clearSorteoFormationDragHighlights(root);

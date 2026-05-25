@@ -9,6 +9,7 @@ import { CaptainTokensIsland } from './CaptainTokensIsland.jsx';
 import { ManualTeamsSearchAssistIsland } from './ManualTeamsSearchAssistIsland.jsx';
 import { StatsPlayerSearchIsland } from './StatsPlayerSearchIsland.jsx';
 import { Jugadores2PageIsland } from './Jugadores2PageIsland.jsx';
+import { SorteoLegacyPageIsland } from './SorteoLegacyPageIsland.jsx';
 
 const registry = {
   captain_tokens: CaptainTokensIsland,
@@ -20,6 +21,7 @@ const registry = {
   participant_controls: ParticipantControlsIsland,
   player_create: PlayerCreateIsland,
   player_list_controls: PlayerListControlsIsland,
+  sorteo_legacy_page: SorteoLegacyPageIsland,
   stats_player_search: StatsPlayerSearchIsland,
   system_status: SystemStatusIsland,
 };
