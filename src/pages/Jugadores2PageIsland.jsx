@@ -181,7 +181,7 @@ function PlayerCard({ player, onOpen, size = 'compact' }) {
         style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
       >
         {player.photo ? (
-          <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-contain object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" />
+          <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" data-player-photo-oval={player.hasCustomPhoto ? '1' : undefined} />
         ) : null}
       </span>
 
@@ -371,6 +371,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   const [photoName, setPhotoName] = useState(player.hasCustomPhoto ? 'Foto actual cargada. Elegi otra para reemplazarla.' : 'JPG, PNG o WEBP hasta 3 MB');
   const [photoDirty, setPhotoDirty] = useState(false);
   const [openHelp, setOpenHelp] = useState(null);
+  const hasPreviewPhoto = photoDirty || player.hasCustomPhoto;
 
   const displayedOverall = useMemo(() => {
     const weights = positionWeights[primary] || positionWeights.MED;
@@ -440,7 +441,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3 text-center">
           <span className="mx-auto grid h-40 w-36 place-items-center overflow-hidden rounded-lg border border-[#d7e6df] bg-white">
-            <img className={`h-full w-full object-contain ${player.hasCustomPhoto ? '' : 'opacity-60'}`} src={photoUrl} alt="" />
+            <img className={`h-full w-full ${hasPreviewPhoto ? 'object-cover object-top' : 'object-contain opacity-60'}`} src={photoUrl} alt="" data-player-photo-oval={hasPreviewPhoto ? '1' : undefined} />
           </span>
           <label className={fileButtonClass}>
             <span>{player.hasCustomPhoto ? 'Cambiar foto' : 'Elegir foto'}</span>

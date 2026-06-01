@@ -25,18 +25,22 @@ const compactCardBackgrounds = {
 
 const cardPalettes = {
   bronze: {
+    color: '#f0b170',
     text: 'text-[#f0b170] [text-shadow:0_2px_0_rgba(0,0,0,.74),0_1px_5px_rgba(0,0,0,.38)]',
     separator: 'bg-[#f0b170]/34',
   },
   silver: {
+    color: '#e8eeea',
     text: 'text-[#e8eeea] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.42)]',
     separator: 'bg-[#e8eeea]/32',
   },
   gold: {
+    color: '#f5d867',
     text: 'text-[#f5d867] [text-shadow:0_2px_0_rgba(0,0,0,.72),0_1px_5px_rgba(0,0,0,.36)]',
     separator: 'bg-[#f5d867]/34',
   },
   elite: {
+    color: '#a5fff0',
     text: 'text-[#a5fff0] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.42)]',
     separator: 'bg-[#a5fff0]/34',
   },
@@ -688,8 +692,9 @@ function FullPlayerCard({ player, assignedPosition }) {
       <span
         className="absolute left-[36.4%] right-[13.3%] top-[12.9%] z-10 flex h-[36.8%] items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
         style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
+        data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
-        <img className={`h-full w-full object-contain object-top ${player.has_custom_photo ? '' : 'opacity-56'}`} src={player.photo_path} alt="" />
+        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo_path} alt="" data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
       <strong className={`absolute left-[12.1%] right-[10.9%] top-[53.3%] z-30 grid h-[7.8%] place-items-center overflow-hidden text-ellipsis whitespace-nowrap px-1 text-center font-black uppercase leading-none ${isLongName ? 'text-[.95rem]' : 'text-[1.28rem]'} ${fullCardText}`} data-sorteo-full-card-text="1">
         {player.nombre}
@@ -724,32 +729,42 @@ function CompactPlayerCard({ player, assignedPosition, draggableProps = {}, onOp
   const longName = String(player.nombre || '').trim().length > 8 || String(player.nombre || '').includes(' ');
   const veryLongName = String(player.nombre || '').trim().length > 11 || String(player.nombre || '').trim().split(/\s+/).some((part) => part.length > 8);
   const nameFontSize = veryLongName ? 'clamp(5.4px, 0.72vw, 9px)' : longName ? 'clamp(6px, 0.82vw, 10.5px)' : 'clamp(6.8px, 0.9vw, 12px)';
+  const cardTextStyle = {
+    '--sorteo-card-text': palette.color,
+  };
+  const positionTextStyle = {
+    '--sorteo-card-position': outOfPosition ? '#ffb4a8' : secondary ? '#ffe9a6' : palette.color,
+  };
   return (
     <button
       type="button"
       className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'}`}
-      style={{ background: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
+      style={{ ...cardTextStyle, background: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
       onClick={onOpen}
       aria-label={`Ver ficha de ${player.nombre}`}
+      data-card-tier={tier}
+      data-sorteo-player-tier={tier}
       {...domDraggableProps}
     >
       <span className="absolute left-[9%] right-[8%] top-[10.1%] z-20 h-[56.1%] bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/38" aria-hidden="true" />
-      <span className={`absolute left-[14.2%] top-[15.8%] z-30 grid h-[29.8%] w-[23.2%] content-start justify-items-center ${palette.text}`}>
-        <strong className="text-[.6rem] font-black leading-[.8] min-[380px]:text-[.66rem] sm:text-[.9rem] xl:text-[1.12rem]">{playerCardRating(adjusted)}</strong>
+      <span className={`absolute left-[14.2%] top-[15.8%] z-30 grid h-[29.8%] w-[23.2%] content-start justify-items-center ${palette.text}`} style={cardTextStyle} data-sorteo-card-text="1">
+        <strong className="text-[.6rem] font-black leading-[.8] min-[380px]:text-[.66rem] sm:text-[.9rem] xl:text-[1.12rem]" style={cardTextStyle} data-sorteo-card-text="1">{playerCardRating(adjusted)}</strong>
         <span className="mt-0.5 grid justify-items-center gap-px leading-none">
-          <span className={`text-[.28rem] font-black uppercase leading-none min-[380px]:text-[.31rem] sm:text-[.44rem] xl:text-[.54rem] ${outOfPosition ? 'text-[#ffb4a8]' : secondary ? 'text-[#ffe9a6]' : ''}`}>{assignedPosition}</span>
+          <span className="text-[.28rem] font-black uppercase leading-none min-[380px]:text-[.31rem] sm:text-[.44rem] xl:text-[.54rem]" style={positionTextStyle} data-sorteo-card-position="1">{assignedPosition}</span>
           <span className="block aspect-square w-[8px] min-[380px]:w-[9px] sm:w-[11px]"><Arrow form={playerRegularityForm(player)} /></span>
         </span>
       </span>
       <span
         className="absolute left-[36.4%] right-[13.3%] top-[14.8%] z-10 flex h-[42.1%] items-start justify-center overflow-hidden"
         style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
+        data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
-        <img className={`h-full w-full object-contain object-top ${player.has_custom_photo ? '' : 'opacity-50'}`} src={player.photo_path} alt="" />
+        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-top' : 'object-contain object-top opacity-50'}`} src={player.photo_path} alt="" data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
       <strong
         className={`absolute left-[8.5%] right-[7.5%] top-[58.8%] z-30 grid h-[18.2%] place-items-center overflow-hidden px-0.5 text-center font-black uppercase leading-[.92] whitespace-normal break-words ${palette.text}`}
-        style={{ fontSize: nameFontSize }}
+        style={{ ...cardTextStyle, fontSize: nameFontSize }}
+        data-sorteo-card-text="1"
       >
         {player.nombre}
       </strong>
@@ -1198,6 +1213,10 @@ export function SorteoLegacyPageIsland({ root }) {
     const sourceTeamIndex = Number(source.teamIndex);
     const key = String(source.playerKey);
     if (!Number.isFinite(sourceTeamIndex) || !teams[sourceTeamIndex]) return;
+    if (targetPlayerKey && String(targetPlayerKey) === key) return;
+    const targetKeyForAssignment = targetPlayerKey && teams[targetTeamIndex]?.some((player) => playerKey(player) === String(targetPlayerKey))
+      ? String(targetPlayerKey)
+      : null;
     pushUndo(targetTeamIndex);
     if (sourceTeamIndex !== targetTeamIndex) pushUndo(sourceTeamIndex);
     setTeams((current) => {
@@ -1217,8 +1236,14 @@ export function SorteoLegacyPageIsland({ root }) {
       next[targetTeamIndex].push(moving);
       return next;
     });
-    if (targetLine && FORMATION_LINES.includes(targetLine)) {
-      setAssignments((current) => ({ ...current, [key]: targetLine }));
+    if ((targetLine && FORMATION_LINES.includes(targetLine)) || targetKeyForAssignment) {
+      setAssignments((current) => {
+        const next = { ...current };
+        if (targetLine && FORMATION_LINES.includes(targetLine)) next[key] = targetLine;
+        const sourceLine = String(source.assignedPosition || '').toUpperCase();
+        if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) next[targetKeyForAssignment] = sourceLine;
+        return next;
+      });
     }
   };
 
@@ -1243,6 +1268,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const handleDrop = (event, teamIndex, line, targetPlayerKey = null) => {
     event.preventDefault();
+    event.stopPropagation();
     const source = sourceFromDragEvent(event);
     movePlayer(source, teamIndex, line, targetPlayerKey);
     setDragState(null);
@@ -1678,7 +1704,10 @@ export function SorteoLegacyPageIsland({ root }) {
                                           draggable: true,
                                           dragging: dragState?.playerKey === playerKey(player),
                                           onDragStart: (event) => handleDragStart(event, teamIndex, player, assigned),
-                                          onDragOver: (event) => event.preventDefault(),
+                                          onDragOver: (event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                          },
                                           onDrop: (event) => handleDrop(event, teamIndex, assigned, playerKey(player)),
                                           'data-sorteo-drag-player': '1',
                                           'data-player-key': playerKey(player),

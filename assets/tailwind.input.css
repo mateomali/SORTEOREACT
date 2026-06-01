@@ -2734,10 +2734,32 @@
     @apply bg-emerald-950/10;
   }
 
-  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-drag-player],
-  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-drag-player] :is(strong, span) {
-    color: #f7fff9 !important;
-    -webkit-text-fill-color: #f7fff9 !important;
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-player-tier="bronze"] {
+    --sorteo-card-text: #f0b170;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-player-tier="silver"] {
+    --sorteo-card-text: #e8eeea;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-player-tier="gold"] {
+    --sorteo-card-text: #f5d867;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-player-tier="elite"] {
+    --sorteo-card-text: #a5fff0;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-card-text],
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-card-text] :is(strong, span) {
+    color: var(--sorteo-card-text) !important;
+    -webkit-text-fill-color: var(--sorteo-card-text) !important;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.78), 0 1px 5px rgba(0, 0, 0, 0.45);
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-card-position] {
+    color: var(--sorteo-card-position, var(--sorteo-card-text)) !important;
+    -webkit-text-fill-color: var(--sorteo-card-position, var(--sorteo-card-text)) !important;
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.78), 0 1px 5px rgba(0, 0, 0, 0.45);
   }
 
@@ -2756,6 +2778,25 @@
 
   body.page-sorteo-legacy .sorteo-react-page .sorteo-team-stats span {
     @apply border-[#d7e6df] bg-white;
+  }
+
+  [data-player-photo-frame] {
+    border-radius: 18% !important;
+    overflow: hidden !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+  }
+
+  [data-player-photo-oval],
+  .formation-card-photo.is-custom img,
+  .sorteo-static-player-photo.is-custom img,
+  .captain-formation-player .formation-card-photo.is-custom img {
+    border-radius: 18% !important;
+    clip-path: none !important;
+    object-fit: cover !important;
+    object-position: center top !important;
+    transform: scale(1.08);
+    transform-origin: center top;
   }
 
   @media (max-width: 760px) {
@@ -5032,11 +5073,198 @@
   }
 
   .finish-formation-pitch-preview {
-    @apply border-b border-emerald-100 bg-emerald-50/30 p-3;
+    @apply border-b border-emerald-100 bg-white p-3;
   }
 
   .finish-formation-pitch-preview:empty {
     @apply hidden;
+  }
+
+  .finish-formation-pitch-preview .finish-sorteo-pitch-grid {
+    @apply grid gap-4 xl:grid-cols-2;
+  }
+
+  .finish-formation-pitch-preview .finish-sorteo-team {
+    @apply grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm;
+  }
+
+  .finish-formation-pitch-preview .team-head {
+    @apply grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center;
+  }
+
+  .finish-formation-pitch-preview .team-head h4 {
+    @apply m-0 text-lg font-black text-[#07130f];
+  }
+
+  .finish-formation-pitch-preview .team-head p {
+    @apply m-0 text-xs font-semibold text-slate-500;
+  }
+
+  .finish-formation-pitch-preview .finish-sorteo-team-score {
+    @apply inline-grid min-h-9 place-items-center rounded-md border border-[#d7e6df] bg-white px-3 text-sm font-black text-[#07130f];
+  }
+
+  .finish-formation-pitch-preview .team-formation {
+    @apply relative grid h-[680px] grid-rows-[minmax(0,.8fr)_repeat(3,minmax(0,1fr))] gap-2 overflow-hidden rounded-lg border border-[#7fb89c] p-3 text-white shadow-none;
+    background:
+      linear-gradient(180deg, rgba(5, 39, 25, 0.08), rgba(5, 39, 25, 0.22)),
+      url("./images/captain-field-bg-vertical.jpg") center / 100% 100% no-repeat,
+      #173f25 !important;
+  }
+
+  .finish-formation-pitch-preview .team-formation::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0;
+    background: rgba(2, 18, 11, 0.08);
+  }
+
+  .finish-formation-pitch-preview .team-formation > * {
+    @apply relative z-[1];
+  }
+
+  .finish-formation-pitch-preview .formation-line {
+    @apply mb-0 grid min-h-0 grid-cols-[54px_minmax(0,1fr)] items-center gap-2 border-b border-white/15 last:border-b-0;
+  }
+
+  .finish-formation-pitch-preview .line-label {
+    @apply grid justify-items-center gap-1 text-center text-[10px] font-black uppercase leading-none text-white [text-shadow:0_1px_2px_rgba(0,0,0,.48)];
+  }
+
+  .finish-formation-pitch-preview .line-label small {
+    @apply rounded bg-emerald-950/45 px-1 text-[9px] font-extrabold leading-tight text-white/75;
+  }
+
+  .finish-formation-pitch-preview .line-players {
+    @apply flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border border-white/10 bg-emerald-950/10 p-1;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card {
+    aspect-ratio: 409 / 620;
+    width: 72px;
+    flex: 0 0 72px;
+    border: 0;
+    padding: 0;
+    position: relative;
+    display: block;
+    overflow: hidden;
+    cursor: grab;
+    background: var(--finish-card-bg) center / contain no-repeat;
+    filter: drop-shadow(0 4px 7px rgba(2, 14, 9, 0.24));
+    font-family: "Barlow Condensed", sans-serif;
+    text-align: left;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card:active {
+    cursor: grabbing;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card.is-dragging {
+    opacity: 0.55;
+    scale: 0.95;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card.is-drag-over {
+    outline: 2px solid #d8f999;
+    outline-offset: 2px;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-shade {
+    @apply absolute z-20 bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/38;
+    left: 9%;
+    right: 8%;
+    top: 10.1%;
+    height: 56.1%;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-rating {
+    @apply absolute z-30 grid content-start justify-items-center text-[#f7fff9] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.45)];
+    left: 14.2%;
+    top: 15.8%;
+    width: 23.2%;
+    height: 29.8%;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-rating strong {
+    @apply font-black leading-[.8] text-[#f7fff9];
+    font-size: 1.12rem;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-rating > span:not(.sorteo-static-player-form) {
+    @apply mt-0.5 font-black uppercase leading-none text-[#f7fff9];
+    font-size: 0.54rem;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-rating .is-out-of-position {
+    color: #ffb4a8 !important;
+    -webkit-text-fill-color: #ffb4a8 !important;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-rating .is-secondary-position {
+    color: #ffe9a6 !important;
+    -webkit-text-fill-color: #ffe9a6 !important;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-form {
+    display: block;
+    width: 11px;
+    aspect-ratio: 1;
+    margin-top: 2px;
+    clip-path: polygon(50% 0, 100% 48%, 70% 48%, 70% 100%, 30% 100%, 30% 48%, 0 48%);
+    background: #a7ec35;
+    filter: drop-shadow(0 0 1px #07130f);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-form.is-up {
+    background: #1ec7f2;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-form.is-down {
+    background: #ef2b2b;
+    transform: rotate(180deg);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-form.is-right {
+    transform: rotate(90deg);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-photo {
+    position: absolute;
+    z-index: 10;
+    left: 36.4%;
+    right: 13.3%;
+    top: 14.8%;
+    height: 42.1%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, #000 0 74%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0 74%, transparent 100%);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-photo img {
+    @apply h-full w-full object-contain object-top opacity-50;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-photo.is-custom img {
+    @apply opacity-100;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-name {
+    @apply absolute z-30 grid place-items-center overflow-hidden px-0.5 text-center font-black uppercase leading-[.92] whitespace-normal break-words text-[#f7fff9] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.45)];
+    left: 8.5%;
+    right: 7.5%;
+    top: 58.8%;
+    height: 18.2%;
+    font-size: var(--finish-name-size);
+  }
+
+  .finish-formation-pitch-preview .sorteo-team-stats {
+    @apply grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f];
+  }
+
+  .finish-formation-pitch-preview .sorteo-team-stats span {
+    @apply rounded-md border border-[#d7e6df] bg-white px-2 py-1;
   }
 
   .finish-formation-grid {
@@ -18575,7 +18803,7 @@ body.page-capitanes .content .formation-undo-button,
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-sin-stat {
-  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
   --formation-slot-bg: rgba(245, 240, 229, 0.78);
   --formation-slot-line: rgba(7, 19, 15, 0.28);
   position: relative;
@@ -18598,22 +18826,22 @@ body.page-capitanes .content .captain-formation-player.formation-card-sin-stat {
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-bronze {
-  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
   --formation-slot-bg: rgba(248, 217, 155, 0.78);
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-silver {
-  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-silver.png");
   --formation-slot-bg: rgba(249, 255, 251, 0.74);
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-gold {
-  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-gold.png");
   --formation-slot-bg: rgba(255, 240, 157, 0.72);
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-elite {
-  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-elite.png");
   --formation-slot-bg: rgba(247, 241, 255, 0.34);
   --formation-slot-line: rgba(243, 237, 255, 0.5);
 }
@@ -19472,7 +19700,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta {
-  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
   position: relative;
   display: block;
   aspect-ratio: 409 / 710;
@@ -19514,7 +19742,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze {
-  --formation-card-image: url("./card-backgrounds/clean-bronze.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
 }
 
 .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver,
@@ -19522,7 +19750,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver {
-  --formation-card-image: url("./card-backgrounds/clean-silver.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-silver.png");
   --formation-slot-bg: color-mix(in srgb, #f5fbf8 58%, transparent);
   --formation-slot-line: rgba(22, 35, 31, 0.18);
 }
@@ -19532,7 +19760,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold {
-  --formation-card-image: url("./card-backgrounds/clean-gold.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-gold.png");
   --formation-slot-bg: color-mix(in srgb, #fff09d 54%, transparent);
   --formation-slot-line: rgba(50, 34, 4, 0.2);
 }
@@ -19542,7 +19770,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite {
-  --formation-card-image: url("./card-backgrounds/clean-elite.png");
+  --formation-card-image: url("./card-backgrounds/reference-compact-elite.png");
   --formation-slot-bg: color-mix(in srgb, #f7f1ff 34%, transparent);
   --formation-slot-line: rgba(243, 237, 255, 0.38);
 }
@@ -21014,7 +21242,7 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
     padding: 8px !important;
   }
 
-  .finish-formation-pitch-preview > .grid {
+  .finish-formation-pitch-preview .finish-sorteo-pitch-grid {
     display: flex !important;
     gap: 8px !important;
     overflow-x: auto !important;
@@ -21032,7 +21260,7 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
   }
 
   .finish-formation-pitch-preview .team-head {
-    margin-bottom: 8px !important;
+    margin-bottom: 0 !important;
     gap: 8px !important;
   }
 
@@ -21068,18 +21296,16 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
   }
 
   .finish-formation-pitch-preview .team-formation {
+    height: 430px !important;
+    gap: 4px !important;
     border-radius: 8px !important;
-    padding: 8px !important;
-    background:
-      linear-gradient(rgba(5, 37, 27, 0.08), rgba(5, 37, 27, 0.18)),
-      url("./images/captain-field-bg-vertical.jpg") center / 100% 100% no-repeat,
-      #07563d !important;
+    padding: 6px !important;
   }
 
   .finish-formation-pitch-preview .formation-line {
-    grid-template-columns: 34px minmax(0, 1fr) !important;
-    gap: 6px !important;
-    margin-bottom: 6px !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    gap: 4px !important;
+    margin-bottom: 0 !important;
   }
 
   .finish-formation-pitch-preview .line-label {
@@ -21089,27 +21315,30 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
 
   .finish-formation-pitch-preview .line-players {
     gap: 4px !important;
+    padding: 2px !important;
   }
 
-  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta {
-    --formation-compact-card-width: 58px !important;
-    flex-basis: 58px !important;
-    width: 58px !important;
-    min-width: 58px !important;
-    max-width: 58px !important;
-    filter: drop-shadow(0 3px 5px rgba(2, 14, 9, 0.24)) !important;
+  .finish-formation-pitch-preview .sorteo-static-player-card {
+    width: 54px !important;
+    flex-basis: 54px !important;
   }
 
-  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong {
-    font-size: 0.62rem !important;
+  .finish-formation-pitch-preview .sorteo-static-player-rating strong {
+    font-size: 0.9rem !important;
   }
 
-  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
-    font-size: 0.31rem !important;
+  .finish-formation-pitch-preview .sorteo-static-player-rating > span:not(.sorteo-static-player-form) {
+    font-size: 0.44rem !important;
   }
 
-  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position {
-    font-size: 0.3rem !important;
+  .finish-formation-pitch-preview .sorteo-team-stats {
+    gap: 4px !important;
+    padding: 6px !important;
+  }
+
+  .finish-formation-pitch-preview .sorteo-team-stats span {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
   }
 
   .finish-formation-table tr {

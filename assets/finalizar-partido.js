@@ -213,32 +213,18 @@
     return 'bronze';
   };
 
+  const compactCardBackground = (tier) => ({
+    bronze: 'assets/card-backgrounds/reference-compact-bronze.png',
+    silver: 'assets/card-backgrounds/reference-compact-silver.png',
+    gold: 'assets/card-backgrounds/reference-compact-gold.png',
+    elite: 'assets/card-backgrounds/reference-compact-elite.png',
+  }[tier] || 'assets/card-backgrounds/reference-compact-bronze.png');
+
   const cardRegularity = (player) => {
     const regularity = statValue(player, 'regularity');
     if (regularity >= 4.5) return ['up', 'Regularidad alta'];
     if (regularity < 3.0) return ['down', 'Regularidad baja'];
     return ['right', 'Regularidad normal'];
-  };
-
-  const cardStats = (player, position) => {
-    if (position === 'ARQ') {
-      return [
-        ['ARQ', cardRating(statValue(player, 'goalkeeper_skill'))],
-        ['RIT', cardRating(statValue(player, 'rhythm'))],
-        ['DEF', cardRating(statValue(player, 'defense_physical'))],
-        ['TEC', cardRating(statValue(player, 'technique'))],
-        ['EQU', cardRating(statValue(player, 'teamwork'))],
-        ['MEN', cardRating(statValue(player, 'mentality'))],
-      ];
-    }
-    return [
-      ['TEC', cardRating(statValue(player, 'technique'))],
-      ['RIT', cardRating(statValue(player, 'rhythm'))],
-      ['DEF', cardRating(statValue(player, 'defense_physical'))],
-      ['ATA', cardRating(statValue(player, 'attack'))],
-      ['EQU', cardRating(statValue(player, 'teamwork'))],
-      ['MEN', cardRating(statValue(player, 'mentality'))],
-    ];
   };
 
   const groupFormationLines = (playersList) => positions.reduce((lines, position) => {
@@ -267,46 +253,82 @@
     const rating = positionRating(player, position);
     const [regularityForm, regularityLabel] = cardRegularity(player);
     const isNatural = hasPosition(player, position);
+    const secondary = isNatural && position !== parsePositions(player)[0];
     const photoPath = player.photo_path || 'assets/players/default-player-silhouette.png';
     const photoClass = player.photo_custom ? 'is-custom' : 'is-default';
-    const stats = cardStats(player, position)
-      .map(([label, value]) => `<span class="formation-card-stat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></span>`)
-      .join('');
+    const tier = cardTier(rating);
+    const name = String(player.name || 'Jugador').trim();
+    const veryLongName = name.length > 11 || name.split(/\s+/).some((part) => part.length > 8);
+    const longName = name.length > 8 || name.includes(' ');
+    const nameSize = veryLongName ? 'clamp(5.4px, 0.72vw, 9px)' : longName ? 'clamp(6px, 0.82vw, 10.5px)' : 'clamp(6.8px, 0.9vw, 12px)';
     return `
-      <div class="formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-${cardTier(rating)}${isNatural ? '' : ' is-out-of-position'}" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id)}" data-assigned-position="${escapeHtml(position)}" data-player-skill="${escapeHtml(rating)}">
-        <span class="player-card-rating" title="Puntaje general"><strong>${escapeHtml(cardRating(rating))}</strong><span>GEN</span></span>
-        <span class="formation-card-photo ${photoClass}" aria-hidden="true"><img src="${escapeHtml(photoPath)}" alt=""></span>
-        <strong class="formation-player-name">${escapeHtml(player.name || 'Jugador')}</strong>
-        <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada">${escapeHtml(position || 'GEN')}</span>
-        <span class="formation-card-regularity is-${regularityForm}" title="${escapeHtml(regularityLabel)}" aria-label="${escapeHtml(regularityLabel)}"></span>
-        <span class="formation-card-stats" aria-label="Stats del jugador">${stats}</span>
-      </div>
+      <button
+        class="sorteo-static-player-card formation-card-tier-${tier}${isNatural ? '' : ' is-out-of-position'}"
+        type="button"
+        draggable="true"
+        data-finish-pitch-player
+        data-static-player-key="${escapeHtml(player.id)}"
+        data-assigned-position="${escapeHtml(position)}"
+        data-player-skill="${escapeHtml(rating)}"
+        style="--finish-card-bg: url('${escapeHtml(compactCardBackground(tier))}'); --finish-name-size: ${nameSize};"
+        aria-label="Intercambiar ${escapeHtml(name)}"
+      >
+        <span class="sorteo-static-player-shade" aria-hidden="true"></span>
+        <span class="sorteo-static-player-rating">
+          <strong>${escapeHtml(cardRating(rating))}</strong>
+          <span class="${!isNatural ? 'is-out-of-position' : secondary ? 'is-secondary-position' : ''}">${escapeHtml(position)}</span>
+          <span class="sorteo-static-player-form is-${regularityForm}" title="${escapeHtml(regularityLabel)}" aria-label="${escapeHtml(regularityLabel)}"></span>
+        </span>
+        <span class="sorteo-static-player-photo ${photoClass}" aria-hidden="true"${player.photo_custom ? ' data-player-photo-frame="1"' : ''}><img src="${escapeHtml(photoPath)}" alt=""${player.photo_custom ? ' data-player-photo-oval="1"' : ''}></span>
+        <strong class="sorteo-static-player-name">${escapeHtml(name)}</strong>
+      </button>
     `;
   };
 
+  const averageStat = (team, field) => team.players.length
+    ? team.players.reduce((total, player) => total + statValue(player, field), 0) / team.players.length
+    : 0;
+
+  const renderTeamStats = (team) => {
+    const goalkeeper = Math.max(0, ...team.players
+      .filter((player) => (player.assigned_position || bestNaturalPosition(player)) === 'ARQ')
+      .map((player) => statValue(player, 'goalkeeper_skill')));
+    return [
+      ['Arquero', goalkeeper || averageStat(team, 'attack')],
+      ['Solidez', averageStat(team, 'defense_physical')],
+      ['Ritmo', averageStat(team, 'rhythm')],
+      ['Tecnica', averageStat(team, 'technique')],
+      ['Equipo', averageStat(team, 'teamwork')],
+      ['Mentalidad', averageStat(team, 'mentality')],
+      ['Regularidad', averageStat(team, 'regularity')],
+    ].map(([label, value]) => `<span>${escapeHtml(label)} ${Number(value).toFixed(1)}</span>`).join('');
+  };
+
   const renderCanonicalPitch = (summaries) => `
-    <div class="grid gap-3 lg:grid-cols-2">
+    <div class="finish-sorteo-pitch-grid">
       ${summaries.map((team) => {
         const lines = groupFormationLines(team.players);
-        const colorSelect = form.querySelector(`select[name="team_color[${CSS.escape(String(team.teamNumber))}]"]`);
-        const colorName = colorSelect?.value || '';
         return `
-          <article class="team-card multi-draw-pitch-team">
+          <article class="team-card sorteo-team-card finish-sorteo-team" data-team-index="${escapeHtml(team.teamNumber - 1)}" data-sorteo-team-card="1">
             <div class="team-head">
-              <h4>${escapeHtml(team.label)}</h4>
-              ${colorName ? `<span class="chip">${escapeHtml(colorName)}</span>` : ''}
-            </div>
-            <div class="formation-title-row">
-              <div class="formation-total-title" data-formation-total-title><span>Base</span><strong>${team.total.toFixed(1)} pts</strong></div>
-              <div class="formation-total-title formation-tactic-title"><span>TACTICA</span><strong data-formation-tactic>${escapeHtml(tacticLabel(lines))}</strong></div>
+              <div>
+                <h4>${escapeHtml(team.label)}</h4>
+                <p>${team.players.length} jugadores | ${team.players.filter(lowRhythm).length} lentos | ${escapeHtml(tacticLabel(lines))}</p>
+              </div>
+              <span class="finish-sorteo-team-score">${team.total.toFixed(1)} pts</span>
             </div>
             <div class="team-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="${escapeHtml(team.teamNumber)}">
               ${requiredPitchLines.map((line) => {
                 const linePlayers = formationLinePlayers(lines, line);
                 const label = line === 'DEF' && (lines.LAT || []).length ? 'DEF/LAT' : line;
+                const count = line === 'DEF' ? (lines.DEF || []).length + (lines.LAT || []).length : (lines[line] || []).length;
+                const max = line === 'ARQ' ? 1 : (line === 'DEF' ? lineLimit('DEF') + lineLimit('LAT') : lineLimit(line));
                 return `
-                  <div class="formation-line">
-                    <div class="line-label">${escapeHtml(label)}</div>
+                  <div class="formation-line sorteo-line-basic">
+                    <div class="line-label">
+                      <span>${escapeHtml(label)}</span>
+                      <small>${escapeHtml(count)}/${escapeHtml(max)}</small>
+                    </div>
                     <div class="line-players">
                       ${linePlayers.length ? linePlayers.map(renderFormationPlayer).join('') : '<span class="formation-player empty-slot">-</span>'}
                     </div>
@@ -314,6 +336,7 @@
                 `;
               }).join('')}
             </div>
+            <div class="sorteo-team-stats">${renderTeamStats(team)}</div>
           </article>
         `;
       }).join('')}
@@ -579,18 +602,33 @@
     }
   };
 
-  const applySwap = (recommendation) => {
-    const leftId = String(recommendation.leftPlayer.id);
-    const rightId = String(recommendation.rightPlayer.id);
-    const leftSelect = form.querySelector(`select[name="player_team[${CSS.escape(leftId)}]"]`);
-    const rightSelect = form.querySelector(`select[name="player_team[${CSS.escape(rightId)}]"]`);
-    if (!leftSelect || !rightSelect) return;
-    const leftTeam = leftSelect.value;
-    leftSelect.value = rightSelect.value;
-    rightSelect.value = leftTeam;
+  const swapPlayersById = (leftId, rightId) => {
+    if (!leftId || !rightId || String(leftId) === String(rightId)) return false;
+    const leftTeam = form.querySelector(`select[name="player_team[${CSS.escape(String(leftId))}]"]`);
+    const rightTeam = form.querySelector(`select[name="player_team[${CSS.escape(String(rightId))}]"]`);
+    const leftPosition = form.querySelector(`select[name="player_position[${CSS.escape(String(leftId))}]"]`);
+    const rightPosition = form.querySelector(`select[name="player_position[${CSS.escape(String(rightId))}]"]`);
+    if (!leftTeam || !rightTeam) return false;
+    const nextLeftTeam = rightTeam.value;
+    const nextRightTeam = leftTeam.value;
+    const nextLeftPosition = rightPosition?.value;
+    const nextRightPosition = leftPosition?.value;
+    leftTeam.value = nextLeftTeam;
+    rightTeam.value = nextRightTeam;
+    if (leftPosition && positions.includes(nextLeftPosition)) leftPosition.value = nextLeftPosition;
+    if (rightPosition && positions.includes(nextRightPosition)) rightPosition.value = nextRightPosition;
     syncFormationRowLocation(leftId);
     syncFormationRowLocation(rightId);
     renderPitchPreview();
+    panel.hidden = true;
+    panel.innerHTML = '';
+    return true;
+  };
+
+  const applySwap = (recommendation) => {
+    const leftId = String(recommendation.leftPlayer.id);
+    const rightId = String(recommendation.rightPlayer.id);
+    if (!swapPlayersById(leftId, rightId)) return;
     window.requestAnimationFrame(() => {
       renderAnalysis({ applied: true });
     });
@@ -605,6 +643,34 @@
     if (recommendation) {
       applySwap(recommendation);
     }
+  });
+  pitchPreview?.addEventListener('dragstart', (event) => {
+    const card = event.target.closest('[data-finish-pitch-player]');
+    if (!card) return;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(card.getAttribute('data-static-player-key') || ''));
+    card.classList.add('is-dragging');
+  });
+  pitchPreview?.addEventListener('dragend', () => {
+    pitchPreview.querySelectorAll('.is-dragging, .is-drag-over').forEach((item) => item.classList.remove('is-dragging', 'is-drag-over'));
+  });
+  pitchPreview?.addEventListener('dragover', (event) => {
+    const card = event.target.closest('[data-finish-pitch-player]');
+    if (!card) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    pitchPreview.querySelectorAll('.is-drag-over').forEach((item) => {
+      if (item !== card) item.classList.remove('is-drag-over');
+    });
+    card.classList.add('is-drag-over');
+  });
+  pitchPreview?.addEventListener('drop', (event) => {
+    const card = event.target.closest('[data-finish-pitch-player]');
+    if (!card) return;
+    event.preventDefault();
+    const sourceId = event.dataTransfer.getData('text/plain');
+    const targetId = card.getAttribute('data-static-player-key');
+    swapPlayersById(sourceId, targetId);
   });
   form.addEventListener('change', (event) => {
     if (event.target.matches('select[name^="player_team["], select[name^="player_position["]')) {
