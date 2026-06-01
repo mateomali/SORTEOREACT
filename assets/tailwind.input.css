@@ -2688,6 +2688,86 @@
     @apply opacity-60 ring-2 ring-white/70;
   }
 
+  body.page-sorteo-legacy .sorteo-react-page .sorteo-team-card {
+    @apply border-[#d7e6df] bg-white shadow-sm;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .sorteo-team-card .team-head {
+    @apply mb-0;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation {
+    @apply rounded-lg border border-[#7fb89c] shadow-none;
+    background:
+      linear-gradient(180deg, rgba(5, 39, 25, 0.08), rgba(5, 39, 25, 0.22)),
+      url("./images/captain-field-bg-vertical.jpg") center / 100% 100% no-repeat,
+      #173f25 !important;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0;
+    background: rgba(2, 18, 11, 0.08);
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation > :not(.formation-undo-button) {
+    @apply relative z-[1];
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line {
+    @apply mb-0 grid min-h-0 items-center;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line.sorteo-line-with-tools {
+    grid-template-columns: 54px minmax(0, 1fr) 34px !important;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line.sorteo-line-basic {
+    grid-template-columns: 54px minmax(0, 1fr) !important;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation .line-label {
+    @apply text-white;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .team-formation .line-players {
+    @apply bg-emerald-950/10;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-drag-player],
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-drag-player] :is(strong, span) {
+    color: #f7fff9 !important;
+    -webkit-text-fill-color: #f7fff9 !important;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.78), 0 1px 5px rgba(0, 0, 0, 0.45);
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-drag-player] img,
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-drag-player] [aria-hidden="true"] {
+    -webkit-text-fill-color: initial !important;
+    text-shadow: none;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-full-card-text],
+  body.page-sorteo-legacy .sorteo-react-page [data-sorteo-full-card-text] :is(strong, span) {
+    color: #f7fff9 !important;
+    -webkit-text-fill-color: #f7fff9 !important;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.82), 0 1px 6px rgba(0, 0, 0, 0.55) !important;
+  }
+
+  body.page-sorteo-legacy .sorteo-react-page .sorteo-team-stats span {
+    @apply border-[#d7e6df] bg-white;
+  }
+
+  @media (max-width: 760px) {
+    body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line.sorteo-line-with-tools {
+      grid-template-columns: 32px minmax(0, 1fr) 22px !important;
+    }
+
+    body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line.sorteo-line-basic {
+      grid-template-columns: 38px minmax(0, 1fr) !important;
+    }
+  }
+
   .formation-player[data-static-formation-player].is-drag-over {
     @apply scale-[1.03] border-lime-200 bg-emerald-900 ring-2 ring-lime-200;
   }
@@ -4529,8 +4609,81 @@
     @apply w-full self-end sm:w-auto;
   }
 
+  .manual-actions {
+    @apply flex flex-col gap-2 sm:flex-row sm:justify-end;
+  }
+
   .manual-team-characteristics {
     @apply w-full;
+  }
+
+  .manual-analysis-panel {
+    @apply w-full rounded-xl border border-slate-200 bg-slate-50 p-3;
+  }
+
+  .manual-analysis-head {
+    @apply flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2;
+  }
+
+  .manual-analysis-head strong {
+    @apply text-sm font-extrabold text-[#07130f];
+  }
+
+  .manual-analysis-head span {
+    @apply text-xs font-bold text-slate-600;
+  }
+
+  .manual-analysis-grid {
+    @apply mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .manual-analysis-grid article {
+    @apply rounded-lg border border-white bg-white p-2 text-xs shadow-sm shadow-slate-950/5;
+  }
+
+  .manual-analysis-grid strong,
+  .manual-analysis-grid span {
+    @apply block;
+  }
+
+  .manual-analysis-grid strong {
+    @apply font-extrabold text-[#07130f];
+  }
+
+  .manual-analysis-grid span {
+    @apply mt-1 font-semibold text-slate-600;
+  }
+
+  .manual-analysis-findings {
+    @apply mt-3 rounded-lg border border-white bg-white p-3;
+  }
+
+  .manual-analysis-findings > strong {
+    @apply block text-sm font-extrabold text-[#07130f];
+  }
+
+  .manual-analysis-findings > p {
+    @apply mt-2 text-sm font-semibold text-slate-600;
+  }
+
+  .manual-analysis-findings ul {
+    @apply mt-2 grid gap-2;
+  }
+
+  .manual-analysis-findings li {
+    @apply grid grid-cols-[62px_minmax(0,1fr)] gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2;
+  }
+
+  .manual-analysis-findings li > span {
+    @apply text-xs font-extrabold text-emerald-900;
+  }
+
+  .manual-analysis-findings li strong {
+    @apply block text-sm font-extrabold text-[#07130f];
+  }
+
+  .manual-analysis-findings li p {
+    @apply mt-1 text-xs font-semibold text-slate-600;
   }
 
   .team-characteristics-grid {
@@ -4870,8 +5023,20 @@
     @apply flex flex-wrap items-start justify-between gap-3 border-b border-emerald-100 p-4;
   }
 
+  .finish-formation-head-actions {
+    @apply flex flex-col gap-2 sm:flex-row;
+  }
+
   .finish-formation-head h3 {
     @apply m-0;
+  }
+
+  .finish-formation-pitch-preview {
+    @apply border-b border-emerald-100 bg-emerald-50/30 p-3;
+  }
+
+  .finish-formation-pitch-preview:empty {
+    @apply hidden;
   }
 
   .finish-formation-grid {
@@ -4928,6 +5093,30 @@
 
   .finish-formation-actions {
     @apply justify-center border-t border-emerald-100 p-4 pt-3;
+  }
+
+  .finish-team-analysis-panel {
+    @apply mx-3 mb-3;
+  }
+
+  .finish-analysis-apply {
+    @apply mt-2 w-fit;
+  }
+
+  .finish-analysis-swap-title {
+    @apply flex flex-wrap items-center gap-1.5;
+  }
+
+  .finish-analysis-swap-title > span {
+    @apply inline-flex items-center gap-1;
+  }
+
+  .finish-analysis-swap-arrow {
+    @apply text-slate-500;
+  }
+
+  .finish-analysis-team-icon {
+    @apply h-4 w-4;
   }
 
   [data-finish-player-row] {
@@ -20817,5 +21006,190 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
 @media (max-width: 370px) {
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
     --formation-compact-card-width: 44px;
+  }
+}
+
+@media (max-width: 760px) {
+  .finish-formation-pitch-preview {
+    padding: 8px !important;
+  }
+
+  .finish-formation-pitch-preview > .grid {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scroll-padding-left: 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .finish-formation-pitch-preview .team-card {
+    border-radius: 8px !important;
+    flex: 0 0 min(94%, 320px) !important;
+    padding: 8px !important;
+    scroll-snap-align: start;
+  }
+
+  .finish-formation-pitch-preview .team-head {
+    margin-bottom: 8px !important;
+    gap: 8px !important;
+  }
+
+  .finish-formation-pitch-preview .team-head h4 {
+    font-size: 0.875rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .finish-formation-pitch-preview .chip {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+  }
+
+  .finish-formation-pitch-preview .formation-title-row {
+    margin-bottom: 8px !important;
+    gap: 8px !important;
+  }
+
+  .finish-formation-pitch-preview .formation-total-title {
+    margin-bottom: 0 !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    padding: 6px 8px !important;
+  }
+
+  .finish-formation-pitch-preview .formation-total-title span {
+    font-size: 9px !important;
+  }
+
+  .finish-formation-pitch-preview .formation-total-title strong {
+    padding: 2px 6px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .finish-formation-pitch-preview .team-formation {
+    border-radius: 8px !important;
+    padding: 8px !important;
+    background:
+      linear-gradient(rgba(5, 37, 27, 0.08), rgba(5, 37, 27, 0.18)),
+      url("./images/captain-field-bg-vertical.jpg") center / 100% 100% no-repeat,
+      #07563d !important;
+  }
+
+  .finish-formation-pitch-preview .formation-line {
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+    gap: 6px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .finish-formation-pitch-preview .line-label {
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+
+  .finish-formation-pitch-preview .line-players {
+    gap: 4px !important;
+  }
+
+  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta {
+    --formation-compact-card-width: 58px !important;
+    flex-basis: 58px !important;
+    width: 58px !important;
+    min-width: 58px !important;
+    max-width: 58px !important;
+    filter: drop-shadow(0 3px 5px rgba(2, 14, 9, 0.24)) !important;
+  }
+
+  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong {
+    font-size: 0.62rem !important;
+  }
+
+  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+    font-size: 0.31rem !important;
+  }
+
+  .finish-formation-pitch-preview .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position {
+    font-size: 0.3rem !important;
+  }
+
+  .finish-formation-table tr {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      "player"
+      "team"
+      "line";
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .finish-formation-table td {
+    min-width: 0 !important;
+  }
+
+  .finish-formation-table td[data-label="Jugador"] {
+    grid-area: player;
+  }
+
+  .finish-formation-table td[data-label="Equipo"] {
+    grid-area: team;
+  }
+
+  .finish-formation-table td[data-label="Linea"] {
+    grid-area: line;
+  }
+
+  .finish-formation-table td[data-label="Equipo"],
+  .finish-formation-table td[data-label="Linea"] {
+    display: grid !important;
+    grid-template-columns: 70px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    text-align: left !important;
+  }
+
+  .finish-formation-table td[data-label="Equipo"]::before,
+  .finish-formation-table td[data-label="Linea"]::before {
+    margin-bottom: 0 !important;
+    text-align: left !important;
+  }
+
+  .finish-formation-table select {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-inline: 8px !important;
+    font-size: 0.84rem !important;
+  }
+
+  .finish-formation-grid {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding: 8px !important;
+    overscroll-behavior-x: contain;
+    scroll-padding-left: 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .finish-formation-grid .finish-formation-team {
+    flex: 0 0 min(94%, 320px) !important;
+    align-self: flex-start;
+    scroll-snap-align: start;
+  }
+
+  .finish-formation-team header {
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+
+  .finish-formation-shirt {
+    min-width: 132px !important;
+  }
+
+  .finish-formation-table-wrap {
+    max-height: 70vh;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }

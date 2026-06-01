@@ -803,11 +803,11 @@ function admin_history_team_label(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => 'ðŸ’—',
-        'AZUL' => 'ðŸ’™',
-        'VERDE' => 'ðŸ’š',
-        'NEGRO' => 'ðŸ–¤',
-        'NARANJA' => 'ðŸ§¡',
+        'ROSA' => '💗',
+        'AZUL' => '💙',
+        'VERDE' => '💚',
+        'NEGRO' => '🖤',
+        'NARANJA' => '🧡',
         'CAMISADO' => 'C',
         'DESCAMISADO' => 'D',
     ];
@@ -1394,7 +1394,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
             <a class="btn btn-muted" href="equipos_manual.php?match_id=<?= $latestId ?>">Manual</a>
           <?php elseif ($latestCanFinalize): ?>
             <?php if ($latestCanEditCaptainFormation): ?>
-              <a class="btn btn-muted" href="capitanes.php?match_id=<?= $latestId ?>#formacion">Formaciones</a>
+              <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>&amp;edit_formations=1#formaciones">Formaciones</a>
             <?php endif; ?>
             <form method="post">
               <input type="hidden" name="action" value="undo_draw">
@@ -1513,7 +1513,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
               <span class="btn btn-disabled icon-dice" data-short=""><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
               <?php if ($canEditCaptainFormation): ?>
-                <a class="btn btn-muted icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>#formacion">Formaciones</a>
+                <a class="btn btn-muted icon-captain" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>&amp;edit_formations=1#formaciones">Formaciones</a>
               <?php else: ?>
                 <span class="btn btn-disabled icon-captain" data-short="">Capitanes</span>
               <?php endif; ?>
@@ -1563,7 +1563,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
                 <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
                 <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Equipos manuales</a>
               <?php elseif ($canEditCaptainFormation): ?>
-                <a class="btn btn-muted icon-captain" data-short="" href="capitanes.php?match_id=<?= $matchId ?>#formacion">Editar formaciones</a>
+                <a class="btn btn-muted icon-captain" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>&amp;edit_formations=1#formaciones">Editar formaciones</a>
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>

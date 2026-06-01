@@ -66,7 +66,7 @@ $manualAliases = [
     'NICO' => 'NICO',
     'PABLO' => 'PABLO',
     'PABLO GARCIA' => 'PABLO GARCIA',
-    'PABLO GARCÃA' => 'PABLO GARCIA',
+    'PABLO GARCÍA' => 'PABLO GARCIA',
     'PABLO G' => 'PABLO GARCIA',
     'PABLO K' => 'PABLO CASTILLO',
     'PELADO' => 'PELA',
@@ -74,10 +74,10 @@ $manualAliases = [
     'PLANAS' => 'MARIANO PLANAS',
     'BETO PIKI' => 'BETO',
     'RODRI CHAVEZ' => 'RODRI CHAVEZ',
-    'RODRI CHÃVEZ' => 'RODRI CHAVEZ',
+    'RODRI CHÁVEZ' => 'RODRI CHAVEZ',
     'RODRI' => 'RODRI SUAREZ',
     'RODRI SUAREZ' => 'RODRI SUAREZ',
-    'RODRI SUÃREZ' => 'RODRI SUAREZ',
+    'RODRI SUÁREZ' => 'RODRI SUAREZ',
     'SEBA' => 'SEBACORTEZ',
     'SEBA CORTEZ' => 'SEBACORTEZ',
     'TEBO' => 'TEBO',
@@ -86,7 +86,7 @@ $manualAliases = [
     'VICTOR' => 'VICTOR',
     'VIKINGO' => 'VIKINGO',
     'R CHAVEZ' => 'RODRI CHAVEZ',
-    'R CHÃVEZ' => 'RODRI CHAVEZ',
+    'R CHÁVEZ' => 'RODRI CHAVEZ',
 ];
 
 $goalOverrides = [
@@ -102,7 +102,6 @@ function restore_goals_normalize(string $value): string
     $value = mb_strtoupper($value, 'UTF-8');
     $value = strtr($value, [
         'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ü' => 'U', 'Ñ' => 'N',
-        'Ã' => 'A', 'Ã‰' => 'E', 'Ã' => 'I', 'Ã“' => 'O', 'Ãš' => 'U', 'Ãœ' => 'U', 'Ã‘' => 'N',
     ]);
     $value = preg_replace('/[^A-Z0-9 ]/u', '', $value) ?? $value;
     return trim($value);
@@ -197,7 +196,7 @@ function restore_goals_parse_match(string $block, int $year, array $months): arr
             ];
             continue;
         }
-        if ($currentTeam !== null && preg_match('/^([[:alpha:]ÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã± ]{3,})(\d+(?:[,.]\d+)?)$/u', $line, $stuckRatingMatches)) {
+        if ($currentTeam !== null && preg_match('/^([[:alpha:]ÁÉÍÓÚÜÑáéíóúüñ ]{3,})(\d+(?:[,.]\d+)?)$/u', $line, $stuckRatingMatches)) {
             $teams[$currentTeam]['players'][] = [
                 'name' => trim((string) $stuckRatingMatches[1]),
                 'rating' => (float) str_replace(',', '.', (string) $stuckRatingMatches[2]),

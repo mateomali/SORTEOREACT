@@ -43,13 +43,13 @@ const cardPalettes = {
 };
 
 const teamColorOptions = [
-  { name: 'ROSA', label: 'Rosa', accent: 'bg-rose-500', panel: 'border-rose-200 bg-rose-50/85', tag: 'bg-rose-100 text-rose-950 border-rose-200' },
-  { name: 'AZUL', label: 'Azul', accent: 'bg-sky-500', panel: 'border-sky-200 bg-sky-50/85', tag: 'bg-sky-100 text-sky-950 border-sky-200' },
-  { name: 'NARANJA', label: 'Naranja', accent: 'bg-orange-500', panel: 'border-orange-200 bg-orange-50/85', tag: 'bg-orange-100 text-orange-950 border-orange-200' },
-  { name: 'NEGRO', label: 'Negro', accent: 'bg-slate-950', panel: 'border-slate-300 bg-slate-100/90', tag: 'bg-slate-950 text-white border-slate-700' },
-  { name: 'VERDE', label: 'Verde', accent: 'bg-emerald-600', panel: 'border-emerald-200 bg-emerald-50/85', tag: 'bg-emerald-100 text-emerald-950 border-emerald-200' },
-  { name: 'CAMISADO', label: 'Camisado', accent: 'bg-white ring-1 ring-slate-300', panel: 'border-slate-200 bg-white', tag: 'bg-white text-slate-950 border-slate-300' },
-  { name: 'DESCAMISADO', label: 'Descamisado', accent: 'bg-stone-300', panel: 'border-stone-200 bg-stone-100/90', tag: 'bg-stone-100 text-stone-950 border-stone-300' },
+  { name: 'ROSA', label: 'Rosa', accent: 'bg-rose-500', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'AZUL', label: 'Azul', accent: 'bg-sky-500', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'NARANJA', label: 'Naranja', accent: 'bg-orange-500', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'NEGRO', label: 'Negro', accent: 'bg-slate-950', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'VERDE', label: 'Verde', accent: 'bg-emerald-600', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'CAMISADO', label: 'Camisado', accent: 'bg-white ring-1 ring-slate-300', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'DESCAMISADO', label: 'Descamisado', accent: 'bg-stone-300', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
 ];
 
 const positionWeights = {
@@ -67,6 +67,7 @@ const primaryButtonClass = `inline-flex min-h-11 items-center justify-center gap
 const secondaryButtonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-4 text-sm font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
 const dangerButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-extrabold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 ${focusRing}`;
 const iconButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f7fbf9] hover:text-[#063d2b] ${focusRing}`;
+const pitchBackgroundClass = 'bg-[linear-gradient(rgba(5,37,27,.10),rgba(5,37,27,.24)),url(/assets/images/captain-field-bg-vertical.jpg),linear-gradient(160deg,#0e7a43,#07563d)] [background-position:center,center,center] [background-repeat:no-repeat,no-repeat,no-repeat] [background-size:auto,100%_100%,auto]';
 
 function parsePayload(root) {
   try {
@@ -166,6 +167,26 @@ function getPrimaryPlayerPosition(player) {
   return getOrderedPlayerPositions(player)[0] || 'MED';
 }
 
+function canPlayGoalkeeper(player) {
+  return getOrderedPlayerPositions(player).includes('ARQ') || player?.emergencyGoalkeeper === true || player?.manualGoalkeeper === true;
+}
+
+function goalkeeperSortValue(player) {
+  if (player?.manualGoalkeeper === true) return 0;
+  if (getPrimaryPlayerPosition(player) === 'ARQ') return 1;
+  if (getOrderedPlayerPositions(player).includes('ARQ')) return 2;
+  if (player?.emergencyGoalkeeper === true) return 3;
+  return 4;
+}
+
+function initialManualGoalkeepers(players) {
+  return Object.fromEntries(
+    players
+      .filter((player) => getPrimaryPlayerPosition(player) === 'ARQ')
+      .map((player) => [playerKey(player), true]),
+  );
+}
+
 function pitchLineForPosition(position) {
   return String(position || '').toUpperCase() === 'LAT' ? 'DEF' : String(position || '').toUpperCase();
 }
@@ -186,7 +207,7 @@ function applyRegularityAdjustment(rating, player) {
 
 function positionBaseRating(player, assignedPosition) {
   const position = String(assignedPosition || '').toUpperCase();
-  if (position === 'ARQ' && !getOrderedPlayerPositions(player).includes('ARQ') && player?.emergencyGoalkeeper !== true) {
+  if (position === 'ARQ' && !canPlayGoalkeeper(player)) {
     return 2;
   }
   const weights = positionWeights[position] || positionWeights.MED;
@@ -330,11 +351,11 @@ function historicalRepeatPenalty(teams, pairHistory) {
 }
 
 function prepareEmergencyGoalkeepers(players, numTeams) {
-  const naturalGoalkeepers = players.filter((player) => getOrderedPlayerPositions(player).includes('ARQ'));
-  const missing = Math.max(0, numTeams - naturalGoalkeepers.length);
+  const goalkeeperCandidates = players.filter(canPlayGoalkeeper);
+  const missing = Math.max(0, numTeams - goalkeeperCandidates.length);
   if (!missing) return { players, emergencyGoalkeepers: [] };
   const emergencyIds = new Set(players
-    .filter((player) => !getOrderedPlayerPositions(player).includes('ARQ'))
+    .filter((player) => !canPlayGoalkeeper(player))
     .sort((a, b) => bestNaturalPlayerRating(a) - bestNaturalPlayerRating(b))
     .slice(0, missing)
     .map(playerKey));
@@ -357,9 +378,11 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
   const goalkeeperCandidates = team
     .slice()
     .sort((a, b) => {
-      const aCan = getOrderedPlayerPositions(a).includes('ARQ') || a.emergencyGoalkeeper === true;
-      const bCan = getOrderedPlayerPositions(b).includes('ARQ') || b.emergencyGoalkeeper === true;
+      const aCan = canPlayGoalkeeper(a);
+      const bCan = canPlayGoalkeeper(b);
       if (aCan !== bCan) return aCan ? -1 : 1;
+      const priorityDiff = goalkeeperSortValue(a) - goalkeeperSortValue(b);
+      if (priorityDiff) return priorityDiff;
       return adjustedPositionRating(b, 'ARQ') - adjustedPositionRating(a, 'ARQ');
     });
   const chosenGoalkeeper = goalkeeperCandidates[0];
@@ -464,8 +487,12 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
 
 function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) {
   const teams = Array.from({ length: numTeams }, () => []);
-  const goalkeepers = shuffle(players.filter((player) => getOrderedPlayerPositions(player).includes('ARQ') || player.emergencyGoalkeeper === true))
-    .sort((a, b) => adjustedPositionRating(b, 'ARQ') - adjustedPositionRating(a, 'ARQ'))
+  const goalkeepers = shuffle(players.filter(canPlayGoalkeeper))
+    .sort((a, b) => {
+      const priorityDiff = goalkeeperSortValue(a) - goalkeeperSortValue(b);
+      if (priorityDiff) return priorityDiff;
+      return adjustedPositionRating(b, 'ARQ') - adjustedPositionRating(a, 'ARQ');
+    })
     .slice(0, numTeams);
   if (goalkeepers.length < numTeams) return null;
   goalkeepers.forEach((player, index) => teams[index].push(player));
@@ -638,17 +665,18 @@ function Arrow({ form }) {
 function FullPlayerCard({ player, assignedPosition }) {
   const adjusted = adjustedPositionRating(player, assignedPosition);
   const tier = playerCardTier(adjusted);
-  const palette = cardPalettes[tier] || cardPalettes.bronze;
   const positions = getOrderedPlayerPositions(player);
   const isLongName = player.nombre.length > 12;
+  const fullCardText = 'text-[#f7fff9] [text-shadow:0_2px_0_rgba(0,0,0,.82),0_1px_6px_rgba(0,0,0,.55)]';
   return (
     <article
       className="relative mx-auto block aspect-[409/710] w-[168px] overflow-hidden border-0 bg-transparent p-0 drop-shadow-[0_7px_12px_rgba(2,14,9,0.22)]"
       style={{ background: `url("${cardBackgrounds[tier] || cardBackgrounds.bronze}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
       aria-label={`Ficha de ${player.nombre}`}
+      data-sorteo-full-card="1"
     >
       <span className="absolute left-[9%] right-[8%] top-[8.8%] z-20 h-[49%] bg-gradient-to-b from-transparent via-[#07130f]/6 to-[#07130f]/34" aria-hidden="true" />
-      <span className={`absolute left-[14.2%] top-[13.8%] z-30 grid h-[26%] w-[23.2%] content-start justify-items-center px-0.5 pt-0.5 ${palette.text}`}>
+      <span className={`absolute left-[14.2%] top-[13.8%] z-30 grid h-[26%] w-[23.2%] content-start justify-items-center px-0.5 pt-0.5 ${fullCardText}`} data-sorteo-full-card-text="1">
         <strong className="block text-[2.03rem] font-black leading-[.8]">{playerCardRating(adjusted)}</strong>
         <span className="mt-[5px] grid justify-items-center gap-[1px] text-center leading-none">
           {positions.slice(0, 2).map((position, index) => (
@@ -663,14 +691,14 @@ function FullPlayerCard({ player, assignedPosition }) {
       >
         <img className={`h-full w-full object-contain object-top ${player.has_custom_photo ? '' : 'opacity-56'}`} src={player.photo_path} alt="" />
       </span>
-      <strong className={`absolute left-[12.1%] right-[10.9%] top-[53.3%] z-30 grid h-[7.8%] place-items-center overflow-hidden text-ellipsis whitespace-nowrap px-1 text-center font-black uppercase leading-none ${isLongName ? 'text-[.95rem]' : 'text-[1.28rem]'} ${palette.text}`}>
+      <strong className={`absolute left-[12.1%] right-[10.9%] top-[53.3%] z-30 grid h-[7.8%] place-items-center overflow-hidden text-ellipsis whitespace-nowrap px-1 text-center font-black uppercase leading-none ${isLongName ? 'text-[.95rem]' : 'text-[1.28rem]'} ${fullCardText}`} data-sorteo-full-card-text="1">
         {player.nombre}
       </strong>
-      <span className={`absolute left-[20.3%] right-[20.3%] top-[62.8%] z-30 block h-px ${palette.separator}`} aria-hidden="true" />
+      <span className="absolute left-[20.3%] right-[20.3%] top-[62.8%] z-30 block h-px bg-white/35" aria-hidden="true" />
       <span className="absolute left-[17.3%] right-[16.1%] top-[66.7%] z-30 grid h-[17%] grid-cols-2 grid-rows-3 gap-x-[7%] gap-y-0 overflow-visible px-[1.8%] py-[.9%]">
-        <span className={`absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 ${palette.separator}`} aria-hidden="true" />
+        <span className="absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 bg-white/25" aria-hidden="true" />
         {playerCardStats(player, assignedPosition).map((stat) => (
-          <span key={stat.label} className={`grid grid-cols-[1.18rem_minmax(0,1fr)] items-center gap-[3px] overflow-visible ${palette.text}`}>
+          <span key={stat.label} className={`grid grid-cols-[1.18rem_minmax(0,1fr)] items-center gap-[3px] overflow-visible ${fullCardText}`} data-sorteo-full-card-text="1">
             <strong className="text-right text-[1.03rem] font-black leading-none">{stat.value}</strong>
             <span className="text-[.85rem] font-black uppercase leading-none">{stat.label}</span>
           </span>
@@ -690,10 +718,12 @@ function CompactPlayerCard({ player, assignedPosition, draggableProps = {}, onOp
   const adjusted = adjustedPositionRating(player, assignedPosition);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
-  const widthClass = 'w-[50px] min-[380px]:w-[57px] sm:w-[88px]';
+  const widthClass = 'w-[44px] min-[380px]:w-[54px] sm:w-[60px] xl:w-[72px] 2xl:w-[78px]';
   const outOfPosition = !getOrderedPlayerPositions(player).includes(assignedPosition);
   const secondary = !outOfPosition && assignedPosition !== getPrimaryPlayerPosition(player);
   const longName = String(player.nombre || '').trim().length > 8 || String(player.nombre || '').includes(' ');
+  const veryLongName = String(player.nombre || '').trim().length > 11 || String(player.nombre || '').trim().split(/\s+/).some((part) => part.length > 8);
+  const nameFontSize = veryLongName ? 'clamp(5.4px, 0.72vw, 9px)' : longName ? 'clamp(6px, 0.82vw, 10.5px)' : 'clamp(6.8px, 0.9vw, 12px)';
   return (
     <button
       type="button"
@@ -705,9 +735,9 @@ function CompactPlayerCard({ player, assignedPosition, draggableProps = {}, onOp
     >
       <span className="absolute left-[9%] right-[8%] top-[10.1%] z-20 h-[56.1%] bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/38" aria-hidden="true" />
       <span className={`absolute left-[14.2%] top-[15.8%] z-30 grid h-[29.8%] w-[23.2%] content-start justify-items-center ${palette.text}`}>
-        <strong className="text-[.72rem] font-black leading-[.8] min-[380px]:text-[.78rem] sm:text-[1.08rem]">{playerCardRating(adjusted)}</strong>
+        <strong className="text-[.6rem] font-black leading-[.8] min-[380px]:text-[.66rem] sm:text-[.9rem] xl:text-[1.12rem]">{playerCardRating(adjusted)}</strong>
         <span className="mt-0.5 grid justify-items-center gap-px leading-none">
-          <span className={`text-[.34rem] font-black uppercase leading-none min-[380px]:text-[.37rem] sm:text-[.54rem] ${outOfPosition ? 'text-[#ffb4a8]' : secondary ? 'text-[#ffe9a6]' : ''}`}>{assignedPosition}</span>
+          <span className={`text-[.28rem] font-black uppercase leading-none min-[380px]:text-[.31rem] sm:text-[.44rem] xl:text-[.54rem] ${outOfPosition ? 'text-[#ffb4a8]' : secondary ? 'text-[#ffe9a6]' : ''}`}>{assignedPosition}</span>
           <span className="block aspect-square w-[8px] min-[380px]:w-[9px] sm:w-[11px]"><Arrow form={playerRegularityForm(player)} /></span>
         </span>
       </span>
@@ -717,7 +747,10 @@ function CompactPlayerCard({ player, assignedPosition, draggableProps = {}, onOp
       >
         <img className={`h-full w-full object-contain object-top ${player.has_custom_photo ? '' : 'opacity-50'}`} src={player.photo_path} alt="" />
       </span>
-      <strong className={`absolute left-[11.5%] right-[10%] top-[60.8%] z-30 grid h-[14.8%] place-items-center overflow-hidden px-0.5 text-center ${longName ? 'text-[.39rem] min-[380px]:text-[.43rem] sm:text-[.68rem]' : 'text-[.48rem] min-[380px]:text-[.52rem] sm:text-[.82rem]'} font-black uppercase leading-[.86] whitespace-normal [overflow-wrap:normal] [text-wrap:balance] ${palette.text}`}>
+      <strong
+        className={`absolute left-[8.5%] right-[7.5%] top-[58.8%] z-30 grid h-[18.2%] place-items-center overflow-hidden px-0.5 text-center font-black uppercase leading-[.92] whitespace-normal break-words ${palette.text}`}
+        style={{ fontSize: nameFontSize }}
+      >
         {player.nombre}
       </strong>
     </button>
@@ -813,6 +846,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const payload = useMemo(() => parsePayload(root), [root]);
   const lockedMatch = payload.matchId > 0;
   const [players, setPlayers] = useState(() => payload.players.map(normalizePlayer));
+  const [manualGoalkeepers, setManualGoalkeepers] = useState(() => initialManualGoalkeepers(payload.players.map(normalizePlayer)));
   const [numTeams] = useState(payload.numTeams);
   const [maxDiff, setMaxDiff] = useState(0.5);
   const [sortKey, setSortKey] = useState('nombre');
@@ -838,6 +872,11 @@ export function SorteoLegacyPageIsland({ root }) {
   const teamsContainerRef = useRef(null);
 
   const selectedPlayers = useMemo(() => (lockedMatch ? players.slice() : players.filter((player) => player.selected)), [lockedMatch, players]);
+  const selectedGoalkeepers = useMemo(
+    () => selectedPlayers.filter((player) => manualGoalkeepers[playerKey(player)] === true),
+    [manualGoalkeepers, selectedPlayers],
+  );
+  const goalkeeperLimitReached = selectedGoalkeepers.length >= numTeams;
 
   const sortedPlayers = useMemo(() => {
     const sorted = players.slice();
@@ -852,6 +891,10 @@ export function SorteoLegacyPageIsland({ root }) {
     });
     return sorted;
   }, [players, sortDirection, sortKey]);
+  const goalkeeperOptions = useMemo(() => {
+    const selectedKeys = new Set(selectedPlayers.map(playerKey));
+    return sortedPlayers.filter((player) => selectedKeys.has(playerKey(player)));
+  }, [selectedPlayers, sortedPlayers]);
 
   const nextGenerationIsRedraw = lockedMatch && (hasSavedDraw || generatedOnce || Boolean(teams));
   const redrawsRemaining = Math.max(0, payload.redrawLimit - persistedRedrawCount - redrawsUsedThisSession);
@@ -869,6 +912,19 @@ export function SorteoLegacyPageIsland({ root }) {
     const color = getTeamColor(teamIndex);
     return `Equipo ${color.label}`;
   }, [getTeamColor]);
+
+  const toggleManualGoalkeeper = useCallback((player) => {
+    const key = playerKey(player);
+    setManualGoalkeepers((current) => {
+      const next = { ...current };
+      if (next[key]) {
+        delete next[key];
+      } else {
+        next[key] = true;
+      }
+      return next;
+    });
+  }, []);
 
   const currentMatchupName = useMemo(() => Array.from({ length: numTeams }, (_, index) => getTeamDisplayName(index)).join(' vs '), [getTeamDisplayName, numTeams]);
 
@@ -898,7 +954,15 @@ export function SorteoLegacyPageIsland({ root }) {
     setError('');
     setSuccess('');
     const rawSelected = lockedMatch ? players.slice() : players.filter((player) => player.selected);
-    const prepared = prepareEmergencyGoalkeepers(rawSelected, numTeams);
+    const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true).map(playerKey));
+    if (selectedGoalkeeperKeys.size > numTeams) {
+      setError(`Elegiste ${selectedGoalkeeperKeys.size} arqueros para ${numTeams} equipos. Deja como maximo 1 arquero por equipo.`);
+      return null;
+    }
+    const selectedWithGoalkeepers = rawSelected.map((player) => (
+      selectedGoalkeeperKeys.has(playerKey(player)) ? { ...player, manualGoalkeeper: true } : player
+    ));
+    const prepared = prepareEmergencyGoalkeepers(selectedWithGoalkeepers, numTeams);
     const candidates = prepared.players;
     if (!candidates.length) {
       setError('Selecciona al menos un jugador.');
@@ -961,7 +1025,7 @@ export function SorteoLegacyPageIsland({ root }) {
     } finally {
       setGenerating(false);
     }
-  }, [lockedMatch, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, teams]);
+  }, [lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, teams]);
 
   useEffect(() => {
     const previous = window.generarEquipos;
@@ -992,6 +1056,11 @@ export function SorteoLegacyPageIsland({ root }) {
   const removePlayer = (player) => {
     if (lockedMatch) return;
     setPlayers((current) => current.filter((item) => playerKey(item) !== playerKey(player)));
+    setManualGoalkeepers((current) => {
+      const next = { ...current };
+      delete next[playerKey(player)];
+      return next;
+    });
   };
 
   const setAllSelected = (checked) => {
@@ -1030,6 +1099,7 @@ export function SorteoLegacyPageIsland({ root }) {
         return normalizePlayer({ nombre, posicion, ritmo, puntuacion, selected: true }, index);
       }).filter((player) => player.nombre && player.posicion);
       setPlayers(imported);
+      setManualGoalkeepers(initialManualGoalkeepers(imported));
       setSuccess(`${imported.length} jugadores importados correctamente.`);
     };
     reader.readAsText(file);
@@ -1081,6 +1151,45 @@ export function SorteoLegacyPageIsland({ root }) {
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate) === line ? 'MED' : bestNaturalPlayerPosition(candidate);
       setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' ? 'MED' : fallback }));
+    }
+  };
+
+  const pitchLineDelta = (teamIndex, line, delta) => {
+    if (line !== 'DEF') {
+      lineDelta(teamIndex, line, delta);
+      return;
+    }
+    if (!teams?.[teamIndex]) return;
+    const team = teams[teamIndex];
+    const currentAssignments = buildTeamAssignment(team, assignments);
+    const counts = teamLineCounts(team, currentAssignments);
+    pushUndo(teamIndex);
+
+    if (delta > 0) {
+      const perPositionLimit = maxDefLatPlayersPerPosition(team.length);
+      const candidate = team
+        .filter((player) => {
+          const currentLine = currentAssignments[playerKey(player)];
+          return currentLine !== 'ARQ' && currentLine !== 'DEF' && currentLine !== 'LAT';
+        })
+        .flatMap((player) => ['DEF', 'LAT']
+          .filter((targetLine) => (counts[targetLine] || 0) < perPositionLimit)
+          .map((targetLine) => ({ player, targetLine, rating: adjustedPositionRating(player, targetLine) })))
+        .sort((a, b) => b.rating - a.rating)[0];
+      if (candidate) setAssignments((current) => ({ ...current, [playerKey(candidate.player)]: candidate.targetLine }));
+      return;
+    }
+
+    const candidate = team
+      .filter((player) => ['DEF', 'LAT'].includes(currentAssignments[playerKey(player)]))
+      .sort((a, b) => {
+        const assignedA = currentAssignments[playerKey(a)];
+        const assignedB = currentAssignments[playerKey(b)];
+        return adjustedPositionRating(a, assignedA) - adjustedPositionRating(b, assignedB);
+      })[0];
+    if (candidate) {
+      const fallback = bestNaturalPlayerPosition(candidate);
+      setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' || fallback === 'DEF' || fallback === 'LAT' ? 'MED' : fallback }));
     }
   };
 
@@ -1256,7 +1365,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   return (
     <section
-      className="sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-4 px-3 py-4 text-[#07130f] sm:px-5"
+      className="sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5"
       onDragOver={(event) => {
         if (!dragState) return;
         event.preventDefault();
@@ -1267,7 +1376,7 @@ export function SorteoLegacyPageIsland({ root }) {
         setDragPoint(null);
       }}
     >
-      <div className="grid gap-4 rounded-xl border border-[#d7e6df] bg-[#f8fbfa] p-3 shadow-sm shadow-emerald-950/10 sm:p-4">
+      <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button className={quietButtonClass} type="button" onClick={() => navigate(payload.links?.back || 'editar_partidos.php')}>
             <Icon name="arrowLeft" />
@@ -1286,35 +1395,35 @@ export function SorteoLegacyPageIsland({ root }) {
           )}
         </div>
 
-        <header className="grid gap-3 rounded-lg border border-lime-200/70 bg-emerald-950 px-4 py-4 text-lime-50 shadow-lg shadow-emerald-950/20 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <header className="grid gap-3 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div className="min-w-0">
-            <p className="m-0 text-xs font-extrabold uppercase tracking-[.16em] text-lime-100/70">Sorteo de equipos</p>
-            <h1 className="m-0 text-2xl font-black leading-tight text-lime-50 sm:text-3xl">Generador GOODFELLAS</h1>
+            <p className="m-0 text-xs font-extrabold uppercase tracking-[.12em] text-[#526b62]">Sorteo de equipos</p>
+            <h1 className="m-0 text-xl font-black leading-tight text-[#07130f] sm:text-2xl">Generador GOODFELLAS</h1>
             {payload.match ? (
-              <p className="m-0 mt-2 text-sm font-semibold text-lime-50/80">
+              <p className="m-0 mt-1 text-sm font-semibold text-[#526b62]">
                 {payload.match.title} | {payload.match.matchDate}
               </p>
             ) : null}
           </div>
-          <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3">
-            <span className="rounded-lg border border-white/15 bg-white/10 px-3 py-2">
-              <b className="block text-lg font-black">{selectedPlayers.length}</b>
-              <small className="text-[10px] font-extrabold uppercase text-lime-100/75">Jugadores</small>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
+              <b className="block text-base font-black text-[#07130f]">{selectedPlayers.length}</b>
+              <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Jugadores</small>
             </span>
-            <span className="rounded-lg border border-white/15 bg-white/10 px-3 py-2">
-              <b className="block text-lg font-black">{numTeams}</b>
-              <small className="text-[10px] font-extrabold uppercase text-lime-100/75">Equipos</small>
+            <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
+              <b className="block text-base font-black text-[#07130f]">{numTeams}</b>
+              <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Equipos</small>
             </span>
-            <span className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 max-sm:col-span-2">
-              <b className="block text-lg font-black">{maxDiff}</b>
-              <small className="text-[10px] font-extrabold uppercase text-lime-100/75">Diferencia</small>
+            <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
+              <b className="block text-base font-black text-[#07130f]">{maxDiff}</b>
+              <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Diferencia</small>
             </span>
           </div>
         </header>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-        <aside className="grid content-start gap-3 rounded-xl border border-[#d7e6df] bg-white p-3 shadow-sm shadow-emerald-950/10">
+        <aside className={`grid content-start gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm ${lockedMatch ? 'max-lg:order-2' : ''}`}>
           <div className="flex items-center justify-between gap-3 border-b border-[#d7e6df] pb-3">
             <div>
               <h2 className="m-0 text-base font-black text-[#07130f]">Jugadores disponibles</h2>
@@ -1361,7 +1470,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
           <div className="grid max-h-[62vh] gap-2 overflow-auto rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2" id="jugadores-container">
             {sortedPlayers.map((player) => (
-              <article key={playerKey(player)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-[#d7e6df] bg-white p-2">
+              <article key={playerKey(player)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-[#d7e6df] bg-white p-2">
                 <input
                   className="h-4 w-4 accent-[#063d2b]"
                   id={`jugador-${playerKey(player)}`}
@@ -1375,6 +1484,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   <span className="flex flex-wrap items-center gap-1 text-[11px] font-extrabold text-slate-500">
                     <span>{player.posicion}</span>
                     <span>{playerCardRating(player.puntuacion)} GEN</span>
+                    {manualGoalkeepers[playerKey(player)] === true ? <span>Arquero</span> : null}
                     {isLowRhythmPlayer(player) ? <span>Lento</span> : null}
                   </span>
                 </div>
@@ -1389,9 +1499,57 @@ export function SorteoLegacyPageIsland({ root }) {
           </div>
         </aside>
 
-        <main className="grid content-start gap-4">
-          <div className="grid gap-3 rounded-xl border border-[#d7e6df] bg-white p-3 shadow-sm shadow-emerald-950/10">
-            <div className="flex flex-wrap items-center justify-center gap-2">
+        <main className={`grid content-start gap-4 lg:contents ${lockedMatch ? 'max-lg:order-1' : ''}`}>
+          <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-start-2 lg:row-start-1">
+            <div className="grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="m-0 text-sm font-black text-[#07130f]">Definir arqueros</h3>
+                  <p className="m-0 text-[11px] font-semibold text-[#526b62]">Se eligen antes de realizar el sorteo.</p>
+                </div>
+                <span className={`rounded-md border px-2 py-1 text-xs font-black ${selectedGoalkeepers.length === numTeams ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                  {selectedGoalkeepers.length}/{numTeams}
+                </span>
+              </div>
+              {selectedGoalkeepers.length > numTeams ? (
+                <p className="m-0 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-extrabold text-red-700">
+                  Hay mas arqueros elegidos que equipos.
+                </p>
+              ) : null}
+              <div className="grid max-h-44 gap-1.5 overflow-auto sm:grid-cols-2 xl:grid-cols-3">
+                {goalkeeperOptions.length ? goalkeeperOptions.map((player) => {
+                  const key = playerKey(player);
+                  const checked = manualGoalkeepers[key] === true;
+                  const disabled = !checked && goalkeeperLimitReached;
+                  return (
+                    <label
+                      key={`arquero-${key}`}
+                      className={`grid min-h-10 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border bg-white px-2 py-1.5 ${checked ? 'border-[#063d2b]' : 'border-[#d7e6df]'} ${disabled ? 'cursor-not-allowed opacity-55' : ''}`}
+                    >
+                      <input
+                        className="h-4 w-4 accent-[#063d2b]"
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={() => toggleManualGoalkeeper(player)}
+                      />
+                      <span className="min-w-0">
+                        <strong className="block truncate text-sm font-black text-[#07130f]">{player.nombre}</strong>
+                        <small className="block truncate text-[11px] font-extrabold text-[#526b62]">{player.posicion}</small>
+                      </span>
+                      <span className="rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1 text-[11px] font-black text-[#063d2b]">
+                        ARQ {playerCardRating(adjustedPositionRating(player, 'ARQ'))}
+                      </span>
+                    </label>
+                  );
+                }) : (
+                  <p className="m-0 rounded-md border border-[#d7e6df] bg-white px-2 py-2 text-xs font-bold text-[#526b62]">
+                    Selecciona jugadores para definir arqueros.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <button className={primaryButtonClass} id="generateTeamsButton" type="button" onClick={generateTeams} disabled={generateDisabled}>
                 <Icon name="dice" />
                 {generating ? 'Generando...' : generateButtonLabel}
@@ -1409,10 +1567,10 @@ export function SorteoLegacyPageIsland({ root }) {
             <Message id="success" tone="success">{success}</Message>
           </div>
 
-          <div id="equipos-generados" ref={teamsContainerRef} className="grid gap-4">
+          <div id="equipos-generados" ref={teamsContainerRef} className="grid gap-4 lg:col-span-2 lg:row-start-2">
             {teams ? (
               <>
-                <div className="mx-auto w-full rounded-xl border border-[#d7e6df] bg-white px-4 py-3 text-center text-xl font-black text-[#07130f] shadow-sm" data-sorteo-matchup-title="1">
+                <div className="w-full rounded-lg border border-[#d7e6df] bg-white px-4 py-2 text-center text-lg font-black text-[#07130f] shadow-sm" data-sorteo-matchup-title="1">
                   {currentMatchupName}
                 </div>
                 <div className="grid gap-4 xl:grid-cols-2">
@@ -1437,8 +1595,8 @@ export function SorteoLegacyPageIsland({ root }) {
                     const summary = teamTotalsSummary(team, assignments);
                     const formationOptions = getFormationOptions(team.length);
                     return (
-                      <article key={teamIndex} className={`team grid gap-3 rounded-xl border p-3 shadow-lg shadow-emerald-950/10 max-[760px]:gap-2 max-[760px]:p-2 ${color.panel}`} data-team-index={teamIndex} data-sorteo-team-card="1">
-                        <div className="grid gap-2 rounded-lg border border-white/70 bg-white/80 p-3 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center max-[760px]:p-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                      <article key={teamIndex} className="team-card sorteo-team-card team grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2" data-team-index={teamIndex} data-sorteo-team-card="1">
+                        <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
                             <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]" data-team-title>
                               <span className={`h-3 w-3 rounded-full ${color.accent}`} aria-hidden="true" />
@@ -1446,10 +1604,10 @@ export function SorteoLegacyPageIsland({ root }) {
                             </h3>
                             <p className="m-0 text-xs font-semibold text-slate-500">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>
                           </div>
-                          <span className={`inline-grid min-h-10 place-items-center rounded-lg border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
+                          <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/70 bg-white/65 p-2 max-[760px]:gap-1.5 max-[760px]:p-1.5 md:grid-cols-2">
+                        <div className="grid grid-cols-2 gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:gap-1.5 max-[760px]:p-1.5 md:grid-cols-2">
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
                             Camiseta
                             <select className={inputClass} value={color.name} onChange={(event) => setTeamColor(teamIndex, event.target.value)}>
@@ -1468,15 +1626,12 @@ export function SorteoLegacyPageIsland({ root }) {
                         </div>
 
                         <div
-                          className="team-formation relative grid min-h-[620px] grid-rows-[.8fr_1fr_1fr_1fr] gap-2 overflow-hidden rounded-xl border border-emerald-200 p-3 text-white max-[760px]:min-h-0 max-[760px]:gap-1 max-[760px]:p-2"
-                          style={{
-                            background: 'linear-gradient(rgba(5,37,27,.12),rgba(5,37,27,.30)), url("assets/images/captain-field-bg-vertical.jpg") center / cover no-repeat, linear-gradient(160deg,#0e7a43,#07563d)',
-                          }}
+                          className={`team-formation relative grid h-[680px] grid-rows-[minmax(0,.8fr)_repeat(3,minmax(0,1fr))] gap-2 overflow-hidden rounded-lg border border-emerald-200 p-3 text-white max-[760px]:h-[430px] max-[760px]:gap-1 max-[760px]:p-1.5 ${pitchBackgroundClass}`}
                           data-sorteo-drop-team={teamIndex}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
                         >
-                          <button className="absolute right-2 top-2 z-20 grid h-8 w-8 place-items-center rounded-lg border border-white/25 bg-emerald-950/65 text-white transition hover:bg-emerald-950 disabled:cursor-not-allowed disabled:opacity-40" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio">
+                          <button className="absolute right-2 top-2 z-20 grid h-8 w-8 place-items-center rounded-lg border border-white/25 bg-emerald-950/65 text-white transition hover:bg-emerald-950 disabled:cursor-not-allowed disabled:opacity-40 max-[760px]:h-7 max-[760px]:w-7" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio">
                             <Icon name="undo" />
                           </button>
                           {PITCH_LINES.map((line) => {
@@ -1484,31 +1639,28 @@ export function SorteoLegacyPageIsland({ root }) {
                             const label = line === 'DEF' ? 'DEF/LAT' : line;
                             const lineCounts = teamLineCounts(team, currentAssignments);
                             const count = line === 'DEF' ? lineCounts.DEF + lineCounts.LAT : lineCounts[line];
-                            const max = line === 'ARQ' ? 1 : maxFieldPlayersPerLine(team.length);
+                            const max = line === 'ARQ' ? 1 : (line === 'DEF' ? maxDefLatPlayersPerPosition(team.length) * 2 : maxFieldPlayersPerLine(team.length));
                             const canTuneLine = line !== 'ARQ';
-                            const controlLines = line === 'DEF' ? ['DEF', 'LAT'] : [line];
                             return (
                               <div
                                 key={line}
-                                className={`grid items-center gap-2 border-b border-white/15 last:border-b-0 max-[760px]:gap-1 ${
+                                className={`formation-line ${canTuneLine ? 'sorteo-line-with-tools' : 'sorteo-line-basic'} grid min-h-0 items-center gap-2 border-b border-white/15 last:border-b-0 max-[760px]:gap-1 ${
                                   canTuneLine
-                                    ? 'grid-cols-[54px_minmax(0,1fr)_34px] max-[760px]:grid-cols-[36px_minmax(0,1fr)_24px] max-[760px]:gap-0.5'
+                                    ? 'grid-cols-[54px_minmax(0,1fr)_34px] max-[760px]:grid-cols-[32px_minmax(0,1fr)_22px] max-[760px]:gap-0.5'
                                     : 'grid-cols-[54px_minmax(0,1fr)] max-[760px]:grid-cols-[38px_minmax(0,1fr)]'
                                 }`}
                               >
-                                <div className="grid justify-items-center gap-1 text-center text-[10px] font-black uppercase text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,.48)] max-[760px]:gap-0.5 max-[760px]:text-[9px]">
+                                <div className="line-label grid justify-items-center gap-1 text-center text-[10px] font-black uppercase text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,.48)] max-[760px]:gap-0.5 max-[760px]:text-[9px]">
                                   <span className="leading-none">{label}</span>
                                   <small className="rounded bg-emerald-950/45 px-1 text-[9px] font-extrabold leading-tight text-white/75 max-[760px]:text-[8px]">{count}/{max}</small>
                                   {canTuneLine ? (
                                     <span className="grid gap-1 max-[760px]:gap-0.5">
-                                      {controlLines.map((controlLine) => (
-                                        <button className="grid !h-7 !min-h-0 w-7 place-items-center rounded border border-white/30 bg-emerald-950/55 !p-0 text-xs font-black text-white hover:bg-emerald-950/80 max-[760px]:!h-6 max-[760px]:w-6 max-[760px]:text-[10px]" key={controlLine} type="button" onClick={() => lineDelta(teamIndex, controlLine, -1)} aria-label={`Quitar jugador de ${controlLine}`}>-</button>
-                                      ))}
+                                      <button className="grid !h-7 !min-h-0 w-7 place-items-center rounded border border-white/30 bg-emerald-950/55 !p-0 text-xs font-black text-white hover:bg-emerald-950/80 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-[10px]" type="button" onClick={() => pitchLineDelta(teamIndex, line, -1)} aria-label={`Quitar jugador de ${label}`}>-</button>
                                     </span>
                                   ) : null}
                                 </div>
                                 <div
-                                  className="flex min-h-[128px] flex-wrap items-center justify-center gap-2 rounded-lg border !border-white/10 !bg-emerald-950/10 p-2 max-[760px]:min-h-[98px] max-[760px]:gap-1 max-[760px]:p-0.5"
+                                  className="line-players flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/10 !bg-emerald-950/10 p-1 max-[760px]:gap-1 max-[760px]:p-0.5"
                                   data-sorteo-drop-line={line}
                                   data-team-index={teamIndex}
                                   onDragOver={(event) => event.preventDefault()}
@@ -1539,9 +1691,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                 </div>
                                 {canTuneLine ? (
                                   <div className="grid justify-items-center gap-1 max-[760px]:gap-0.5">
-                                    {controlLines.map((controlLine) => (
-                                      <button className="grid !h-7 !min-h-0 w-7 place-items-center rounded border border-lime-200/45 bg-lime-100 !p-0 text-xs font-black text-[#07130f] hover:bg-lime-200 max-[760px]:!h-6 max-[760px]:w-6 max-[760px]:text-[10px]" key={controlLine} type="button" onClick={() => lineDelta(teamIndex, controlLine, 1)} aria-label={`Agregar jugador a ${controlLine}`}>+</button>
-                                    ))}
+                                    <button className="grid !h-7 !min-h-0 w-7 place-items-center rounded border border-lime-200/45 bg-lime-100 !p-0 text-xs font-black text-[#07130f] hover:bg-lime-200 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-[10px]" type="button" onClick={() => pitchLineDelta(teamIndex, line, 1)} aria-label={`Agregar jugador a ${label}`}>+</button>
                                   </div>
                                 ) : null}
                               </div>
@@ -1549,7 +1699,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           })}
                         </div>
 
-                        <div className="grid gap-2 rounded-lg border border-white/70 bg-white/70 p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
+                        <div className="sorteo-team-stats grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
                           <div className="flex flex-wrap gap-1.5 max-[760px]:gap-1">
                             {(summary.arquero > 0 ? [['Arquero', summary.arquero]] : [['Ataque', summary.ataque]])
                               .concat([
@@ -1571,13 +1721,13 @@ export function SorteoLegacyPageIsland({ root }) {
                 </div>
               </>
             ) : (
-              <div className="grid min-h-64 place-items-center rounded-xl border border-dashed border-[#c9d8d1] bg-white p-8 text-center text-sm font-semibold text-slate-500">
+              <div className="grid min-h-64 place-items-center rounded-lg border border-dashed border-[#c9d8d1] bg-white p-8 text-center text-sm font-semibold text-slate-500">
                 Genera los equipos para ver la cancha y las cartas compactas.
               </div>
             )}
           </div>
 
-          <div id="download-controls" className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-xl border border-[#d7e6df] bg-white p-3 shadow-sm shadow-emerald-950/10`}>
+          <div id="download-controls" className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
             <div className="flex flex-wrap justify-center gap-2">
               <button className={quietButtonClass} type="button" onClick={downloadTeamsJpg} disabled={exporting}><Icon name="download" />{exporting ? 'Generando JPG...' : 'Exportar JPG'}</button>
               <button className={quietButtonClass} type="button" onClick={copyTeams}><Icon name="clipboard" />Copiar</button>

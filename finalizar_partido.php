@@ -1127,6 +1127,7 @@ require __DIR__ . '/includes/header.php';
         $roundRobinComplete = $isRoundRobinMatch && $roundRobinPlayedCount === count($roundRobinFixtures);
         $roundRobinTable = $isRoundRobinMatch ? calculate_round_robin_table($matchTeams, $roundRobinFixtures, $roundRobinScores) : [];
         $scoreSaved = repo_match_has_saved_result($selectedMatch, $matchTeams);
+        $canEditFormations = count($matchTeams) > 0 && in_array((string) ($selectedMatch['status'] ?? ''), ['sorteado', 'finalizado'], true);
         $hasSavedRatings = count(array_filter($participants, static fn(array $player): bool => $player['rating'] !== null && $player['rating'] !== '')) > 0;
         $hasSavedAwards = count($savedAwards) > 0;
         $canShareMatchSummary = $scoreSaved;
@@ -1204,7 +1205,7 @@ require __DIR__ . '/includes/header.php';
               <?php if ($scoreSaved && !$valuationsLocked): ?>
                 <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
               <?php endif; ?>
-              <?php if ($scoreSaved): ?>
+              <?php if ($canEditFormations): ?>
                 <a class="btn <?= $editFormations ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_formations=<?= $editFormations ? '0' : '1' ?><?= $editFormations ? '' : '#formaciones' ?>" title="<?= $editFormations ? 'Ocultar formaciones y camisetas' : 'Editar formaciones y camisetas' ?>"><span class="finish-edit-icon"><?= $editFormations ? '-' : '+' ?></span><span><?= $editFormations ? 'Ocultar formaciones' : 'Ver formaciones' ?></span></a>
               <?php endif; ?>
             </div>
@@ -1238,7 +1239,7 @@ require __DIR__ . '/includes/header.php';
               <?php else: ?>
                 <span class="btn btn-disabled finish-edit-btn" title="Guarda el resultado para habilitar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></span>
               <?php endif; ?>
-              <?php if ($scoreSaved): ?>
+              <?php if ($canEditFormations): ?>
                 <a class="btn <?= $editFormations ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_formations=<?= $editFormations ? '0' : '1' ?><?= $editFormations ? '' : '#formaciones' ?>" title="<?= $editFormations ? 'Ocultar formaciones y camisetas' : 'Editar formaciones y camisetas' ?>"><span class="finish-edit-icon"><?= $editFormations ? '-' : '+' ?></span><span><?= $editFormations ? 'Ocultar formaciones' : 'Ver formaciones' ?></span></a>
               <?php endif; ?>
             </div>
@@ -1265,7 +1266,7 @@ require __DIR__ . '/includes/header.php';
         <p class="flash flash-info">Las valoraciones quedaron bloqueadas porque pasaron mas de 7 dias desde la finalizacion de la fecha.</p>
       <?php endif; ?>
 
-      <?php if ($scoreSaved && $editFormations): ?>
+      <?php if ($canEditFormations && $editFormations): ?>
         <?php
           $shirtOptions = finish_shirt_options();
           $teamPlayerRows = [];
@@ -1283,12 +1284,37 @@ require __DIR__ . '/includes/header.php';
         <form method="post" id="formaciones" class="card finish-formation-editor" data-no-partial>
           <input type="hidden" name="action" value="save_formations">
           <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+          <script type="application/json" data-finish-team-analysis-config><?= json_encode([
+            'numTeams' => (int) ($selectedMatch['num_teams'] ?? count($matchTeams)),
+            'playersPerTeam' => (int) ($selectedMatch['players_per_team'] ?? 1),
+            'maxDiff' => (float) ($selectedMatch['max_diff'] ?? 0.5),
+            'players' => array_map(static fn(array $p): array => [
+                'id' => (int) $p['id'],
+                'name' => (string) $p['name'],
+                'positions' => (string) ($p['positions'] ?? ''),
+                'pace' => (string) ($p['pace'] ?? ''),
+                'skill' => (float) ($p['skill'] ?? 0),
+                'technique' => player_effective_stat($p, 'technique'),
+                'rhythm' => player_effective_stat($p, 'rhythm'),
+                'defense_physical' => player_effective_stat($p, 'defense_physical'),
+                'attack' => player_effective_stat($p, 'attack'),
+                'teamwork' => player_effective_stat($p, 'teamwork'),
+                'mentality' => player_effective_stat($p, 'mentality'),
+                'regularity' => player_effective_stat($p, 'regularity'),
+                'goalkeeper_skill' => player_effective_stat($p, 'goalkeeper_skill'),
+                'photo_path' => player_photo_path($p),
+                'photo_custom' => player_has_custom_photo($p),
+            ], $participants),
+          ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
           <div class="finish-formation-head">
             <div>
               <h3>Formaciones y camisetas</h3>
               <p class="small-muted">Ajusta como quedo parado cada equipo y que camiseta uso en este partido.</p>
             </div>
-            <button class="btn btn-primary" type="submit" name="action" value="save_formations" data-confirm="Guardar formaciones y camisetas de esta fecha?">Guardar formaciones</button>
+            <div class="finish-formation-head-actions">
+              <button class="btn btn-muted" type="button" data-finish-analyze-teams>Analizar equipos</button>
+              <button class="btn btn-primary" type="submit" name="action" value="save_formations" data-confirm="Guardar formaciones y camisetas de esta fecha?">Guardar formaciones</button>
+            </div>
           </div>
           <div class="finish-formation-grid">
             <?php foreach ($matchTeams as $team): ?>
@@ -1297,7 +1323,7 @@ require __DIR__ . '/includes/header.php';
                 $currentShirt = finish_normalize_shirt($team['color_name'] ?? '', $teamNumber);
                 $teamRows = $teamPlayerRows[$teamNumber] ?? [];
               ?>
-              <article class="finish-formation-team">
+              <article class="finish-formation-team" data-finish-formation-team="<?= $teamNumber ?>">
                 <header>
                   <div>
                     <small>Equipo <?= $teamNumber ?></small>
@@ -1328,7 +1354,7 @@ require __DIR__ . '/includes/header.php';
                           $currentTeam = (int) ($player['team_number'] ?? $teamNumber);
                           $currentPosition = finish_player_position($player);
                         ?>
-                        <tr>
+                        <tr data-finish-formation-row data-player-id="<?= $playerId ?>">
                           <td data-label="Jugador">
                             <strong><?= h((string) $player['name']) ?></strong>
                             <small><?= h((string) ($player['positions'] ?? '')) ?></small>
@@ -1356,7 +1382,10 @@ require __DIR__ . '/includes/header.php';
               </article>
             <?php endforeach; ?>
           </div>
+          <div class="finish-formation-pitch-preview" data-finish-formation-pitch></div>
+          <div class="manual-analysis-panel finish-team-analysis-panel" data-finish-team-analysis hidden></div>
           <div class="btn-row finish-formation-actions">
+            <button class="btn btn-muted" type="button" data-finish-analyze-teams>Analizar equipos</button>
             <button class="btn btn-primary" type="submit" name="action" value="save_formations" data-confirm="Guardar formaciones y camisetas de esta fecha?">Guardar formaciones</button>
           </div>
         </form>

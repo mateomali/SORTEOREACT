@@ -256,7 +256,6 @@ function awards_only_normalize(string $value): string
     $value = mb_strtoupper($value, 'UTF-8');
     $value = strtr($value, [
         'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ü' => 'U', 'Ñ' => 'N',
-        'Ã' => 'A', 'Ã‰' => 'E', 'Ã' => 'I', 'Ã“' => 'O', 'Ãš' => 'U', 'Ãœ' => 'U', 'Ã‘' => 'N',
     ]);
     $value = preg_replace('/[^A-Z0-9 ]/u', '', $value) ?? $value;
     return trim($value);

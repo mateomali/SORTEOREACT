@@ -268,10 +268,10 @@
         if (value) value.textContent = `${total.toFixed(1)} pts`;
         const tactic = titleContainer?.querySelector('[data-formation-tactic]') || externalTitle.querySelector('[data-formation-tactic]');
         if (tactic) {
-          const counts = ['DEF', 'LAT', 'MED', 'DEL'].map((line) => {
-            const formationLine = formationLines(formation).find((candidate) => lineKey(candidate) === line);
-            return formationLine?.querySelectorAll('[data-static-formation-player]')?.length || 0;
-          });
+          const cards = Array.from(formation.querySelectorAll('[data-static-formation-player]'));
+          const counts = ['DEF', 'LAT', 'MED', 'DEL'].map((position) => (
+            cards.filter((card) => String(card.dataset.assignedPosition || '').toUpperCase() === position).length
+          ));
           tactic.textContent = counts.join('-');
         }
         return;
@@ -2821,11 +2821,43 @@
     const mobilePanel = root.querySelector('[data-manual-mobile-panel]');
     const formationNote = root.querySelector('[data-manual-formation-note]');
     const characteristicsPanel = root.querySelector('[data-manual-team-characteristics]');
+    const analysisPanel = root.querySelector('[data-manual-analysis]');
+    const analyzeButton = root.querySelector('[data-manual-analyze]');
     const saveButton = root.querySelector('[data-manual-save]');
     const players = Array.isArray(config.players) ? config.players : [];
     const numTeams = Number(config.numTeams || 2);
     const playersPerTeam = Number(config.playersPerTeam || 1);
+    const maxDiff = Math.max(0.1, Number(config.maxDiff || 0.5));
     const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
+    const requiredPitchLines = ['ARQ', 'DEF', 'MED', 'DEL'];
+    const fieldStatWeights = {
+      DEF: { defense_physical: 0.31, rhythm: 0.18, technique: 0.13, teamwork: 0.16, mentality: 0.12, attack: 0.10 },
+      LAT: { rhythm: 0.24, defense_physical: 0.19, technique: 0.17, attack: 0.14, teamwork: 0.15, mentality: 0.11 },
+      MED: { technique: 0.24, rhythm: 0.22, defense_physical: 0.12, teamwork: 0.17, attack: 0.13, mentality: 0.12 },
+      DEL: { attack: 0.31, rhythm: 0.20, technique: 0.17, teamwork: 0.14, mentality: 0.10, defense_physical: 0.08 },
+    };
+    const goalkeeperStatWeights = { goalkeeper_skill: 0.42, defense_physical: 0.14, rhythm: 0.10, technique: 0.10, teamwork: 0.14, mentality: 0.10 };
+    const drawBalanceWeights = {
+      general: 50,
+      attack: 15,
+      defense_physical: 15,
+      rhythm: 18,
+      technique: 5,
+      teamwork: 8,
+      mentality: 10,
+      regularity: 5,
+      goalkeeper_skill: 25,
+    };
+    const analysisStatLabels = {
+      attack: 'ataque',
+      defense_physical: 'solidez defensiva',
+      rhythm: 'ritmo',
+      technique: 'tecnica',
+      teamwork: 'juego en equipo',
+      mentality: 'mentalidad',
+      regularity: 'regularidad',
+      goalkeeper_skill: 'arquero',
+    };
     const teamColors = [
       { name: 'ROSA', className: 'manual-team-rosa' },
       { name: 'AZUL', className: 'manual-team-azul' },
@@ -2880,6 +2912,7 @@
     let longPressTimer = null;
     let longPressKey = '';
     let touchAssignActive = false;
+    let analysisVisible = false;
 
     const counts = () => {
       const values = Array.from({ length: numTeams }, () => 0);
@@ -2910,6 +2943,328 @@
     const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
 
     const teamPlayers = (teamNumber) => players.filter((player) => String(assignments.get(String(player.id))?.team || '') === String(teamNumber));
+
+    const parsePlayerPositions = (player) => String(player.positions || '')
+      .split('/')
+      .map((position) => position.trim().toUpperCase())
+      .filter((position, index, list) => positions.includes(position) && list.indexOf(position) === index)
+      .slice(0, 2);
+
+    const playerPositionIndex = (player, position) => parsePlayerPositions(player).indexOf(position);
+    const playerHasPosition = (player, position) => playerPositionIndex(player, position) !== -1;
+    const playerPrimaryPosition = (player) => parsePlayerPositions(player)[0] || 'MED';
+    const pitchLine = (position) => (position === 'LAT' ? 'DEF' : position);
+    const playerPositionFitFactor = (player, position) => {
+      const index = playerPositionIndex(player, position);
+      if (index === 0) return 1;
+      if (index === 1) return 0.94;
+      const naturalLines = parsePlayerPositions(player).map(pitchLine);
+      return naturalLines.includes(pitchLine(position)) ? 0.86 : 0.72;
+    };
+    const mainLineLimit = () => Math.max(0, Math.floor(playersPerTeam / 3));
+    const defenseSideLimit = () => Math.max(0, Math.floor(playersPerTeam / 4));
+    const lineLimit = (position) => {
+      if (position === 'ARQ') return 1;
+      if (position === 'DEF' || position === 'LAT') return defenseSideLimit();
+      return mainLineLimit();
+    };
+
+    const regularityAdjusted = (rating, player) => Math.max(1, Math.min(6, rating * (1 + ((statValue(player, 'regularity') - 3.5) / 50))));
+    const positionRating = (player, position) => {
+      const weights = position === 'ARQ' ? goalkeeperStatWeights : (fieldStatWeights[position] || fieldStatWeights.MED);
+      const total = Object.entries(weights).reduce((sum, [field, weight]) => sum + (statValue(player, field) * weight), 0);
+      return Math.round(regularityAdjusted(total, player) * playerPositionFitFactor(player, position) * 10) / 10;
+    };
+    const bestNaturalPosition = (player) => parsePlayerPositions(player)
+      .sort((left, right) => {
+        const ratingDiff = positionRating(player, right) - positionRating(player, left);
+        if (ratingDiff !== 0) return ratingDiff;
+        return positions.indexOf(left) - positions.indexOf(right);
+      })[0] || 'MED';
+    const bestNaturalRating = (player) => positionRating(player, bestNaturalPosition(player));
+    const assignedPositionFor = (player) => {
+      const assignment = assignments.get(String(player.id)) || {};
+      return positions.includes(assignment.position) ? assignment.position : bestNaturalPosition(player);
+    };
+    const assignedRating = (player) => positionRating(player, assignedPositionFor(player));
+
+    const teamSnapshots = () => Array.from({ length: numTeams }, (_, index) => ({
+      teamNumber: index + 1,
+      color: teamColorByName(selectedTeamColors[index]),
+      players: teamPlayers(index + 1),
+    }));
+
+    const sum = (values) => values.reduce((total, value) => total + value, 0);
+    const spread = (values) => values.length ? Math.max(...values) - Math.min(...values) : 0;
+    const minItem = (items, valueGetter) => items.reduce((best, item) => (best === null || valueGetter(item) < valueGetter(best) ? item : best), null);
+    const maxItem = (items, valueGetter) => items.reduce((best, item) => (best === null || valueGetter(item) > valueGetter(best) ? item : best), null);
+
+    const bandIds = () => {
+      if (players.length < 4) return { low: new Set(), high: new Set() };
+      const sorted = [...players].sort((left, right) => {
+        const diff = bestNaturalRating(left) - bestNaturalRating(right);
+        return diff !== 0 ? diff : String(left.name || '').localeCompare(String(right.name || ''));
+      });
+      const bandSize = Math.max(1, Math.floor(players.length * 0.25));
+      return {
+        low: new Set(sorted.slice(0, bandSize).map((player) => String(player.id))),
+        high: new Set(sorted.slice(-bandSize).map((player) => String(player.id))),
+      };
+    };
+
+    const lowLiability = (player) => {
+      const rating = bestNaturalRating(player);
+      return Math.max(0, 2.5 - rating) * 2 + (rating < 2 ? (2 - rating) * 3 : 0);
+    };
+
+    const weakestPairScore = (team, count = 2) => {
+      const ratings = team.map(bestNaturalRating).sort((left, right) => left - right);
+      return sum(ratings.slice(0, Math.max(1, Math.min(count, ratings.length))));
+    };
+
+    const analyzeTeam = (snapshot, bands) => {
+      const statFields = Object.keys(analysisStatLabels);
+      const lineCounts = Object.fromEntries(positions.map((position) => [position, 0]));
+      const statTotals = Object.fromEntries(statFields.map((field) => [field, 0]));
+      const outOfPosition = [];
+      snapshot.players.forEach((player) => {
+        const assigned = assignedPositionFor(player);
+        lineCounts[assigned] = (lineCounts[assigned] || 0) + 1;
+        statFields.forEach((field) => {
+          if (field === 'goalkeeper_skill' && !playerHasPosition(player, 'ARQ') && assigned !== 'ARQ') return;
+          statTotals[field] += statValue(player, field);
+        });
+        if (!playerHasPosition(player, assigned)) {
+          outOfPosition.push(player);
+        }
+      });
+      const pitchCounts = {
+        ARQ: lineCounts.ARQ || 0,
+        DEF: (lineCounts.DEF || 0) + (lineCounts.LAT || 0),
+        MED: lineCounts.MED || 0,
+        DEL: lineCounts.DEL || 0,
+      };
+      return {
+        ...snapshot,
+        total: sum(snapshot.players.map(assignedRating)),
+        slow: snapshot.players.filter(lowRhythm).length,
+        fast: snapshot.players.filter((player) => !lowRhythm(player)).length,
+        statTotals,
+        lineCounts,
+        pitchCounts,
+        missingLines: requiredPitchLines.filter((line) => (pitchCounts[line] || 0) <= 0),
+        overloadedLines: positions.filter((line) => (lineCounts[line] || 0) > lineLimit(line)),
+        outOfPosition,
+        highBand: snapshot.players.filter((player) => bands.high.has(String(player.id))).length,
+        lowBand: snapshot.players.filter((player) => bands.low.has(String(player.id))).length,
+        floorScore: weakestPairScore(snapshot.players, 2),
+        liability: sum(snapshot.players.map(lowLiability)),
+      };
+    };
+
+    const analysisCost = (summaries) => {
+      const statFields = Object.keys(analysisStatLabels);
+      let cost = spread(summaries.map((team) => team.total)) * drawBalanceWeights.general;
+      statFields.forEach((field) => {
+        cost += spread(summaries.map((team) => team.statTotals[field] || 0)) * (drawBalanceWeights[field] || 0);
+      });
+      cost += spread(summaries.map((team) => team.slow)) * 20;
+      cost += spread(summaries.map((team) => team.lowBand)) * 120;
+      cost += spread(summaries.map((team) => team.highBand)) * 90;
+      cost += spread(summaries.map((team) => team.floorScore)) * 55;
+      cost += spread(summaries.map((team) => team.liability)) * 85;
+      summaries.forEach((team) => {
+        cost += team.missingLines.length * 240;
+        cost += team.overloadedLines.length * 160;
+        cost += Math.abs((team.lineCounts.ARQ || 0) - 1) * 260;
+        cost += team.outOfPosition.length * 20;
+      });
+      return cost;
+    };
+
+    const buildSummariesFromSnapshots = (snapshots) => {
+      const bands = bandIds();
+      return snapshots.map((snapshot) => analyzeTeam(snapshot, bands));
+    };
+
+    const teamDisplayName = (summary) => `${teamLabel(summary.teamNumber)} (${summary.color.name})`;
+
+    const describeAnalysisIssues = (summaries) => {
+      const issues = [];
+      const totals = summaries.map((team) => team.total);
+      const strongest = maxItem(summaries, (team) => team.total);
+      const weakest = minItem(summaries, (team) => team.total);
+      const totalGap = spread(totals);
+      if (strongest && weakest && totalGap > maxDiff) {
+        issues.push({
+          severity: 'alta',
+          title: `Diferencia general de ${totalGap.toFixed(1)} puntos`,
+          detail: `${teamDisplayName(strongest)} queda por encima de ${teamDisplayName(weakest)}. El limite configurado para el sorteo es ${maxDiff.toFixed(1)}.`,
+        });
+      }
+
+      summaries.forEach((team) => {
+        if ((team.lineCounts.ARQ || 0) !== 1) {
+          issues.push({
+            severity: 'alta',
+            title: `${teamDisplayName(team)} tiene ${(team.lineCounts.ARQ || 0)} arqueros`,
+            detail: 'El sorteo valida un arquero por equipo. Ajusta la posicion o mueve un jugador.',
+          });
+        }
+        if (team.missingLines.length) {
+          issues.push({
+            severity: 'alta',
+            title: `${teamDisplayName(team)} no cubre ${team.missingLines.join(', ')}`,
+            detail: 'Cada equipo necesita arquero, defensa, medio y ataque representados.',
+          });
+        }
+        if (team.overloadedLines.length) {
+          issues.push({
+            severity: 'media',
+            title: `${teamDisplayName(team)} carga demasiado ${team.overloadedLines.join(', ')}`,
+            detail: 'El criterio del sorteo limita acumulacion por linea para evitar equipos partidos.',
+          });
+        }
+        if (team.outOfPosition.length) {
+          issues.push({
+            severity: 'media',
+            title: `${teamDisplayName(team)} tiene ${team.outOfPosition.length} fuera de posicion`,
+            detail: team.outOfPosition.slice(0, 3).map((player) => player.name).join(', '),
+          });
+        }
+      });
+
+      const slowGap = spread(summaries.map((team) => team.slow));
+      if (slowGap > 1) {
+        const mostSlow = maxItem(summaries, (team) => team.slow);
+        const leastSlow = minItem(summaries, (team) => team.slow);
+        issues.push({
+          severity: 'media',
+          title: `Ritmo lento desparejo (${slowGap} de diferencia)`,
+          detail: `${teamDisplayName(mostSlow)} concentra ${mostSlow.slow} lentos y ${teamDisplayName(leastSlow)} tiene ${leastSlow.slow}.`,
+        });
+      }
+
+      ['attack', 'defense_physical', 'rhythm', 'technique', 'teamwork', 'mentality', 'regularity', 'goalkeeper_skill'].forEach((field) => {
+        const values = summaries.map((team) => team.players.length ? (team.statTotals[field] || 0) / team.players.length : 0);
+        const gap = spread(values);
+        const threshold = field === 'goalkeeper_skill' ? 0.8 : 0.55;
+        if (gap <= threshold) return;
+        const strong = summaries[values.indexOf(Math.max(...values))];
+        const weak = summaries[values.indexOf(Math.min(...values))];
+        issues.push({
+          severity: field === 'goalkeeper_skill' ? 'alta' : 'media',
+          title: `Brecha de ${analysisStatLabels[field]}: ${gap.toFixed(1)}`,
+          detail: `${teamDisplayName(weak)} queda corto frente a ${teamDisplayName(strong)}.`,
+        });
+      });
+
+      const highGap = spread(summaries.map((team) => team.highBand));
+      if (highGap > 0) {
+        const highTeam = maxItem(summaries, (team) => team.highBand);
+        const lowTeam = minItem(summaries, (team) => team.highBand);
+        issues.push({
+          severity: 'media',
+          title: 'Jugadores fuertes concentrados',
+          detail: `${teamDisplayName(highTeam)} tiene ${highTeam.highBand}; ${teamDisplayName(lowTeam)} tiene ${lowTeam.highBand}.`,
+        });
+      }
+
+      const lowGap = spread(summaries.map((team) => team.lowBand));
+      if (lowGap > 0) {
+        const highLowTeam = maxItem(summaries, (team) => team.lowBand);
+        const lowLowTeam = minItem(summaries, (team) => team.lowBand);
+        issues.push({
+          severity: 'media',
+          title: 'Jugadores mas flojos concentrados',
+          detail: `${teamDisplayName(highLowTeam)} tiene ${highLowTeam.lowBand}; ${teamDisplayName(lowLowTeam)} tiene ${lowLowTeam.lowBand}.`,
+        });
+      }
+
+      if (spread(summaries.map((team) => team.floorScore)) > 1) {
+        const weakFloor = minItem(summaries, (team) => team.floorScore);
+        issues.push({
+          severity: 'media',
+          title: `${teamDisplayName(weakFloor)} tiene banco mas fragil`,
+          detail: 'El sorteo penaliza que los dos puntajes mas bajos queden muy juntos.',
+        });
+      }
+
+      return issues.slice(0, 8);
+    };
+
+    const swapRecommendations = (summaries) => {
+      const baseSnapshots = teamSnapshots();
+      const baseCost = analysisCost(summaries);
+      const candidates = [];
+      for (let left = 0; left < baseSnapshots.length - 1; left += 1) {
+        for (let right = left + 1; right < baseSnapshots.length; right += 1) {
+          baseSnapshots[left].players.forEach((leftPlayer, leftIndex) => {
+            baseSnapshots[right].players.forEach((rightPlayer, rightIndex) => {
+              const nextSnapshots = baseSnapshots.map((team) => ({ ...team, players: [...team.players] }));
+              nextSnapshots[left].players[leftIndex] = rightPlayer;
+              nextSnapshots[right].players[rightIndex] = leftPlayer;
+              const nextSummaries = buildSummariesFromSnapshots(nextSnapshots);
+              const nextCost = analysisCost(nextSummaries);
+              const improvement = baseCost - nextCost;
+              if (improvement <= Math.max(12, baseCost * 0.03)) return;
+              candidates.push({
+                leftPlayer,
+                rightPlayer,
+                leftTeam: summaries[left],
+                rightTeam: summaries[right],
+                nextSummaries,
+                improvement,
+                nextTotalGap: spread(nextSummaries.map((team) => team.total)),
+              });
+            });
+          });
+        }
+      }
+      return candidates
+        .sort((a, b) => b.improvement - a.improvement)
+        .slice(0, 3);
+    };
+
+    const renderManualAnalysis = () => {
+      if (!analysisPanel) return;
+      if (!analysisVisible || !teamsAreComplete()) {
+        analysisPanel.hidden = true;
+        analysisPanel.innerHTML = '';
+        return;
+      }
+      const summaries = buildSummariesFromSnapshots(teamSnapshots());
+      const issues = describeAnalysisIssues(summaries);
+      const recommendations = swapRecommendations(summaries);
+      analysisPanel.hidden = false;
+      analysisPanel.innerHTML = `
+        <div class="manual-analysis-head">
+          <strong>Analisis de equipos</strong>
+          <span>Diferencia general ${spread(summaries.map((team) => team.total)).toFixed(1)} / limite ${maxDiff.toFixed(1)}</span>
+        </div>
+        <div class="manual-analysis-grid">
+          ${summaries.map((team) => `
+            <article>
+              <strong>${escapeHtml(teamDisplayName(team))}</strong>
+              <span>General ${team.total.toFixed(1)} | ${team.fast} rapidos / ${team.slow} lentos</span>
+              <span>Lineas ARQ ${team.lineCounts.ARQ || 0}, DEF ${(team.lineCounts.DEF || 0) + (team.lineCounts.LAT || 0)}, MED ${team.lineCounts.MED || 0}, DEL ${team.lineCounts.DEL || 0}</span>
+            </article>
+          `).join('')}
+        </div>
+        <div class="manual-analysis-findings">
+          <strong>Puntos flojos</strong>
+          ${issues.length
+            ? `<ul>${issues.map((issue) => `<li><span>${escapeHtml(issue.severity)}</span><div><strong>${escapeHtml(issue.title)}</strong><p>${escapeHtml(issue.detail)}</p></div></li>`).join('')}</ul>`
+            : '<p>No aparecen falencias fuertes con los criterios del sorteo.</p>'}
+        </div>
+        <div class="manual-analysis-findings">
+          <strong>Cambios sugeridos</strong>
+          ${recommendations.length
+            ? `<ul>${recommendations.map((item) => `<li><span>swap</span><div><strong>${escapeHtml(item.leftPlayer.name)} (${teamLabel(item.leftTeam.teamNumber)}) por ${escapeHtml(item.rightPlayer.name)} (${teamLabel(item.rightTeam.teamNumber)})</strong><p>Baja la diferencia general proyectada a ${item.nextTotalGap.toFixed(1)} y mejora el balance global.</p></div></li>`).join('')}</ul>`
+            : '<p>No hay un intercambio simple que mejore claramente el balance.</p>'}
+        </div>
+      `;
+    };
 
     const teamCharacteristics = (team) => {
       const total = team.reduce((sum, player) => sum + Number(player.skill || 0), 0);
@@ -2993,7 +3348,11 @@
       if (saveButton) {
         saveButton.disabled = !canSave;
       }
+      if (analyzeButton) {
+        analyzeButton.disabled = !canSave;
+      }
       renderTeamCharacteristics();
+      renderManualAnalysis();
     };
 
     const warnTeamLimitReached = () => {
@@ -3159,6 +3518,7 @@
       }
       current.team = normalizedTeam;
       assignments.set(key, current);
+      analysisVisible = false;
       if (searchInput && String(searchInput.value || '').trim() !== '') {
         searchInput.value = '';
       }
@@ -3193,6 +3553,7 @@
         current.position = String(event.target.value || 'MED');
       }
       assignments.set(key, current);
+      analysisVisible = false;
       render();
     });
 
@@ -3296,6 +3657,14 @@
       if (assignPlayerToTeam(longPressKey, String(target.getAttribute('data-manual-mobile-team') || ''))) {
         closeMobilePanel();
       }
+    });
+
+    analyzeButton?.addEventListener('click', () => {
+      updateStatus();
+      if (analyzeButton.disabled) return;
+      analysisVisible = true;
+      renderManualAnalysis();
+      analysisPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
     saveButton?.addEventListener('click', async () => {
