@@ -501,11 +501,11 @@ function history_team_label_short(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => 'ðŸ’—',
-        'AZUL' => 'ðŸ’™',
-        'VERDE' => 'ðŸ’š',
-        'NEGRO' => 'ðŸ–¤',
-        'NARANJA' => 'ðŸ§¡',
+        'ROSA' => '💗',
+        'AZUL' => '💙',
+        'VERDE' => '💚',
+        'NEGRO' => '🖤',
+        'NARANJA' => '🧡',
         'CAMISADO' => 'C',
         'DESCAMISADO' => 'D',
     ];

@@ -82,7 +82,7 @@ function normalize_pace(string $pace): string
     if ($value === 'lento') {
         return 'lento';
     }
-    if (in_array($value, ['rápido', 'rÃ¡pido', 'rapido'], true)) {
+    if (in_array($value, ['rápido', 'rápido', 'rapido'], true)) {
         return 'rapido';
     }
     return 'rapido';

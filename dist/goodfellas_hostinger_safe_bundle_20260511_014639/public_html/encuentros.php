@@ -778,11 +778,11 @@ function admin_history_team_label(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => 'ðŸ’—',
-        'AZUL' => 'ðŸ’™',
-        'VERDE' => 'ðŸ’š',
-        'NEGRO' => 'ðŸ–¤',
-        'NARANJA' => 'ðŸ§¡',
+        'ROSA' => '💗',
+        'AZUL' => '💙',
+        'VERDE' => '💚',
+        'NEGRO' => '🖤',
+        'NARANJA' => '🧡',
     ];
     $normalizedColor = mb_strtoupper($color, 'UTF-8');
     if (isset($heartByColor[$normalizedColor])) {

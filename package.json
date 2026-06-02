@@ -1,7 +1,7 @@
 {
   "name": "sorteo",
   "version": "1.0.0",
-  "description": "1. Abre phpMyAdmin. 2. Importa el archivo [`database.sql`](./database.sql). 3. Verifica que se creo la base `u552541920_futbol` y sus tablas.",
+  "description": "Goodfellas Futbol local PHP/MySQL app with React islands.",
   "main": "index.js",
   "directories": {
     "lib": "lib"
@@ -10,7 +10,9 @@
     "build": "npm run build:css && npm run build:react",
     "build:css": "tailwindcss -i ./assets/tailwind.input.css -o ./assets/tailwind.css --minify",
     "build:react": "vite build",
+    "db:import": "powershell -ExecutionPolicy Bypass -File scripts/importar-base-local.ps1",
     "dev:react": "vite --host 0.0.0.0",
+    "serve:local": "powershell -ExecutionPolicy Bypass -File scripts/levantar-servidor-local.ps1",
     "test:react-smoke": "playwright test tests/react-partial-smoke.spec.js",
     "test:site-pages": "playwright test tests/site-pages-smoke.spec.js",
     "test:smoke": "npm run test:site-pages && npm run test:spa && npm run test:react-smoke",

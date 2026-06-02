@@ -478,7 +478,7 @@ function player_mobile_rating_summary(array $player): string
     }
     $full = max(0, min(6, $full));
     $empty = max(0, 6 - $full - ($hasHalf ? 1 : 0));
-    $stars = str_repeat('â˜…', $full) . ($hasHalf ? 'Â½' : '') . str_repeat('â˜†', $empty);
+    $stars = str_repeat('★', $full) . ($hasHalf ? '½' : '') . str_repeat('☆', $empty);
 
     return '<span class="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">' .
         '<span class="truncate">' . h((string) $player['positions']) . '</span>' .

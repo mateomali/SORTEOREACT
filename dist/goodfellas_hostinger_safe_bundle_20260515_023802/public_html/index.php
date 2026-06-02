@@ -260,7 +260,7 @@ $awardDescriptions = [
     'putita' => 'Jugador no comprometido o problematico.',
     'ghost' => 'Jugador que erro mucho o participo poco.',
     'keeper' => 'Mejor arquero de la fecha.',
-    'goodfellas' => 'Mejor actitud y buen compaÃ±ero.',
+    'goodfellas' => 'Mejor actitud y buen compañero.',
 ];
 $savedMatchAwards = $selectedMatchId > 0 ? repo_match_awards($selectedMatchId) : [];
 $playerAwardIcons = [];
@@ -507,11 +507,11 @@ function history_team_label_short(array $match, array $team, array $captainNames
     }
 
     $heartByColor = [
-        'ROSA' => 'ðŸ’—',
-        'AZUL' => 'ðŸ’™',
-        'VERDE' => 'ðŸ’š',
-        'NEGRO' => 'ðŸ–¤',
-        'NARANJA' => 'ðŸ§¡',
+        'ROSA' => '💗',
+        'AZUL' => '💙',
+        'VERDE' => '💚',
+        'NEGRO' => '🖤',
+        'NARANJA' => '🧡',
         'CAMISADO' => 'C',
         'DESCAMISADO' => 'D',
     ];
@@ -790,7 +790,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     ob_start();
     ?>
     <?php if (!$groupedTeams): ?>
-      <p>Los equipos todavÃ­a no fueron formados. Cuando estÃ©n sorteados o elegidos por capitanes, se mostrarÃ¡ la formaciÃ³n acÃ¡.</p>
+      <p>Los equipos todavía no fueron formados. Cuando estén sorteados o elegidos por capitanes, se mostrará la formación acá.</p>
       <?php if ($participants): ?>
         <div class="selected-player-list public-player-list">
           <?php foreach ($participants as $player): ?>
@@ -911,7 +911,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                               </span>
                             <?php endif; ?>
                           <?php else: ?>
-                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> â­</span>
+                            <span class="formation-player-meta"><?= h(number_format($formationOverall, 1, '.', '')) ?> ⭐</span>
                           <?php endif; ?>
                         </div>
                       <?php endforeach; ?>

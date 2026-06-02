@@ -50,6 +50,7 @@ const textActionButtonClass = `!border-0 !bg-transparent !p-0 !text-left !shadow
 const playerNameButtonClass = `!grid !w-full min-w-0 !justify-start !justify-self-stretch !justify-items-start !border-0 !bg-transparent !p-0 !text-left !shadow-none ${focusRing}`;
 const fieldControlClass = 'min-h-10 rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
 const numberControlClass = 'h-10 rounded-lg border border-[#c9d8d1] bg-white px-2 text-center text-base font-black text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+const sortableHeaderButtonClass = `inline-flex min-h-8 items-center gap-1 rounded-md border border-transparent px-1.5 text-xs font-black text-[#526b62] transition-colors hover:border-[#c9d8d1] hover:bg-white hover:text-[#063d2b] ${focusRing}`;
 
 function filterButtonClass(active) {
   return `min-h-10 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#063d2b] bg-[#063d2b] text-white' : 'border-[#c9d8d1] bg-white text-[#07130f] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'}`;
@@ -77,6 +78,29 @@ function normalize(value) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+}
+
+function compareText(a, b) {
+  return String(a || '').localeCompare(String(b || ''), 'es-AR', { sensitivity: 'base', numeric: true });
+}
+
+function comparePlayersBySort(a, b, sortConfig) {
+  const direction = sortConfig.direction === 'asc' ? 1 : -1;
+  let result = 0;
+
+  if (sortConfig.field === 'name') {
+    result = compareText(a.name, b.name);
+  } else if (sortConfig.field === 'position') {
+    result = compareText(a.positionsText || a.primaryPosition, b.positionsText || b.primaryPosition);
+  } else if (sortConfig.field === 'overall') {
+    result = Number(a.overall || 0) - Number(b.overall || 0);
+  }
+
+  if (result === 0) {
+    result = compareText(a.name, b.name);
+  }
+
+  return result * direction;
 }
 
 function normalizeSix(value, fallback = 3) {
@@ -243,6 +267,19 @@ function SaveIcon() {
       <path d="M17 21v-8H7v8" />
       <path d="M7 3v5h8" />
     </svg>
+  );
+}
+
+function SortHeaderButton({ field, label, sortConfig, onSort }) {
+  const active = sortConfig.field === field;
+  const directionLabel = active && sortConfig.direction === 'asc' ? 'menor a mayor' : 'mayor a menor';
+  const indicator = active ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕';
+
+  return (
+    <button className={sortableHeaderButtonClass} type="button" onClick={() => onSort(field)} aria-sort={active ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'} title={`Ordenar ${label.toLowerCase()} de ${directionLabel}`}>
+      <span>{label}</span>
+      <span className="text-[11px] leading-none text-[#063d2b]" aria-hidden="true">{indicator}</span>
+    </button>
   );
 }
 
@@ -593,6 +630,7 @@ export function Jugadores2PageIsland({ root }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [topSort, setTopSort] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ field: 'name', direction: 'asc' });
   const [activeId, setActiveId] = useState(null);
   const [cardId, setCardId] = useState(null);
   const [radarId, setRadarId] = useState(null);
@@ -615,6 +653,14 @@ export function Jugadores2PageIsland({ root }) {
     ));
   }, []);
 
+  const handleHeaderSort = useCallback((field) => {
+    setTopSort(false);
+    setSortConfig((current) => ({
+      field,
+      direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  }, []);
+
   const visiblePlayers = useMemo(() => {
     const normalizedQuery = normalize(query);
     const filtered = payload.players.filter((player) => {
@@ -622,9 +668,11 @@ export function Jugadores2PageIsland({ root }) {
       const matchesQuery = normalizedQuery === '' || normalize(`${player.search} ${player.overall} ${player.rating}`).includes(normalizedQuery);
       return matchesFilter && matchesQuery;
     });
-    if (!topSort) return filtered;
-    return filtered.slice().sort((a, b) => Number(b.overall || 0) - Number(a.overall || 0));
-  }, [filter, payload.players, query, topSort]);
+    if (topSort) {
+      return filtered.slice().sort((a, b) => Number(b.overall || 0) - Number(a.overall || 0));
+    }
+    return filtered.slice().sort((a, b) => comparePlayersBySort(a, b, sortConfig));
+  }, [filter, payload.players, query, sortConfig, topSort]);
 
   const activePlayer = payload.players.find((player) => String(player.id) === String(activeId)) || null;
   const cardPlayer = payload.players.find((player) => String(player.id) === String(cardId)) || null;
@@ -707,9 +755,15 @@ export function Jugadores2PageIsland({ root }) {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-[#f2f6f4]">
             <tr>
-              <th className="border-b border-[#c9d8d1] px-3 py-2 text-left text-xs font-black text-[#526b62]">Jugador</th>
-              <th className="border-b border-[#c9d8d1] px-3 py-2 text-left text-xs font-black text-[#526b62]">Posicion</th>
-              <th className="border-b border-[#c9d8d1] px-3 py-2 text-left text-xs font-black text-[#526b62]">Media</th>
+              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+                <SortHeaderButton field="name" label="Jugador" sortConfig={sortConfig} onSort={handleHeaderSort} />
+              </th>
+              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+                <SortHeaderButton field="position" label="Posicion" sortConfig={sortConfig} onSort={handleHeaderSort} />
+              </th>
+              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+                <SortHeaderButton field="overall" label="Media" sortConfig={sortConfig} onSort={handleHeaderSort} />
+              </th>
               <th className="border-b border-[#c9d8d1] px-3 py-2 text-right text-xs font-black text-[#526b62]">Acciones</th>
             </tr>
           </thead>
