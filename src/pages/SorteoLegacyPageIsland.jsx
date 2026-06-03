@@ -465,6 +465,19 @@ function historicalRepeatPenalty(teams, pairHistory) {
   return penalty;
 }
 
+function teamRepeatedPairs(team, pairHistory = {}) {
+  const pairs = [];
+  for (let a = 0; a < team.length; a += 1) {
+    for (let b = a + 1; b < team.length; b += 1) {
+      const key = teammatePairKey(team[a], team[b]);
+      if (!key) continue;
+      const repeats = Number(pairHistory[key] || 0);
+      if (repeats > 0) pairs.push({ names: `${team[a].nombre} + ${team[b].nombre}`, count: repeats });
+    }
+  }
+  return pairs.sort((left, right) => right.count - left.count || left.names.localeCompare(right.names, 'es')).slice(0, 3);
+}
+
 function prepareEmergencyGoalkeepers(players, numTeams) {
   const goalkeeperCandidates = players.filter(canPlayGoalkeeper);
   const missing = Math.max(0, numTeams - goalkeeperCandidates.length);
@@ -1266,6 +1279,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [touchMoveMode, setTouchMoveMode] = useState(false);
   const [touchMoveSource, setTouchMoveSource] = useState(null);
   const [lockedPlayerPositions, setLockedPlayerPositions] = useState({});
+  const [drawVariants, setDrawVariants] = useState([]);
   const seenDrawSignatures = useRef(new Set(payload.savedDrawSignature ? [payload.savedDrawSignature] : []));
   const teamsContainerRef = useRef(null);
 
@@ -1428,6 +1442,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setTeams(result.teams);
       setAssignments({});
       setLockedPlayerPositions({});
+      setDrawVariants([]);
       setTeamFormations({});
       setUndoStacks({});
       setAnalysisVisible(false);
@@ -1558,6 +1573,7 @@ export function SorteoLegacyPageIsland({ root }) {
         tierText: formatTierCounts(tierCounts),
         lowRhythm: team.filter(isLowRhythmPlayer).length,
         irregular: team.filter(isIrregularPlayer).length,
+        repeatedPairs: teamRepeatedPairs(team, payload.pairHistory),
         secondaryPlayers,
         adaptedPlayers,
         strengths: stats.slice(0, 3),
@@ -1610,6 +1626,45 @@ export function SorteoLegacyPageIsland({ root }) {
       comparisons,
     };
   }, [assignments, getTeamDisplayName, payload.drawBalanceWeights, payload.pairHistory, teams]);
+
+  const drawAuditSnapshot = useMemo(() => {
+    if (!teams || !drawAnalysis) return null;
+    return {
+      algorithm_version: 'react-sorteo-v2',
+      created_at: new Date().toISOString(),
+      criteria: {
+        max_diff_requested: Number(maxDiff || 0),
+        strict_max_diff: STRICT_MAX_DIFF,
+        flexible_max_diff: FLEXIBLE_MAX_DIFF,
+        rules: drawAnalysis.ruleChecks,
+        optimized: ['puntaje ajustado por posicion', 'cobertura de lineas', 'platinum', 'ritmo', 'regularidad', 'tiers', 'historial de companeros'],
+      },
+      metrics: {
+        diff: Number(drawAnalysis.diff.toFixed(2)),
+        slow_spread: drawAnalysis.slowSpread,
+        irregular_spread: drawAnalysis.irregularSpread,
+        platinum_spread: drawAnalysis.platinumSpread,
+        tier_spread: drawAnalysis.tierSpread,
+        historical_penalty: drawAnalysis.historicalPenalty,
+      },
+      manual: {
+        assignment_count: Object.keys(assignments || {}).length,
+        locked_positions: lockedPlayerPositions,
+        team_formations: teamFormations,
+      },
+      teams: drawAnalysis.summaries.map((summary) => ({
+        name: summary.name,
+        total: Number(summary.total.toFixed(2)),
+        lines: summary.counts,
+        tiers: summary.tierCounts,
+        strengths: summary.strengths.map((stat) => stat.label),
+        weaknesses: summary.weaknesses.map((stat) => stat.label),
+        repeated_pairs: summary.repeatedPairs,
+        secondary_players: summary.secondaryPlayers,
+        adapted_players: summary.adaptedPlayers,
+      })),
+    };
+  }, [assignments, drawAnalysis, lockedPlayerPositions, maxDiff, teamFormations, teams]);
 
   const setTeamColor = (teamIndex, colorName) => {
     if (teamColorTaken(colorName, teamIndex)) {
@@ -1895,6 +1950,55 @@ export function SorteoLegacyPageIsland({ root }) {
     setTouchMoveSource(null);
   };
 
+  const generateDrawVariants = async () => {
+    setError('');
+    setSuccess('');
+    const rawSelected = lockedMatch ? players.slice() : players.filter((player) => player.selected);
+    const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true).map(playerKey));
+    const selectedWithGoalkeepers = rawSelected.map((player) => (
+      selectedGoalkeeperKeys.has(playerKey(player)) ? { ...player, manualGoalkeeper: true } : player
+    ));
+    const prepared = prepareEmergencyGoalkeepers(selectedWithGoalkeepers, numTeams);
+    const candidates = prepared.players;
+    if (!candidates.length || candidates.length % numTeams !== 0) {
+      setError('Primero selecciona una cantidad valida de jugadores.');
+      return;
+    }
+    const avoidSignatures = new Set(seenDrawSignatures.current);
+    if (teams) avoidSignatures.add(drawSignature(teams));
+    const variants = [];
+    setGenerating(true);
+    setGenerationStage('Comparando variantes');
+    await new Promise((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 20)));
+    try {
+      for (let index = 0; index < 8 && variants.length < 3; index += 1) {
+        const result = generateBalancedTeams(candidates, numTeams, Math.min(Math.max(0.5, maxDiff), STRICT_MAX_DIFF), payload.pairHistory, payload.drawBalanceWeights, avoidSignatures);
+        if (!result) continue;
+        const signature = drawSignature(result.teams);
+        if (!signature || avoidSignatures.has(signature)) continue;
+        avoidSignatures.add(signature);
+        variants.push({ ...result, signature });
+      }
+      setDrawVariants(variants);
+      if (!variants.length) setError('No se encontraron variantes distintas con las reglas actuales.');
+    } finally {
+      setGenerating(false);
+      setGenerationStage('');
+    }
+  };
+
+  const applyDrawVariant = (variant) => {
+    if (!variant?.teams) return;
+    pushUndo(0);
+    setTeams(variant.teams);
+    setAssignments({});
+    setLockedPlayerPositions({});
+    setTeamFormations({});
+    setDrawVariants([]);
+    setAnalysisVisible(true);
+    setSuccess(`Variante aplicada. Diferencia ${variant.evaluation.diff.toFixed(1)}.`);
+  };
+
   const downloadTeamsText = () => {
     if (!teams) {
       setError('Primero genera los equipos.');
@@ -1992,6 +2096,7 @@ export function SorteoLegacyPageIsland({ root }) {
           num_teams: numTeams,
           redraw_increment: redrawsUsedThisSession,
           teams: teamsPayload,
+          draw_audit_snapshot: drawAuditSnapshot,
         }),
       });
       const data = await response.json();
@@ -2390,6 +2495,10 @@ export function SorteoLegacyPageIsland({ root }) {
               <button className={quietButtonClass} type="button" onClick={downloadTeamsJpg} disabled={exporting}><Icon name="download" />{exporting ? 'Generando JPG...' : 'Exportar JPG'}</button>
               <button className={quietButtonClass} type="button" onClick={copyTeams}><Icon name="clipboard" />Copiar</button>
               <button className={quietButtonClass} type="button" onClick={downloadTeamsText}><Icon name="download" />Descargar texto</button>
+              <button className={quietButtonClass} type="button" onClick={generateDrawVariants} disabled={generating}>
+                <Icon name="dice" />
+                Comparar variantes
+              </button>
               <button className={touchMoveMode ? secondaryButtonClass : quietButtonClass} type="button" onClick={() => {
                 setTouchMoveMode((enabled) => !enabled);
                 setTouchMoveSource(null);
@@ -2411,6 +2520,19 @@ export function SorteoLegacyPageIsland({ root }) {
             {manualChangeCount > 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
                 Hay {manualChangeCount} ajuste{manualChangeCount === 1 ? '' : 's'} manual{manualChangeCount === 1 ? '' : 'es'} en cancha{lockedPositionCount > 0 ? `, con ${lockedPositionCount} posicion${lockedPositionCount === 1 ? '' : 'es'} bloqueada${lockedPositionCount === 1 ? '' : 's'}` : ''}. Al guardar se conservaran las posiciones actuales.
+              </div>
+            ) : null}
+            {drawVariants.length ? (
+              <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
+                <strong className="text-xs font-black text-[#07130f]">Variantes disponibles</strong>
+                <div className="grid gap-2 md:grid-cols-3">
+                  {drawVariants.map((variant, index) => (
+                    <button key={variant.signature || index} className="grid gap-1 rounded-md border border-[#d7e6df] bg-white px-3 py-2 text-left text-xs font-bold text-[#526b62] transition-colors hover:border-[#9fc8b5]" type="button" onClick={() => applyDrawVariant(variant)}>
+                      <span className="font-black text-[#07130f]">Variante {index + 1}</span>
+                      <span>Diff {variant.evaluation.diff.toFixed(1)} | Ritmo {variant.evaluation.slowSpread} | Platinum {variant.evaluation.platinumSpread}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
@@ -2497,6 +2619,11 @@ export function SorteoLegacyPageIsland({ root }) {
                       <p className="m-0 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2 text-xs font-bold text-[#526b62]">
                         {summary.secondaryPlayers.length ? `Usa posicion secundaria: ${summary.secondaryPlayers.join(', ')}. ` : ''}
                         {summary.adaptedPlayers.length ? `Adaptados fuera de posicion natural: ${summary.adaptedPlayers.join(', ')}.` : ''}
+                      </p>
+                    ) : null}
+                    {summary.repeatedPairs.length ? (
+                      <p className="m-0 rounded-md border border-amber-200 bg-amber-50 px-2 py-2 text-xs font-bold text-[#7a4b00]">
+                        Historial repetido: {summary.repeatedPairs.map((pair) => `${pair.names} (${pair.count})`).join(', ')}.
                       </p>
                     ) : null}
                   </article>

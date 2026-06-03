@@ -527,6 +527,7 @@ CREATE TABLE `matches` (
   `draw_mode` enum('none','random','captains','manual') NOT NULL DEFAULT 'none',
   `draw_started_at` datetime DEFAULT NULL,
   `draw_completed_at` datetime DEFAULT NULL,
+  `draw_audit_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`draw_audit_snapshot`)),
   `finalized_at` datetime DEFAULT NULL,
   `result_saved_at` datetime DEFAULT NULL,
   `formation_edit_deadline` datetime DEFAULT NULL,

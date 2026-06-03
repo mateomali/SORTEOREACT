@@ -138,6 +138,7 @@ if (!in_array($drawMode, ['random', 'manual'], true)) {
 }
 $redrawIncrement = max(0, min(20, (int) ($data['redraw_increment'] ?? 0)));
 $postedTeams = $data['teams'] ?? [];
+$auditSnapshot = is_array($data['draw_audit_snapshot'] ?? null) ? $data['draw_audit_snapshot'] : [];
 
 if ($matchId <= 0 || !is_array($postedTeams) || !$postedTeams) {
     http_response_code(422);
@@ -299,6 +300,20 @@ $teamScores = array_map(
     $teams
 );
 $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
+$auditSnapshot = array_merge($auditSnapshot, [
+    'server' => [
+        'saved_at' => date(DATE_ATOM),
+        'draw_mode' => $drawMode,
+        'num_teams' => $numTeams,
+        'players_per_team' => $teamSize,
+        'max_diff' => $maxDiff,
+        'redraw_increment' => $redrawIncrement,
+    ],
+]);
+$auditSnapshotJson = json_encode($auditSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if ($auditSnapshotJson === false || strlen($auditSnapshotJson) > 65535) {
+    $auditSnapshotJson = null;
+}
 
 $pdo = db();
 $pdo->beginTransaction();
@@ -370,6 +385,7 @@ try {
         'UPDATE matches
          SET status = :status, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
              draw_mode = :draw_mode, draw_started_at = COALESCE(draw_started_at, NOW()), draw_completed_at = NOW(),
+             draw_audit_snapshot = :draw_audit_snapshot,
              redraw_count = redraw_count + :redraw_increment,
              formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
          WHERE id = :id'
@@ -380,6 +396,7 @@ try {
         'players_per_team' => $teamSize,
         'max_diff' => $maxDiff,
         'draw_mode' => $drawMode,
+        'draw_audit_snapshot' => $auditSnapshotJson,
         'redraw_increment' => $redrawIncrement,
         'id' => $matchId,
     ]);
