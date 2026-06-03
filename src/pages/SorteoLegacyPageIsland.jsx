@@ -98,6 +98,18 @@ const secondaryButtonClass = `inline-flex min-h-11 items-center justify-center g
 const dangerButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-extrabold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 ${focusRing}`;
 const iconButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f7fbf9] hover:text-[#063d2b] ${focusRing}`;
 const pitchBackgroundClass = 'bg-[linear-gradient(rgba(5,37,27,.10),rgba(5,37,27,.24)),url(/assets/images/captain-field-bg-vertical.jpg),linear-gradient(160deg,#0e7a43,#07563d)] [background-position:center,center,center] [background-repeat:no-repeat,no-repeat,no-repeat] [background-size:auto,100%_100%,auto]';
+const pitchLineToneClasses = {
+  ARQ: 'border-l-4 border-l-amber-300/80 bg-amber-200/7',
+  DEF: 'border-l-4 border-l-cyan-200/80 bg-cyan-200/7',
+  MED: 'border-l-4 border-l-lime-200/80 bg-lime-200/7',
+  DEL: 'border-l-4 border-l-rose-200/80 bg-rose-200/7',
+};
+const pitchLineLabelClasses = {
+  ARQ: 'bg-amber-200 text-[#07130f]',
+  DEF: 'bg-cyan-100 text-[#07130f]',
+  MED: 'bg-lime-200 text-[#07130f]',
+  DEL: 'bg-rose-100 text-[#07130f]',
+};
 
 function parsePayload(root) {
   try {
@@ -243,6 +255,29 @@ function defenseLinePlayers(players, assignments) {
     ...defenders,
     ...laterals.slice(leftCount),
   ];
+}
+
+function closestDefenderForLateralReplacement(team, assignments, lateralKey, lockedPlayerPositions = {}) {
+  const defensePlayers = team.filter((player) => {
+    const assigned = String(assignments[playerKey(player)] || getPrimaryPlayerPosition(player)).toUpperCase();
+    return assigned === 'DEF' || assigned === 'LAT';
+  });
+  const orderedDefense = defenseLinePlayers(defensePlayers, assignments);
+  const lateralIndex = orderedDefense.findIndex((player) => playerKey(player) === String(lateralKey));
+  const candidates = orderedDefense
+    .map((player, index) => ({ player, index }))
+    .filter(({ player }) => {
+      const key = playerKey(player);
+      const assigned = String(assignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
+      return key !== String(lateralKey)
+        && assigned === 'DEF'
+        && !lockedPlayerPositions[key]
+        && !isFixedGoalkeeper(player);
+    });
+  if (!candidates.length) return null;
+  if (lateralIndex < 0) return playerKey(candidates[0].player);
+  return playerKey(candidates
+    .sort((left, right) => Math.abs(left.index - lateralIndex) - Math.abs(right.index - lateralIndex))[0].player);
 }
 
 function statValue(player, field) {
@@ -440,6 +475,17 @@ function fieldLineCountsFitLimits(counts, teamSize) {
     && FIELD_LINES.every((line) => (
       Number(counts?.[line] || 0) >= logicalLineMinimum(line, teamSize)
       && Number(counts?.[line] || 0) <= fieldLineLimit(line, teamSize)
+    ));
+}
+
+function pitchLineCountsFitLimits(counts, teamSize) {
+  const pitchCounts = pitchLineCountsFromLogical(counts);
+  const max = maxFieldPlayersPerLine(teamSize);
+  const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
+  return (!hasGoalkeeperCount || pitchCounts.ARQ === fieldLineMinimum('ARQ', teamSize))
+    && REQUIRED_FIELD_LINES.every((line) => (
+      pitchCounts[line] >= fieldLineMinimum(line, teamSize)
+      && pitchCounts[line] <= max
     ));
 }
 
@@ -944,43 +990,64 @@ function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights,
 function getFormationOptions(teamSize) {
   const fieldPlayers = Math.max(0, teamSize - 1);
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
-  const maxDefLat = maxDefLatPlayersPerPosition(teamSize);
-  const minDef = logicalLineMinimum('DEF', teamSize);
-  const minLat = logicalLineMinimum('LAT', teamSize);
+  const minDefense = logicalLineMinimum('DEF', teamSize) + logicalLineMinimum('LAT', teamSize);
   const minMed = fieldLineMinimum('MED', teamSize);
   const minDel = fieldLineMinimum('DEL', teamSize);
   const candidates = [];
-  for (let def = 0; def <= Math.min(maxDefLat, fieldPlayers); def += 1) {
-    for (let lat = 0; lat <= Math.min(maxDefLat, fieldPlayers - def); lat += 1) {
-      if (def + lat > maxPerLine) continue;
-      for (let med = 0; med <= Math.min(maxPerLine, fieldPlayers - def - lat); med += 1) {
-        const del = fieldPlayers - def - lat - med;
-        if (del < 0 || del > maxPerLine) continue;
-        if (def < minDef || lat < minLat || med < minMed || del < minDel) continue;
-        if ((def + lat) < fieldLineMinimum('DEF', teamSize)) continue;
-        const balance = Math.max(def + lat, med, del) - Math.min(def + lat, med, del);
-        candidates.push({ DEF: def, LAT: lat, MED: med, DEL: del, value: `${def}-${lat}-${med}-${del}`, balance });
-      }
+  for (let defense = minDefense; defense <= Math.min(maxPerLine, fieldPlayers); defense += 1) {
+    for (let med = minMed; med <= Math.min(maxPerLine, fieldPlayers - defense); med += 1) {
+      const del = fieldPlayers - defense - med;
+      if (del < minDel || del > maxPerLine) continue;
+      const balance = Math.max(defense, med, del) - Math.min(defense, med, del);
+      candidates.push({ DEF: defense, MED: med, DEL: del, value: `${defense}-${med}-${del}`, balance });
     }
   }
   return candidates
-    .sort((a, b) => a.balance - b.balance || b.MED - a.MED || (b.DEF + b.LAT) - (a.DEF + a.LAT) || b.DEL - a.DEL)
+    .sort((a, b) => a.balance - b.balance || b.MED - a.MED || b.DEF - a.DEF || b.DEL - a.DEL)
     .slice(0, 5);
 }
 
 function parseFormationValue(value) {
   const parts = String(value || '').split('-').map((part) => Number.parseInt(part, 10));
-  if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return null;
-  return { DEF: parts[0], LAT: parts[1], MED: parts[2], DEL: parts[3] };
+  if (parts.some((part) => !Number.isFinite(part))) return null;
+  if (parts.length === 3) return { DEF: parts[0], LAT: null, MED: parts[1], DEL: parts[2] };
+  if (parts.length === 4) return { DEF: parts[0], LAT: parts[1], MED: parts[2], DEL: parts[3] };
+  return null;
+}
+
+function splitDefenseFormationCount(team, defenseCount) {
+  const minDef = logicalLineMinimum('DEF', team.length);
+  const minLat = logicalLineMinimum('LAT', team.length);
+  const maxDefLat = maxDefLatPlayersPerPosition(team.length);
+  const safeDefenseCount = Math.max(0, Number(defenseCount || 0));
+  let lat = Math.max(minLat, Math.min(maxDefLat, Math.floor(safeDefenseCount / 2)));
+  let def = safeDefenseCount - lat;
+  if (def < minDef) {
+    def = minDef;
+    lat = safeDefenseCount - def;
+  }
+  if (lat < minLat) {
+    lat = minLat;
+    def = safeDefenseCount - lat;
+  }
+  if (def > maxDefLat) {
+    def = maxDefLat;
+    lat = safeDefenseCount - def;
+  }
+  return { DEF: Math.max(0, def), LAT: Math.max(0, lat) };
 }
 
 function applyFormationToTeam(team, value) {
-  const counts = parseFormationValue(value);
-  if (!counts) return {};
+  const parsedCounts = parseFormationValue(value);
+  if (!parsedCounts) return {};
   const assignments = {};
   const goalkeeper = team.find(isFixedGoalkeeper) || team.slice().sort((a, b) => adjustedPositionRating(b, 'ARQ') - adjustedPositionRating(a, 'ARQ'))[0];
   if (goalkeeper) assignments[playerKey(goalkeeper)] = 'ARQ';
   const remaining = team.filter((player) => playerKey(player) !== playerKey(goalkeeper));
+  const defenseCounts = parsedCounts.LAT === null
+    ? splitDefenseFormationCount(team, parsedCounts.DEF)
+    : { DEF: parsedCounts.DEF, LAT: parsedCounts.LAT };
+  const counts = { ...parsedCounts, ...defenseCounts };
   FIELD_LINES.forEach((line) => {
     for (let index = 0; index < counts[line]; index += 1) {
       const candidate = remaining
@@ -1271,6 +1338,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [preview, setPreview] = useState(null);
   const [dragState, setDragState] = useState(null);
   const [dragPoint, setDragPoint] = useState(null);
+  const [dragHoverTarget, setDragHoverTarget] = useState(null);
   const [persistedRedrawCount, setPersistedRedrawCount] = useState(payload.redrawCount);
   const [redrawsUsedThisSession, setRedrawsUsedThisSession] = useState(0);
   const [hasSavedDraw, setHasSavedDraw] = useState(payload.hasSavedDraw);
@@ -1803,6 +1871,18 @@ export function SorteoLegacyPageIsland({ root }) {
       ? String(targetPlayerKey)
       : null;
     const sourceLine = String(source.assignedPosition || '').toUpperCase();
+    const lateralReplacementKey = !targetKeyForAssignment
+      && sourceLine === 'LAT'
+      && targetLine
+      && pitchLineForPosition(targetLine) !== 'DEF'
+      && teams[sourceTeamIndex]
+      ? closestDefenderForLateralReplacement(
+        teams[sourceTeamIndex],
+        buildTeamAssignment(teams[sourceTeamIndex], assignments),
+        key,
+        lockedPlayerPositions,
+      )
+      : null;
     if (targetLine && FORMATION_LINES.includes(targetLine) && teams[targetTeamIndex]) {
       if (targetPlayer && sourcePlayer) {
         const proposedTargetTeam = sourceTeamIndex === targetTeamIndex
@@ -1841,7 +1921,10 @@ export function SorteoLegacyPageIsland({ root }) {
           : [...teams[targetTeamIndex], sourcePlayer];
         const proposedAssignments = buildTeamAssignment(proposedTeam, assignments);
         proposedAssignments[key] = targetLine;
-        if (!fieldLineCountsFitLimits(teamLineCounts(proposedTeam, proposedAssignments), proposedTeam.length)) {
+        if (sourceTeamIndex === targetTeamIndex && lateralReplacementKey) {
+          proposedAssignments[lateralReplacementKey] = 'LAT';
+        }
+        if (!pitchLineCountsFitLimits(teamLineCounts(proposedTeam, proposedAssignments), proposedTeam.length)) {
           setError(`Limite de formacion: maximo ${maxFieldPlayersPerLine(proposedTeam.length)} por linea.`);
           return;
         }
@@ -1870,10 +1953,54 @@ export function SorteoLegacyPageIsland({ root }) {
       setAssignments((current) => {
         const next = { ...current };
         if (targetLine && FORMATION_LINES.includes(targetLine)) next[key] = sourcePlayer && isFixedGoalkeeper(sourcePlayer) ? 'ARQ' : targetLine;
+        if (lateralReplacementKey) next[lateralReplacementKey] = 'LAT';
         if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) next[targetKeyForAssignment] = sourceLine;
         return next;
       });
     }
+  };
+
+  const canDropSourceOnLine = (source, targetTeamIndex, targetLine) => {
+    if (!teams || !source || !FORMATION_LINES.includes(String(targetLine || '').toUpperCase())) return false;
+    const sourceTeamIndex = Number(source.teamIndex);
+    const key = String(source.playerKey);
+    const line = String(targetLine || '').toUpperCase();
+    if (!Number.isFinite(sourceTeamIndex) || !teams[sourceTeamIndex] || !teams[targetTeamIndex]) return false;
+    const sourcePlayer = teams[sourceTeamIndex]?.find((player) => playerKey(player) === key);
+    if (!sourcePlayer || lockedPlayerPositions[key]) return false;
+    if (isFixedGoalkeeper(sourcePlayer) && line !== 'ARQ') return false;
+    const currentLine = String(source.assignedPosition || '').toUpperCase();
+    if (currentLine === line && sourceTeamIndex === targetTeamIndex) return false;
+    const proposedTeam = sourceTeamIndex === targetTeamIndex
+      ? teams[targetTeamIndex]
+      : [...teams[targetTeamIndex], sourcePlayer];
+    const proposedAssignments = buildTeamAssignment(proposedTeam, assignments);
+    proposedAssignments[key] = line;
+    if (
+      sourceTeamIndex === targetTeamIndex
+      && String(source.assignedPosition || '').toUpperCase() === 'LAT'
+      && pitchLineForPosition(line) !== 'DEF'
+    ) {
+      const replacementKey = closestDefenderForLateralReplacement(
+        teams[sourceTeamIndex],
+        buildTeamAssignment(teams[sourceTeamIndex], assignments),
+        key,
+        lockedPlayerPositions,
+      );
+      if (replacementKey) proposedAssignments[replacementKey] = 'LAT';
+    }
+    return pitchLineCountsFitLimits(teamLineCounts(proposedTeam, proposedAssignments), proposedTeam.length);
+  };
+
+  const dragScoreDelta = (source, targetLine) => {
+    if (!source?.player || !FORMATION_LINES.includes(String(targetLine || '').toUpperCase())) return null;
+    const sourceLine = String(source.assignedPosition || getPrimaryPlayerPosition(source.player)).toUpperCase();
+    const destinationLine = String(targetLine || '').toUpperCase();
+    const from = playerCardRating(adjustedPositionRating(source.player, sourceLine));
+    const to = playerCardRating(adjustedPositionRating(source.player, destinationLine));
+    if (!from || !to) return null;
+    const percent = Math.round(((to - from) / from) * 100);
+    return { percent, from, to, line: destinationLine };
   };
 
   const handleDragStart = (event, teamIndex, player, assignedPosition) => {
@@ -1892,6 +2019,7 @@ export function SorteoLegacyPageIsland({ root }) {
     event.dataTransfer.setDragImage(img, 0, 0);
     setDragState({ ...source, player });
     setDragPoint({ x: event.clientX, y: event.clientY });
+    setDragHoverTarget({ teamIndex, line: assignedPosition, playerKey: playerKey(player) });
   };
 
   const sourceFromDragEvent = (event) => {
@@ -1909,12 +2037,18 @@ export function SorteoLegacyPageIsland({ root }) {
     event.stopPropagation();
     const source = sourceFromDragEvent(event);
     const targetCard = event.target.closest?.('[data-sorteo-drag-player]');
-    const resolvedTeamIndex = targetCard?.dataset?.teamIndex != null ? Number(targetCard.dataset.teamIndex) : teamIndex;
+    const targetLine = event.target.closest?.('[data-sorteo-drop-line]');
+    const resolvedTeamIndex = targetCard?.dataset?.teamIndex != null
+      ? Number(targetCard.dataset.teamIndex)
+      : (targetLine?.dataset?.teamIndex != null ? Number(targetLine.dataset.teamIndex) : teamIndex);
     const resolvedTargetPlayerKey = targetPlayerKey || targetCard?.dataset?.playerKey || null;
-    const resolvedLine = targetCard?.dataset?.assignedPosition || line || null;
+    const resolvedLine = resolvedTargetPlayerKey
+      ? (targetCard?.dataset?.assignedPosition || line || null)
+      : (targetLine?.dataset?.sorteoDropLine || line || null);
     movePlayer(source, Number.isFinite(resolvedTeamIndex) ? resolvedTeamIndex : teamIndex, resolvedLine, resolvedTargetPlayerKey);
     setDragState(null);
     setDragPoint(null);
+    setDragHoverTarget(null);
   };
 
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
@@ -2115,6 +2249,18 @@ export function SorteoLegacyPageIsland({ root }) {
     }
   };
 
+  const currentDragDelta = dragState && dragHoverTarget?.line
+    ? dragScoreDelta(dragState, dragHoverTarget.line)
+    : null;
+  const currentDragDeltaClass = currentDragDelta?.percent > 0
+    ? 'border-lime-200 bg-lime-200 text-[#07130f]'
+    : (currentDragDelta?.percent < 0
+      ? 'border-red-200 bg-red-100 text-red-900'
+      : 'border-white/30 bg-white text-[#07130f]');
+  const currentDragDeltaText = currentDragDelta
+    ? `${currentDragDelta.to - currentDragDelta.from > 0 ? '+' : ''}${currentDragDelta.to - currentDragDelta.from} pts`
+    : '';
+
   return (
     <section
       className="sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5"
@@ -2126,6 +2272,7 @@ export function SorteoLegacyPageIsland({ root }) {
       onDragEnd={() => {
         setDragState(null);
         setDragPoint(null);
+        setDragHoverTarget(null);
       }}
     >
       <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4">
@@ -2397,17 +2544,31 @@ export function SorteoLegacyPageIsland({ root }) {
                             const count = line === 'DEF' ? lineCounts.DEF + lineCounts.LAT : lineCounts[line];
                             const max = line === 'ARQ' ? 1 : maxFieldPlayersPerLine(team.length);
                             const canTuneLine = line !== 'ARQ';
+                            const isDraggingPlayer = Boolean(dragState);
+                            const lineCanAcceptDrop = isDraggingPlayer && canDropSourceOnLine(dragState, teamIndex, line);
+                            const lineDropClass = !isDraggingPlayer
+                              ? ''
+                              : (lineCanAcceptDrop
+                                ? 'border-lime-200/70 bg-lime-200/15 ring-2 ring-lime-200/70'
+                                : 'opacity-45');
                             return (
                               <div
                                 key={line}
-                                className={`formation-line ${canTuneLine ? 'sorteo-line-with-tools' : 'sorteo-line-basic'} grid min-h-0 items-center gap-2 border-b border-white/15 last:border-b-0 max-[760px]:gap-1 ${
+                                className={`formation-line ${pitchLineToneClasses[line] || ''} ${canTuneLine ? 'sorteo-line-with-tools' : 'sorteo-line-basic'} grid min-h-0 items-center gap-2 border-b border-white/15 transition-colors duration-150 last:border-b-0 max-[760px]:gap-1 ${lineDropClass} ${
                                   canTuneLine
                                     ? 'grid-cols-[54px_minmax(0,1fr)_34px] max-[760px]:grid-cols-[32px_minmax(0,1fr)_22px] max-[760px]:gap-0.5'
                                     : 'grid-cols-[54px_minmax(0,1fr)] max-[760px]:grid-cols-[38px_minmax(0,1fr)]'
                                 }`}
+                                data-sorteo-drop-line={line}
+                                data-team-index={teamIndex}
+                                onDragOver={(event) => {
+                                  event.preventDefault();
+                                  if (dragState) setDragHoverTarget({ teamIndex, line });
+                                }}
+                                onDrop={(event) => handleDrop(event, teamIndex, line)}
                               >
                                 <div className="line-label grid justify-items-center gap-1 text-center text-[10px] font-black uppercase text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,.48)] max-[760px]:gap-0.5 max-[760px]:text-[9px]">
-                                  <span className="leading-none">{label}</span>
+                                  <span className={`leading-none px-1 py-0.5 [text-shadow:none] ${pitchLineLabelClasses[line] || ''}`}>{label}</span>
                                   <small className="rounded bg-emerald-950/45 px-1 text-[9px] font-extrabold leading-tight text-white/75 max-[760px]:text-[8px]">{count}/{max}</small>
                                   {canTuneLine ? (
                                     <span className="grid gap-1 max-[760px]:gap-0.5">
@@ -2419,7 +2580,10 @@ export function SorteoLegacyPageIsland({ root }) {
                                   className="line-players flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/10 !bg-emerald-950/10 p-1 max-[760px]:gap-1 max-[760px]:p-0.5"
                                   data-sorteo-drop-line={line}
                                   data-team-index={teamIndex}
-                                  onDragOver={(event) => event.preventDefault()}
+                                  onDragOver={(event) => {
+                                    event.preventDefault();
+                                    if (dragState) setDragHoverTarget({ teamIndex, line });
+                                  }}
                                   onDrop={(event) => handleDrop(event, teamIndex, line)}
                                   onClick={() => handleTouchLine(teamIndex, line)}
                                 >
@@ -2441,6 +2605,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                           onDragOver: (event) => {
                                             event.preventDefault();
                                             event.stopPropagation();
+                                            if (dragState) setDragHoverTarget({ teamIndex, line: assigned, playerKey: playerKey(player) });
                                           },
                                           onDrop: (event) => handleDrop(event, teamIndex, assigned, playerKey(player)),
                                           'data-sorteo-drag-player': '1',
@@ -2705,7 +2870,15 @@ export function SorteoLegacyPageIsland({ root }) {
         <div className="pointer-events-none fixed z-[100]" style={{ left: dragPoint.x + 14, top: dragPoint.y + 14 }}>
           <div className="absolute -left-3 -top-3 h-8 w-8 rounded-full bg-lime-200/20 blur-sm" />
           <div className="absolute -left-6 -top-6 h-12 w-12 rounded-full border border-lime-200/35" />
-          <CompactPlayerCard player={dragState.player} assignedPosition={dragState.assignedPosition} />
+          <div className="relative">
+            {currentDragDelta ? (
+              <div className={`absolute -right-2 -top-2 z-20 grid min-w-14 justify-items-center border px-2 py-1 text-[11px] font-black leading-tight shadow-sm ${currentDragDeltaClass}`}>
+                <span>{currentDragDeltaText}</span>
+                <span className="text-[9px] font-extrabold opacity-75">{`${currentDragDelta.from} -> ${currentDragDelta.to} ${currentDragDelta.line}`}</span>
+              </div>
+            ) : null}
+            <CompactPlayerCard player={dragState.player} assignedPosition={dragState.assignedPosition} />
+          </div>
         </div>
       ) : null}
     </section>

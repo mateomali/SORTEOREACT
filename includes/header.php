@@ -41,6 +41,7 @@ if (is_admin()) {
         'configuracion.php' => 'Configuracion',
         'usuarios.php' => 'Usuarios',
         'directivos.php' => 'Directivos',
+        'mis_valoraciones.php' => 'Valoraciones',
         'backup.php' => 'Backup',
         'logout.php' => 'Salir',
     ];
@@ -48,6 +49,7 @@ if (is_admin()) {
     $roleLabel = 'Directivo';
     $roleMenu = [
         'junta_votaciones.php' => 'Votaciones',
+        'mis_valoraciones.php' => 'Mis valoraciones',
         'logout.php' => 'Salir',
     ];
 } elseif (is_player_user()) {

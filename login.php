@@ -83,7 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['role'] ?? 'user_login');
     $password = (string) ($_POST['password'] ?? '');
 
-    if ($action === 'admin_bootstrap') {
+    if ($action === 'cancel_site_user_change_password') {
+        clear_pending_site_password_reset();
+        flash('info', 'Podes ingresar con otro usuario.');
+        redirect('login.php');
+    } elseif ($action === 'admin_bootstrap') {
         if (hash_equals(ADMIN_PASSWORD, $password)) {
             unset($_SESSION['directivo_id'], $_SESSION['directivo_name'], $_SESSION['pending_directivo_id'], $_SESSION['pending_directivo_name'], $_SESSION['user_id'], $_SESSION['username'], $_SESSION['user_role'], $_SESSION['player_id'], $_SESSION['player_name'], $_SESSION['guest_vote_invite_id']);
             $_SESSION['is_admin'] = true;
@@ -107,10 +111,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$user || (int) $user['active'] !== 1 || (int) ($user['password_needs_reset'] ?? 0) !== 1) {
             clear_pending_site_password_reset();
             flash('error', 'Primero ingresa con tu usuario y la clave provisoria.');
-        } elseif (strlen($newPassword) < 6) {
-            flash('error', 'La clave nueva debe tener al menos 6 caracteres.');
-        } elseif (hash_equals('123456', $newPassword)) {
-            flash('error', 'La clave nueva no puede ser 123456.');
+        } elseif (strlen($newPassword) < 4) {
+            flash('error', 'La clave nueva debe tener al menos 4 caracteres.');
+        } elseif (in_array($newPassword, ['1234', '123456'], true)) {
+            flash('error', 'La clave nueva no puede ser la clave provisoria.');
         } elseif (!hash_equals($newPassword, $confirmPassword)) {
             flash('error', 'Las claves nuevas no coinciden.');
         } else {
@@ -247,142 +251,133 @@ require __DIR__ . '/includes/header.php';
       <span class="<?= h($loginRatingClass) ?>">GF</span>
       <div>
         <strong class="block min-w-0 text-base font-black leading-tight text-lime-50">Goodfellas</strong>
-        <span class="block min-w-0 text-xs font-extrabold leading-tight text-lime-100 max-[380px]:hidden">Cuenta de acceso</span>
+        <span class="block min-w-0 text-xs font-extrabold leading-tight text-lime-100 max-[380px]:hidden"><?= $pendingUsername !== '' ? 'Clave provisoria' : 'Cuenta de acceso' ?></span>
       </div>
     </div>
     <div class="p-4 max-[760px]:p-3">
-      <div class="mb-3 max-[760px]:mb-2">
-        <h3 class="<?= h($loginTitleClass) ?>">Entrar al sitio</h3>
-        <p class="<?= h($loginHelpClass) ?> max-[380px]:hidden">Usa tu usuario. El sistema abre las funciones segun tu rol.</p>
-      </div>
-      <form method="post" class="grid gap-2.5 max-[760px]:gap-2">
-        <input type="hidden" name="next" value="<?= h($next) ?>">
-        <input type="hidden" name="role" value="user_login">
-        <div class="min-w-0">
-          <label class="<?= h($loginLabelClass) ?>">Usuario</label>
-          <input class="<?= h($loginInputClass) ?>" type="text" name="username" autocomplete="username" placeholder="tu_usuario" required autofocus>
+      <?php if ($pendingUsername !== ''): ?>
+        <div class="mb-3 max-[760px]:mb-2">
+          <h3 class="<?= h($loginTitleClass) ?>">Elegir clave nueva</h3>
+          <p class="<?= h($loginHelpClass) ?>">Ingresaste como <?= h($pendingUsername) ?>. Cambia la clave para continuar.</p>
         </div>
-        <div class="min-w-0">
-          <label class="<?= h($loginLabelClass) ?>">Clave</label>
-          <div class="<?= h($passwordFieldClass) ?>">
-            <input id="userPassword" class="<?= h($passwordInputClass) ?>" type="password" name="password" autocomplete="current-password" placeholder="Tu clave" required>
-            <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="userPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
+        <form method="post" class="grid gap-2.5 max-[760px]:gap-2">
+          <input type="hidden" name="role" value="site_user_change_password">
+          <div class="min-w-0">
+            <label class="<?= h($loginLabelClass) ?>">Nueva clave</label>
+            <div class="<?= h($passwordFieldClass) ?>">
+              <input id="newSiteUserPassword" class="<?= h($passwordInputClass) ?>" type="password" name="new_password" autocomplete="new-password" minlength="4" placeholder="Minimo 4 caracteres" required autofocus>
+              <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="newSiteUserPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
+            </div>
           </div>
+          <div class="min-w-0">
+            <label class="<?= h($loginLabelClass) ?>">Repetir clave</label>
+            <div class="<?= h($passwordFieldClass) ?>">
+              <input id="confirmSiteUserPassword" class="<?= h($passwordInputClass) ?>" type="password" name="confirm_password" autocomplete="new-password" minlength="4" placeholder="Repetir clave" required>
+              <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="confirmSiteUserPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
+            </div>
+          </div>
+          <button class="<?= h($loginSubmitClass) ?>" type="submit">Guardar y entrar</button>
+        </form>
+        <form method="post" class="mt-2">
+          <input type="hidden" name="role" value="cancel_site_user_change_password">
+          <button class="inline-flex min-h-8 w-full items-center justify-center rounded-lg border border-emerald-900/15 bg-white px-3 py-1.5 text-xs font-black text-[#07130f] hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-900/10" type="submit">Ingresar con otro usuario</button>
+        </form>
+      <?php else: ?>
+        <div class="mb-3 max-[760px]:mb-2">
+          <h3 class="<?= h($loginTitleClass) ?>">Entrar al sitio</h3>
+          <p class="<?= h($loginHelpClass) ?> max-[380px]:hidden">Usa tu usuario. El sistema abre las funciones segun tu rol.</p>
         </div>
-        <button class="<?= h($loginSubmitClass) ?>" type="submit">Entrar</button>
-      </form>
+        <form method="post" class="grid gap-2.5 max-[760px]:gap-2">
+          <input type="hidden" name="next" value="<?= h($next) ?>">
+          <input type="hidden" name="role" value="user_login">
+          <div class="min-w-0">
+            <label class="<?= h($loginLabelClass) ?>">Usuario</label>
+            <input class="<?= h($loginInputClass) ?>" type="text" name="username" autocomplete="username" placeholder="tu_usuario" required autofocus>
+          </div>
+          <div class="min-w-0">
+            <label class="<?= h($loginLabelClass) ?>">Clave</label>
+            <div class="<?= h($passwordFieldClass) ?>">
+              <input id="userPassword" class="<?= h($passwordInputClass) ?>" type="password" name="password" autocomplete="current-password" placeholder="Tu clave" required>
+              <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="userPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
+            </div>
+          </div>
+          <button class="<?= h($loginSubmitClass) ?>" type="submit">Entrar</button>
+        </form>
 
-      <details id="registro-jugador" class="<?= h($loginDetailsClass) ?>">
-        <summary class="<?= h($loginSummaryClass) ?>">
-          <span>Crear cuenta de jugador</span>
-          <span class="<?= h($loginSummaryIconClass) ?> inline-flex group-open:hidden">+</span>
-          <span class="<?= h($loginSummaryIconClass) ?> hidden group-open:inline-flex">-</span>
-        </summary>
-        <div class="mt-3">
-          <div class="mb-3">
-            <h3 class="<?= h($loginTitleClass) ?>">Vincularme a un jugador</h3>
-            <p class="<?= h($loginHelpClass) ?>">La cuenta queda vinculada a tu perfil de jugador.</p>
+        <details id="registro-jugador" class="<?= h($loginDetailsClass) ?>">
+          <summary class="<?= h($loginSummaryClass) ?>">
+            <span>Crear cuenta de jugador</span>
+            <span class="<?= h($loginSummaryIconClass) ?> inline-flex group-open:hidden">+</span>
+            <span class="<?= h($loginSummaryIconClass) ?> hidden group-open:inline-flex">-</span>
+          </summary>
+          <div class="mt-3">
+            <div class="mb-3">
+              <h3 class="<?= h($loginTitleClass) ?>">Vincularme a un jugador</h3>
+              <p class="<?= h($loginHelpClass) ?>">La cuenta queda vinculada a tu perfil de jugador.</p>
+            </div>
+            <form method="post" class="grid gap-2.5">
+              <input type="hidden" name="role" value="player_register">
+              <div class="min-w-0">
+                <label class="<?= h($loginLabelClass) ?>">Mi jugador</label>
+                <select class="<?= h($loginInputClass) ?>" name="player_id" required>
+                  <option value="">Elegir jugador...</option>
+                  <?php foreach ($registerPlayers as $player): ?>
+                    <option value="<?= (int) $player['id'] ?>"><?= h((string) $player['name']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="min-w-0">
+                <label class="<?= h($loginLabelClass) ?>">Usuario</label>
+                <input class="<?= h($loginInputClass) ?>" type="text" name="username" autocomplete="username" placeholder="tu_usuario" required>
+              </div>
+              <div class="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                <div class="min-w-0">
+                  <label class="<?= h($loginLabelClass) ?>">Clave</label>
+                  <div class="<?= h($passwordFieldClass) ?>">
+                    <input id="registerPassword" class="<?= h($passwordInputClass) ?>" type="password" name="password" autocomplete="new-password" minlength="6" placeholder="Minimo 6 caracteres" required>
+                    <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="registerPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
+                  </div>
+                </div>
+                <div class="min-w-0">
+                  <label class="<?= h($loginLabelClass) ?>">Repetir clave</label>
+                  <div class="<?= h($passwordFieldClass) ?>">
+                    <input id="registerConfirmPassword" class="<?= h($passwordInputClass) ?>" type="password" name="confirm_password" autocomplete="new-password" minlength="6" placeholder="Repetir clave" required>
+                    <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="registerConfirmPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
+                  </div>
+                </div>
+              </div>
+              <button class="<?= h($loginSubmitClass) ?> disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500" type="submit" <?= !$registerPlayers ? 'disabled' : '' ?>>Vincular jugador</button>
+              <?php if (!$registerPlayers): ?>
+                <p class="<?= h($loginHelpClass) ?>">No quedan jugadores activos disponibles para registrar.</p>
+              <?php endif; ?>
+            </form>
           </div>
-          <form method="post" class="grid gap-2.5">
-            <input type="hidden" name="role" value="player_register">
-            <div class="min-w-0">
-              <label class="<?= h($loginLabelClass) ?>">Mi jugador</label>
-              <select class="<?= h($loginInputClass) ?>" name="player_id" required>
-                <option value="">Elegir jugador...</option>
-                <?php foreach ($registerPlayers as $player): ?>
-                  <option value="<?= (int) $player['id'] ?>"><?= h((string) $player['name']) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-            <div class="min-w-0">
-              <label class="<?= h($loginLabelClass) ?>">Usuario</label>
-              <input class="<?= h($loginInputClass) ?>" type="text" name="username" autocomplete="username" placeholder="tu_usuario" required>
-            </div>
-            <div class="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-              <div class="min-w-0">
-                <label class="<?= h($loginLabelClass) ?>">Clave</label>
-                <div class="<?= h($passwordFieldClass) ?>">
-                  <input id="registerPassword" class="<?= h($passwordInputClass) ?>" type="password" name="password" autocomplete="new-password" minlength="6" placeholder="Minimo 6 caracteres" required>
-                  <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="registerPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
-                </div>
-              </div>
-              <div class="min-w-0">
-                <label class="<?= h($loginLabelClass) ?>">Repetir clave</label>
-                <div class="<?= h($passwordFieldClass) ?>">
-                  <input id="registerConfirmPassword" class="<?= h($passwordInputClass) ?>" type="password" name="confirm_password" autocomplete="new-password" minlength="6" placeholder="Repetir clave" required>
-                  <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="registerConfirmPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
-                </div>
-              </div>
-            </div>
-            <button class="<?= h($loginSubmitClass) ?> disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500" type="submit" <?= !$registerPlayers ? 'disabled' : '' ?>>Vincular jugador</button>
-            <?php if (!$registerPlayers): ?>
-              <p class="<?= h($loginHelpClass) ?>">No quedan jugadores activos disponibles para registrar.</p>
-            <?php endif; ?>
-          </form>
-        </div>
-      </details>
+        </details>
+      <?php endif; ?>
     </div>
   </article>
 
-  <details id="login-admin" class="group w-full rounded-xl border border-emerald-900/15 bg-white px-3 py-2 text-[#07130f] shadow-sm shadow-emerald-950/5 scroll-mt-20">
-    <summary class="<?= h($loginSummaryClass) ?>">
-      <span>Acceso admin inicial</span>
-      <span class="<?= h($loginSummaryIconClass) ?> inline-flex group-open:hidden">+</span>
-      <span class="<?= h($loginSummaryIconClass) ?> hidden group-open:inline-flex">-</span>
-    </summary>
-    <form method="post" class="mt-3 grid gap-2.5">
-      <input type="hidden" name="next" value="<?= h($next) ?>">
-      <input type="hidden" name="role" value="admin_bootstrap">
-      <div class="min-w-0">
-        <label class="<?= h($loginLabelClass) ?>">Clave admin global</label>
-        <div class="<?= h($passwordFieldClass) ?>">
-          <input id="adminPassword" class="<?= h($passwordInputClass) ?>" type="password" name="password" autocomplete="current-password" placeholder="Clave del administrador">
-          <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="adminPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
-        </div>
-      </div>
-      <button class="inline-flex h-10 w-full items-center justify-center rounded-lg border border-emerald-900/15 bg-emerald-50 px-3 text-sm font-black text-[#07130f] transition hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-900/10" type="submit">Entrar como admin</button>
-    </form>
-  </details>
-</section>
-
-<?php if ($pendingUsername !== ''): ?>
-  <section class="mx-auto mt-3 grid w-full max-w-md gap-3">
-    <article class="<?= h($loginPanelClass) ?> scroll-mt-20">
-      <div class="<?= h($loginPanelHeadClass) ?>">
-        <span class="<?= h($loginRatingClass) ?>">OK</span>
-        <div>
-          <strong class="block min-w-0 text-base font-black leading-tight text-lime-50"><?= h($pendingUsername) ?></strong>
-          <span class="block min-w-0 text-xs font-extrabold leading-tight text-lime-100">Clave provisoria</span>
-        </div>
-      </div>
-      <div class="p-4 max-[760px]:p-3">
-        <div class="mb-3">
-          <h3 class="<?= h($loginTitleClass) ?>">Actualizar clave</h3>
-          <p class="<?= h($loginHelpClass) ?>"><?= h($pendingUsername) ?> ingreso con clave provisoria. Guarda una clave nueva para continuar.</p>
-        </div>
-        <form method="post" class="grid gap-2.5">
-          <input type="hidden" name="role" value="site_user_change_password">
-          <div class="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-            <div class="min-w-0">
-              <label class="<?= h($loginLabelClass) ?>">Nueva clave</label>
-              <div class="<?= h($passwordFieldClass) ?>">
-                <input id="newSiteUserPassword" class="<?= h($passwordInputClass) ?>" type="password" name="new_password" autocomplete="new-password" minlength="6" placeholder="Minimo 6 caracteres" required>
-                <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="newSiteUserPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
-              </div>
-            </div>
-            <div class="min-w-0">
-              <label class="<?= h($loginLabelClass) ?>">Repetir clave</label>
-              <div class="<?= h($passwordFieldClass) ?>">
-                <input id="confirmSiteUserPassword" class="<?= h($passwordInputClass) ?>" type="password" name="confirm_password" autocomplete="new-password" minlength="6" placeholder="Repetir clave" required>
-                <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="confirmSiteUserPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
-              </div>
-            </div>
+  <?php if ($pendingUsername === ''): ?>
+    <details id="login-admin" class="group w-full rounded-xl border border-emerald-900/15 bg-white px-3 py-2 text-[#07130f] shadow-sm shadow-emerald-950/5 scroll-mt-20">
+      <summary class="<?= h($loginSummaryClass) ?>">
+        <span>Acceso admin inicial</span>
+        <span class="<?= h($loginSummaryIconClass) ?> inline-flex group-open:hidden">+</span>
+        <span class="<?= h($loginSummaryIconClass) ?> hidden group-open:inline-flex">-</span>
+      </summary>
+      <form method="post" class="mt-3 grid gap-2.5">
+        <input type="hidden" name="next" value="<?= h($next) ?>">
+        <input type="hidden" name="role" value="admin_bootstrap">
+        <div class="min-w-0">
+          <label class="<?= h($loginLabelClass) ?>">Clave admin global</label>
+          <div class="<?= h($passwordFieldClass) ?>">
+            <input id="adminPassword" class="<?= h($passwordInputClass) ?>" type="password" name="password" autocomplete="current-password" placeholder="Clave del administrador">
+            <button class="<?= h($passwordToggleClass) ?>" type="button" data-password-toggle="adminPassword" aria-label="Mostrar clave" aria-pressed="false"><?= $passwordToggleIcon ?></button>
           </div>
-          <button class="<?= h($loginSubmitClass) ?>" type="submit">Guardar clave nueva</button>
-        </form>
-      </div>
-    </article>
-  </section>
-<?php endif; ?>
+        </div>
+        <button class="inline-flex h-10 w-full items-center justify-center rounded-lg border border-emerald-900/15 bg-emerald-50 px-3 text-sm font-black text-[#07130f] transition hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-900/10" type="submit">Entrar como admin</button>
+      </form>
+    </details>
+  <?php endif; ?>
+</section>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

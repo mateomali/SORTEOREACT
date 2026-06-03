@@ -103,6 +103,358 @@ function ensure_directivos_schema(): void
             CONSTRAINT fk_director_vote_invite_voter FOREIGN KEY (voter_member_id) REFERENCES directive_members(id) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS director_player_stat_votes (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            voter_id INT UNSIGNED NOT NULL,
+            player_id INT UNSIGNED NOT NULL,
+            attack TINYINT UNSIGNED NULL,
+            defense_physical TINYINT UNSIGNED NULL,
+            technique TINYINT UNSIGNED NULL,
+            rhythm TINYINT UNSIGNED NULL,
+            teamwork TINYINT UNSIGNED NULL,
+            mentality TINYINT UNSIGNED NULL,
+            regularity TINYINT UNSIGNED NULL,
+            goalkeeper_skill TINYINT UNSIGNED NULL,
+            comments TEXT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_director_player_stat_vote (voter_id, player_id),
+            INDEX idx_director_player_stat_player (player_id),
+            CONSTRAINT fk_director_player_stat_voter FOREIGN KEY (voter_id) REFERENCES directive_members(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            CONSTRAINT fk_director_player_stat_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    ensure_default_directive_site_users();
+}
+
+function default_directive_user_names(): array
+{
+    return ['Marcelo', 'Braian', 'Cesar', 'Marian', 'Guille', 'Pela', 'Rodri', 'Pablo'];
+}
+
+function ensure_default_directive_site_users(string $temporaryPassword = '1234'): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+
+    ensure_auth_schema();
+    $pdo = db();
+    $selectUser = $pdo->prepare('SELECT * FROM site_users WHERE LOWER(username) = LOWER(:username) LIMIT 1');
+    $insertUser = $pdo->prepare(
+        'INSERT INTO site_users (username, password_hash, password_needs_reset, role, player_id, can_vote, active)
+         VALUES (:username, :password_hash, 1, "directivo", NULL, 1, 1)'
+    );
+    $updateUser = $pdo->prepare(
+        'UPDATE site_users
+         SET role = "directivo",
+             can_vote = 1,
+             active = 1
+         WHERE id = :id'
+    );
+    $selectMemberBySiteUser = $pdo->prepare('SELECT * FROM directive_members WHERE site_user_id = :site_user_id LIMIT 1');
+    $selectMemberByName = $pdo->prepare(
+        'SELECT * FROM directive_members
+         WHERE LOWER(name) = LOWER(:name)
+           AND name NOT LIKE "Invitado voto %"
+         LIMIT 1'
+    );
+    $insertMember = $pdo->prepare(
+        'INSERT INTO directive_members (site_user_id, name, password_hash, password_needs_setup, active)
+         VALUES (:site_user_id, :name, :password_hash, 0, 1)'
+    );
+    $updateMember = $pdo->prepare(
+        'UPDATE directive_members
+         SET site_user_id = :site_user_id,
+             name = :name,
+             active = 1
+         WHERE id = :id'
+    );
+    $detachMember = $pdo->prepare(
+        'UPDATE directive_members
+         SET site_user_id = NULL,
+             active = 0
+         WHERE id = :id'
+    );
+    $memberPasswordHash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+
+    foreach (default_directive_user_names() as $name) {
+        $selectUser->execute(['username' => $name]);
+        $user = $selectUser->fetch();
+        if ($user) {
+            $userId = (int) $user['id'];
+            $updateUser->execute(['id' => $userId]);
+        } else {
+            $insertUser->execute([
+                'username' => $name,
+                'password_hash' => password_hash($temporaryPassword, PASSWORD_DEFAULT),
+            ]);
+            $userId = (int) $pdo->lastInsertId();
+        }
+
+        $selectMemberByName->execute(['name' => $name]);
+        $memberByName = $selectMemberByName->fetch();
+        $selectMemberBySiteUser->execute(['site_user_id' => $userId]);
+        $memberBySiteUser = $selectMemberBySiteUser->fetch();
+        $member = $memberByName ?: $memberBySiteUser;
+
+        if ($member) {
+            $updateMember->execute([
+                'id' => (int) $member['id'],
+                'site_user_id' => $userId,
+                'name' => $name,
+            ]);
+            if ($memberByName && $memberBySiteUser && (int) $memberByName['id'] !== (int) $memberBySiteUser['id']) {
+                $detachMember->execute(['id' => (int) $memberBySiteUser['id']]);
+            }
+        } else {
+            $insertMember->execute([
+                'site_user_id' => $userId,
+                'name' => $name,
+                'password_hash' => $memberPasswordHash,
+            ]);
+        }
+    }
+}
+
+function director_player_stat_fields(): array
+{
+    return ['attack', 'defense_physical', 'technique', 'rhythm', 'teamwork', 'mentality', 'regularity', 'goalkeeper_skill'];
+}
+
+function director_player_stat_labels(): array
+{
+    return [
+        'attack' => 'Ataque',
+        'defense_physical' => 'Solidez',
+        'technique' => 'Tecnica',
+        'rhythm' => 'Ritmo',
+        'teamwork' => 'Equipo',
+        'mentality' => 'Mentalidad',
+        'regularity' => 'Regularidad',
+        'goalkeeper_skill' => 'Arquero',
+    ];
+}
+
+function director_stat_0_99_from_internal(float|string|int|null $value): int
+{
+    $rating = normalize_player_stat($value);
+    $anchors = [
+        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
+        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
+        [5.2, 93], [5.3, 94], [6.0, 99],
+    ];
+    for ($index = 0; $index < count($anchors) - 1; $index++) {
+        [$fromRating, $fromOverall] = $anchors[$index];
+        [$toRating, $toOverall] = $anchors[$index + 1];
+        if ($rating <= $toRating) {
+            $ratio = ($rating - $fromRating) / ($toRating - $fromRating);
+            return (int) round($fromOverall + (($toOverall - $fromOverall) * $ratio));
+        }
+    }
+    return 99;
+}
+
+function director_internal_stat_from_0_99(float|string|int|null $value): ?float
+{
+    if ($value === null || trim((string) $value) === '') {
+        return null;
+    }
+    $overall = max(0.0, min(99.0, (float) $value));
+    $anchors = [
+        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
+        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
+        [5.2, 93], [5.3, 94], [6.0, 99],
+    ];
+    if ($overall <= 35) {
+        return 1.0;
+    }
+    for ($index = 0; $index < count($anchors) - 1; $index++) {
+        [$fromRating, $fromOverall] = $anchors[$index];
+        [$toRating, $toOverall] = $anchors[$index + 1];
+        if ($overall <= $toOverall) {
+            $ratio = ($overall - $fromOverall) / ($toOverall - $fromOverall);
+            return normalize_player_stat($fromRating + (($toRating - $fromRating) * $ratio));
+        }
+    }
+    return 6.0;
+}
+
+function director_clamp_stat_0_99(float|string|int|null $value): ?int
+{
+    if ($value === null || trim((string) $value) === '') {
+        return null;
+    }
+    return max(0, min(99, (int) round((float) $value)));
+}
+
+function director_member_stat_votes(int $voterId): array
+{
+    ensure_directivos_schema();
+    $stmt = db()->prepare('SELECT * FROM director_player_stat_votes WHERE voter_id = :voter_id');
+    $stmt->execute(['voter_id' => $voterId]);
+    $votes = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $votes[(int) $row['player_id']] = $row;
+    }
+    return $votes;
+}
+
+function director_player_stat_vote_progress(int $activePlayerCount): array
+{
+    ensure_directivos_schema();
+    if ($activePlayerCount <= 0) {
+        return [];
+    }
+    $stmt = db()->query(
+        'SELECT dm.id, dm.name, COUNT(p.id) AS voted_players
+         FROM directive_members dm
+         LEFT JOIN director_player_stat_votes v ON v.voter_id = dm.id
+         LEFT JOIN players p ON p.id = v.player_id AND p.active = 1
+         WHERE dm.active = 1 AND dm.name NOT LIKE \'Invitado voto %\'
+         GROUP BY dm.id, dm.name
+         ORDER BY dm.name ASC'
+    );
+    $rows = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $rows[] = [
+            'id' => (int) $row['id'],
+            'name' => (string) $row['name'],
+            'voted_players' => (int) $row['voted_players'],
+            'complete' => (int) $row['voted_players'] >= $activePlayerCount,
+        ];
+    }
+    return $rows;
+}
+
+function director_recalculate_player_stats(array $playerIds = []): void
+{
+    ensure_directivos_schema();
+    $fields = director_player_stat_fields();
+    $fieldSql = implode(', ', array_map(static fn(string $field): string => "AVG(v.$field) AS $field", $fields));
+    $params = [];
+    $where = '';
+    if ($playerIds) {
+        $playerIds = array_values(array_unique(array_map('intval', $playerIds)));
+        $where = ' AND v.player_id IN (' . implode(',', array_fill(0, count($playerIds), '?')) . ')';
+        $params = $playerIds;
+    }
+    $stmt = db()->prepare(
+        "SELECT v.player_id, $fieldSql
+         FROM director_player_stat_votes v
+         INNER JOIN players p ON p.id = v.player_id AND p.active = 1
+         WHERE 1=1$where
+         GROUP BY v.player_id"
+    );
+    $stmt->execute($params);
+    $averages = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $averages[(int) $row['player_id']] = $row;
+    }
+    if (!$playerIds) {
+        $playerIds = array_keys($averages);
+    }
+    if (!$playerIds) {
+        return;
+    }
+    $selectPlayers = db()->prepare('SELECT * FROM players WHERE id = :id AND active = 1 LIMIT 1');
+    $update = db()->prepare(
+        'UPDATE players
+         SET pace = :pace, skill = :skill,
+             technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
+             attack = :attack, teamwork = :teamwork, mentality = :mentality, regularity = :regularity, goalkeeper_skill = :goalkeeper_skill
+         WHERE id = :id'
+    );
+    foreach ($playerIds as $playerId) {
+        $avg = $averages[(int) $playerId] ?? null;
+        if (!$avg) {
+            continue;
+        }
+        $selectPlayers->execute(['id' => (int) $playerId]);
+        $player = $selectPlayers->fetch();
+        if (!$player) {
+            continue;
+        }
+        $next = $player;
+        foreach ($fields as $field) {
+            if ($avg[$field] !== null) {
+                $next[$field] = director_internal_stat_from_0_99($avg[$field]);
+            }
+        }
+        $skill = player_overall_rating($next);
+        $pace = player_pace_from_rhythm((float) player_effective_stat($next, 'rhythm'));
+        $update->execute([
+            'id' => (int) $playerId,
+            'pace' => $pace,
+            'skill' => $skill,
+            'technique' => $next['technique'],
+            'rhythm' => $next['rhythm'],
+            'defense_physical' => $next['defense_physical'],
+            'attack' => $next['attack'],
+            'teamwork' => $next['teamwork'],
+            'mentality' => $next['mentality'],
+            'regularity' => $next['regularity'],
+            'goalkeeper_skill' => $next['goalkeeper_skill'],
+        ]);
+    }
+}
+
+function director_save_player_stat_votes(int $voterId, array $input): int
+{
+    ensure_directivos_schema();
+    if ($voterId <= 0) {
+        throw new RuntimeException('Directivo invalido.');
+    }
+    $fields = director_player_stat_fields();
+    $players = repo_all_players(true);
+    $playerIds = array_map(static fn(array $player): int => (int) $player['id'], $players);
+    $allowed = array_flip($playerIds);
+    $pdo = db();
+    $pdo->beginTransaction();
+    $saved = 0;
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO director_player_stat_votes
+               (voter_id, player_id, attack, defense_physical, technique, rhythm, teamwork, mentality, regularity, goalkeeper_skill, comments)
+             VALUES
+               (:voter_id, :player_id, :attack, :defense_physical, :technique, :rhythm, :teamwork, :mentality, :regularity, :goalkeeper_skill, :comments)
+             ON DUPLICATE KEY UPDATE
+               attack = VALUES(attack), defense_physical = VALUES(defense_physical), technique = VALUES(technique),
+               rhythm = VALUES(rhythm), teamwork = VALUES(teamwork), mentality = VALUES(mentality),
+               regularity = VALUES(regularity), goalkeeper_skill = VALUES(goalkeeper_skill),
+               comments = VALUES(comments), updated_at = CURRENT_TIMESTAMP'
+        );
+        foreach ($input as $playerId => $row) {
+            $pid = (int) $playerId;
+            if (!isset($allowed[$pid]) || !is_array($row)) {
+                continue;
+            }
+            $params = ['voter_id' => $voterId, 'player_id' => $pid, 'comments' => trim((string) ($row['comments'] ?? ''))];
+            $hasValue = $params['comments'] !== '';
+            foreach ($fields as $field) {
+                $params[$field] = director_clamp_stat_0_99($row[$field] ?? null);
+                if ($params[$field] !== null) {
+                    $hasValue = true;
+                }
+            }
+            if (!$hasValue) {
+                continue;
+            }
+            $stmt->execute($params);
+            $saved++;
+        }
+        director_recalculate_player_stats($playerIds);
+        $pdo->commit();
+        return $saved;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 }
 
 function directive_members(bool $onlyActive = false): array
