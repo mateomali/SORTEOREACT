@@ -18,6 +18,13 @@ const ANALYSIS_FIELDS = [
 ];
 const TIER_BALANCE_WEIGHTS = { bronze: 35, silver: 45, gold: 70, elite: 110, supreme: 150 };
 const TIER_LABELS = { bronze: 'Bronze', silver: 'Plata', gold: 'Oro', elite: 'Elite', supreme: 'Platinum' };
+const GENERATION_STEPS = [
+  'Preparando arqueros',
+  'Repartiendo platinum',
+  'Balanceando posiciones',
+  'Optimizando puntaje',
+  'Validando sorteo',
+];
 const STRICT_MAX_DIFF = 2.5;
 const FLEXIBLE_MAX_DIFF = 6;
 
@@ -1071,7 +1078,7 @@ function FullPlayerCard({ player, assignedPosition }) {
 }
 
 function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableProps = {}, onOpen }) {
-  const { dragging = false, ...domDraggableProps } = draggableProps;
+  const { dragging = false, selected = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRating(player, assignedPosition);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
@@ -1091,9 +1098,12 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
   return (
     <button
       type="button"
-      className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'}`}
+      className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
       style={{ ...cardTextStyle, background: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
-      onClick={onOpen}
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen?.();
+      }}
       aria-label={`Ver ficha de ${player.nombre}`}
       data-card-tier={tier}
       data-sorteo-player-tier={tier}
@@ -1231,6 +1241,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [error, setError] = useState(payload.loadError);
   const [success, setSuccess] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [generationStage, setGenerationStage] = useState('');
   const [exporting, setExporting] = useState(false);
   const [formModal, setFormModal] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -1241,6 +1252,8 @@ export function SorteoLegacyPageIsland({ root }) {
   const [hasSavedDraw, setHasSavedDraw] = useState(payload.hasSavedDraw);
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
+  const [touchMoveMode, setTouchMoveMode] = useState(false);
+  const [touchMoveSource, setTouchMoveSource] = useState(null);
   const seenDrawSignatures = useRef(new Set(payload.savedDrawSignature ? [payload.savedDrawSignature] : []));
   const teamsContainerRef = useRef(null);
 
@@ -1326,6 +1339,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const generateTeams = useCallback(async () => {
     setError('');
     setSuccess('');
+    setTouchMoveSource(null);
     const rawSelected = lockedMatch ? players.slice() : players.filter((player) => player.selected);
     const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true).map(playerKey));
     if (selectedGoalkeeperKeys.size > numTeams) {
@@ -1368,20 +1382,29 @@ export function SorteoLegacyPageIsland({ root }) {
       return null;
     }
 
+    const advanceGenerationStage = async (stage) => {
+      setGenerationStage(stage);
+      await new Promise((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 20)));
+    };
+
     setGenerating(true);
-    await new Promise((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 20)));
+    await advanceGenerationStage('Preparando arqueros');
     try {
+      await advanceGenerationStage('Repartiendo platinum');
       const avoidSignatures = new Set(seenDrawSignatures.current);
       if (teams) avoidSignatures.add(drawSignature(teams));
       let result = null;
       for (let diff = Math.max(0.5, maxDiff); diff <= FLEXIBLE_MAX_DIFF; diff += 0.5) {
+        await advanceGenerationStage(diff <= Math.max(0.5, maxDiff) ? 'Balanceando posiciones' : `Ampliando diff a ${diff.toFixed(1)}`);
         result = generateBalancedTeams(candidates, numTeams, Math.min(diff, STRICT_MAX_DIFF), payload.pairHistory, payload.drawBalanceWeights, nextGenerationIsRedraw ? avoidSignatures : new Set());
+        await advanceGenerationStage('Optimizando puntaje');
         if (result && (!nextGenerationIsRedraw || !avoidSignatures.has(drawSignature(result.teams)))) break;
       }
       if (!result) {
         setError('No se encontro una combinacion valida con los jugadores seleccionados.');
         return null;
       }
+      await advanceGenerationStage('Validando sorteo');
       const signature = drawSignature(result.teams);
       if (signature) seenDrawSignatures.current.add(signature);
       setTeams(result.teams);
@@ -1402,6 +1425,7 @@ export function SorteoLegacyPageIsland({ root }) {
       return result.teams;
     } finally {
       setGenerating(false);
+      setGenerationStage('');
     }
   }, [lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, teams]);
 
@@ -1526,6 +1550,22 @@ export function SorteoLegacyPageIsland({ root }) {
       const values = summaries.map((summary) => Number(summary.tierCounts?.[tier] || 0));
       return Math.max(maxSpread, countSpread(values));
     }, 0);
+    const lineIssues = summaries.flatMap((summary) => {
+      const teamSize = teams[0]?.length || 0;
+      return FORMATION_LINES
+        .filter((line) => {
+          const count = Number(summary.counts?.[line] || 0);
+          return count < logicalLineMinimum(line, teamSize) || count > fieldLineLimit(line, teamSize);
+        })
+        .map((line) => `${summary.name}: ${line}`);
+    });
+    const ruleChecks = [
+      { label: 'Un arquero por equipo', ok: summaries.every((summary) => Number(summary.counts.ARQ || 0) === 1) },
+      { label: 'Laterales y lineas cubiertas', ok: lineIssues.length === 0 },
+      { label: 'Platinum repartidos', ok: evaluation.platinumSpread <= 1 },
+      { label: 'Ritmo lento equilibrado', ok: evaluation.slowSpread <= 1 },
+      { label: 'Irregulares repartidos', ok: evaluation.irregularSpread <= 1 },
+    ];
     const comparisons = ANALYSIS_FIELDS
       .map(([field, label]) => {
         const values = summaries.map((summary) => summary.statValues[field]);
@@ -1542,8 +1582,11 @@ export function SorteoLegacyPageIsland({ root }) {
       diff: evaluation.diff,
       slowSpread: evaluation.slowSpread,
       irregularSpread: evaluation.irregularSpread,
+      platinumSpread: evaluation.platinumSpread,
       tierSpread,
       historicalPenalty: historicalRepeatPenalty(teams, payload.pairHistory),
+      ruleChecks,
+      decisionText: `Se evaluaron equipos por puntaje ajustado a posicion, cobertura de lineas, reparto de platinum, ritmo, regularidad, tiers e historial de companeros.`,
       summaries,
       comparisons,
     };
@@ -1768,6 +1811,35 @@ export function SorteoLegacyPageIsland({ root }) {
     movePlayer(source, Number.isFinite(resolvedTeamIndex) ? resolvedTeamIndex : teamIndex, resolvedLine, resolvedTargetPlayerKey);
     setDragState(null);
     setDragPoint(null);
+  };
+
+  const handleTouchCard = (teamIndex, player, assignedPosition) => {
+    if (!touchMoveMode) {
+      setPreview({ player, assignedPosition });
+      return;
+    }
+    const key = playerKey(player);
+    if (isFixedGoalkeeper(player)) {
+      setError(`${player.nombre} esta fijado como arquero y no puede cambiar de posicion.`);
+      return;
+    }
+    if (!touchMoveSource) {
+      setError('');
+      setTouchMoveSource({ teamIndex, playerKey: key, assignedPosition, playerName: player.nombre });
+      return;
+    }
+    if (touchMoveSource.teamIndex === teamIndex && touchMoveSource.playerKey === key) {
+      setTouchMoveSource(null);
+      return;
+    }
+    movePlayer(touchMoveSource, teamIndex, assignedPosition, key);
+    setTouchMoveSource(null);
+  };
+
+  const handleTouchLine = (teamIndex, line) => {
+    if (!touchMoveMode || !touchMoveSource) return;
+    movePlayer(touchMoveSource, teamIndex, line, null);
+    setTouchMoveSource(null);
   };
 
   const downloadTeamsText = () => {
@@ -2083,12 +2155,17 @@ export function SorteoLegacyPageIsland({ root }) {
             <div id="generateTeamsLoading" className={`${generating ? 'grid' : 'hidden'} gap-2 rounded-lg border border-[#9fc8b5] bg-[#f4fbf7] px-4 py-3 text-sm font-bold text-[#063d2b]`} role="status" aria-live="polite" aria-busy={generating}>
               <div className="flex items-center justify-between gap-3">
                 <strong className="block">Generando equipos...</strong>
-                <span className="text-xs font-black text-[#526b62]">Balanceando</span>
+                <span className="text-xs font-black text-[#526b62]">{generationStage || 'Balanceando'}</span>
               </div>
               <div className="sorteo-generate-progress" role="progressbar" aria-label="Progreso de generacion de equipos" aria-valuetext="Buscando la combinacion mas equilibrada">
                 <span />
               </div>
-              <span className="text-xs font-semibold text-[#526b62]">Buscando la combinacion mas equilibrada.</span>
+              <div className="flex flex-wrap gap-1.5 text-[11px] font-black text-[#526b62]" aria-hidden="true">
+                {GENERATION_STEPS.map((step) => (
+                  <span key={step} className={`rounded border px-1.5 py-0.5 ${generationStage === step ? 'border-[#063d2b] bg-white text-[#063d2b]' : 'border-[#cfe4da] bg-white/60'}`}>{step}</span>
+                ))}
+              </div>
+              <span className="text-xs font-semibold text-[#526b62]">Buscando la combinacion mas equilibrada sin romper arqueros, posiciones ni cartas platinum.</span>
             </div>
             <Message id="error" tone="error">{error}</Message>
             <Message id="success" tone="success">{success}</Message>
@@ -2185,6 +2262,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                   data-team-index={teamIndex}
                                   onDragOver={(event) => event.preventDefault()}
                                   onDrop={(event) => handleDrop(event, teamIndex, line)}
+                                  onClick={() => handleTouchLine(teamIndex, line)}
                                 >
                                   {lineList.map((player) => {
                                     const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
@@ -2194,10 +2272,11 @@ export function SorteoLegacyPageIsland({ root }) {
                                         player={player}
                                         assignedPosition={assigned}
                                         laneRole={assigned === 'LAT' ? 'lateral' : ''}
-                                        onOpen={() => !dragState && setPreview({ player, assignedPosition: assigned })}
+                                        onOpen={() => !dragState && handleTouchCard(teamIndex, player, assigned)}
                                         draggableProps={{
                                           draggable: !isFixedGoalkeeper(player),
                                           dragging: dragState?.playerKey === playerKey(player),
+                                          selected: touchMoveSource?.teamIndex === teamIndex && touchMoveSource?.playerKey === playerKey(player),
                                           onDragStart: (event) => handleDragStart(event, teamIndex, player, assigned),
                                           onDragOver: (event) => {
                                             event.preventDefault();
@@ -2256,12 +2335,24 @@ export function SorteoLegacyPageIsland({ root }) {
               <button className={quietButtonClass} type="button" onClick={downloadTeamsJpg} disabled={exporting}><Icon name="download" />{exporting ? 'Generando JPG...' : 'Exportar JPG'}</button>
               <button className={quietButtonClass} type="button" onClick={copyTeams}><Icon name="clipboard" />Copiar</button>
               <button className={quietButtonClass} type="button" onClick={downloadTeamsText}><Icon name="download" />Descargar texto</button>
+              <button className={touchMoveMode ? secondaryButtonClass : quietButtonClass} type="button" onClick={() => {
+                setTouchMoveMode((enabled) => !enabled);
+                setTouchMoveSource(null);
+              }} aria-pressed={touchMoveMode}>
+                <Icon name="pencil" />
+                {touchMoveMode ? 'Modo toque activo' : 'Modo toque'}
+              </button>
               <button className={secondaryButtonClass} type="button" onClick={() => setAnalysisVisible((visible) => !visible)} aria-expanded={analysisVisible}>
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}
               </button>
               {lockedMatch ? <button className={primaryButtonClass} type="button" onClick={saveDraw}><Icon name="save" />Guardar sorteo</button> : null}
             </div>
+            {touchMoveMode ? (
+              <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-3 py-2 text-xs font-bold text-[#526b62]">
+                {touchMoveSource ? `Seleccionado: ${touchMoveSource.playerName}. Toca otro jugador para intercambiar o una linea para moverlo.` : 'Toca una carta para seleccionarla. Luego toca otra carta o una linea.'}
+              </div>
+            ) : null}
           </div>
 
           {teams && analysisVisible && drawAnalysis ? (
@@ -2270,7 +2361,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <div>
                   <h3 className="m-0 text-base font-black text-[#07130f]">Analisis de equipos</h3>
                   <p className="m-0 text-xs font-semibold text-[#526b62]">
-                    Se eligio minimizando diferencia de puntaje ajustado, cobertura por posiciones, ritmo, regularidad e historial de companeros.
+                    {drawAnalysis.decisionText}
                   </p>
                 </div>
                 <span className="inline-flex min-h-9 items-center justify-center rounded-md border border-[#9fc8b5] bg-[#eaf7f0] px-3 text-sm font-black text-[#063d2b]">
@@ -2278,7 +2369,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 </span>
               </div>
 
-              <div className="grid gap-2 md:grid-cols-4">
+              <div className="grid gap-2 md:grid-cols-5">
                 <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
                   <span className="block text-[11px] font-black uppercase text-[#526b62]">Ritmo lento</span>
                   <strong className="block text-lg font-black text-[#07130f]">Spread {drawAnalysis.slowSpread}</strong>
@@ -2292,8 +2383,23 @@ export function SorteoLegacyPageIsland({ root }) {
                   <strong className="block text-lg font-black text-[#07130f]">Spread {drawAnalysis.tierSpread}</strong>
                 </div>
                 <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
+                  <span className="block text-[11px] font-black uppercase text-[#526b62]">Platinum</span>
+                  <strong className="block text-lg font-black text-[#07130f]">Spread {drawAnalysis.platinumSpread}</strong>
+                </div>
+                <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
                   <span className="block text-[11px] font-black uppercase text-[#526b62]">Historial repetido</span>
                   <strong className="block text-lg font-black text-[#07130f]">{drawAnalysis.historicalPenalty ? 'Penalizado' : 'Sin alerta'}</strong>
+                </div>
+              </div>
+
+              <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
+                <strong className="text-sm font-black text-[#07130f]">Reglas verificadas</strong>
+                <div className="flex flex-wrap gap-1.5">
+                  {drawAnalysis.ruleChecks.map((rule) => (
+                    <span key={rule.label} className={`rounded-md border px-2 py-1 text-xs font-black ${rule.ok ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-[#7a4b00]'}`}>
+                      {rule.ok ? 'OK' : 'Revisar'} {rule.label}
+                    </span>
+                  ))}
                 </div>
               </div>
 
