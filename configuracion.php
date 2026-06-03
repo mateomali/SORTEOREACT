@@ -12,7 +12,10 @@ ensure_admin_config_schema();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     try {
-        if ($action === 'save_settings') {
+        if ($action === 'save_settings' && isset($_POST['reset_position_weights'])) {
+            admin_config_reset_position_weights();
+            flash('success', 'Pesos por posicion restaurados.');
+        } elseif ($action === 'save_settings') {
             admin_config_save_settings($_POST);
             flash('success', 'Configuracion de sorteos guardada.');
         } elseif ($action === 'save_court') {
@@ -26,6 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $settings = admin_config_settings();
+$positionWeights = admin_config_position_weights($settings);
+$positionWeightLabels = admin_config_position_weight_labels();
 $courts = rental_courts(false);
 $title = 'Configuracion | ' . APP_NAME;
 $activePage = 'configuracion.php';
@@ -70,6 +75,28 @@ require __DIR__ . '/includes/header.php';
         <input class="w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25" type="number" name="multi_draw_lock_minutes_default" min="0" max="1440" value="<?= h((string) $settings['multi_draw_lock_minutes_default']) ?>">
         <small class="text-xs font-semibold text-lime-50/72">Minutos antes del partido.</small>
       </label>
+      <div class="grid gap-3 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-3">
+        <div>
+          <span class="text-xs font-black uppercase text-lime-100/85">Pesos por posicion</span>
+          <p class="m-0 mt-1 text-xs font-semibold text-lime-50/72">Valores relativos. Al guardar se normalizan para que cada posicion sume 100%.</p>
+        </div>
+        <div class="grid gap-3">
+          <?php foreach ($positionWeights as $position => $weights): ?>
+            <fieldset class="grid gap-2 rounded-xl border border-lime-200/20 bg-emerald-950/65 p-3">
+              <legend class="px-1 text-sm font-black text-lime-50"><?= h($position) ?> · <?= h(number_format(array_sum($weights) * 100, 0, ',', '.')) ?>%</legend>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <?php foreach ($weights as $field => $weight): ?>
+                  <label class="grid gap-1">
+                    <span class="text-[11px] font-black uppercase text-lime-100/80"><?= h($positionWeightLabels[$field] ?? $field) ?></span>
+                    <input class="rounded-lg border border-lime-200/35 bg-emerald-950/92 px-2.5 py-2 text-xs font-bold text-lime-50" type="number" name="position_weights[<?= h($position) ?>][<?= h($field) ?>]" min="0" max="1" step="0.01" value="<?= h(number_format((float) $weight, 2, '.', '')) ?>">
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            </fieldset>
+          <?php endforeach; ?>
+        </div>
+        <button class="btn btn-muted w-full" type="submit" name="reset_position_weights" value="1">Restaurar pesos por defecto</button>
+      </div>
       <button class="btn btn-primary w-full" type="submit">Guardar configuracion</button>
     </form>
   </article>

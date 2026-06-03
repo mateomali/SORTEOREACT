@@ -9,10 +9,14 @@ function ensure_admin_config_schema(): void
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS app_settings (
             setting_key VARCHAR(80) PRIMARY KEY,
-            setting_value VARCHAR(255) NOT NULL,
+            setting_value TEXT NOT NULL,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+    $settingValueType = schema_column_type($pdo, 'app_settings', 'setting_value');
+    if ($settingValueType !== '' && str_starts_with(strtolower($settingValueType), 'varchar')) {
+        $pdo->exec('ALTER TABLE app_settings MODIFY setting_value TEXT NOT NULL');
+    }
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS rental_courts (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -34,6 +38,11 @@ function ensure_admin_config_schema(): void
     admin_config_seed_defaults();
 }
 
+function admin_config_default_position_weights_json(): string
+{
+    return json_encode(player_position_stat_weight_defaults(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+}
+
 function admin_config_seed_defaults(): void
 {
     $defaults = [
@@ -41,6 +50,7 @@ function admin_config_seed_defaults(): void
         'redraw_limit_default' => '3',
         'multi_draw_count_default' => '3',
         'multi_draw_lock_minutes_default' => '60',
+        'position_stat_weights' => admin_config_default_position_weights_json(),
     ];
     foreach ($defaults as $key => $value) {
         admin_config_insert_missing($key, $value);
@@ -86,12 +96,32 @@ function admin_config_settings(): array
         'redraw_limit_default' => '3',
         'multi_draw_count_default' => '3',
         'multi_draw_lock_minutes_default' => '60',
+        'position_stat_weights' => admin_config_default_position_weights_json(),
     ];
     $stmt = db()->query('SELECT setting_key, setting_value FROM app_settings');
     foreach ($stmt->fetchAll() as $row) {
         $settings[(string) $row['setting_key']] = (string) $row['setting_value'];
     }
     return $settings;
+}
+
+function admin_config_position_weight_labels(): array
+{
+    return [
+        'goalkeeper_skill' => 'Arquero',
+        'defense_physical' => 'Solidez',
+        'rhythm' => 'Ritmo',
+        'technique' => 'Tecnica',
+        'teamwork' => 'Equipo',
+        'mentality' => 'Mentalidad',
+        'attack' => 'Ataque',
+    ];
+}
+
+function admin_config_position_weights(array $settings): array
+{
+    $decoded = json_decode((string) ($settings['position_stat_weights'] ?? ''), true);
+    return player_normalize_position_stat_weights(is_array($decoded) ? $decoded : player_position_stat_weight_defaults());
 }
 
 function admin_config_save_settings(array $input): void
@@ -101,6 +131,15 @@ function admin_config_save_settings(array $input): void
     admin_config_set_default('redraw_limit_default', (string) max(0, min(20, (int) ($input['redraw_limit_default'] ?? 3))));
     admin_config_set_default('multi_draw_count_default', (string) max(1, min(10, (int) ($input['multi_draw_count_default'] ?? 3))));
     admin_config_set_default('multi_draw_lock_minutes_default', (string) max(0, min(1440, (int) ($input['multi_draw_lock_minutes_default'] ?? 60))));
+    $weightsInput = is_array($input['position_weights'] ?? null) ? $input['position_weights'] : [];
+    $normalizedWeights = player_normalize_position_stat_weights($weightsInput);
+    admin_config_set_default('position_stat_weights', json_encode($normalizedWeights, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}');
+}
+
+function admin_config_reset_position_weights(): void
+{
+    ensure_admin_config_schema();
+    admin_config_set_default('position_stat_weights', admin_config_default_position_weights_json());
 }
 
 function rental_courts(bool $activeOnly = false): array

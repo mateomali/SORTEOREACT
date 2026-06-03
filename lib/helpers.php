@@ -243,9 +243,17 @@ function player_field_stat_fields(): array
     return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 }
 
-function player_field_stat_weights(?string $position = null): array
+function player_position_stat_weight_defaults(): array
 {
-    return match (strtoupper((string) ($position ?? 'MED'))) {
+    return [
+        'ARQ' => [
+            'goalkeeper_skill' => 0.42,
+            'defense_physical' => 0.14,
+            'rhythm' => 0.10,
+            'technique' => 0.10,
+            'teamwork' => 0.14,
+            'mentality' => 0.10,
+        ],
         'DEF' => [
             'defense_physical' => 0.28,
             'rhythm' => 0.20,
@@ -262,6 +270,14 @@ function player_field_stat_weights(?string $position = null): array
             'attack' => 0.12,
             'mentality' => 0.10,
         ],
+        'MED' => [
+            'technique' => 0.24,
+            'rhythm' => 0.23,
+            'teamwork' => 0.19,
+            'mentality' => 0.13,
+            'defense_physical' => 0.12,
+            'attack' => 0.09,
+        ],
         'DEL' => [
             'attack' => 0.31,
             'rhythm' => 0.20,
@@ -270,27 +286,63 @@ function player_field_stat_weights(?string $position = null): array
             'mentality' => 0.10,
             'defense_physical' => 0.08,
         ],
-        default => [
-            'technique' => 0.24,
-            'rhythm' => 0.23,
-            'teamwork' => 0.19,
-            'mentality' => 0.13,
-            'defense_physical' => 0.12,
-            'attack' => 0.09,
-        ],
-    };
+    ];
+}
+
+function player_normalize_position_stat_weights(array $weights): array
+{
+    $defaults = player_position_stat_weight_defaults();
+    $allowedFields = ['goalkeeper_skill', 'defense_physical', 'rhythm', 'technique', 'teamwork', 'mentality', 'attack'];
+    $normalized = [];
+    foreach ($defaults as $position => $defaultWeights) {
+        $rawWeights = is_array($weights[$position] ?? null) ? $weights[$position] : $defaultWeights;
+        $row = [];
+        foreach ($defaultWeights as $field => $defaultWeight) {
+            if (!in_array($field, $allowedFields, true)) {
+                continue;
+            }
+            $value = (float) ($rawWeights[$field] ?? $defaultWeight);
+            $row[$field] = max(0.0, min(1.0, $value));
+        }
+        $sum = array_sum($row);
+        if ($sum <= 0.0) {
+            $row = $defaultWeights;
+            $sum = array_sum($row);
+        }
+        $normalized[$position] = array_map(static fn(float $value): float => round($value / $sum, 4), $row);
+    }
+    return $normalized;
+}
+
+function player_position_stat_weights_config(): array
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    $defaults = player_position_stat_weight_defaults();
+    try {
+        $stmt = db()->prepare('SELECT setting_value FROM app_settings WHERE setting_key = :setting_key LIMIT 1');
+        $stmt->execute(['setting_key' => 'position_stat_weights']);
+        $raw = $stmt->fetchColumn();
+        $decoded = $raw ? json_decode((string) $raw, true) : null;
+        $cached = player_normalize_position_stat_weights(is_array($decoded) ? $decoded : $defaults);
+    } catch (Throwable) {
+        $cached = player_normalize_position_stat_weights($defaults);
+    }
+    return $cached;
+}
+
+function player_field_stat_weights(?string $position = null): array
+{
+    $weights = player_position_stat_weights_config();
+    $position = strtoupper((string) ($position ?? 'MED'));
+    return $weights[$position] ?? $weights['MED'];
 }
 
 function player_goalkeeper_stat_weights(): array
 {
-    return [
-        'goalkeeper_skill' => 0.42,
-        'defense_physical' => 0.14,
-        'rhythm' => 0.10,
-        'technique' => 0.10,
-        'teamwork' => 0.14,
-        'mentality' => 0.10,
-    ];
+    return player_position_stat_weights_config()['ARQ'];
 }
 
 function player_draw_balance_weights(): array

@@ -24,7 +24,7 @@ DROP TABLE IF EXISTS `app_settings`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `app_settings` (
   `setting_key` varchar(80) NOT NULL,
-  `setting_value` varchar(255) NOT NULL,
+  `setting_value` text NOT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -36,7 +36,7 @@ CREATE TABLE `app_settings` (
 
 LOCK TABLES `app_settings` WRITE;
 /*!40000 ALTER TABLE `app_settings` DISABLE KEYS */;
-INSERT INTO `app_settings` VALUES ('allow_redraw_default','1','2026-05-09 00:08:24'),('multi_draw_count_default','1','2026-05-18 01:01:45'),('multi_draw_lock_minutes_default','60','2026-05-09 00:08:24'),('redraw_limit_default','3','2026-05-09 00:08:24');
+INSERT INTO `app_settings` VALUES ('allow_redraw_default','1','2026-05-09 00:08:24'),('multi_draw_count_default','1','2026-05-18 01:01:45'),('multi_draw_lock_minutes_default','60','2026-05-09 00:08:24'),('position_stat_weights','{\"ARQ\":{\"goalkeeper_skill\":0.42,\"defense_physical\":0.14,\"rhythm\":0.1,\"technique\":0.1,\"teamwork\":0.14,\"mentality\":0.1},\"DEF\":{\"defense_physical\":0.28,\"rhythm\":0.2,\"technique\":0.18,\"teamwork\":0.13,\"mentality\":0.13,\"attack\":0.08},\"LAT\":{\"rhythm\":0.24,\"defense_physical\":0.22,\"technique\":0.17,\"teamwork\":0.15,\"attack\":0.12,\"mentality\":0.1},\"MED\":{\"technique\":0.24,\"rhythm\":0.23,\"teamwork\":0.19,\"mentality\":0.13,\"defense_physical\":0.12,\"attack\":0.09},\"DEL\":{\"attack\":0.31,\"rhythm\":0.2,\"technique\":0.17,\"teamwork\":0.14,\"mentality\":0.1,\"defense_physical\":0.08}}','2026-06-03 00:00:00'),('redraw_limit_default','3','2026-05-09 00:08:24');
 /*!40000 ALTER TABLE `app_settings` ENABLE KEYS */;
 UNLOCK TABLES;
 

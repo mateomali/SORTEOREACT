@@ -230,7 +230,7 @@ function ensure_control_schema(): array
         ['matches', 'draw_mode', "draw_mode ENUM('none', 'random', 'captains', 'manual') NOT NULL DEFAULT 'none' AFTER status"],
         ['matches', 'draw_started_at', 'draw_started_at DATETIME NULL AFTER draw_mode'],
         ['matches', 'draw_completed_at', 'draw_completed_at DATETIME NULL AFTER draw_started_at'],
-        ['matches', 'draw_audit_snapshot', 'JSON NULL AFTER draw_completed_at'],
+        ['matches', 'draw_audit_snapshot', 'draw_audit_snapshot JSON NULL AFTER draw_completed_at'],
         ['matches', 'finalized_at', 'finalized_at DATETIME NULL AFTER draw_audit_snapshot'],
         ['matches', 'result_saved_at', 'result_saved_at DATETIME NULL AFTER finalized_at'],
         ['matches', 'formation_edit_deadline', 'formation_edit_deadline DATETIME NULL AFTER finalized_at'],

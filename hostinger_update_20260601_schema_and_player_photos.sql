@@ -9,6 +9,15 @@ SET NAMES utf8mb4;
 START TRANSACTION;
 
 -- Esquema requerido por sorteos, formaciones, capitanes y fotos.
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key VARCHAR(80) PRIMARY KEY,
+  setting_value TEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE app_settings
+  MODIFY setting_value TEXT NOT NULL;
+
 ALTER TABLE matches
   ADD COLUMN IF NOT EXISTS title VARCHAR(120) NULL AFTER id,
   ADD COLUMN IF NOT EXISTS num_teams TINYINT UNSIGNED NOT NULL DEFAULT 2 AFTER match_date,
@@ -246,6 +255,10 @@ LEFT JOIN (
 ) f ON f.match_id = mt.match_id AND f.team_number = mt.team_number
 SET mt.formation_name = COALESCE(mt.formation_name, f.formation_name)
 WHERE f.formation_name IS NOT NULL;
+
+INSERT IGNORE INTO app_settings (setting_key, setting_value)
+VALUES
+  ('position_stat_weights', '{"ARQ":{"goalkeeper_skill":0.42,"defense_physical":0.14,"rhythm":0.1,"technique":0.1,"teamwork":0.14,"mentality":0.1},"DEF":{"defense_physical":0.28,"rhythm":0.2,"technique":0.18,"teamwork":0.13,"mentality":0.13,"attack":0.08},"LAT":{"rhythm":0.24,"defense_physical":0.22,"technique":0.17,"teamwork":0.15,"attack":0.12,"mentality":0.1},"MED":{"technique":0.24,"rhythm":0.23,"teamwork":0.19,"mentality":0.13,"defense_physical":0.12,"attack":0.09},"DEL":{"attack":0.31,"rhythm":0.2,"technique":0.17,"teamwork":0.14,"mentality":0.1,"defense_physical":0.08}}');
 
 -- Vinculacion de fotos incluidas en public_html/uploads/players/.
 -- Si algun id no existe en hosting, ese UPDATE no afecta filas.

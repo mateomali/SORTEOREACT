@@ -91,6 +91,27 @@ assert_true(
     'El puntaje ARQ debe ponderar caracteristicas principales, no solo habilidad de arquero.'
 );
 
+$customWeights = player_normalize_position_stat_weights([
+    'MED' => [
+        'technique' => 0.75,
+        'rhythm' => 0.25,
+        'teamwork' => 0,
+        'mentality' => 0,
+        'defense_physical' => 0,
+        'attack' => 0,
+        'ignored_field' => 99,
+    ],
+    'BAD' => [
+        'attack' => 1,
+    ],
+]);
+assert_true(abs(array_sum($customWeights['MED']) - 1.0) < 0.001, 'Los pesos MED personalizados deben normalizar a 1.');
+assert_true(abs($customWeights['MED']['technique'] - 0.75) < 0.001, 'La tecnica MED debe respetar el peso relativo personalizado.');
+assert_true(!isset($customWeights['BAD']), 'Las posiciones no soportadas no deben persistir en pesos normalizados.');
+foreach (player_position_stat_weight_defaults() as $position => $_weights) {
+    assert_true(abs(array_sum($customWeights[$position]) - 1.0) < 0.001, "Los pesos {$position} deben sumar 1.");
+}
+
 $threeTeamPlayers = [
     test_player(101, 'Arquero 1', 'ARQ', 4.4, ['goalkeeper_skill' => 5.2]),
     test_player(102, 'Arquero 2', 'ARQ', 4.2, ['goalkeeper_skill' => 5.1]),
