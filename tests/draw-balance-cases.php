@@ -147,8 +147,8 @@ $ninePlayerTooManyDefenders = [
 ];
 
 assert_formation_limits($ninePlayerValidSplit, true, '9 jugadores: 2 DEF + 2 LAT debe ser valido');
-assert_formation_limits($ninePlayerTooManyForwards, false, '9 jugadores: 4 DEL debe ser invalido');
-assert_formation_limits($ninePlayerTooManyDefenders, false, '9 jugadores: 3 DEF debe ser invalido');
+assert_formation_limits($ninePlayerTooManyForwards, true, '9 jugadores: 4 DEL es valido si la asignacion corrige el minimo de MED');
+assert_formation_limits($ninePlayerTooManyDefenders, true, '9 jugadores: 4 DEF/LAT es valido porque el maximo combinado por linea es 4');
 
 $unevenFloorTeams = [
     [

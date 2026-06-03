@@ -17447,6 +17447,15 @@ body.page-index .content .match-history .formation-player.is-player-of-match::af
   --formation-card-badge: #f7f1ff;
 }
 
+.team-formation .formation-player.formation-card-sin-stat.formation-card-tier-supreme,
+  body.page-index .content .match-history .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-supreme,
+  body.page-historial .content .match-history .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-supreme {
+  --formation-card-bg: #0b1716;
+  --formation-card-border: #dffdf3;
+  --formation-card-band: #9fffe6;
+  --formation-card-badge: #dffdf3;
+}
+
 .team-formation .formation-player.formation-card-sin-stat .player-card-rating,
   body.page-index .content .match-history .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating,
   body.page-historial .content .match-history .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating {
@@ -17732,6 +17741,13 @@ body.page-index .content .match-history .formation-player.is-player-of-match::af
   --formation-card-image: url("./card-backgrounds/clean-elite.png");
   --formation-slot-bg: rgba(247, 241, 255, 0.34);
   --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+.public-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-supreme,
+  .home-captain-live-teams .is-base-formation .formation-player.formation-card-sin-stat.formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-supreme.png");
+  --formation-slot-bg: rgba(223, 253, 243, 0.78);
+  --formation-slot-line: rgba(159, 255, 230, 0.58);
 }
 
 .public-teams .is-base-formation .formation-player.formation-card-sin-stat .player-card-rating,
@@ -18072,6 +18088,12 @@ body.page-index .content .match-history .public-teams .is-base-formation .format
   --formation-card-image: url("./card-backgrounds/clean-elite.png");
   --formation-slot-bg: rgba(247, 241, 255, 0.34);
   --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+.public-teams .formation-player.formation-card-sin-stat.formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-supreme.png");
+  --formation-slot-bg: rgba(223, 253, 243, 0.78);
+  --formation-slot-line: rgba(159, 255, 230, 0.58);
 }
 
 .public-teams .formation-player.formation-card-sin-stat .player-card-rating {
@@ -18472,6 +18494,14 @@ body.page-index .content .match-history .public-teams .formation-player.formatio
   --formation-slot-line: rgba(243, 237, 255, 0.5);
 }
 
+body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-supreme,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-supreme,
+  body.page-perfil .content .public-teams .formation-player.formation-card-sin-stat.formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-supreme.png");
+  --formation-slot-bg: rgba(223, 253, 243, 0.78);
+  --formation-slot-line: rgba(159, 255, 230, 0.58);
+}
+
 body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.is-position-changed,
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.is-position-changed,
@@ -18846,6 +18876,12 @@ body.page-capitanes .content .captain-formation-player.formation-card-tier-elite
   --formation-slot-line: rgba(243, 237, 255, 0.5);
 }
 
+body.page-capitanes .content .captain-formation-player.formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-compact-supreme.png");
+  --formation-slot-bg: rgba(223, 253, 243, 0.78);
+  --formation-slot-line: rgba(159, 255, 230, 0.58);
+}
+
 body.page-capitanes .content .captain-formation-player.formation-card-sin-stat .player-card-rating {
   position: absolute;
   z-index: 2;
@@ -19149,6 +19185,12 @@ body.has-formation-card-preview {
   --formation-card-image: url("./card-backgrounds/clean-elite.png");
   --formation-slot-bg: rgba(247, 241, 255, 0.34);
   --formation-slot-line: rgba(243, 237, 255, 0.5);
+}
+
+.formation-card-preview-stage .formation-player.formation-card-sin-stat.formation-card-preview-stat.formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-supreme.png");
+  --formation-slot-bg: rgba(223, 253, 243, 0.78);
+  --formation-slot-line: rgba(159, 255, 230, 0.58);
 }
 
 .formation-card-preview-stage .formation-player.formation-card-sin-stat.formation-card-preview-stat .player-card-rating {
@@ -19471,6 +19513,11 @@ body.has-formation-card-preview {
   --formation-slot-line: rgba(243, 237, 255, 0.38);
 }
 
+.formation-card-preview-stage .formation-player.formation-card-preview-stat.formation-card-tier-supreme {
+  --formation-slot-bg: color-mix(in srgb, #dffdf3 58%, transparent);
+  --formation-slot-line: rgba(159, 255, 230, 0.48);
+}
+
 .formation-card-preview-stage .formation-player.formation-card-sin-stat.formation-card-preview-stat .player-card-rating {
   top: 13.2%;
   left: 14.5%;
@@ -19775,6 +19822,16 @@ body.has-formation-card-preview {
   --formation-slot-line: rgba(243, 237, 255, 0.38);
 }
 
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
+  body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
+  body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-compact-supreme.png");
+  --formation-slot-bg: color-mix(in srgb, #dffdf3 58%, transparent);
+  --formation-slot-line: rgba(159, 255, 230, 0.48);
+}
+
 .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
   body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating,
@@ -20054,6 +20111,12 @@ body.has-formation-card-preview {
   --formation-card-image: url("./card-backgrounds/clean-elite.png");
   --formation-slot-bg: color-mix(in srgb, #f7f1ff 34%, transparent);
   --formation-slot-line: rgba(243, 237, 255, 0.38);
+}
+
+.formation-player.card-pro-relieve.formation-card-sin-stat:not(.formation-card-compacta).formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-supreme.png");
+  --formation-slot-bg: color-mix(in srgb, #dffdf3 58%, transparent);
+  --formation-slot-line: rgba(159, 255, 230, 0.48);
 }
 
 .formation-player.card-pro-relieve.formation-card-sin-stat:not(.formation-card-compacta) .player-card-rating {
@@ -20741,6 +20804,12 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
   --formation-card-image: url("./card-backgrounds/reference-compact-elite.png") !important;
   --formation-card-text: #a5fff0 !important;
   --formation-card-separator: rgba(165, 255, 240, 0.34) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme {
+  --formation-card-image: url("./card-backgrounds/reference-compact-supreme.png") !important;
+  --formation-card-text: #dffdf3 !important;
+  --formation-card-separator: rgba(159, 255, 230, 0.38) !important;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta::before {

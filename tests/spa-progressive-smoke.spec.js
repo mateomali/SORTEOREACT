@@ -104,7 +104,7 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
     await page.waitForSelector('#generateTeamsButton', { timeout: 10000 });
     await wait(700);
 
-    await expect(page.locator('main.content')).toContainText('Generador de Equipos GOODFELLAS');
+    await expect(page.locator('main.content')).toContainText(/Generador(?: de Equipos)? GOODFELLAS/);
     expect(await page.evaluate(() => window.__partialSmokeMarker)).toBe(markerBefore);
     expect(await page.evaluate(() => typeof window.goodfellasPartialNavigate)).toBe('function');
     expect(await page.evaluate(() => typeof window.generarEquipos)).toBe('function');

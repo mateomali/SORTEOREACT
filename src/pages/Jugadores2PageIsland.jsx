@@ -5,6 +5,7 @@ const cardBackgrounds = {
   silver: 'assets/card-backgrounds/reference-silver.png',
   gold: 'assets/card-backgrounds/reference-gold.png',
   elite: 'assets/card-backgrounds/reference-elite.png',
+  supreme: 'assets/card-backgrounds/reference-supreme.png',
 };
 
 const cardPalettes = {
@@ -23,6 +24,10 @@ const cardPalettes = {
   elite: {
     text: 'text-[#a5fff0] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.42)]',
     separator: 'bg-[#a5fff0]/34',
+  },
+  supreme: {
+    text: 'text-[#dffdf3] [text-shadow:0_2px_0_rgba(0,0,0,.82),0_1px_6px_rgba(0,255,220,.34)]',
+    separator: 'bg-[#9fffe6]/38',
   },
 };
 

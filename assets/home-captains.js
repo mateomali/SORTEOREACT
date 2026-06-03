@@ -69,9 +69,10 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
     };
     const playerCardTier = (value) => {
       const overall = playerCardRating(value);
-      if (overall >= 90) return 'elite';
-      if (overall >= 80) return 'gold';
-      if (overall >= 65) return 'silver';
+      if (overall >= 88) return 'supreme';
+      if (overall >= 84) return 'elite';
+      if (overall >= 76) return 'gold';
+      if (overall >= 66) return 'silver';
       return 'bronze';
     };
     const playerCardStatValue = (player, field) => playerCardRating(statValue(player, field));

@@ -47,12 +47,35 @@ function draw_pitch_line_counts(array $logicalCounts): array
 
 function draw_main_field_line_limit(int $teamSize): int
 {
-    return max(0, intdiv($teamSize, 3));
+    $fieldPlayers = max(0, $teamSize - 1);
+    return $fieldPlayers > 0 ? max(1, intdiv($fieldPlayers, 2)) : 0;
 }
 
 function draw_defense_side_line_limit(int $teamSize): int
 {
-    return max(0, intdiv($teamSize, 4));
+    return draw_main_field_line_limit($teamSize);
+}
+
+function draw_pitch_line_minimum(string $position, int $teamSize): int
+{
+    $line = draw_pitch_line(strtoupper(trim($position)));
+    $fieldPlayers = max(0, $teamSize - 1);
+    if ($line === 'ARQ') {
+        return 1;
+    }
+    if ($fieldPlayers === 4) {
+        return in_array($line, player_required_lines(), true) ? 1 : 0;
+    }
+    if ($fieldPlayers < 5) {
+        return 0;
+    }
+    if ($line === 'DEF' || $line === 'MED') {
+        return 2;
+    }
+    if ($line === 'DEL') {
+        return 1;
+    }
+    return 0;
 }
 
 function draw_line_limit(string $position, int $teamSize): int
@@ -69,6 +92,16 @@ function draw_line_limit(string $position, int $teamSize): int
 
 function draw_line_counts_fit_limits(array $lineCounts, int $teamSize): bool
 {
+    $pitchCounts = draw_pitch_line_counts($lineCounts);
+    foreach (player_required_lines() as $line) {
+        $count = (int) ($pitchCounts[$line] ?? 0);
+        if ($count < draw_pitch_line_minimum($line, $teamSize)) {
+            return false;
+        }
+        if ($count > draw_main_field_line_limit($teamSize)) {
+            return false;
+        }
+    }
     foreach (player_field_lines() as $line) {
         if ((int) ($lineCounts[$line] ?? 0) > draw_line_limit($line, $teamSize)) {
             return false;
@@ -189,12 +222,46 @@ function build_team_position_assignment(array $team): array
         return $count;
     };
 
+    foreach (player_required_lines() as $requiredLine) {
+        $guard = 0;
+        while ($guard < $teamSize) {
+            $guard++;
+            $lineCount = $countLines($assignment);
+            $pitchCount = draw_pitch_line_counts($lineCount);
+            if (($pitchCount[$requiredLine] ?? 0) >= draw_pitch_line_minimum($requiredLine, $teamSize)) {
+                break;
+            }
+
+            $candidate = null;
+            $candidateRating = null;
+            foreach ($team as $player) {
+                $id = (int) $player['id'];
+                $currentLine = draw_pitch_line((string) ($assignment[$id] ?? 'MED'));
+                if ($currentLine === $requiredLine || $currentLine === 'ARQ') {
+                    continue;
+                }
+                if (($pitchCount[$currentLine] ?? 0) <= draw_pitch_line_minimum($currentLine, $teamSize)) {
+                    continue;
+                }
+                $rating = player_position_rating($player, $requiredLine);
+                if ($candidate === null || $rating > $candidateRating) {
+                    $candidate = $player;
+                    $candidateRating = $rating;
+                }
+            }
+            if ($candidate === null) {
+                break;
+            }
+            $assignment[(int) $candidate['id']] = $requiredLine;
+        }
+    }
+
     $changed = true;
     while ($changed) {
         $changed = false;
         $lineCount = $countLines($assignment);
         $pitchCount = draw_pitch_line_counts($lineCount);
-        $overloaded = array_values(array_filter(['MED', 'DEL'], static fn(string $line): bool => $pitchCount[$line] > $maxPerMainLine));
+        $overloaded = array_values(array_filter(player_required_lines(), static fn(string $line): bool => $pitchCount[$line] > $maxPerMainLine));
         usort($overloaded, static fn(string $a, string $b): int => $pitchCount[$b] <=> $pitchCount[$a]);
         $logicalOverloaded = array_values(array_filter($fieldLines, static fn(string $line): bool => $lineCount[$line] > draw_line_limit($line, $teamSize)));
         usort($logicalOverloaded, static fn(string $a, string $b): int => $lineCount[$b] <=> $lineCount[$a]);
@@ -613,6 +680,8 @@ function decorate_teams(array $teams): array
 
 function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int $attempts = 50000, int $targetValidCandidates = 80): ?array
 {
+    static $exactCache = [];
+
     if ($numTeams < 2) {
         return null;
     }
@@ -623,6 +692,21 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
     $teamSize = (int) ($totalPlayers / $numTeams);
     $bands = draw_player_band_ids($players);
     $players = prepare_emergency_goalkeepers($players, $numTeams);
+    if ($numTeams === 2 && $totalPlayers <= 20) {
+        $cacheKey = md5(json_encode([
+            'ids' => array_map(static fn(array $player): int => (int) ($player['id'] ?? 0), $players),
+            'max_diff' => round($maxDiff, 2),
+        ], JSON_THROW_ON_ERROR));
+        if (array_key_exists($cacheKey, $exactCache)) {
+            return $exactCache[$cacheKey] !== null ? decorate_teams($exactCache[$cacheKey]) : null;
+        }
+        $exactTeams = draw_exact_two_team_candidate($players, $teamSize, $maxDiff, $bands);
+        if ($exactTeams !== null) {
+            $exactCache[$cacheKey] = $exactTeams;
+            return decorate_teams($exactTeams);
+        }
+        $exactCache[$cacheKey] = null;
+    }
 
     $goalkeepers = array_values(array_filter($players, static fn(array $p): bool => player_primary_position($p) === 'ARQ' || is_emergency_goalkeeper($p)));
     $bestTeams = null;

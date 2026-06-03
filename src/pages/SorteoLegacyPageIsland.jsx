@@ -14,6 +14,7 @@ const cardBackgrounds = {
   silver: 'assets/card-backgrounds/reference-silver.png',
   gold: 'assets/card-backgrounds/reference-gold.png',
   elite: 'assets/card-backgrounds/reference-elite.png',
+  supreme: 'assets/card-backgrounds/reference-supreme.png',
 };
 
 const compactCardBackgrounds = {
@@ -21,6 +22,7 @@ const compactCardBackgrounds = {
   silver: 'assets/card-backgrounds/reference-compact-silver.png',
   gold: 'assets/card-backgrounds/reference-compact-gold.png',
   elite: 'assets/card-backgrounds/reference-compact-elite.png',
+  supreme: 'assets/card-backgrounds/reference-compact-supreme.png',
 };
 
 const cardPalettes = {
@@ -43,6 +45,11 @@ const cardPalettes = {
     color: '#a5fff0',
     text: 'text-[#a5fff0] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.42)]',
     separator: 'bg-[#a5fff0]/34',
+  },
+  supreme: {
+    color: '#dffdf3',
+    text: 'text-[#dffdf3] [text-shadow:0_2px_0_rgba(0,0,0,.82),0_1px_6px_rgba(0,255,220,.34)]',
+    separator: 'bg-[#9fffe6]/38',
   },
 };
 
@@ -204,6 +211,10 @@ function isLowRhythmPlayer(player) {
   return statValue(player, 'ritmo_stat') <= 3;
 }
 
+function isIrregularPlayer(player) {
+  return playerCardRating(statValue(player, 'regularidad')) < 70;
+}
+
 function applyRegularityAdjustment(rating, player) {
   const factor = 1 + ((statValue(player, 'regularidad') - 3.5) / 50);
   return Math.max(1, Math.min(6, rating * factor));
@@ -266,9 +277,10 @@ function playerCardRating(value) {
 
 function playerCardTier(value) {
   const overall = playerCardRating(value);
-  if (overall >= 90) return 'elite';
-  if (overall >= 80) return 'gold';
-  if (overall >= 65) return 'silver';
+  if (overall >= 88) return 'supreme';
+  if (overall >= 84) return 'elite';
+  if (overall >= 76) return 'gold';
+  if (overall >= 66) return 'silver';
   return 'bronze';
 }
 
@@ -318,18 +330,49 @@ function shuffle(items) {
 }
 
 function maxFieldPlayersPerLine(teamSize) {
-  return Math.max(0, Math.floor(Number(teamSize || 0) / 3));
+  const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
+  return fieldPlayers > 0 ? Math.max(1, Math.floor(fieldPlayers / 2)) : 0;
 }
 
 function maxDefLatPlayersPerPosition(teamSize) {
-  return Math.max(0, Math.floor(Number(teamSize || 0) / 4));
+  return maxFieldPlayersPerLine(teamSize);
 }
 
 function fieldLineLimit(position, teamSize) {
   const line = String(position || '').toUpperCase();
   if (line === 'ARQ') return 1;
-  if (line === 'DEF' || line === 'LAT') return maxDefLatPlayersPerPosition(teamSize);
   return maxFieldPlayersPerLine(teamSize);
+}
+
+function fieldLineMinimum(position, teamSize) {
+  const line = String(position || '').toUpperCase();
+  const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
+  if (line === 'ARQ') return 1;
+  if (fieldPlayers === 4) return REQUIRED_FIELD_LINES.includes(line) ? 1 : 0;
+  if (fieldPlayers < 5) return 0;
+  if (line === 'DEF' || line === 'MED') return 2;
+  if (line === 'DEL') return 1;
+  return 0;
+}
+
+function pitchLineCountsFromLogical(logicalCounts = {}) {
+  return {
+    ARQ: Number(logicalCounts.ARQ || 0),
+    DEF: Number(logicalCounts.DEF || 0) + Number(logicalCounts.LAT || 0),
+    MED: Number(logicalCounts.MED || 0),
+    DEL: Number(logicalCounts.DEL || 0),
+  };
+}
+
+function fieldLineCountsFitLimits(counts, teamSize) {
+  const pitchCounts = pitchLineCountsFromLogical(counts);
+  const max = maxFieldPlayersPerLine(teamSize);
+  const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
+  return (!hasGoalkeeperCount || pitchCounts.ARQ === fieldLineMinimum('ARQ', teamSize))
+    && REQUIRED_FIELD_LINES.every((line) => (
+      pitchCounts[line] >= fieldLineMinimum(line, teamSize)
+      && pitchCounts[line] <= max
+    ));
 }
 
 function teammatePairKey(a, b) {
@@ -401,13 +444,51 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
 
   if (team.length >= 4) {
     REQUIRED_FIELD_LINES.forEach((line) => {
-      const hasLine = team.some((player) => pitchLineForPosition(assignment[playerKey(player)]) === line);
-      if (hasLine) return;
-      const candidate = team
-        .filter((player) => assignment[playerKey(player)] !== 'ARQ')
-        .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
-      if (candidate) assignment[playerKey(candidate)] = line;
+      let guard = 0;
+      while (guard < team.length) {
+        guard += 1;
+        const counts = pitchLineCountsFromLogical(teamLineCounts(team, assignment));
+        if ((counts[line] || 0) >= fieldLineMinimum(line, team.length)) break;
+        const candidate = team
+          .filter((player) => assignment[playerKey(player)] !== 'ARQ')
+          .filter((player) => {
+            const currentLine = pitchLineForPosition(assignment[playerKey(player)]);
+            return currentLine !== line && (counts[currentLine] || 0) > fieldLineMinimum(currentLine, team.length);
+          })
+          .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
+        if (!candidate) break;
+        assignment[playerKey(candidate)] = line;
+      }
     });
+  }
+
+  let changed = true;
+  let guard = 0;
+  while (changed && guard < team.length * FIELD_LINES.length) {
+    changed = false;
+    guard += 1;
+    const counts = teamLineCounts(team, assignment);
+    const pitchCounts = pitchLineCountsFromLogical(counts);
+    const max = maxFieldPlayersPerLine(team.length);
+    const exceededLine = REQUIRED_FIELD_LINES.find((line) => pitchCounts[line] > max);
+    if (!exceededLine) break;
+    const originLines = exceededLine === 'DEF' ? ['DEF', 'LAT'] : [exceededLine];
+    const targetLine = REQUIRED_FIELD_LINES
+      .filter((line) => line !== exceededLine && pitchCounts[line] < max)
+      .sort((a, b) => pitchCounts[a] - pitchCounts[b])[0];
+    if (!targetLine) break;
+    const candidate = team
+      .filter((player) => originLines.includes(assignment[playerKey(player)]))
+      .sort((a, b) => {
+        const assignedA = assignment[playerKey(a)];
+        const assignedB = assignment[playerKey(b)];
+        const lossA = adjustedPositionRating(a, assignedA) - adjustedPositionRating(a, targetLine);
+        const lossB = adjustedPositionRating(b, assignedB) - adjustedPositionRating(b, targetLine);
+        return lossA - lossB;
+      })[0];
+    if (!candidate) break;
+    assignment[playerKey(candidate)] = targetLine;
+    changed = true;
   }
 
   return assignment;
@@ -455,6 +536,8 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
   const diff = Math.max(...totals) - Math.min(...totals);
   const slowCounts = teams.map((team) => team.filter(isLowRhythmPlayer).length);
   const slowSpread = Math.max(...slowCounts) - Math.min(...slowCounts);
+  const irregularCounts = teams.map((team) => team.filter(isIrregularPlayer).length);
+  const irregularSpread = Math.max(...irregularCounts) - Math.min(...irregularCounts);
   const teamSize = Math.max(...teams.map((team) => team.length), 0);
   const linePenalty = teams.reduce((sum, team) => {
     const counts = teamLineCounts(team, buildTeamAssignment(team, assignmentOverrides));
@@ -466,7 +549,8 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
     };
     let penalty = counts.ARQ === 1 ? 0 : Math.abs(counts.ARQ - 1) * 200;
     REQUIRED_FIELD_LINES.forEach((line) => {
-      if (teamSize >= 4 && pitchCounts[line] < 1) penalty += 120;
+      const min = fieldLineMinimum(line, teamSize);
+      if (pitchCounts[line] < min) penalty += (min - pitchCounts[line]) * 220;
       if (pitchCounts[line] > maxFieldPlayersPerLine(teamSize)) penalty += (pitchCounts[line] - maxFieldPlayersPerLine(teamSize)) * 30;
     });
     FIELD_LINES.forEach((line) => {
@@ -482,9 +566,10 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
     return sum + ((Math.max(...values) - Math.min(...values)) * Number(weight || 0));
   }, 0);
   return {
-    value: (diff * 1000) + (slowSpread * 60) + linePenalty + statPenalty + historicalRepeatPenalty(teams, pairHistory),
+    value: (diff * 1000) + (slowSpread * 60) + (irregularSpread * 95) + linePenalty + statPenalty + historicalRepeatPenalty(teams, pairHistory),
     diff,
     slowSpread,
+    irregularSpread,
     totals,
   };
 }
@@ -551,9 +636,63 @@ function improveBySwaps(teams, teamSize, pairHistory, weights) {
   return { teams: best, evaluation: bestEval };
 }
 
+function teamsFitFormationRules(teams, teamSize) {
+  return teams.every((team) => {
+    if (team.length !== teamSize) return false;
+    const counts = teamLineCounts(team, buildTeamAssignment(team));
+    return fieldLineCountsFitLimits(counts, teamSize);
+  });
+}
+
+function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, weights, avoidSignatures = new Set()) {
+  if (players.length !== teamSize * 2 || players.length > 20 || teamSize < 2) return null;
+  let best = null;
+  let bestEval = null;
+  const selected = [0];
+
+  const visit = (start) => {
+    if (selected.length === teamSize) {
+      const picked = new Set(selected);
+      const left = [];
+      const right = [];
+      players.forEach((player, index) => {
+        (picked.has(index) ? left : right).push(player);
+      });
+      const teams = [left, right];
+      if (!teamsFitFormationRules(teams, teamSize)) return;
+      const evaluationBase = scoreTeams(teams, pairHistory, {}, weights);
+      const signature = drawSignature(teams);
+      const signaturePenalty = avoidSignatures.has(signature) ? 100000000 : 0;
+      const evaluation = { ...evaluationBase, value: evaluationBase.value + signaturePenalty, signature };
+      if (!bestEval || evaluation.value < bestEval.value) {
+        best = teams;
+        bestEval = evaluation;
+      }
+      return;
+    }
+
+    const remaining = teamSize - selected.length;
+    for (let index = start; index <= players.length - remaining; index += 1) {
+      selected.push(index);
+      visit(index + 1);
+      selected.pop();
+      if (bestEval && bestEval.diff <= maxDiff && bestEval.slowSpread <= 1 && bestEval.irregularSpread <= 1 && !avoidSignatures.has(bestEval.signature)) {
+        return;
+      }
+    }
+  };
+
+  visit(1);
+  return best ? { teams: best, evaluation: bestEval, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
+}
+
 function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights, avoidSignatures = new Set()) {
   const teamSize = players.length / numTeams;
-  const attempts = Math.min(900, Math.max(220, players.length * players.length * 3));
+  if (numTeams === 2 && players.length <= 20) {
+    const exact = generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, weights, avoidSignatures);
+    if (exact) return exact;
+  }
+  const attempts = Math.min(180, Math.max(60, players.length * 4));
   let best = null;
   let bestEval = null;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -566,7 +705,7 @@ function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights,
     if (!bestEval || evaluation.value < bestEval.value) {
       best = improved.teams;
       bestEval = evaluation;
-      if (!signaturePenalty && bestEval.diff <= maxDiff && bestEval.slowSpread <= 1) break;
+      if (!signaturePenalty && bestEval.diff <= maxDiff && bestEval.slowSpread <= 1 && bestEval.irregularSpread <= 1) break;
     }
   }
   return best ? { teams: best, evaluation: bestEval, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
@@ -576,13 +715,17 @@ function getFormationOptions(teamSize) {
   const fieldPlayers = Math.max(0, teamSize - 1);
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
   const maxDefLat = maxDefLatPlayersPerPosition(teamSize);
+  const minDefLat = fieldLineMinimum('DEF', teamSize);
+  const minMed = fieldLineMinimum('MED', teamSize);
+  const minDel = fieldLineMinimum('DEL', teamSize);
   const candidates = [];
   for (let def = 0; def <= Math.min(maxDefLat, fieldPlayers); def += 1) {
     for (let lat = 0; lat <= Math.min(maxDefLat, fieldPlayers - def); lat += 1) {
+      if (def + lat > maxPerLine) continue;
       for (let med = 0; med <= Math.min(maxPerLine, fieldPlayers - def - lat); med += 1) {
         const del = fieldPlayers - def - lat - med;
         if (del < 0 || del > maxPerLine) continue;
-        if (fieldPlayers >= 3 && ((def + lat) < 1 || med < 1 || del < 1)) continue;
+        if ((def + lat) < minDefLat || med < minMed || del < minDel) continue;
         const balance = Math.max(def + lat, med, del) - Math.min(def + lat, med, del);
         candidates.push({ DEF: def, LAT: lat, MED: med, DEL: del, value: `${def}-${lat}-${med}-${del}`, balance });
       }
@@ -992,6 +1135,10 @@ export function SorteoLegacyPageIsland({ root }) {
       setError('No hay jugadores suficientes para sortear.');
       return null;
     }
+    if (teamSize < 5) {
+      setError(`Con ${teamSize} jugadores por equipo no se puede respetar la formacion minima: 1 arquero y al menos 1 jugador en DEF/LAT, MED y DEL.`);
+      return null;
+    }
     const pureGoalkeepers = candidates.filter((player) => getOrderedPlayerPositions(player).length === 1 && getPrimaryPlayerPosition(player) === 'ARQ');
     if (pureGoalkeepers.length > numTeams) {
       setError(`Hay ${pureGoalkeepers.length} arqueros puros para ${numTeams} equipos. Debe haber como maximo 1 por equipo.`);
@@ -1154,6 +1301,8 @@ export function SorteoLegacyPageIsland({ root }) {
     const currentAssignments = buildTeamAssignment(team, assignments);
     pushUndo(teamIndex);
     if (delta > 0) {
+      const counts = teamLineCounts(team, currentAssignments);
+      if ((counts[line] || 0) >= fieldLineLimit(line, team.length)) return;
       const candidate = team
         .filter((player) => currentAssignments[playerKey(player)] !== line && currentAssignments[playerKey(player)] !== 'ARQ')
         .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
@@ -1162,6 +1311,7 @@ export function SorteoLegacyPageIsland({ root }) {
     }
     const candidate = team
       .filter((player) => currentAssignments[playerKey(player)] === line)
+      .filter(() => (teamLineCounts(team, currentAssignments)[line] || 0) > fieldLineMinimum(line, team.length))
       .sort((a, b) => adjustedPositionRating(a, line) - adjustedPositionRating(b, line))[0];
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate) === line ? 'MED' : bestNaturalPlayerPosition(candidate);
@@ -1182,6 +1332,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
     if (delta > 0) {
       const perPositionLimit = maxDefLatPlayersPerPosition(team.length);
+      if ((counts.DEF || 0) + (counts.LAT || 0) >= maxFieldPlayersPerLine(team.length)) return;
       const candidate = team
         .filter((player) => {
           const currentLine = currentAssignments[playerKey(player)];
@@ -1197,6 +1348,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
     const candidate = team
       .filter((player) => ['DEF', 'LAT'].includes(currentAssignments[playerKey(player)]))
+      .filter(() => (counts.DEF || 0) + (counts.LAT || 0) > fieldLineMinimum('DEF', team.length))
       .sort((a, b) => {
         const assignedA = currentAssignments[playerKey(a)];
         const assignedB = currentAssignments[playerKey(b)];
@@ -1217,6 +1369,18 @@ export function SorteoLegacyPageIsland({ root }) {
     const targetKeyForAssignment = targetPlayerKey && teams[targetTeamIndex]?.some((player) => playerKey(player) === String(targetPlayerKey))
       ? String(targetPlayerKey)
       : null;
+    if (targetLine && FORMATION_LINES.includes(targetLine) && teams[targetTeamIndex]) {
+      const sourcePlayer = teams[sourceTeamIndex]?.find((player) => playerKey(player) === key);
+      const proposedTeam = sourceTeamIndex === targetTeamIndex || !sourcePlayer
+        ? teams[targetTeamIndex]
+        : [...teams[targetTeamIndex], sourcePlayer];
+      const proposedAssignments = buildTeamAssignment(proposedTeam, assignments);
+      proposedAssignments[key] = targetLine;
+      if (!fieldLineCountsFitLimits(teamLineCounts(proposedTeam, proposedAssignments), proposedTeam.length)) {
+        setError(`Limite de formacion: maximo ${maxFieldPlayersPerLine(proposedTeam.length)} por linea.`);
+        return;
+      }
+    }
     pushUndo(targetTeamIndex);
     if (sourceTeamIndex !== targetTeamIndex) pushUndo(sourceTeamIndex);
     setTeams((current) => {
@@ -1604,16 +1768,7 @@ export function SorteoLegacyPageIsland({ root }) {
                     const color = getTeamColor(teamIndex);
                     const currentAssignments = teamAssignments(teamIndex);
                     const linePlayers = Object.fromEntries(PITCH_LINES.map((line) => [line, []]));
-                    team
-                      .slice()
-                      .sort((a, b) => {
-                        const assignedA = currentAssignments[playerKey(a)] || getPrimaryPlayerPosition(a);
-                        const assignedB = currentAssignments[playerKey(b)] || getPrimaryPlayerPosition(b);
-                        const orderDiff = (POSITION_ORDER[assignedA] ?? 99) - (POSITION_ORDER[assignedB] ?? 99);
-                        if (orderDiff) return orderDiff;
-                        return adjustedPositionRating(b, assignedB) - adjustedPositionRating(a, assignedA);
-                      })
-                      .forEach((player) => {
+                    team.forEach((player) => {
                         const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
                         const pitchLine = pitchLineForPosition(assigned);
                         (linePlayers[pitchLine] || linePlayers.MED).push(player);
@@ -1665,7 +1820,7 @@ export function SorteoLegacyPageIsland({ root }) {
                             const label = line === 'DEF' ? 'DEF/LAT' : line;
                             const lineCounts = teamLineCounts(team, currentAssignments);
                             const count = line === 'DEF' ? lineCounts.DEF + lineCounts.LAT : lineCounts[line];
-                            const max = line === 'ARQ' ? 1 : (line === 'DEF' ? maxDefLatPlayersPerPosition(team.length) * 2 : maxFieldPlayersPerLine(team.length));
+                            const max = line === 'ARQ' ? 1 : maxFieldPlayersPerLine(team.length);
                             const canTuneLine = line !== 'ARQ';
                             return (
                               <div

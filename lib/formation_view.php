@@ -37,13 +37,16 @@ function formation_view_card_rating(float $value): int
 function formation_view_card_tier(float $value): string
 {
     $overall = formation_view_card_rating($value);
-    if ($overall >= 90) {
+    if ($overall >= 88) {
+        return 'supreme';
+    }
+    if ($overall >= 84) {
         return 'elite';
     }
-    if ($overall >= 80) {
+    if ($overall >= 76) {
         return 'gold';
     }
-    if ($overall >= 65) {
+    if ($overall >= 66) {
         return 'silver';
     }
     return 'bronze';

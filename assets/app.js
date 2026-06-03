@@ -122,14 +122,15 @@
     };
     const playerCardTier = (value) => {
       const overall = playerCardRating(value);
-      if (overall >= 90) return 'elite';
-      if (overall >= 80) return 'gold';
-      if (overall >= 65) return 'silver';
+      if (overall >= 88) return 'supreme';
+      if (overall >= 84) return 'elite';
+      if (overall >= 76) return 'gold';
+      if (overall >= 66) return 'silver';
       return 'bronze';
     };
     const updatePlayerCardTier = (card, value) => {
       if (!card?.classList?.contains('formation-card-sin-stat')) return;
-      ['bronze', 'silver', 'gold', 'elite'].forEach((tier) => {
+      ['bronze', 'silver', 'gold', 'elite', 'supreme'].forEach((tier) => {
         card.classList.toggle(`formation-card-tier-${tier}`, playerCardTier(value) === tier);
       });
     };

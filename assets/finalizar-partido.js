@@ -207,9 +207,10 @@
 
   const cardTier = (rating) => {
     const overall = cardRating(rating);
-    if (overall >= 90) return 'elite';
-    if (overall >= 80) return 'gold';
-    if (overall >= 65) return 'silver';
+    if (overall >= 88) return 'supreme';
+    if (overall >= 84) return 'elite';
+    if (overall >= 76) return 'gold';
+    if (overall >= 66) return 'silver';
     return 'bronze';
   };
 
@@ -218,6 +219,7 @@
     silver: 'assets/card-backgrounds/reference-compact-silver.png',
     gold: 'assets/card-backgrounds/reference-compact-gold.png',
     elite: 'assets/card-backgrounds/reference-compact-elite.png',
+    supreme: 'assets/card-backgrounds/reference-compact-supreme.png',
   }[tier] || 'assets/card-backgrounds/reference-compact-bronze.png');
 
   const cardRegularity = (player) => {

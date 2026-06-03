@@ -257,13 +257,16 @@ function jugadores2_card_stat(array $player, string $field): int
 
 function jugadores2_card_tier(int $overall): string
 {
-    if ($overall >= 90) {
+    if ($overall >= 88) {
+        return 'supreme';
+    }
+    if ($overall >= 84) {
         return 'elite';
     }
-    if ($overall >= 80) {
+    if ($overall >= 76) {
         return 'gold';
     }
-    if ($overall >= 65) {
+    if ($overall >= 66) {
         return 'silver';
     }
     return 'bronze';

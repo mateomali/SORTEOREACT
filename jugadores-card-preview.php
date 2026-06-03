@@ -33,13 +33,16 @@ function card_preview_demo_photo(int $index): string
 
 function card_preview_tier(int $overall): string
 {
-    if ($overall >= 90) {
+    if ($overall >= 88) {
+        return 'supreme';
+    }
+    if ($overall >= 84) {
         return 'elite';
     }
-    if ($overall >= 80) {
+    if ($overall >= 76) {
         return 'gold';
     }
-    if ($overall >= 65) {
+    if ($overall >= 66) {
         return 'silver';
     }
     return 'bronze';
@@ -157,6 +160,16 @@ require __DIR__ . '/includes/header.php';
     --tier-accent-soft: rgba(116, 71, 170, .16);
     --tier-accent-line: rgba(83, 55, 130, .38);
     --tier-name-bg: rgba(246, 241, 255, .9);
+  }
+
+  .fut-card.tier-supreme {
+    --tier-bg:
+      linear-gradient(135deg, rgba(159, 255, 230, .16) 0 18%, transparent 18% 38%, rgba(245, 216, 103, .12) 38% 56%, transparent 56%),
+      linear-gradient(180deg, #eefdf8 0%, #9fffe6 18%, #122322 54%, #07130f 100%);
+    --tier-line: #dffdf3;
+    --tier-accent-soft: rgba(159, 255, 230, .18);
+    --tier-accent-line: rgba(159, 255, 230, .44);
+    --tier-name-bg: rgba(223, 253, 243, .86);
   }
 
   .fut-card-top {
