@@ -1,60 +1,58 @@
--- phpMyAdmin SQL Dump
--- version 5.2.2
--- https://www.phpmyadmin.net/
+﻿-- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
 --
--- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 02-06-2026 a las 17:52:04
--- Versión del servidor: 11.8.6-MariaDB-log
--- Versión de PHP: 7.2.34
-
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
-
+-- Host: 127.0.0.1    Database: u552541920_futbol
+-- ------------------------------------------------------
+-- Server version	10.4.32-MariaDB
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Base de datos: `u552541920_futbol`
+-- Table structure for table `app_settings`
 --
 
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `app_settings`
---
-
+DROP TABLE IF EXISTS `app_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `app_settings` (
   `setting_key` varchar(80) NOT NULL,
   `setting_value` varchar(255) NOT NULL,
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `app_settings`
+-- Dumping data for table `app_settings`
 --
 
-INSERT INTO `app_settings` (`setting_key`, `setting_value`, `updated_at`) VALUES
-('allow_redraw_default', '1', '2026-05-09 00:08:24'),
-('multi_draw_count_default', '1', '2026-05-18 01:01:45'),
-('multi_draw_lock_minutes_default', '60', '2026-05-09 00:08:24'),
-('redraw_limit_default', '3', '2026-05-09 00:08:24');
-
--- --------------------------------------------------------
+LOCK TABLES `app_settings` WRITE;
+/*!40000 ALTER TABLE `app_settings` DISABLE KEYS */;
+INSERT INTO `app_settings` VALUES ('allow_redraw_default','1','2026-05-09 00:08:24'),('multi_draw_count_default','1','2026-05-18 01:01:45'),('multi_draw_lock_minutes_default','60','2026-05-09 00:08:24'),('redraw_limit_default','3','2026-05-09 00:08:24');
+/*!40000 ALTER TABLE `app_settings` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Estructura de tabla para la tabla `captain_drafts`
+-- Table structure for table `captain_drafts`
 --
 
+DROP TABLE IF EXISTS `captain_drafts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `captain_drafts` (
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `captain1_player_id` int(10) UNSIGNED NOT NULL,
-  `captain2_player_id` int(10) UNSIGNED NOT NULL,
-  `captain3_player_id` int(10) UNSIGNED DEFAULT NULL,
-  `captain4_player_id` int(10) UNSIGNED DEFAULT NULL,
+  `match_id` int(10) unsigned NOT NULL,
+  `captain1_player_id` int(10) unsigned NOT NULL,
+  `captain2_player_id` int(10) unsigned NOT NULL,
+  `captain3_player_id` int(10) unsigned DEFAULT NULL,
+  `captain4_player_id` int(10) unsigned DEFAULT NULL,
   `captain1_token` varchar(64) NOT NULL DEFAULT '',
   `captain2_token` varchar(64) NOT NULL DEFAULT '',
   `captain3_token` varchar(64) DEFAULT NULL,
@@ -63,104 +61,468 @@ CREATE TABLE `captain_drafts` (
   `captain2_color_name` varchar(40) DEFAULT NULL,
   `captain3_color_name` varchar(40) DEFAULT NULL,
   `captain4_color_name` varchar(40) DEFAULT NULL,
-  `current_team` tinyint(3) UNSIGNED DEFAULT 1,
+  `current_team` tinyint(3) unsigned DEFAULT 1,
   `status` enum('active','completed') NOT NULL DEFAULT 'active',
   `started_at` datetime DEFAULT NULL,
   `completed_at` datetime DEFAULT NULL,
-  `turn_version` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `turn_version` int(10) unsigned NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`match_id`),
+  KEY `fk_captain_drafts_captain1` (`captain1_player_id`),
+  KEY `fk_captain_drafts_captain2` (`captain2_player_id`),
+  CONSTRAINT `fk_captain_drafts_captain1` FOREIGN KEY (`captain1_player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_captain_drafts_captain2` FOREIGN KEY (`captain2_player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_captain_drafts_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `captain_drafts`
+-- Dumping data for table `captain_drafts`
 --
 
-INSERT INTO `captain_drafts` (`match_id`, `captain1_player_id`, `captain2_player_id`, `captain3_player_id`, `captain4_player_id`, `captain1_token`, `captain2_token`, `captain3_token`, `captain4_token`, `captain1_color_name`, `captain2_color_name`, `captain3_color_name`, `captain4_color_name`, `current_team`, `status`, `started_at`, `completed_at`, `turn_version`, `created_at`, `updated_at`) VALUES
-(132, 18, 30, NULL, NULL, '291f5da038525d55012f46c280baedf636fd758bc0b8605b7dbddf3429dbe830', '9551aa1b8d06047e6abfb8c695cc6d7c3b44474c9d5313e14e85c1a8833426cb', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2025-10-24 22:00:00', '2025-10-24 22:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(133, 38, 6, NULL, NULL, 'd2148302b5cb30f10d1fa25fd217f11c183a06f6add9af14e49bb71b0b55ce08', '4de43085593f434ee13e84b1878eea2858fa34a1d5c41e9283ad6ee80944caf8', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2025-10-27 21:00:00', '2025-10-27 21:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(134, 17, 10, NULL, NULL, '49487a50bb5ae3c7f1546ce43619f47f3f1fc150ddea05f1abee629283fa03fe', '1ccb7ec9a91eacb52a9815d0c99c469ab134965760f5be1a446ac8bb0716a1b2', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2025-10-31 22:00:00', '2025-10-31 22:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(135, 61, 23, NULL, NULL, '1f9ba293177418ee0416bc2f1cc41966aac588ca130c6ab12565195c8850c012', '7573c1ada9614380ce35a8218ff40c22e5a714fc6f15baab2c38e9ee090d2c85', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2025-11-03 21:00:00', '2025-11-03 21:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(136, 44, 40, NULL, NULL, '4692acbf1adebf158b7f6c548e8ead0cfae72c09e140b5c91e5c057fd16305e5', '1e66d81a815f5fc4c81261e768a5ec158d5ff546baef63e26d7037cb000aa85e', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2025-11-10 21:00:00', '2025-11-10 21:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(138, 61, 17, NULL, NULL, 'c74fbfaa799c1dae59a2299695f2897366dadeaeea37e2e17e58bf33b30126ee', 'ec5115f0a29ad5965c6296aee2be92d08b8f602f4d804ac47312284599ff7117', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2025-11-17 21:00:00', '2025-11-17 21:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(139, 13, 7, NULL, NULL, 'fa32245110a2fe2a42021df0f01d6c7f9f0b171e7ce87b6d8892ec6ccf3e6d21', '05bfd6667282c8a12a61b39bb10cadbf3d49b10def4d89703de4fdcbc64a3695', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2025-11-21 22:00:00', '2025-11-21 22:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(146, 1, 10, NULL, NULL, '134d99a8ecc4f522bb6a9b18d51b635983371fd7f735d9481ee32994aea0d3ef', 'fe40a9adbec25135698392794f07ba76af8584a68bc0cadcae2376d942835bf3', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2026-01-05 21:00:00', '2026-01-05 21:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(148, 1, 38, NULL, NULL, 'bcf52010803d2125b9e37aeb58e45fce9fe5c343997e935363cad6194a1c80f8', 'c265011f7cbbbec13500754be95b8caacc6ac667e264e84f001f1c2195373d06', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2026-01-12 21:00:00', '2026-01-12 21:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27'),
-(149, 10, 27, NULL, NULL, 'fb1f30f65c5f1f8d9076104c5b6f8c276ff9feb11bf53b233821bb7839ca0c14', '49a7d849d164333df9a3f2689e0649672c38918b123054d96534cfc78918a92b', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'completed', '2026-01-16 22:00:00', '2026-01-16 22:00:00', 0, '2026-05-10 13:40:27', '2026-05-10 13:40:27');
-
--- --------------------------------------------------------
+LOCK TABLES `captain_drafts` WRITE;
+/*!40000 ALTER TABLE `captain_drafts` DISABLE KEYS */;
+INSERT INTO `captain_drafts` VALUES (132,18,30,NULL,NULL,'291f5da038525d55012f46c280baedf636fd758bc0b8605b7dbddf3429dbe830','9551aa1b8d06047e6abfb8c695cc6d7c3b44474c9d5313e14e85c1a8833426cb',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2025-10-24 22:00:00','2025-10-24 22:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(133,38,6,NULL,NULL,'d2148302b5cb30f10d1fa25fd217f11c183a06f6add9af14e49bb71b0b55ce08','4de43085593f434ee13e84b1878eea2858fa34a1d5c41e9283ad6ee80944caf8',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2025-10-27 21:00:00','2025-10-27 21:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(134,17,10,NULL,NULL,'49487a50bb5ae3c7f1546ce43619f47f3f1fc150ddea05f1abee629283fa03fe','1ccb7ec9a91eacb52a9815d0c99c469ab134965760f5be1a446ac8bb0716a1b2',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2025-10-31 22:00:00','2025-10-31 22:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(135,61,23,NULL,NULL,'1f9ba293177418ee0416bc2f1cc41966aac588ca130c6ab12565195c8850c012','7573c1ada9614380ce35a8218ff40c22e5a714fc6f15baab2c38e9ee090d2c85',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2025-11-03 21:00:00','2025-11-03 21:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(136,44,40,NULL,NULL,'4692acbf1adebf158b7f6c548e8ead0cfae72c09e140b5c91e5c057fd16305e5','1e66d81a815f5fc4c81261e768a5ec158d5ff546baef63e26d7037cb000aa85e',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2025-11-10 21:00:00','2025-11-10 21:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(138,61,17,NULL,NULL,'c74fbfaa799c1dae59a2299695f2897366dadeaeea37e2e17e58bf33b30126ee','ec5115f0a29ad5965c6296aee2be92d08b8f602f4d804ac47312284599ff7117',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2025-11-17 21:00:00','2025-11-17 21:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(139,13,7,NULL,NULL,'fa32245110a2fe2a42021df0f01d6c7f9f0b171e7ce87b6d8892ec6ccf3e6d21','05bfd6667282c8a12a61b39bb10cadbf3d49b10def4d89703de4fdcbc64a3695',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2025-11-21 22:00:00','2025-11-21 22:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(146,1,10,NULL,NULL,'134d99a8ecc4f522bb6a9b18d51b635983371fd7f735d9481ee32994aea0d3ef','fe40a9adbec25135698392794f07ba76af8584a68bc0cadcae2376d942835bf3',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2026-01-05 21:00:00','2026-01-05 21:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(148,1,38,NULL,NULL,'bcf52010803d2125b9e37aeb58e45fce9fe5c343997e935363cad6194a1c80f8','c265011f7cbbbec13500754be95b8caacc6ac667e264e84f001f1c2195373d06',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2026-01-12 21:00:00','2026-01-12 21:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27'),(149,10,27,NULL,NULL,'fb1f30f65c5f1f8d9076104c5b6f8c276ff9feb11bf53b233821bb7839ca0c14','49a7d849d164333df9a3f2689e0649672c38918b123054d96534cfc78918a92b',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'completed','2026-01-16 22:00:00','2026-01-16 22:00:00',0,'2026-05-10 13:40:27','2026-05-10 13:40:27');
+/*!40000 ALTER TABLE `captain_drafts` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Estructura de tabla para la tabla `captain_picks`
+-- Table structure for table `captain_picks`
 --
 
+DROP TABLE IF EXISTS `captain_picks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `captain_picks` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `player_id` int(10) UNSIGNED NOT NULL,
-  `team_number` tinyint(3) UNSIGNED NOT NULL,
-  `picked_by_player_id` int(10) UNSIGNED NOT NULL,
-  `pick_order` smallint(5) UNSIGNED NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `player_id` int(10) unsigned NOT NULL,
+  `team_number` tinyint(3) unsigned NOT NULL,
+  `picked_by_player_id` int(10) unsigned NOT NULL,
+  `pick_order` smallint(5) unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_captain_pick_player` (`match_id`,`player_id`),
+  UNIQUE KEY `uniq_captain_pick_order` (`match_id`,`pick_order`),
+  KEY `idx_captain_pick_match_team` (`match_id`,`team_number`),
+  KEY `fk_captain_picks_player` (`player_id`),
+  KEY `fk_captain_picks_picker` (`picked_by_player_id`),
+  CONSTRAINT `fk_captain_picks_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_captain_picks_picker` FOREIGN KEY (`picked_by_player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_captain_picks_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=130 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Estructura de tabla para la tabla `directive_members`
+-- Dumping data for table `captain_picks`
 --
 
+LOCK TABLES `captain_picks` WRITE;
+/*!40000 ALTER TABLE `captain_picks` DISABLE KEYS */;
+/*!40000 ALTER TABLE `captain_picks` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `directive_members`
+--
+
+DROP TABLE IF EXISTS `directive_members`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `directive_members` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `site_user_id` int(10) UNSIGNED DEFAULT NULL,
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `site_user_id` int(10) unsigned DEFAULT NULL,
   `name` varchar(120) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `password_needs_setup` tinyint(1) NOT NULL DEFAULT 0,
   `setup_code_hash` varchar(255) DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_directive_member_name` (`name`),
+  UNIQUE KEY `uniq_directive_member_site_user` (`site_user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `directive_members`
+--
+
+LOCK TABLES `directive_members` WRITE;
+/*!40000 ALTER TABLE `directive_members` DISABLE KEYS */;
+INSERT INTO `directive_members` VALUES (1,NULL,'pablo','$2y$10$9VDGfldu0vPWviJfk99KEOQw/WnjgqMsrLtmNmDVcFDgAPtJyVdcS',0,NULL,1,'2026-05-08 00:55:57','2026-05-08 01:03:05'),(2,NULL,'manu','$2y$10$XfzoV5aLFzwBRHrrJ59Wperr9MXybnfhi6rX8Wg8//LvibciGVCiS',0,NULL,1,'2026-05-08 01:03:19','2026-05-08 01:03:19'),(3,NULL,'cesar','$2y$10$eUbwOFUU9UeeoPPulWCtR.cSrNmWKdqDzLdR9SRtrS6B4ueViH5TG',0,NULL,1,'2026-05-08 01:03:26','2026-05-08 01:03:26'),(4,NULL,'pela','$2y$10$AIq1.ugEtQjF1abYhT9eWuXKZWhdqDh2lrKADOlQHzYk5VSC35NbG',0,NULL,1,'2026-05-08 01:03:33','2026-05-08 01:03:33'),(5,NULL,'braian','$2y$10$zZIEnDFQbQLvQAhcRbHUY.29yOCQlugKGEMqZCQKYrJG1azcZ2ujS',1,'$2y$10$egqr.g3OsrSbCfGVi4jHMOouAqOe8.z79yEJlDHEgXW1j/m/aY8Ja',1,'2026-05-08 01:36:56','2026-05-08 01:37:24'),(6,NULL,'Invitado voto 40-16 ALE CUERVO','$2y$10$2To6BsBgQ8yvjxPVDSlnDuDcj3YVd/urP19IZqZY45vMtE5j12Wna',0,NULL,0,'2026-05-08 02:01:52','2026-05-08 02:01:52'),(7,NULL,'Invitado voto 40-17 CESAR','$2y$10$.t9J7.QtYWPy3SQAUMQcv.Pkv7mT0vs3y2m3vDbWeDM/VNa3Hs8tO',0,NULL,0,'2026-05-08 02:01:57','2026-05-08 02:01:57'),(8,NULL,'Invitado voto 40-24 FRANCOK','$2y$10$gE28L2GBRTmgRFBxcMjlTO8ZIvyuJpurifYAG.KarV6kajX7U1.C2',0,NULL,0,'2026-05-08 02:02:01','2026-05-08 02:02:01'),(9,NULL,'Invitado voto 40-11 MANU','$2y$10$alUeS/SoKW4iZ78.A2PH0OeIFndRQE5belGih8UwSFDOFuQdKKxhm',0,NULL,0,'2026-05-08 02:02:04','2026-05-08 02:02:04'),(10,NULL,'Invitado voto 40-29 TEBO','$2y$10$J6p/jnXmv6FW2Z5xF2Za5OPdtowoL7Itvv3RCJcj3aMX4qc7yDm4e',0,NULL,0,'2026-05-08 02:02:12','2026-05-08 02:02:12'),(11,NULL,'Invitado voto 40-30 FACU','$2y$10$vHHQv/pjnzfGDdmcHuGw3OEzTGqr0B0k4lgEMg8X1k3sB4kadAvUe',0,NULL,0,'2026-05-08 02:02:22','2026-05-08 02:02:22'),(12,NULL,'Invitado voto 40-10 BRIAN','$2y$10$tAW1C6qs2LhfRxL8QRyOl.2hPn0T6iNNweE7SDnX12m1yJirDqAPO',0,NULL,0,'2026-05-08 02:08:11','2026-05-08 02:08:11'),(13,NULL,'Invitado voto 40-14 PABLO','$2y$10$xH1tFbBUV.9bCyrtyBsDE.GjKrcWENaSc/iyEZa0bxp5uDNMP4ukW',0,NULL,0,'2026-05-08 02:08:17','2026-05-08 02:08:17');
+/*!40000 ALTER TABLE `directive_members` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_awards`
+--
+
+DROP TABLE IF EXISTS `match_awards`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_awards` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `award_code` varchar(40) NOT NULL,
+  `player_id` int(10) unsigned NOT NULL,
+  `notes` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_match_award` (`match_id`,`award_code`),
+  KEY `idx_awards_player` (`player_id`,`award_code`),
+  CONSTRAINT `fk_match_awards_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_match_awards_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1094 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_awards`
+--
+
+LOCK TABLES `match_awards` WRITE;
+/*!40000 ALTER TABLE `match_awards` DISABLE KEYS */;
+INSERT INTO `match_awards` VALUES (763,132,'player_of_match',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(764,132,'goal_of_week',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(765,132,'lyrical',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(766,132,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(767,132,'capocannoniere',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(768,132,'tractor',41,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(769,132,'guinda',59,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(770,133,'player_of_match',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(771,133,'goal_of_week',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(772,133,'lyrical',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(773,133,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(774,133,'capocannoniere',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(775,133,'tractor',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(776,133,'guinda',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(777,133,'putita',44,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(778,134,'player_of_match',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(779,134,'goal_of_week',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(780,134,'lyrical',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(781,134,'wall',44,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(782,134,'capocannoniere',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(783,134,'tractor',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(784,134,'guinda',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(785,134,'putita',61,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(786,135,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(787,135,'goal_of_week',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(788,135,'lyrical',22,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(789,135,'wall',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(790,135,'capocannoniere',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(791,135,'tractor',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(792,136,'player_of_match',12,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(793,136,'goal_of_week',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(794,136,'lyrical',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(795,136,'wall',18,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(796,136,'capocannoniere',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(797,136,'tractor',40,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(798,136,'guinda',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(799,136,'putita',30,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(800,136,'ghost',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(801,137,'player_of_match',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(802,137,'goal_of_week',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(803,137,'lyrical',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(804,137,'wall',61,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(805,137,'capocannoniere',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(806,137,'tractor',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(807,137,'guinda',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(808,137,'putita',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(809,137,'ghost',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(810,138,'player_of_match',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(811,138,'goal_of_week',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(812,138,'lyrical',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(813,138,'wall',24,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(814,138,'tractor',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(815,138,'guinda',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(816,138,'putita',9,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(817,138,'ghost',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(818,139,'player_of_match',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(819,139,'goal_of_week',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(820,139,'lyrical',61,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(821,139,'wall',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(822,139,'capocannoniere',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(823,139,'tractor',22,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(824,139,'guinda',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(825,139,'ghost',13,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(826,140,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(827,140,'goal_of_week',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(828,140,'lyrical',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(829,140,'wall',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(830,140,'capocannoniere',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(831,140,'tractor',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(832,140,'guinda',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(833,140,'putita',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(834,140,'ghost',18,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(835,141,'player_of_match',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(836,141,'goal_of_week',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(837,141,'lyrical',59,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(838,141,'wall',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(839,141,'capocannoniere',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(840,141,'tractor',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(841,141,'guinda',19,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(842,142,'player_of_match',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(843,142,'goal_of_week',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(844,142,'lyrical',18,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(845,142,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(846,142,'tractor',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(847,142,'guinda',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(848,142,'ghost',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(849,143,'player_of_match',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(850,143,'goal_of_week',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(851,143,'lyrical',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(852,143,'wall',30,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(853,143,'capocannoniere',42,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(854,143,'tractor',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(855,143,'guinda',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(856,143,'ghost',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(857,144,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(858,144,'goal_of_week',18,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(859,144,'lyrical',46,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(860,144,'wall',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(861,144,'capocannoniere',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(862,144,'tractor',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(863,144,'guinda',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(864,144,'putita',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(865,144,'ghost',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(866,144,'keeper',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(867,145,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(868,145,'goal_of_week',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(869,145,'lyrical',18,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(870,145,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(871,145,'capocannoniere',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(872,145,'tractor',9,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(873,145,'guinda',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(874,145,'putita',61,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(875,145,'ghost',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(876,145,'keeper',2,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(877,146,'player_of_match',41,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(878,146,'lyrical',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(879,146,'tractor',43,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(880,146,'keeper',24,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(881,146,'terminator',9,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(882,146,'goodfellas',47,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(883,147,'player_of_match',49,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(884,147,'goal_of_week',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(885,147,'lyrical',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(886,147,'wall',19,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(887,147,'tractor',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(888,147,'keeper',49,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(889,147,'goodfellas',23,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(890,148,'player_of_match',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(891,148,'goal_of_week',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(892,148,'lyrical',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(893,148,'wall',48,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(894,148,'tractor',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(895,148,'keeper',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(896,148,'terminator',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(897,148,'goodfellas',22,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(898,149,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(899,149,'goal_of_week',8,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(900,149,'lyrical',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(901,149,'wall',25,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(902,149,'tractor',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(903,149,'keeper',23,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(904,149,'goodfellas',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(905,150,'player_of_match',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(906,150,'goal_of_week',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(907,150,'lyrical',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(908,150,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(909,150,'tractor',30,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(910,150,'keeper',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(911,150,'terminator',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(912,150,'goodfellas',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(913,151,'player_of_match',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(914,151,'goal_of_week',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(915,151,'wall',46,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(916,151,'tractor',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(917,151,'goodfellas',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(918,152,'player_of_match',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(919,152,'goal_of_week',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(920,152,'wall',46,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(921,152,'tractor',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(922,152,'keeper',60,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(923,152,'terminator',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(924,153,'player_of_match',8,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(925,153,'goal_of_week',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(926,153,'lyrical',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(927,153,'wall',46,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(928,153,'tractor',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(929,153,'keeper',49,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(930,153,'terminator',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(931,153,'goodfellas',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(932,154,'player_of_match',46,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(933,154,'goal_of_week',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(934,154,'lyrical',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(935,154,'wall',46,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(936,154,'tractor',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(937,154,'keeper',60,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(938,154,'terminator',25,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(939,154,'goodfellas',9,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(940,155,'wall',49,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(941,155,'keeper',61,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(942,155,'terminator',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(943,156,'player_of_match',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(944,156,'lyrical',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(945,156,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(946,156,'tractor',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(947,156,'terminator',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(948,157,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(949,157,'goal_of_week',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(950,157,'lyrical',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(951,157,'wall',57,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(952,157,'tractor',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(953,157,'keeper',48,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(954,157,'goodfellas',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(955,158,'player_of_match',12,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(956,158,'goal_of_week',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(957,158,'lyrical',12,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(958,158,'wall',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(959,158,'tractor',41,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(960,158,'keeper',48,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(961,158,'terminator',43,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(962,158,'goodfellas',48,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(963,159,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(964,159,'goal_of_week',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(965,159,'lyrical',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(966,159,'wall',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(967,159,'tractor',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(968,159,'keeper',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(969,159,'terminator',25,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(970,159,'goodfellas',4,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(971,160,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(972,160,'goal_of_week',8,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(973,160,'lyrical',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(974,160,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(975,160,'tractor',43,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(976,160,'keeper',48,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(977,160,'terminator',30,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(978,161,'player_of_match',10,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(979,161,'goal_of_week',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(980,161,'lyrical',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(981,161,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(982,161,'tractor',1,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(983,161,'goodfellas',18,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(984,162,'player_of_match',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(985,162,'goal_of_week',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(986,162,'lyrical',22,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(987,162,'wall',30,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(988,162,'tractor',43,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(989,162,'keeper',27,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(990,162,'terminator',18,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(991,162,'goodfellas',27,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(992,163,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(993,163,'goal_of_week',43,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(994,163,'lyrical',38,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(995,163,'wall',46,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(996,163,'tractor',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(997,163,'keeper',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(998,163,'terminator',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(999,163,'goodfellas',5,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1000,164,'player_of_match',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1001,164,'goal_of_week',6,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1002,164,'lyrical',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1003,164,'wall',43,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1004,164,'tractor',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1005,164,'keeper',24,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1006,164,'terminator',27,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1007,165,'player_of_match',29,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1008,165,'goal_of_week',29,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1009,165,'lyrical',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1010,165,'wall',14,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1011,165,'tractor',11,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1012,165,'keeper',24,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1013,165,'goodfellas',24,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1014,166,'player_of_match',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1015,166,'goal_of_week',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1016,166,'lyrical',7,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1017,166,'wall',41,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1018,166,'tractor',15,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1019,166,'keeper',13,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1020,166,'goodfellas',17,NULL,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(1021,167,'player_of_match',27,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1022,167,'goal_of_week',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1023,167,'lyrical',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1024,167,'wall',25,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1025,167,'tractor',22,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1026,167,'goodfellas',35,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1027,168,'player_of_match',12,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1028,168,'goal_of_week',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1029,168,'lyrical',22,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1030,168,'wall',25,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1031,168,'terminator',25,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1032,168,'tractor',37,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1033,168,'goodfellas',37,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1034,169,'player_of_match',48,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1035,169,'goal_of_week',18,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1036,169,'lyrical',10,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1037,169,'wall',48,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1038,169,'terminator',30,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1039,169,'tractor',30,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1040,169,'goodfellas',24,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1041,170,'player_of_match',55,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1042,170,'goal_of_week',40,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1043,170,'lyrical',55,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1044,170,'wall',2,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1045,170,'terminator',55,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1046,170,'tractor',6,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1047,170,'goodfellas',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1048,171,'player_of_match',36,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1049,171,'goal_of_week',7,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1050,171,'lyrical',13,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1051,171,'wall',2,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1052,171,'terminator',17,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1053,171,'tractor',35,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1054,171,'guinda',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1055,171,'goodfellas',6,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1056,172,'player_of_match',36,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1057,172,'goal_of_week',36,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1058,172,'lyrical',55,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1059,172,'wall',17,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1060,172,'terminator',17,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1061,172,'tractor',30,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1062,172,'guinda',17,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1063,172,'goodfellas',43,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1064,173,'player_of_match',2,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1065,173,'goal_of_week',23,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1066,173,'lyrical',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1067,173,'wall',17,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1068,173,'tractor',30,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1069,173,'guinda',40,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1070,173,'goodfellas',6,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1071,174,'player_of_match',32,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1072,174,'goal_of_week',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1073,174,'lyrical',1,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1074,174,'wall',17,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1075,174,'terminator',2,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1076,174,'tractor',31,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1077,174,'guinda',17,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1078,174,'goodfellas',40,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(1079,175,'player_of_match',10,NULL,'2026-05-10 13:33:45','2026-05-10 13:33:45'),(1080,175,'goal_of_week',1,NULL,'2026-05-10 13:33:45','2026-05-10 13:33:45'),(1081,175,'lyrical',10,NULL,'2026-05-10 13:33:45','2026-05-10 13:33:45'),(1082,175,'wall',13,NULL,'2026-05-10 13:33:45','2026-05-10 13:33:45'),(1083,175,'tractor',31,NULL,'2026-05-10 13:33:45','2026-05-10 13:33:45'),(1084,175,'guinda',10,NULL,'2026-05-10 13:33:45','2026-05-10 13:33:45'),(1085,175,'goodfellas',40,NULL,'2026-05-10 13:33:45','2026-05-10 13:33:45'),(1086,176,'player_of_match',11,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04'),(1087,176,'goal_of_week',8,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04'),(1088,176,'lyrical',11,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04'),(1089,176,'wall',17,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04'),(1090,176,'capocannoniere',29,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04'),(1091,176,'terminator',11,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04'),(1092,176,'tractor',31,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04'),(1093,176,'guinda',1,NULL,'2026-05-15 05:05:04','2026-05-15 05:05:04');
+/*!40000 ALTER TABLE `match_awards` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_director_award_votes`
+--
+
+DROP TABLE IF EXISTS `match_director_award_votes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_director_award_votes` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `voter_id` int(10) unsigned NOT NULL,
+  `award_code` varchar(40) NOT NULL,
+  `player_id` int(10) unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_director_award_vote` (`match_id`,`voter_id`,`award_code`),
+  KEY `idx_director_award_match_code` (`match_id`,`award_code`),
+  KEY `fk_director_award_voter` (`voter_id`),
+  KEY `fk_director_award_player` (`player_id`),
+  CONSTRAINT `fk_director_award_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_director_award_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_director_award_voter` FOREIGN KEY (`voter_id`) REFERENCES `directive_members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_director_award_votes`
+--
+
+LOCK TABLES `match_director_award_votes` WRITE;
+/*!40000 ALTER TABLE `match_director_award_votes` DISABLE KEYS */;
+/*!40000 ALTER TABLE `match_director_award_votes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_director_publications`
+--
+
+DROP TABLE IF EXISTS `match_director_publications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_director_publications` (
+  `match_id` int(10) unsigned NOT NULL,
+  `published_at` datetime NOT NULL,
+  `reason` enum('all_voted','deadline','admin') NOT NULL,
+  `eligible_voters` smallint(5) unsigned NOT NULL DEFAULT 0,
+  `submitted_voters` smallint(5) unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`match_id`),
+  CONSTRAINT `fk_director_publication_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `directive_members`
+-- Dumping data for table `match_director_publications`
 --
 
-INSERT INTO `directive_members` (`id`, `site_user_id`, `name`, `password_hash`, `password_needs_setup`, `setup_code_hash`, `active`, `created_at`, `updated_at`) VALUES
-(1, NULL, 'pablo', '$2y$10$9VDGfldu0vPWviJfk99KEOQw/WnjgqMsrLtmNmDVcFDgAPtJyVdcS', 0, NULL, 1, '2026-05-08 00:55:57', '2026-05-08 01:03:05'),
-(2, NULL, 'manu', '$2y$10$XfzoV5aLFzwBRHrrJ59Wperr9MXybnfhi6rX8Wg8//LvibciGVCiS', 0, NULL, 1, '2026-05-08 01:03:19', '2026-05-08 01:03:19'),
-(3, NULL, 'cesar', '$2y$10$eUbwOFUU9UeeoPPulWCtR.cSrNmWKdqDzLdR9SRtrS6B4ueViH5TG', 0, NULL, 1, '2026-05-08 01:03:26', '2026-05-08 01:03:26'),
-(4, NULL, 'pela', '$2y$10$AIq1.ugEtQjF1abYhT9eWuXKZWhdqDh2lrKADOlQHzYk5VSC35NbG', 0, NULL, 1, '2026-05-08 01:03:33', '2026-05-08 01:03:33'),
-(5, NULL, 'braian', '$2y$10$zZIEnDFQbQLvQAhcRbHUY.29yOCQlugKGEMqZCQKYrJG1azcZ2ujS', 1, '$2y$10$egqr.g3OsrSbCfGVi4jHMOouAqOe8.z79yEJlDHEgXW1j/m/aY8Ja', 1, '2026-05-08 01:36:56', '2026-05-08 01:37:24'),
-(6, NULL, 'Invitado voto 40-16 ALE CUERVO', '$2y$10$2To6BsBgQ8yvjxPVDSlnDuDcj3YVd/urP19IZqZY45vMtE5j12Wna', 0, NULL, 0, '2026-05-08 02:01:52', '2026-05-08 02:01:52'),
-(7, NULL, 'Invitado voto 40-17 CESAR', '$2y$10$.t9J7.QtYWPy3SQAUMQcv.Pkv7mT0vs3y2m3vDbWeDM/VNa3Hs8tO', 0, NULL, 0, '2026-05-08 02:01:57', '2026-05-08 02:01:57'),
-(8, NULL, 'Invitado voto 40-24 FRANCOK', '$2y$10$gE28L2GBRTmgRFBxcMjlTO8ZIvyuJpurifYAG.KarV6kajX7U1.C2', 0, NULL, 0, '2026-05-08 02:02:01', '2026-05-08 02:02:01'),
-(9, NULL, 'Invitado voto 40-11 MANU', '$2y$10$alUeS/SoKW4iZ78.A2PH0OeIFndRQE5belGih8UwSFDOFuQdKKxhm', 0, NULL, 0, '2026-05-08 02:02:04', '2026-05-08 02:02:04'),
-(10, NULL, 'Invitado voto 40-29 TEBO', '$2y$10$J6p/jnXmv6FW2Z5xF2Za5OPdtowoL7Itvv3RCJcj3aMX4qc7yDm4e', 0, NULL, 0, '2026-05-08 02:02:12', '2026-05-08 02:02:12'),
-(11, NULL, 'Invitado voto 40-30 FACU', '$2y$10$vHHQv/pjnzfGDdmcHuGw3OEzTGqr0B0k4lgEMg8X1k3sB4kadAvUe', 0, NULL, 0, '2026-05-08 02:02:22', '2026-05-08 02:02:22'),
-(12, NULL, 'Invitado voto 40-10 BRIAN', '$2y$10$tAW1C6qs2LhfRxL8QRyOl.2hPn0T6iNNweE7SDnX12m1yJirDqAPO', 0, NULL, 0, '2026-05-08 02:08:11', '2026-05-08 02:08:11'),
-(13, NULL, 'Invitado voto 40-14 PABLO', '$2y$10$xH1tFbBUV.9bCyrtyBsDE.GjKrcWENaSc/iyEZa0bxp5uDNMP4ukW', 0, NULL, 0, '2026-05-08 02:08:17', '2026-05-08 02:08:17');
-
--- --------------------------------------------------------
+LOCK TABLES `match_director_publications` WRITE;
+/*!40000 ALTER TABLE `match_director_publications` DISABLE KEYS */;
+/*!40000 ALTER TABLE `match_director_publications` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Estructura de tabla para la tabla `matches`
+-- Table structure for table `match_director_rating_votes`
 --
 
+DROP TABLE IF EXISTS `match_director_rating_votes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_director_rating_votes` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `voter_id` int(10) unsigned NOT NULL,
+  `player_id` int(10) unsigned NOT NULL,
+  `rating` decimal(3,1) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_director_rating_vote` (`match_id`,`voter_id`,`player_id`),
+  KEY `idx_director_rating_match_player` (`match_id`,`player_id`),
+  KEY `fk_director_rating_voter` (`voter_id`),
+  KEY `fk_director_rating_player` (`player_id`),
+  CONSTRAINT `fk_director_rating_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_director_rating_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_director_rating_voter` FOREIGN KEY (`voter_id`) REFERENCES `directive_members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_director_rating_votes`
+--
+
+LOCK TABLES `match_director_rating_votes` WRITE;
+/*!40000 ALTER TABLE `match_director_rating_votes` DISABLE KEYS */;
+/*!40000 ALTER TABLE `match_director_rating_votes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_director_vote_invites`
+--
+
+DROP TABLE IF EXISTS `match_director_vote_invites`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_director_vote_invites` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `player_id` int(10) unsigned NOT NULL,
+  `voter_member_id` int(10) unsigned NOT NULL,
+  `token` varchar(5) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_director_vote_invite_match_player` (`match_id`,`player_id`),
+  UNIQUE KEY `uniq_director_vote_invite_token` (`token`),
+  KEY `idx_director_vote_invite_match` (`match_id`),
+  KEY `fk_director_vote_invite_player` (`player_id`),
+  KEY `fk_director_vote_invite_voter` (`voter_member_id`),
+  CONSTRAINT `fk_director_vote_invite_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_director_vote_invite_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_director_vote_invite_voter` FOREIGN KEY (`voter_member_id`) REFERENCES `directive_members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_director_vote_invites`
+--
+
+LOCK TABLES `match_director_vote_invites` WRITE;
+/*!40000 ALTER TABLE `match_director_vote_invites` DISABLE KEYS */;
+/*!40000 ALTER TABLE `match_director_vote_invites` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_draw_option_votes`
+--
+
+DROP TABLE IF EXISTS `match_draw_option_votes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_draw_option_votes` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `option_id` int(10) unsigned NOT NULL,
+  `user_id` int(10) unsigned NOT NULL,
+  `player_id` int(10) unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_match_draw_vote_user` (`match_id`,`user_id`),
+  KEY `idx_match_draw_vote_option` (`option_id`),
+  KEY `fk_match_draw_votes_user` (`user_id`),
+  KEY `fk_match_draw_votes_player` (`player_id`),
+  CONSTRAINT `fk_match_draw_votes_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_match_draw_votes_option` FOREIGN KEY (`option_id`) REFERENCES `match_draw_options` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_match_draw_votes_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_match_draw_votes_user` FOREIGN KEY (`user_id`) REFERENCES `site_users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_draw_option_votes`
+--
+
+LOCK TABLES `match_draw_option_votes` WRITE;
+/*!40000 ALTER TABLE `match_draw_option_votes` DISABLE KEYS */;
+/*!40000 ALTER TABLE `match_draw_option_votes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_draw_options`
+--
+
+DROP TABLE IF EXISTS `match_draw_options`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_draw_options` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `option_number` tinyint(3) unsigned NOT NULL,
+  `teams_json` mediumtext NOT NULL,
+  `total_diff` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `generated_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `selected_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_match_draw_option` (`match_id`,`option_number`),
+  KEY `idx_match_draw_option_match` (`match_id`),
+  CONSTRAINT `fk_match_draw_options_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_draw_options`
+--
+
+LOCK TABLES `match_draw_options` WRITE;
+/*!40000 ALTER TABLE `match_draw_options` DISABLE KEYS */;
+/*!40000 ALTER TABLE `match_draw_options` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_players`
+--
+
+DROP TABLE IF EXISTS `match_players`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_players` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `player_id` int(10) unsigned NOT NULL,
+  `team_number` tinyint(3) unsigned DEFAULT NULL,
+  `assigned_position` enum('ARQ','DEF','LAT','MED','DEL') DEFAULT NULL,
+  `is_goalkeeper` tinyint(1) NOT NULL DEFAULT 0,
+  `lineup_order` smallint(5) unsigned DEFAULT NULL,
+  `formation_line_order` tinyint(3) unsigned DEFAULT NULL,
+  `availability_status` enum('convocado','confirmado','baja') NOT NULL DEFAULT 'convocado',
+  `goals` smallint(5) unsigned NOT NULL DEFAULT 0,
+  `rating` decimal(3,1) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_match_player` (`match_id`,`player_id`),
+  KEY `idx_match_team` (`match_id`,`team_number`),
+  KEY `idx_player_stats` (`player_id`,`goals`,`rating`),
+  KEY `idx_match_lineup` (`match_id`,`team_number`,`assigned_position`,`lineup_order`),
+  KEY `idx_match_availability` (`match_id`,`availability_status`),
+  CONSTRAINT `fk_match_players_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_match_players_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3150 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_players`
+--
+
+LOCK TABLES `match_players` WRITE;
+/*!40000 ALTER TABLE `match_players` DISABLE KEYS */;
+INSERT INTO `match_players` VALUES (2188,132,18,1,'DEF',0,1,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2189,132,27,1,'ARQ',1,2,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2190,132,10,1,'DEL',0,3,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2191,132,6,1,'DEL',0,4,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2192,132,13,1,'DEL',0,5,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2193,132,59,1,'MED',0,6,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2194,132,8,1,'MED',0,7,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2195,132,1,1,'MED',0,8,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2196,132,15,1,'DEL',0,9,4,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2197,132,30,2,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2198,132,19,2,'DEF',0,2,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2199,132,14,2,'DEF',0,3,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2200,132,7,2,'MED',0,4,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2201,132,4,2,'MED',0,5,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2202,132,40,2,'DEF',0,6,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2203,132,5,2,'DEF',0,7,5,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2204,132,41,2,'MED',0,8,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2205,132,38,2,'DEL',0,9,1,'confirmado',0,10.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2206,133,38,1,'DEL',0,1,1,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2207,133,5,1,'DEF',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2208,133,14,1,'DEF',0,3,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2209,133,10,1,'DEL',0,4,2,'confirmado',0,9.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2210,133,12,1,'MED',0,5,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2211,133,43,1,'DEF',0,6,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2212,133,40,1,'DEF',0,7,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2213,133,61,1,'DEF',0,8,5,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2214,133,18,1,'DEF',0,9,6,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2215,133,6,2,'DEL',0,1,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2216,133,24,2,'DEF',0,2,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2217,133,11,2,'DEF',0,3,2,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2218,133,7,2,'MED',0,4,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2219,133,17,2,'DEF',0,5,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2220,133,44,2,'DEF',0,6,4,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2221,133,22,2,'MED',0,7,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2222,133,15,2,'DEL',0,8,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2223,133,9,2,'MED',0,9,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2224,134,17,1,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2225,134,14,1,'DEF',0,2,2,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2226,134,40,1,'DEF',0,3,3,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2227,134,7,1,'MED',0,4,1,'confirmado',4,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2228,134,8,1,'MED',0,5,2,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2229,134,38,1,'DEL',0,6,1,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2230,134,41,1,'MED',0,7,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2231,134,23,1,'DEL',0,8,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2232,134,18,1,'DEF',0,9,4,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2233,134,10,2,'DEL',0,1,1,'confirmado',4,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2234,134,43,2,'DEF',0,2,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2235,134,44,2,'DEF',0,3,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2236,134,6,2,'DEL',0,4,2,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2237,134,5,2,'DEF',0,5,3,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2238,134,15,2,'DEL',0,6,3,'confirmado',4,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2239,134,1,2,'MED',0,7,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2240,134,61,2,'DEF',0,8,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2241,134,59,2,'MED',0,9,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2242,135,61,1,'DEF',0,1,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2243,135,14,1,'DEF',0,2,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2244,135,11,1,'DEF',0,3,3,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2245,135,24,1,'DEF',0,4,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2246,135,12,1,'MED',0,5,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2247,135,40,1,'DEF',0,6,5,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2248,135,6,1,'DEL',0,7,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2249,135,38,1,'DEL',0,8,2,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2250,135,15,1,'DEL',0,9,3,'confirmado',2,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2251,135,23,2,'DEL',0,1,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2252,135,44,2,'DEF',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2253,135,17,2,'DEF',0,3,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2254,135,5,2,'DEF',0,4,3,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2255,135,10,2,'DEL',0,5,2,'confirmado',2,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2256,135,22,2,'MED',0,6,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2257,135,7,2,'MED',0,7,2,'confirmado',7,9.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2258,135,1,2,'MED',0,8,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2259,135,18,2,'DEF',0,9,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2260,136,44,1,'DEF',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2261,136,12,1,'MED',0,2,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2262,136,14,1,'DEF',0,3,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2263,136,9,1,'MED',0,4,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2264,136,24,1,'DEF',0,5,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2265,136,6,1,'DEL',0,6,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2266,136,15,1,'DEL',0,7,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2267,136,18,1,'DEF',0,8,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2268,136,1,1,'MED',0,9,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2269,136,40,2,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2270,136,10,2,'DEL',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2271,136,22,2,'MED',0,3,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2272,136,5,2,'DEF',0,4,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2273,136,30,2,'DEF',0,5,3,'confirmado',0,4.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2274,136,17,2,'DEF',0,6,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2275,136,38,2,'DEL',0,7,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2276,136,61,2,'DEF',0,8,5,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2277,136,23,2,'DEL',0,9,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2278,137,5,1,'DEF',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2279,137,14,1,'DEF',0,2,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2280,137,30,1,'DEF',0,3,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2281,137,59,1,'MED',0,4,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2282,137,6,1,'DEL',0,5,1,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2283,137,15,1,'DEL',0,6,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2284,137,38,1,'DEL',0,7,3,'confirmado',0,10.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2285,137,61,1,'DEF',0,8,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2286,137,23,1,'DEL',0,9,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2287,137,27,2,'ARQ',1,1,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2288,137,17,2,'DEF',0,2,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2289,137,19,2,'DEF',0,3,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2290,137,7,2,'MED',0,4,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2291,137,40,2,'DEF',0,5,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2292,137,8,2,'MED',0,6,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2293,137,1,2,'MED',0,7,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2294,137,18,2,'DEF',0,8,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2295,137,13,2,'DEL',0,9,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2296,138,61,1,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2297,138,14,1,'DEF',0,2,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2298,138,11,1,'DEF',0,3,3,'confirmado',1,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2299,138,7,1,'MED',0,4,1,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2300,138,22,1,'MED',0,5,2,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2301,138,40,1,'DEF',0,6,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2302,138,1,1,'MED',0,7,3,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2303,138,15,1,'DEL',0,8,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2304,138,24,1,'DEF',0,9,5,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2305,138,17,2,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2306,138,10,2,'DEL',0,2,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2307,138,12,2,'MED',0,3,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2308,138,6,2,'DEL',0,4,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2309,138,44,2,'DEF',0,5,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2310,138,9,2,'MED',0,6,2,'confirmado',0,4.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2311,138,38,2,'DEL',0,7,3,'confirmado',1,5.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2312,138,18,2,'DEF',0,8,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2313,138,5,2,'DEF',0,9,4,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2314,139,13,1,'DEL',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2315,139,22,1,'MED',0,2,1,'confirmado',1,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2316,139,17,1,'DEF',0,3,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2317,139,38,1,'DEL',0,4,2,'confirmado',5,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2318,139,40,1,'DEF',0,5,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2319,139,8,1,'MED',0,6,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2320,139,59,1,'MED',0,7,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2321,139,61,1,'DEF',0,8,3,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2322,139,35,1,'ARQ',1,9,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2323,139,7,2,'MED',0,1,1,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2324,139,6,2,'DEL',0,2,1,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2325,139,5,2,'DEF',0,3,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2326,139,30,2,'DEF',0,4,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2327,139,41,2,'MED',0,5,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2328,139,15,2,'DEL',0,6,2,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2329,139,1,2,'MED',0,7,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2330,139,23,2,'DEL',0,8,3,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2331,139,18,2,'DEF',0,9,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2332,140,23,1,'DEL',0,1,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2333,140,19,1,'DEF',0,2,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2334,140,12,1,'MED',0,3,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2335,140,17,1,'DEF',0,4,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2336,140,43,1,'DEF',0,5,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2337,140,41,1,'MED',0,6,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2338,140,61,1,'DEF',0,7,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2339,140,15,1,'DEL',0,8,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2340,140,18,1,'DEF',0,9,5,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2341,140,30,2,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2342,140,24,2,'DEF',0,2,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2343,140,10,2,'DEL',0,3,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2344,140,7,2,'MED',0,4,1,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2345,140,6,2,'DEL',0,5,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2346,140,38,2,'DEL',0,6,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2347,140,2,2,'DEF',0,7,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2348,140,13,2,'DEL',0,8,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2349,140,1,2,'MED',0,9,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2350,141,18,1,'DEF',0,1,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2351,141,14,1,'DEF',0,2,2,'confirmado',0,9.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2352,141,17,1,'DEF',0,3,3,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2353,141,5,1,'DEF',0,4,4,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2354,141,1,1,'MED',0,5,1,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2355,141,2,1,'DEF',0,6,5,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2356,141,10,1,'DEL',0,7,1,'confirmado',3,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2357,141,38,1,'DEL',0,8,2,'confirmado',5,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2358,141,8,1,'MED',0,9,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2359,141,19,2,'DEF',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2360,141,44,2,'DEF',0,2,2,'confirmado',2,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2361,141,30,2,'DEF',0,3,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2362,141,59,2,'MED',0,4,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2363,141,13,2,'DEL',0,5,1,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2364,141,61,2,'DEF',0,6,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2365,141,7,2,'MED',0,7,2,'confirmado',3,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2366,141,6,2,'DEL',0,8,2,'confirmado',2,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2367,141,15,2,'DEL',0,9,3,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2368,142,6,1,'DEL',0,1,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2369,142,14,1,'DEF',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2370,142,5,1,'DEF',0,3,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2371,142,7,1,'MED',0,4,1,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2372,142,11,1,'DEF',0,5,3,'confirmado',2,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2373,142,38,1,'DEL',0,6,2,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2374,142,30,1,'DEF',0,7,4,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2375,142,18,1,'DEF',0,8,5,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2376,142,61,1,'DEF',0,9,6,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2377,142,12,2,'MED',0,1,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 13:20:41'),(2378,142,17,2,'DEF',0,2,1,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2379,142,24,2,'DEF',0,3,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2380,142,22,2,'MED',0,4,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2381,142,44,2,'DEF',0,5,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2382,142,40,2,'DEF',0,6,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2383,142,1,2,'MED',0,7,3,'confirmado',1,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2384,142,15,2,'DEL',0,8,1,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2385,142,23,2,'DEL',0,9,2,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2386,143,27,1,'ARQ',1,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2387,143,14,1,'DEF',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2388,143,30,1,'DEF',0,3,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2389,143,6,1,'DEL',0,4,1,'confirmado',2,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2390,143,8,1,'MED',0,5,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2391,143,16,1,'DEF',0,6,3,'confirmado',3,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2392,143,42,1,'DEL',0,7,2,'confirmado',3,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2393,143,1,1,'MED',0,8,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2394,143,18,1,'DEF',0,9,4,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2395,143,41,2,'MED',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2396,143,17,2,'DEF',0,2,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2397,143,59,2,'MED',0,3,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2398,143,7,2,'MED',0,4,3,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2399,143,38,2,'DEL',0,5,1,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2400,143,2,2,'DEF',0,6,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2401,143,15,2,'DEL',0,7,2,'confirmado',3,5.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2402,143,4,2,'MED',0,8,4,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2403,143,23,2,'DEL',0,9,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2404,144,38,1,'DEL',0,1,1,'confirmado',1,5.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2405,144,14,1,'DEF',0,2,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2406,144,12,1,'MED',0,3,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2407,144,22,1,'MED',0,4,2,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2408,144,6,1,'DEL',0,5,2,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2409,144,30,1,'DEF',0,6,2,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2410,144,1,1,'MED',0,7,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2411,144,41,1,'MED',0,8,4,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2412,144,24,1,'DEF',0,9,3,'confirmado',0,4.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2413,144,11,2,'DEF',0,1,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2414,144,44,2,'DEF',0,2,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2415,144,5,2,'DEF',0,3,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2416,144,7,2,'MED',0,4,1,'confirmado',6,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2417,144,17,2,'DEF',0,5,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2418,144,46,2,'MED',0,6,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2419,144,15,2,'DEL',0,7,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2420,144,18,2,'DEF',0,8,5,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2421,145,61,1,'DEF',0,1,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2422,145,5,1,'DEF',0,2,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2423,145,17,1,'DEF',0,3,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2424,145,22,1,'MED',0,4,1,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2425,145,38,1,'DEL',0,5,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2426,145,1,1,'MED',0,6,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2427,145,15,1,'DEL',0,7,2,'confirmado',0,4.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2428,145,2,1,'DEF',0,8,4,'confirmado',0,4.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2429,145,18,1,'DEF',0,9,5,'confirmado',0,4.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2430,145,30,2,'DEF',0,1,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2431,145,14,2,'DEF',0,2,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2432,145,6,2,'DEL',0,3,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2433,145,9,2,'MED',0,4,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2434,145,7,2,'MED',0,5,2,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2435,145,8,2,'MED',0,6,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2436,145,59,2,'MED',0,7,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2437,145,41,2,'MED',0,8,5,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2438,145,23,2,'DEL',0,9,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2439,146,1,1,'MED',0,1,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2440,146,24,1,'DEF',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2441,146,11,1,'DEF',0,3,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2442,146,43,1,'DEF',0,4,3,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2443,146,22,1,'MED',0,5,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2444,146,5,1,'DEF',0,6,4,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2445,146,6,1,'DEL',0,7,1,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2446,146,38,1,'DEL',0,8,2,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2447,146,47,1,'MED',0,9,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2448,146,10,2,'DEL',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2449,146,23,2,'DEL',0,2,2,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2450,146,14,2,'DEF',0,3,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2451,146,12,2,'MED',0,4,1,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2452,146,17,2,'DEF',0,5,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2453,146,9,2,'MED',0,6,2,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2454,146,48,2,'MED',0,7,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2455,146,41,2,'MED',0,8,4,'confirmado',1,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2456,146,15,2,'DEL',0,9,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2457,147,23,1,'DEL',0,1,1,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2458,147,49,1,'MED',0,2,1,'confirmado',0,9.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2459,147,10,1,'DEL',0,3,2,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2460,147,17,1,'DEF',0,4,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2461,147,6,1,'DEL',0,5,3,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2462,147,15,1,'DEL',0,6,4,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2463,147,48,1,'MED',0,7,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2464,147,33,1,'DEF',0,8,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2465,147,19,1,'DEF',0,9,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2466,147,5,2,'DEF',0,1,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2467,147,13,2,'DEL',0,2,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2468,147,7,2,'MED',0,3,1,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2469,147,38,2,'DEL',0,4,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2470,147,1,2,'MED',0,5,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2471,147,3,2,'DEL',0,6,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2472,147,14,2,'DEF',0,7,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2473,147,30,2,'DEF',0,8,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2474,147,2,2,'DEF',0,9,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2475,148,1,1,'MED',0,1,1,'confirmado',2,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2476,148,11,1,'DEF',0,2,1,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2477,148,22,1,'MED',0,3,2,'confirmado',1,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2478,148,9,1,'MED',0,4,3,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2479,148,7,1,'MED',0,5,4,'confirmado',3,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2480,148,43,1,'DEF',0,6,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2481,148,48,1,'MED',0,7,5,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2482,148,23,1,'DEL',0,8,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2483,148,5,1,'DEF',0,9,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2484,148,38,2,'DEL',0,1,1,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2485,148,10,2,'DEL',0,2,2,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2486,148,6,2,'DEL',0,3,3,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2487,148,17,2,'DEF',0,4,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2488,148,15,2,'DEL',0,5,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2489,148,14,2,'DEF',0,6,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2490,148,12,2,'MED',0,7,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2491,148,30,2,'DEF',0,8,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2492,148,24,2,'DEF',0,9,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2493,149,10,1,'DEL',0,1,1,'confirmado',3,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2494,149,7,1,'MED',0,2,1,'confirmado',6,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2495,149,8,1,'MED',0,3,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2496,149,6,1,'DEL',0,4,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2497,149,30,1,'DEF',0,5,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2498,149,1,1,'MED',0,6,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2499,149,51,1,'MED',0,7,4,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2500,149,25,1,'DEF',0,8,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2501,149,23,1,'DEL',0,9,3,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2502,149,27,2,'ARQ',1,1,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2503,149,14,2,'DEF',0,2,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2504,149,17,2,'DEF',0,3,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2505,149,38,2,'DEL',0,4,1,'confirmado',3,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2506,149,52,2,'MED',0,5,1,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2507,149,16,2,'DEF',0,6,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2508,149,4,2,'MED',0,7,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2509,149,15,2,'DEL',0,8,2,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2510,149,33,2,'DEF',0,9,4,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2511,150,12,1,'MED',0,1,1,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2512,150,7,1,'MED',0,2,2,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2513,150,22,1,'MED',0,3,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2514,150,51,1,'MED',0,4,4,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2515,150,46,1,'MED',0,5,5,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2516,150,48,1,'MED',0,6,6,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2517,150,1,1,'MED',0,7,7,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2518,150,53,1,'MED',0,8,8,'confirmado',1,5.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2519,150,23,1,'DEL',0,9,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2520,150,14,2,'DEF',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2521,150,11,2,'DEF',0,2,2,'confirmado',1,9.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2522,150,10,2,'DEL',0,3,1,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2523,150,6,2,'DEL',0,4,2,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2524,150,17,2,'DEF',0,5,3,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2525,150,8,2,'MED',0,6,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2526,150,5,2,'DEF',0,7,4,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2527,150,38,2,'DEL',0,8,3,'confirmado',3,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2528,150,30,2,'DEF',0,9,5,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2529,151,13,1,'DEL',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2530,151,7,1,'MED',0,2,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2531,151,6,1,'DEL',0,3,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2532,151,46,1,'MED',0,4,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2533,151,17,1,'DEF',0,5,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2534,151,4,1,'MED',0,6,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2535,151,1,1,'MED',0,7,4,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2536,151,15,1,'DEL',0,8,3,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2537,151,23,1,'DEL',0,9,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2538,151,14,2,'DEF',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2539,151,55,2,'MED',0,2,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2540,151,22,2,'MED',0,3,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2541,151,38,2,'DEL',0,4,1,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2542,151,49,2,'MED',0,5,3,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2543,151,8,2,'MED',0,6,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2544,151,5,2,'DEF',0,7,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2545,151,33,2,'DEF',0,8,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2546,151,52,2,'MED',0,9,5,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2547,152,6,1,'DEL',0,1,1,'confirmado',4,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2548,152,11,1,'DEF',0,2,1,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2549,152,22,1,'MED',0,3,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2550,152,46,1,'MED',0,4,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2551,152,1,1,'MED',0,5,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2552,152,8,1,'MED',0,6,4,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2553,152,15,1,'DEL',0,7,2,'confirmado',2,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2554,152,35,1,'ARQ',1,8,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2555,152,60,1,'MED',0,9,5,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2556,152,17,2,'DEF',0,1,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2557,152,14,2,'DEF',0,2,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2558,152,7,2,'MED',0,3,1,'confirmado',2,5.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2559,152,12,2,'MED',0,4,2,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2560,152,9,2,'MED',0,5,3,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2561,152,38,2,'DEL',0,6,1,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2562,152,61,2,'DEF',0,7,3,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2563,152,23,2,'DEL',0,8,2,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2564,152,5,2,'DEF',0,9,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2565,153,61,1,'DEF',0,1,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2566,153,14,1,'DEF',0,2,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2567,153,46,1,'MED',0,3,1,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2568,153,8,1,'MED',0,4,2,'confirmado',3,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2569,153,9,1,'MED',0,5,3,'confirmado',2,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2570,153,15,1,'DEL',0,6,1,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2571,153,33,1,'DEF',0,7,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2572,153,13,1,'DEL',0,8,2,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2573,153,29,1,'MED',0,9,4,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2574,153,7,2,'MED',0,1,1,'confirmado',3,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2575,153,40,2,'DEF',0,2,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2576,153,17,2,'DEF',0,3,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2577,153,41,2,'MED',0,4,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2578,153,6,2,'DEL',0,5,1,'confirmado',2,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2579,153,52,2,'MED',0,6,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2580,153,1,2,'MED',0,7,4,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2581,153,4,2,'MED',0,8,5,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2582,153,49,2,'MED',0,9,6,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2583,154,27,1,'ARQ',1,1,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2584,154,1,1,'MED',0,2,1,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2585,154,11,1,'DEF',0,3,1,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2586,154,7,1,'MED',0,4,2,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2587,154,25,1,'DEF',0,5,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2588,154,5,1,'DEF',0,6,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2589,154,4,1,'MED',0,7,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2590,154,17,1,'DEF',0,8,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2591,154,60,2,'MED',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2592,154,9,2,'MED',0,2,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2593,154,14,2,'DEF',0,3,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2594,154,12,2,'MED',0,4,3,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2595,154,46,2,'MED',0,5,4,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2596,154,40,2,'DEF',0,6,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2597,154,8,2,'MED',0,7,5,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2598,154,15,2,'DEL',0,8,1,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2599,154,61,2,'DEF',0,9,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2600,155,18,1,'DEF',0,1,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2601,155,14,1,'DEF',0,2,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2602,155,30,1,'DEF',0,3,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2603,155,56,1,'MED',0,4,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2604,155,3,1,'DEL',0,5,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2605,155,17,1,'DEF',0,6,4,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2606,155,15,1,'DEL',0,7,2,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2607,155,57,1,'MED',0,8,2,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2608,155,49,1,'MED',0,9,3,'confirmado',0,9.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2609,155,10,2,'DEL',0,1,1,'confirmado',2,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2610,155,46,2,'MED',0,2,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2611,155,48,2,'MED',0,3,2,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2612,155,2,2,'DEF',0,4,1,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2613,155,52,2,'MED',0,5,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2614,155,7,2,'MED',0,6,4,'confirmado',1,4.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2615,155,1,2,'MED',0,7,5,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2616,155,13,2,'DEL',0,8,2,'confirmado',1,4.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2617,155,61,2,'DEF',0,9,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2618,156,14,1,'DEF',0,1,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2619,156,11,1,'DEF',0,2,2,'confirmado',2,9.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2620,156,12,1,'MED',0,3,1,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2621,156,2,1,'DEF',0,4,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2622,156,24,1,'DEF',0,5,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2623,156,8,1,'MED',0,6,2,'confirmado',4,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2624,156,17,1,'DEF',0,7,5,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2625,156,23,1,'DEL',0,8,1,'confirmado',2,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2626,156,35,1,'ARQ',1,9,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2627,156,30,2,'DEF',0,1,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2628,156,7,2,'MED',0,2,1,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2629,156,10,2,'DEL',0,3,1,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2630,156,46,2,'MED',0,4,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2631,156,4,2,'MED',0,5,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2632,156,9,2,'MED',0,6,4,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2633,156,15,2,'DEL',0,7,2,'confirmado',6,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2634,156,1,2,'MED',0,8,5,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2635,156,18,2,'DEF',0,9,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2636,157,23,1,'DEL',0,1,1,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2637,157,49,1,'MED',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2638,157,5,1,'DEF',0,3,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2639,157,18,1,'DEF',0,4,2,'confirmado',1,4.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2640,157,14,1,'DEF',0,5,3,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2641,157,43,1,'DEF',0,6,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2642,157,8,1,'MED',0,7,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2643,157,17,1,'DEF',0,8,5,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2644,157,6,1,'DEL',0,9,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2645,157,9,2,'MED',0,1,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2646,157,48,2,'MED',0,2,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2647,157,1,2,'MED',0,3,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2648,157,13,2,'DEL',0,4,1,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2649,157,57,2,'MED',0,5,4,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2650,157,56,2,'MED',0,6,5,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2651,157,10,2,'DEL',0,7,2,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2652,157,7,2,'MED',0,8,6,'confirmado',1,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2653,157,15,2,'DEL',0,9,3,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2654,158,9,1,'MED',0,1,1,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2655,158,12,1,'MED',0,2,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2656,158,27,1,'ARQ',1,3,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2657,158,41,1,'MED',0,4,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2658,158,10,1,'DEL',0,5,1,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2659,158,8,1,'MED',0,6,4,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2660,158,15,1,'DEL',0,7,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2661,158,57,1,'MED',0,8,5,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2662,158,24,1,'DEF',0,9,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2663,158,6,2,'DEL',0,1,1,'confirmado',1,4.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2664,158,48,2,'MED',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2665,158,43,2,'DEF',0,3,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2666,158,58,2,'MED',0,4,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2667,158,61,2,'DEF',0,5,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2668,158,7,2,'MED',0,6,3,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2669,158,17,2,'DEF',0,7,3,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2670,158,1,2,'MED',0,8,4,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2671,158,62,2,'MED',0,9,5,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 13:20:41'),(2672,159,13,1,'DEL',0,1,1,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2673,159,14,1,'DEF',0,2,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2674,159,6,1,'DEL',0,3,2,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2675,159,8,1,'MED',0,4,1,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2676,159,33,1,'DEF',0,5,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2677,159,15,1,'DEL',0,6,3,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2678,159,47,1,'MED',0,7,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2679,159,25,1,'DEF',0,8,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2680,159,52,1,'MED',0,9,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2681,159,17,2,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2682,159,7,2,'MED',0,2,1,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2683,159,9,2,'MED',0,3,2,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2684,159,4,2,'MED',0,4,3,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2685,159,5,2,'DEF',0,5,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2686,159,41,2,'MED',0,6,4,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2687,159,1,2,'MED',0,7,5,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2688,159,30,2,'DEF',0,8,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2689,159,61,2,'DEF',0,9,4,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2690,160,1,1,'MED',0,1,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2691,160,14,1,'DEF',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2692,160,43,1,'DEF',0,3,2,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2693,160,7,1,'MED',0,4,2,'confirmado',4,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2694,160,22,1,'MED',0,5,3,'confirmado',2,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2695,160,48,1,'MED',0,6,4,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2696,160,30,1,'DEF',0,7,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2697,160,6,1,'DEL',0,8,1,'confirmado',4,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2698,160,2,1,'DEF',0,9,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2699,160,23,2,'DEL',0,1,1,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2700,160,10,2,'DEL',0,2,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2701,160,12,2,'MED',0,3,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2702,160,8,2,'MED',0,4,2,'confirmado',3,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2703,160,9,2,'MED',0,5,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2704,160,17,2,'DEF',0,6,1,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2705,160,37,2,'DEL',0,7,3,'confirmado',0,4.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2706,160,24,2,'DEF',0,8,2,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2707,160,15,2,'DEL',0,9,4,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2708,161,18,1,'DEF',0,1,1,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2709,161,14,1,'DEF',0,2,2,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2710,161,6,1,'DEL',0,3,1,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2711,161,30,1,'DEF',0,4,3,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2712,161,3,1,'DEL',0,5,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2713,161,17,1,'DEF',0,6,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2714,161,47,1,'MED',0,7,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2715,161,57,1,'MED',0,8,2,'confirmado',4,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2716,161,5,1,'DEF',0,9,5,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2717,161,7,2,'MED',0,1,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2718,161,10,2,'DEL',0,2,1,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2719,161,48,2,'MED',0,3,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2720,161,8,2,'MED',0,4,3,'confirmado',3,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2721,161,1,2,'MED',0,5,4,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2722,161,38,2,'DEL',0,6,2,'confirmado',5,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2723,161,40,2,'DEF',0,7,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2724,161,13,2,'DEL',0,8,3,'confirmado',2,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2725,161,33,2,'DEF',0,9,2,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2726,162,38,1,'DEL',0,1,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2727,162,14,1,'DEF',0,2,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2728,162,43,1,'DEF',0,3,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2729,162,46,1,'MED',0,4,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2730,162,5,1,'DEF',0,5,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2731,162,24,1,'DEF',0,6,4,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2732,162,9,1,'MED',0,7,2,'confirmado',2,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2733,162,1,1,'MED',0,8,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2734,162,15,1,'DEL',0,9,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2735,162,12,2,'MED',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 13:20:41'),(2736,162,22,2,'MED',0,2,2,'confirmado',1,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2737,162,30,2,'DEF',0,3,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2738,162,27,2,'ARQ',1,4,1,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2739,162,41,2,'MED',0,5,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2740,162,18,2,'DEF',0,6,2,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2741,162,8,2,'MED',0,7,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2742,162,6,2,'DEL',0,8,1,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2743,162,17,2,'DEF',0,9,3,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2744,163,17,1,'DEF',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2745,163,10,1,'DEL',0,2,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2746,163,7,1,'MED',0,3,1,'confirmado',3,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2747,163,46,1,'MED',0,4,2,'confirmado',1,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2748,163,5,1,'DEF',0,5,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2749,163,6,1,'DEL',0,6,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2750,163,41,1,'MED',0,7,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2751,163,1,1,'MED',0,8,4,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2752,163,15,1,'DEL',0,9,3,'confirmado',3,7.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2753,163,9,2,'MED',0,1,1,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2754,163,12,2,'MED',0,2,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 13:20:41'),(2755,163,29,2,'MED',0,3,3,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2756,163,43,2,'DEF',0,4,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2757,163,24,2,'DEF',0,5,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2758,163,22,2,'MED',0,6,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2759,163,8,2,'MED',0,7,5,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2760,163,38,2,'DEL',0,8,1,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2761,163,18,2,'DEF',0,9,3,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2762,164,9,1,'MED',0,1,1,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2763,164,11,1,'DEF',0,2,1,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2764,164,22,1,'MED',0,3,2,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2765,164,43,1,'DEF',0,4,2,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2766,164,17,1,'DEF',0,5,3,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2767,164,41,1,'MED',0,6,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2768,164,6,1,'DEL',0,7,1,'confirmado',4,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2769,164,15,1,'DEL',0,8,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2770,164,24,1,'DEF',0,9,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2771,164,27,2,'ARQ',1,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2772,164,12,2,'MED',0,2,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2773,164,14,2,'DEF',0,3,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2774,164,7,2,'MED',0,4,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2775,164,8,2,'MED',0,5,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2776,164,40,2,'DEF',0,6,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2777,164,38,2,'DEL',0,7,1,'confirmado',0,5.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2778,164,1,2,'MED',0,8,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2779,164,47,2,'MED',0,9,5,'confirmado',1,5.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2780,165,13,1,'DEL',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2781,165,7,1,'MED',0,2,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2782,165,11,1,'DEF',0,3,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2783,165,16,1,'DEF',0,4,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2784,165,9,1,'MED',0,5,2,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2785,165,38,1,'DEL',0,6,2,'confirmado',3,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2786,165,17,1,'DEF',0,7,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2787,165,15,1,'DEL',0,8,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2788,165,57,1,'MED',0,9,3,'confirmado',1,6.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2789,165,5,2,'DEF',0,1,1,'confirmado',0,5.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2790,165,14,2,'DEF',0,2,2,'confirmado',0,7.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2791,165,29,2,'MED',0,3,1,'confirmado',4,8.5,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2792,165,12,2,'MED',0,4,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 13:20:41'),(2793,165,43,2,'DEF',0,5,3,'confirmado',2,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2794,165,6,2,'DEL',0,6,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2795,165,41,2,'MED',0,7,3,'confirmado',0,6.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2796,165,1,2,'MED',0,8,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2797,165,24,2,'DEF',0,9,4,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2798,166,13,1,'DEL',0,1,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2799,166,7,1,'MED',0,2,1,'confirmado',5,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2800,166,12,1,'MED',0,3,2,'confirmado',2,9.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2801,166,40,1,'DEF',0,4,1,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2802,166,5,1,'DEF',0,5,2,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2803,166,9,1,'MED',0,6,3,'confirmado',0,8.5,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2804,166,41,1,'MED',0,7,4,'confirmado',0,8.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2805,166,15,1,'DEL',0,8,2,'confirmado',3,8.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2806,166,18,1,'DEF',0,9,3,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2807,166,38,2,'DEL',0,1,1,'confirmado',1,6.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2808,166,6,2,'DEL',0,2,2,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2809,166,43,2,'DEF',0,3,1,'confirmado',0,7.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2810,166,30,2,'DEF',0,4,2,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2811,166,24,2,'DEF',0,5,3,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2812,166,22,2,'MED',0,6,1,'confirmado',1,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2813,166,17,2,'DEF',0,7,4,'confirmado',0,6.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2814,166,1,2,'MED',0,8,2,'confirmado',2,7.0,'2026-05-10 12:53:43','2026-05-10 14:01:28'),(2815,166,57,2,'MED',0,9,3,'confirmado',0,1.0,'2026-05-10 12:53:43','2026-05-10 12:53:43'),(2816,171,10,1,'DEL',0,1,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2817,171,7,1,'MED',0,2,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2818,171,40,1,'DEF',0,3,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2819,171,13,1,'DEL',0,4,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2820,171,18,1,'DEF',0,5,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2821,171,23,1,'DEL',0,6,3,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2822,171,36,2,'MED',0,1,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2823,171,6,2,'DEL',0,2,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2824,171,17,2,'DEF',0,3,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2825,171,1,2,'MED',0,4,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2826,171,2,2,'DEF',0,5,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2827,171,35,2,'ARQ',1,6,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2828,174,32,1,'MED',0,1,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2829,174,31,1,'MED',0,2,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2830,174,17,1,'DEF',0,3,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2831,174,6,1,'DEL',0,4,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2832,174,1,1,'MED',0,5,3,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2833,174,2,1,'DEF',0,6,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2834,174,10,2,'DEL',0,1,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2835,174,58,2,'MED',0,2,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2836,174,40,2,'DEF',0,3,1,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2837,174,8,2,'MED',0,4,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2838,174,18,2,'DEF',0,5,2,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:53:17'),(2839,174,34,2,'DEF',0,6,3,'confirmado',0,NULL,'2026-05-10 13:32:09','2026-05-10 13:32:09'),(2840,176,31,2,'MED',0,1,1,'convocado',0,7.5,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2841,176,32,1,'DEL',0,1,1,'convocado',0,8.5,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2842,176,17,1,'DEF',0,2,1,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2843,176,7,2,'DEL',0,2,1,'convocado',0,8.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2844,176,30,2,'DEF',0,3,1,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2845,176,35,2,'ARQ',1,4,1,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2846,176,24,1,'ARQ',1,3,1,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2847,176,22,1,'MED',0,4,1,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2848,176,11,2,'DEF',0,5,2,'convocado',0,8.5,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2849,176,1,1,'MED',0,5,2,'convocado',0,6.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2850,176,47,2,'MED',0,6,2,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2851,176,8,2,'MED',0,7,3,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2852,176,14,2,'DEF',0,8,3,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2853,176,40,1,'DEF',0,6,2,'convocado',0,7.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2854,176,6,2,'DEL',0,9,2,'convocado',0,8.5,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2855,176,29,1,'DEL',0,7,2,'convocado',0,8.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2856,176,44,1,'DEF',0,8,3,'convocado',0,5.0,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2857,176,12,1,'MED',0,9,3,'convocado',0,6.5,'2026-05-11 03:31:54','2026-05-15 05:05:04'),(2876,178,31,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2877,178,10,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2878,178,17,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2879,178,34,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2880,178,30,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2881,178,1,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2882,178,38,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2883,178,39,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2884,178,47,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2885,178,6,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2886,178,43,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2887,178,2,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(2924,181,31,1,'LAT',0,1,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 13:08:29'),(2926,181,10,2,'DEL',0,1,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 01:37:11'),(2927,181,32,1,'LAT',0,2,2,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 13:08:29'),(2928,181,17,2,'DEF',0,2,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 01:37:11'),(2930,181,35,1,'ARQ',1,4,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 01:37:11'),(2931,181,24,2,'ARQ',1,3,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 01:37:11'),(2932,181,22,1,'MED',0,5,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 13:08:29'),(2933,181,11,2,'LAT',0,4,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 13:08:29'),(2935,181,15,2,'DEL',0,5,2,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 01:37:11'),(2936,181,8,1,'MED',0,6,2,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 13:08:29'),(2937,181,14,2,'LAT',0,6,2,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 13:08:29'),(2938,181,40,2,'MED',0,7,1,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 13:08:29'),(2939,181,6,1,'DEL',0,7,2,'convocado',0,NULL,'2026-05-18 03:21:49','2026-05-19 01:39:19'),(2947,181,7,1,'DEL',0,3,1,'convocado',0,NULL,'2026-05-18 13:11:52','2026-05-19 01:39:19'),(3008,181,43,2,'MED',0,8,2,'convocado',0,NULL,'2026-05-18 13:54:53','2026-05-19 13:08:29'),(3009,181,12,1,'DEF',0,8,1,'convocado',0,NULL,'2026-05-18 13:54:53','2026-05-19 13:08:29'),(3010,182,31,1,'LAT',0,1,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3011,182,10,1,'MED',0,2,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3012,182,32,2,'DEL',0,1,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3013,182,17,2,'DEF',0,2,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3014,182,23,1,'DEL',0,3,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3015,182,7,1,'DEL',0,4,2,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3016,182,35,1,'ARQ',1,5,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3017,182,24,2,'ARQ',1,3,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3018,182,22,1,'MED',0,6,2,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3019,182,11,2,'LAT',0,4,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3020,182,1,2,'MED',0,5,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3021,182,15,2,'DEL',0,6,2,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3022,182,8,2,'MED',0,7,2,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3023,182,14,1,'DEF',0,7,1,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3024,182,40,2,'MED',0,8,3,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3025,182,6,1,'DEL',0,8,3,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3026,182,43,2,'LAT',0,9,2,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3027,182,12,1,'LAT',0,9,2,'convocado',0,NULL,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(3046,184,31,1,'MED',0,1,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3047,184,13,2,'DEL',0,1,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3048,184,10,1,'MED',0,2,2,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3049,184,17,1,'DEF',0,3,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3050,184,7,1,'DEL',0,4,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3051,184,35,1,'ARQ',1,5,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3052,184,24,1,'LAT',0,6,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3053,184,22,2,'LAT',0,2,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3054,184,5,2,'DEF',0,3,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3055,184,1,2,'MED',0,4,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3056,184,38,1,'DEL',0,7,2,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3057,184,15,2,'DEL',0,5,2,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3058,184,8,2,'MED',0,6,2,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3059,184,6,1,'DEL',0,8,3,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3060,184,43,1,'LAT',0,9,2,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3061,184,64,2,'ARQ',1,7,1,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3062,184,29,2,'MED',0,8,3,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3063,184,12,2,'LAT',0,9,2,'convocado',0,NULL,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(3082,185,31,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3083,185,13,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3084,185,10,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3085,185,17,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3086,185,7,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3087,185,24,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3088,185,22,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3089,185,5,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3090,185,37,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3091,185,1,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3092,185,38,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3093,185,15,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3094,185,8,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3095,185,6,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3096,185,43,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3097,185,64,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3098,185,29,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3099,185,12,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(3100,186,31,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3101,186,13,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3102,186,10,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3103,186,17,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3104,186,7,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3105,186,22,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3106,186,5,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3107,186,37,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3108,186,38,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3109,186,15,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3110,186,6,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3111,186,43,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3112,186,29,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3113,186,12,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(3114,187,31,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3115,187,13,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3116,187,10,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3117,187,17,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3118,187,7,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3119,187,24,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3120,187,22,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3121,187,5,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3122,187,37,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3123,187,1,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3124,187,38,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3125,187,15,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3126,187,8,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3127,187,6,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3128,187,43,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3129,187,64,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3130,187,29,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3131,187,12,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(3132,188,13,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3133,188,17,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3134,188,23,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3135,188,7,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3136,188,35,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3137,188,24,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3138,188,22,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3139,188,5,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3140,188,11,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3141,188,1,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3142,188,38,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3143,188,8,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3144,188,14,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3145,188,6,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3146,188,43,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3147,188,29,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3148,188,44,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34'),(3149,188,12,NULL,NULL,0,NULL,NULL,'convocado',0,NULL,'2026-05-31 22:27:12','2026-06-01 23:49:34');
+/*!40000 ALTER TABLE `match_players` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_round_robin_results`
+--
+
+DROP TABLE IF EXISTS `match_round_robin_results`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_round_robin_results` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `home_team_number` tinyint(3) unsigned NOT NULL,
+  `away_team_number` tinyint(3) unsigned NOT NULL,
+  `leg` tinyint(3) unsigned NOT NULL,
+  `home_goals` smallint(5) unsigned DEFAULT NULL,
+  `away_goals` smallint(5) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_round_robin_fixture` (`match_id`,`home_team_number`,`away_team_number`,`leg`),
+  KEY `idx_round_robin_match` (`match_id`),
+  CONSTRAINT `fk_round_robin_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=559 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_round_robin_results`
+--
+
+LOCK TABLES `match_round_robin_results` WRITE;
+/*!40000 ALTER TABLE `match_round_robin_results` DISABLE KEYS */;
+/*!40000 ALTER TABLE `match_round_robin_results` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `match_teams`
+--
+
+DROP TABLE IF EXISTS `match_teams`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `match_teams` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `match_id` int(10) unsigned NOT NULL,
+  `team_number` tinyint(3) unsigned NOT NULL,
+  `team_name` varchar(80) DEFAULT NULL,
+  `captain_player_id` int(10) unsigned DEFAULT NULL,
+  `total_skill` decimal(5,1) NOT NULL DEFAULT 0.0,
+  `formation_name` varchar(80) DEFAULT NULL,
+  `formation_data` text DEFAULT NULL,
+  `color_name` varchar(40) DEFAULT NULL,
+  `goals` smallint(5) unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_match_team` (`match_id`,`team_number`),
+  KEY `idx_match_teams_captain` (`captain_player_id`),
+  CONSTRAINT `fk_match_teams_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=324 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `match_teams`
+--
+
+LOCK TABLES `match_teams` WRITE;
+/*!40000 ALTER TABLE `match_teams` DISABLE KEYS */;
+INSERT INTO `match_teams` VALUES (230,132,1,'Equipo 1',18,30.1,'1-1-0-3-4','[{\"id\":18,\"position\":\"DEF\"},{\"id\":27,\"position\":\"ARQ\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":59,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]','ROSA',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(231,132,2,'Equipo 2',30,28.4,'0-5-0-3-1','[{\"id\":30,\"position\":\"DEF\"},{\"id\":19,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"}]','AZUL',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(232,133,1,'Equipo 1',38,29.2,'0-6-0-1-2','[{\"id\":38,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":12,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"}]','ROSA',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(233,133,2,'Equipo 2',6,35.4,'0-4-0-3-2','[{\"id\":6,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":9,\"position\":\"MED\"}]','AZUL',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(234,134,1,'Equipo 1',17,27.8,'0-4-0-3-2','[{\"id\":17,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":41,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]','AZUL',9,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(235,134,2,'Equipo 2',10,30.9,'0-4-0-2-3','[{\"id\":10,\"position\":\"DEL\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"}]','ROSA',11,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(236,135,1,'Equipo 1',61,32.3,'0-5-0-1-3','[{\"id\":61,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"}]','ROSA',6,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(237,135,2,'Equipo 2',23,29.7,'0-4-0-3-2','[{\"id\":23,\"position\":\"DEL\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":22,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"}]','AZUL',10,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(238,136,1,'Equipo 1',44,30.1,'0-4-0-3-2','[{\"id\":44,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"}]','AZUL',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(239,136,2,'Equipo 2',40,28.8,'0-5-0-1-3','[{\"id\":40,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":22,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]','ROSA',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(240,137,1,'Equipo 1',NULL,27.9,'0-4-0-1-4','[{\"id\":5,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]','ROSA',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(241,137,2,'Equipo 2',NULL,29.2,'1-4-0-3-1','[{\"id\":27,\"position\":\"ARQ\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":19,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"}]','AZUL',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(242,138,1,'Equipo 1',61,32.5,'0-5-0-3-1','[{\"id\":61,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"}]','ROSA',7,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(243,138,2,'Equipo 2',17,31.1,'0-4-0-2-3','[{\"id\":17,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":12,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"}]','AZUL',3,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(244,139,1,'Equipo 1',13,29.0,'1-3-0-3-2','[{\"id\":13,\"position\":\"DEL\"},{\"id\":22,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":59,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":35,\"position\":\"ARQ\"}]','ROSA',7,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(245,139,2,'Equipo 2',7,26.9,'0-3-0-3-3','[{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]','AZUL',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(246,140,1,'Equipo 1',NULL,27.8,'0-5-0-2-2','[{\"id\":23,\"position\":\"DEL\"},{\"id\":19,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]','ROSA',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(247,140,2,'Equipo 2',NULL,29.7,'0-3-0-2-4','[{\"id\":30,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"}]','AZUL',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(248,141,1,'Equipo 1',NULL,27.9,'0-5-0-2-2','[{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"}]','ROSA',11,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(249,141,2,'Equipo 2',NULL,30.6,'0-4-0-2-3','[{\"id\":19,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"}]','AZUL',9,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(250,142,1,'Equipo 1',NULL,30.1,'0-6-0-1-2','[{\"id\":6,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":61,\"position\":\"DEF\"}]','ROSA',8,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(251,142,2,'Equipo 2',NULL,28.9,'0-4-0-3-2','[{\"id\":45,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":23,\"position\":\"DEL\"}]','AZUL',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(252,143,1,'Equipo 1',NULL,28.3,'1-4-0-2-2','[{\"id\":27,\"position\":\"ARQ\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":16,\"position\":\"DEF\"},{\"id\":42,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"}]','ROSA',10,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(253,143,2,'Equipo 2',NULL,27.1,'0-2-0-4-3','[{\"id\":41,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":4,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"}]','AZUL',8,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(254,144,1,'Equipo 1',NULL,31.0,'0-3-0-4-2','[{\"id\":38,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"}]','ROSA',4,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(255,144,2,'Equipo 2',NULL,27.8,'0-5-0-2-1','[{\"id\":11,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":46,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]','AZUL',9,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(256,145,1,'Equipo 1',NULL,26.2,'0-5-0-2-2','[{\"id\":61,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"}]','ROSA',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(257,145,2,'Equipo 2',NULL,30.7,'0-2-0-5-2','[{\"id\":30,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":9,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":59,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"}]','AZUL',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(258,146,1,'Equipo 1',1,32.0,'0-4-0-3-2','[{\"id\":1,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":47,\"position\":\"MED\"}]','ROSA',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(259,146,2,'Equipo 2',10,31.8,'0-2-0-4-3','[{\"id\":10,\"position\":\"DEL\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]','AZUL',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(260,147,1,'Equipo 1',NULL,30.4,'0-3-0-2-4','[{\"id\":23,\"position\":\"DEL\"},{\"id\":49,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":48,\"position\":\"MED\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":19,\"position\":\"DEF\"}]','ROSA',6,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(261,147,2,'Equipo 2',NULL,28.3,'0-4-0-2-3','[{\"id\":5,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":3,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":2,\"position\":\"DEF\"}]','AZUL',3,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(262,148,1,'Equipo 1',1,32.0,'0-3-0-5-1','[{\"id\":1,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":48,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"}]','ROSA',10,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(263,148,2,'Equipo 2',38,33.0,'0-4-0-1-4','[{\"id\":38,\"position\":\"DEL\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"}]','AZUL',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(264,149,1,'Equipo 1',10,30.8,'0-2-0-4-3','[{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":51,\"position\":\"MED\"},{\"id\":25,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]','ROSA',12,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(265,149,2,'Equipo 2',27,29.0,'1-4-0-2-2','[{\"id\":27,\"position\":\"ARQ\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":52,\"position\":\"MED\"},{\"id\":16,\"position\":\"DEF\"},{\"id\":4,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":33,\"position\":\"DEF\"}]','AZUL',7,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(266,150,1,'Equipo 1',NULL,29.5,'0-0-0-8-1','[{\"id\":45,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":51,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":53,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"}]','ROSA',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(267,150,2,'Equipo 2',NULL,33.7,'0-5-0-1-3','[{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"}]','AZUL',9,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(268,151,1,'Equipo 1',NULL,29.2,'0-1-0-4-4','[{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":46,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":4,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":23,\"position\":\"DEL\"}]','ROSA',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(269,151,2,'Equipo 2',NULL,29.9,'0-3-0-5-1','[{\"id\":14,\"position\":\"DEF\"},{\"id\":55,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":49,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":52,\"position\":\"MED\"}]','AZUL',0,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(270,152,1,'Equipo 1',NULL,32.4,'1-1-0-5-2','[{\"id\":6,\"position\":\"DEL\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":60,\"position\":\"MED\"}]','ROSA',9,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(271,152,2,'Equipo 2',NULL,30.6,'0-4-0-3-2','[{\"id\":17,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":12,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"}]','AZUL',8,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(272,153,1,'Equipo 1',NULL,31.0,'0-3-0-4-2','[{\"id\":61,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":46,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":29,\"position\":\"MED\"}]','AZUL',9,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(273,153,2,'Equipo 2',NULL,29.6,'0-2-0-6-1','[{\"id\":7,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":52,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":49,\"position\":\"MED\"}]','ROSA',7,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(274,154,1,'Equipo 1',NULL,28.3,'1-4-0-3-0','[{\"id\":27,\"position\":\"ARQ\"},{\"id\":1,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":25,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":4,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"}]','ROSA',4,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(275,154,2,'Equipo 2',NULL,31.0,'0-3-0-5-1','[{\"id\":60,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"}]','AZUL',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(276,155,1,'Equipo 1',NULL,28.6,'0-4-0-3-2','[{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":56,\"position\":\"MED\"},{\"id\":3,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"},{\"id\":49,\"position\":\"MED\"}]','AZUL',3,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(277,155,2,'Equipo 2',NULL,29.1,'0-2-0-5-2','[{\"id\":10,\"position\":\"DEL\"},{\"id\":46,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":52,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"}]','ROSA',4,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(278,156,1,'Equipo 1',NULL,29.4,'1-5-0-2-1','[{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":45,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"}]','AZUL',12,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(279,156,2,'Equipo 2',NULL,28.7,'0-2-0-5-2','[{\"id\":30,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":46,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"}]','ROSA',10,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(280,157,1,'Equipo 1',NULL,28.8,'0-5-0-2-2','[{\"id\":23,\"position\":\"DEL\"},{\"id\":49,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"}]','AZUL',2,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(281,157,2,'Equipo 2',NULL,31.5,'0-0-0-6-3','[{\"id\":9,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"},{\"id\":56,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]','ROSA',6,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(282,158,1,'Equipo 1',NULL,33.0,'1-1-0-5-2','[{\"id\":9,\"position\":\"MED\"},{\"id\":12,\"position\":\"MED\"},{\"id\":27,\"position\":\"ARQ\"},{\"id\":41,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"}]','AZUL',6,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(283,158,2,'Equipo 2',NULL,31.1,'0-3-0-5-1','[{\"id\":6,\"position\":\"DEL\"},{\"id\":48,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":58,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":45,\"position\":\"MED\"}]','ROSA',3,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(284,159,1,'Equipo 1',NULL,30.3,'0-3-0-3-3','[{\"id\":13,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":47,\"position\":\"MED\"},{\"id\":25,\"position\":\"DEF\"},{\"id\":52,\"position\":\"MED\"}]','AZUL',4,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(285,159,2,'Equipo 2',NULL,28.4,'0-4-0-5-0','[{\"id\":17,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":61,\"position\":\"DEF\"}]','ROSA',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(286,160,1,'Equipo 1',NULL,31.1,'0-4-0-4-1','[{\"id\":1,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"}]','ROSA',11,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(287,160,2,'Equipo 2',NULL,31.5,'0-2-0-3-4','[{\"id\":23,\"position\":\"DEL\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":12,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":37,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"}]','AZUL',6,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(288,161,1,'Equipo 1',NULL,29.0,'0-5-0-2-2','[{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":3,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":47,\"position\":\"MED\"},{\"id\":57,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"}]','ROSA',10,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(289,161,2,'Equipo 2',NULL,30.0,'0-2-0-4-3','[{\"id\":7,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":48,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":33,\"position\":\"DEF\"}]','AZUL',12,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(290,162,1,'Equipo 1',NULL,29.5,'0-4-0-3-2','[{\"id\":38,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":46,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]','ROSA',4,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(291,162,2,'Equipo 2',NULL,30.1,'1-3-0-4-1','[{\"id\":45,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":27,\"position\":\"ARQ\"},{\"id\":41,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"}]','AZUL',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(292,163,1,'Equipo 1',NULL,32.3,'0-2-0-4-3','[{\"id\":17,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":41,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]','ROSA',7,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(293,163,2,'Equipo 2',NULL,30.8,'0-3-0-5-1','[{\"id\":9,\"position\":\"MED\"},{\"id\":45,\"position\":\"MED\"},{\"id\":29,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]','AZUL',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(294,164,1,'Equipo 1',NULL,34.1,'0-4-0-3-2','[{\"id\":9,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"}]','AZUL',7,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(295,164,2,'Equipo 2',NULL,31.8,'1-2-0-5-1','[{\"id\":27,\"position\":\"ARQ\"},{\"id\":12,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":47,\"position\":\"MED\"}]','ROSA',3,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(296,165,1,'Equipo 1',NULL,32.5,'0-3-0-3-3','[{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":16,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"}]','AZUL',6,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(297,165,2,'Equipo 2',NULL,31.4,'0-4-0-4-1','[{\"id\":5,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":29,\"position\":\"MED\"},{\"id\":45,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":41,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"}]','ROSA',7,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(298,166,1,'Equipo 1',NULL,29.1,'0-3-0-4-2','[{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":12,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]','AZUL',10,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(299,166,2,'Equipo 2',NULL,30.6,'0-4-0-3-2','[{\"id\":38,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":57,\"position\":\"MED\"}]','ROSA',5,'2026-05-10 12:53:43','2026-05-19 05:59:51'),(300,171,1,'Equipo naranja',NULL,18.8,'0-2-0-1-3','[{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]','NARANJA',0,'2026-05-10 13:32:09','2026-05-19 05:59:51'),(301,171,2,'Descamisados',NULL,20.1,'1-2-0-2-1','[{\"id\":36,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":35,\"position\":\"ARQ\"}]','BLANCO',0,'2026-05-10 13:32:09','2026-05-19 05:59:51'),(302,174,1,'Descamisados FC',NULL,20.2,'0-2-0-3-1','[{\"id\":32,\"position\":\"MED\"},{\"id\":31,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"}]','BLANCO',0,'2026-05-10 13:32:09','2026-05-19 05:59:51'),(303,174,2,'Equipo naranja',NULL,18.3,'0-3-0-2-1','[{\"id\":10,\"position\":\"DEL\"},{\"id\":58,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":34,\"position\":\"DEF\"}]','NARANJA',0,'2026-05-10 13:32:09','2026-05-19 05:59:51'),(306,176,1,'Equipo 1',NULL,33.9,'1-3-0-3-2','[{\"id\":32,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"ARQ\"},{\"id\":22,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":29,\"position\":\"DEL\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"}]','ROSA',0,'2026-05-12 02:40:01','2026-05-19 05:59:51'),(307,176,2,'Equipo 2',NULL,32.4,'1-3-0-3-2','[{\"id\":31,\"position\":\"MED\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":47,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"}]','AZUL',0,'2026-05-12 02:40:01','2026-05-19 05:59:51'),(310,181,1,'Equipo 1',NULL,31.7,'3-2-2','[{\"id\":31,\"position\":\"LAT\"},{\"id\":32,\"position\":\"LAT\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":22,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":12,\"position\":\"DEF\"}]','ROSA',0,'2026-05-19 01:37:11','2026-05-25 21:48:20'),(311,181,2,'Equipo 2',NULL,32.8,'3-2-2','[{\"id\":10,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"ARQ\"},{\"id\":11,\"position\":\"LAT\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":14,\"position\":\"LAT\"},{\"id\":40,\"position\":\"MED\"},{\"id\":43,\"position\":\"MED\"}]','AZUL',0,'2026-05-19 01:37:11','2026-05-25 21:48:20'),(314,182,1,'Equipo 1',NULL,34.0,'3-2-3','[{\"id\":31,\"position\":\"LAT\"},{\"id\":10,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":22,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":12,\"position\":\"LAT\"}]','ROSA',0,'2026-05-19 13:09:07','2026-05-19 13:09:07'),(315,182,2,'Equipo 2',NULL,34.8,'3-3-2','[{\"id\":32,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"ARQ\"},{\"id\":11,\"position\":\"LAT\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":40,\"position\":\"MED\"},{\"id\":43,\"position\":\"LAT\"}]','AZUL',0,'2026-05-19 13:09:07','2026-05-19 13:09:07'),(316,184,1,'Equipo 1',NULL,32.9,'3-2-3','[{\"id\":31,\"position\":\"MED\"},{\"id\":10,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":24,\"position\":\"LAT\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":43,\"position\":\"LAT\"}]','ROSA',0,'2026-05-24 00:45:36','2026-05-24 00:45:36'),(317,184,2,'Equipo 2',NULL,32.2,'3-3-2','[{\"id\":13,\"position\":\"DEL\"},{\"id\":22,\"position\":\"LAT\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":64,\"position\":\"ARQ\"},{\"id\":29,\"position\":\"MED\"},{\"id\":12,\"position\":\"LAT\"}]','AZUL',0,'2026-05-24 00:45:36','2026-05-24 00:45:36');
+/*!40000 ALTER TABLE `match_teams` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `matches`
+--
+
+DROP TABLE IF EXISTS `matches`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `matches` (
-  `id` int(10) UNSIGNED NOT NULL,
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(120) DEFAULT NULL,
-  `rental_court_id` int(10) UNSIGNED DEFAULT NULL,
+  `rental_court_id` int(10) unsigned DEFAULT NULL,
   `match_date` datetime NOT NULL,
-  `num_teams` tinyint(3) UNSIGNED NOT NULL DEFAULT 2,
-  `players_per_team` tinyint(3) UNSIGNED NOT NULL DEFAULT 9,
+  `num_teams` tinyint(3) unsigned NOT NULL DEFAULT 2,
+  `players_per_team` tinyint(3) unsigned NOT NULL DEFAULT 9,
   `max_diff` decimal(4,1) NOT NULL DEFAULT 2.0,
   `allow_redraw` tinyint(1) NOT NULL DEFAULT 1,
-  `redraw_limit` tinyint(3) UNSIGNED NOT NULL DEFAULT 3,
-  `redraw_count` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
-  `multi_draw_count` tinyint(3) UNSIGNED NOT NULL DEFAULT 3,
-  `multi_draw_lock_minutes` smallint(5) UNSIGNED NOT NULL DEFAULT 60,
-  `multi_draw_winner_option_id` int(10) UNSIGNED DEFAULT NULL,
+  `redraw_limit` tinyint(3) unsigned NOT NULL DEFAULT 3,
+  `redraw_count` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `multi_draw_count` tinyint(3) unsigned NOT NULL DEFAULT 3,
+  `multi_draw_lock_minutes` smallint(5) unsigned NOT NULL DEFAULT 60,
+  `multi_draw_winner_option_id` int(10) unsigned DEFAULT NULL,
   `status` enum('programado','sorteado','finalizado') NOT NULL DEFAULT 'programado',
   `draw_mode` enum('none','random','captains','manual') NOT NULL DEFAULT 'none',
   `draw_started_at` datetime DEFAULT NULL,
@@ -171,1484 +533,36 @@ CREATE TABLE `matches` (
   `public_token` varchar(64) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `result_notes` text DEFAULT NULL,
-  `round_robin_legs` tinyint(3) UNSIGNED NOT NULL DEFAULT 2,
+  `round_robin_legs` tinyint(3) unsigned NOT NULL DEFAULT 2,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_matches_public_token` (`public_token`),
+  KEY `idx_matches_date` (`match_date`),
+  KEY `idx_matches_status` (`status`),
+  KEY `idx_matches_draw_mode` (`draw_mode`)
+) ENGINE=InnoDB AUTO_INCREMENT=189 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `matches`
+-- Dumping data for table `matches`
 --
 
-INSERT INTO `matches` (`id`, `title`, `rental_court_id`, `match_date`, `num_teams`, `players_per_team`, `max_diff`, `allow_redraw`, `redraw_limit`, `redraw_count`, `multi_draw_count`, `multi_draw_lock_minutes`, `multi_draw_winner_option_id`, `status`, `draw_mode`, `draw_started_at`, `draw_completed_at`, `finalized_at`, `result_saved_at`, `formation_edit_deadline`, `public_token`, `notes`, `result_notes`, `round_robin_legs`, `created_at`, `updated_at`) VALUES
-(132, 'GUILLE VS FACU', 2, '2025-10-24 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-10-24 22:00:00', '2025-10-24 22:00:00', '2026-05-10 12:53:43', NULL, '2025-10-24 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-10-24:ee257fae00e5bd5e5bc43cc81fce3638', 'Fecha 24 de octubre', 2, '2026-05-10 12:53:43', '2026-05-10 12:53:57'),
-(133, 'Marian vs Pela', 1, '2025-10-27 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-10-27 21:00:00', '2025-10-27 21:00:00', '2026-05-10 12:53:43', NULL, '2025-10-27 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-10-27:cd998571e00112fec820d21492a9c2be', 'Fecha 27 de octubre', 2, '2026-05-10 12:53:43', '2026-05-10 12:53:57'),
-(134, 'Braian vs César', 2, '2025-10-31 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-10-31 22:00:00', '2025-10-31 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-10-31 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-10-31:ef0de2f5244162d65e3e82983120a078', 'Fecha 31 de octubre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(135, 'Franco Vs Cristian', 1, '2025-11-03 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-11-03 21:00:00', '2025-11-03 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-11-03 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-11-03:7b0b9f87b19494271774e782f065dcbd', 'Fecha 3 de noviembre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(136, 'Pablo K vs Victor', 1, '2025-11-10 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-11-10 21:00:00', '2025-11-10 21:00:00', '2026-05-10 12:53:43', NULL, '2025-11-10 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-11-10:433d0eaa0feea389ad1e581e6b9d9347', 'Fecha 10 de noviembre', 2, '2026-05-10 12:53:43', '2026-05-10 12:53:57'),
-(137, 'Javi vs Facu', 2, '2025-11-14 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-11-14 22:00:00', '2025-11-14 22:00:00', '2026-05-10 12:53:43', NULL, '2025-11-14 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-11-14:453ac23c31a58824d01e08849937f3ad', 'Fecha 14 de noviembre', 2, '2026-05-10 12:53:43', '2026-05-10 12:53:57'),
-(138, 'CESAR VS FRANCO', 1, '2025-11-17 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-11-17 21:00:00', '2025-11-17 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-11-17 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-11-17:a5567c877f78236710a19ae05487a7e5', 'Fecha 17 de noviembre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(139, 'ANIBAL VS CUERVO', 2, '2025-11-21 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-11-21 22:00:00', '2025-11-21 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-11-21 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-11-21:b1cb68e2813d81d4b544f696fdf9f000', 'Fecha 21 de noviembre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(140, 'Fecha 24 de noviembre', 1, '2025-11-24 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-11-24 21:00:00', '2025-11-24 21:00:00', '2026-05-10 12:53:43', NULL, '2025-11-24 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-11-24:bb8d65f03f567c516ac420d8c761ba70', 'Fecha 24 de noviembre', 2, '2026-05-10 12:53:43', '2026-05-10 12:53:57'),
-(141, 'Fecha 28 de noviembre', 2, '2025-11-28 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-11-28 22:00:00', '2025-11-28 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-11-28 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-11-28:273035eaa8de2a5edb8668888291df91', 'Fecha 28 de noviembre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(142, 'Fecha 1 de diciembre', 1, '2025-12-01 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-12-01 21:00:00', '2025-12-01 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-12-01 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-12-01:b557ec22137f50ba0ec7a3c45ea758b5', 'Fecha 1 de diciembre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(143, 'Fecha 5 de diciembre', 2, '2025-12-05 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-12-05 22:00:00', '2025-12-05 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-12-05 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-12-05:2de0d5e9774d51505239ff8e74cfe2e4', 'Fecha 5 de diciembre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(144, 'Fecha 8 de diciembre', 1, '2025-12-08 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-12-08 21:00:00', '2025-12-08 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2025-12-08 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-12-08:cdb51a50c2b0debaabff3606c68e0d00', 'Fecha 8 de diciembre', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(145, 'Fecha 12 de diciembre', 2, '2025-12-12 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2025-12-12 22:00:00', '2025-12-12 22:00:00', '2026-05-10 12:53:43', NULL, '2025-12-12 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2025-12-12:abc4de396d6d7f03be7ed5558edf54d7', 'Fecha 12 de diciembre', 2, '2026-05-10 12:53:43', '2026-05-10 12:53:57'),
-(146, 'MARCELO VS BRAIAN.', 1, '2026-01-05 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-05 21:00:00', '2026-01-05 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-01-05 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-05:c3193eda496f29c6c40ca3d0a6d0ee15', 'Fecha 5 de enero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(147, 'Fecha 9 de enero', 2, '2026-01-09 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-09 22:00:00', '2026-01-09 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-01-09 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-09:4a3cc4fed6e429b46f691d6f30717ee0', 'Fecha 9 de enero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(148, 'Marcelo vs Marian', 1, '2026-01-12 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-12 21:00:00', '2026-01-12 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-01-12 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-12:0b2300d4b46b9635a7f4d81bad2aa973', 'Fecha 12 de enero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(149, 'Brian vs Gonza', 2, '2026-01-16 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-16 22:00:00', '2026-01-16 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-01-16 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-16:264a2b655aeecfe78c60c63b3de8559f', 'Fecha 16 de enero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(150, 'Fecha 19 de enero', 1, '2026-01-19 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-19 21:00:00', '2026-01-19 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-01-19 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-19:46fb31531bc68d8735170d5c99df8ffd', 'Fecha 19 de enero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(151, 'Fecha 23 de enero', 2, '2026-01-23 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-23 22:00:00', '2026-01-23 22:00:00', '2026-05-10 12:53:43', NULL, '2026-01-23 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-23:c829e6210fbe5d00604b57c4fb95135c', 'Fecha 23 de enero', 2, '2026-05-10 12:53:43', '2026-05-10 12:53:57'),
-(152, 'Fecha 26 de enero', 1, '2026-01-26 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-26 21:00:00', '2026-01-26 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-01-26 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-26:093937a8ead5d8c02c59c2285ba8dce5', 'Fecha 26 de enero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(153, 'Fecha 30 de enero', 2, '2026-01-30 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-30 22:00:00', '2026-01-30 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-01-30 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-01-30:68a00f98cf9d724d6c0fa1bec7cd363c', 'Fecha 30 de enero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(154, 'Fecha 2 de febrero', 1, '2026-02-02 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-02 21:00:00', '2026-02-02 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-02 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-02:9f77a2f0af42f4adf9623ce51cff67b5', 'Fecha 2 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(155, 'Fecha 6 de febrero', 2, '2026-02-06 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-06 22:00:00', '2026-02-06 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-06 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-06:680da89b7a6e6ed1a8d4863dee500eb5', 'Fecha 6 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(156, 'Fecha 9 de febrero', 1, '2026-02-09 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-09 21:00:00', '2026-02-09 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-09 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-09:f91909f43922e5e1a459f0c097f5f0f5', 'Fecha 9 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(157, 'Fecha 13 de febrero', 2, '2026-02-13 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-13 22:00:00', '2026-02-13 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-13 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-13:efbde822cd90c654129bd69589b8feaa', 'Fecha 13 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(158, 'Fecha 16 de febrero', 1, '2026-02-16 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-16 21:00:00', '2026-02-16 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-16 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-16:67dcc97f5d86579671a6aeb4ab17ab64', 'Fecha 16 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(159, 'Fecha 20 de febrero', 2, '2026-02-20 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-20 22:00:00', '2026-02-20 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-20 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-20:a2791dc1e2261db67ba39e634a094834', 'Fecha 20 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(160, 'Fecha 23 de febrero', 1, '2026-02-23 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-23 21:00:00', '2026-02-23 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-23 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-23:8c1c5329c45a7a7b76b1405d8390faaf', 'Fecha 23 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(161, 'Fecha 27 de febrero', 2, '2026-02-27 22:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-02-27 22:00:00', '2026-02-27 22:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-02-27 21:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-02-27:b6b120301b97551c18ba3be54f363d66', 'Fecha 27 de febrero', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(162, 'Fecha 2 de marzo', 1, '2026-03-02 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-03-02 21:00:00', '2026-03-02 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-03-02 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-03-02:74a8f58dd6fbdd2f2afc4a53e4995952', 'Fecha 2 de marzo', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(163, 'Fecha 9 de marzo', 1, '2026-03-09 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-03-09 21:00:00', '2026-03-09 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-03-09 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-03-09:6eb5fca33b8c6d2bfb8c133fb5064c0c', 'Fecha 9 de marzo', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(164, 'Fecha 16 de marzo', 1, '2026-03-16 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-03-16 21:00:00', '2026-03-16 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-03-16 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-03-16:004b7589b5d432fabd994c11d25df9c6', 'Fecha 16 de marzo', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(165, 'Fecha 23 de marzo', 1, '2026-03-23 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-03-23 21:00:00', '2026-03-23 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-03-23 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-03-23:4537949e1bf92669c01e7380516f6557', 'Fecha 23 de marzo', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(166, 'Fecha 30 de marzo', 1, '2026-03-30 21:00:00', 2, 9, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-03-30 21:00:00', '2026-03-30 21:00:00', '2026-05-10 12:53:43', '2026-05-10 12:53:43', '2026-03-30 20:00:00', NULL, 'Importado desde WhatsApp\nwhatsapp:2026-03-30:35dc0e997c5d5fd36577e9a37326040b', 'Fecha 30 de marzo', 2, '2026-05-10 12:53:43', '2026-05-13 05:10:24'),
-(167, 'Premios miercoles 14', 2, '2026-01-14 22:00:00', 2, 1, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-14 22:00:00', '2026-01-14 22:00:00', '2026-05-10 13:32:09', NULL, '2026-01-14 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nPremios detectados en mensaje del 21/01/2026. Sin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-01-14:fb0a64cbb0c5e0db0b45bffc2c44f01d', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(168, 'Premios miercoles 28', 2, '2026-01-28 22:00:00', 2, 1, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-01-28 22:00:00', '2026-01-28 22:00:00', '2026-05-10 13:32:09', NULL, '2026-01-28 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nSin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-01-28:9991d06e719a41f8ff9354b0aee9a050', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(169, 'Premios miercoles 4 de Marzo', 2, '2026-03-04 22:00:00', 2, 1, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-03-04 22:00:00', '2026-03-04 22:00:00', '2026-05-10 13:32:09', NULL, '2026-03-04 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nSin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-03-04:5836bdde4915c967dfc4844ba83969b5', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(170, 'Premios viernes 27 de Marzo', 2, '2026-03-27 22:00:00', 2, 1, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-03-27 22:00:00', '2026-03-27 22:00:00', '2026-05-10 13:32:09', NULL, '2026-03-27 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nSin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-03-27:eaaccfcb22613ba28c6f6e03110ca657', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(171, 'Copa Heroes de Malvinas', 2, '2026-04-03 22:00:00', 2, 6, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-04-03 22:00:00', '2026-04-03 22:00:00', '2026-05-10 13:32:09', NULL, '2026-04-03 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nEquipos tomados del ultimo mensaje Viernes 22 hs techada Kikers; premios del 04/04/2026.\nwhatsapp-awards-only:2026-04-03:e99d09f8fb446707a341028e01e9454c', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(172, 'Copa Bernardo Houssay', 2, '2026-04-10 22:00:00', 2, 1, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-04-10 22:00:00', '2026-04-10 22:00:00', '2026-05-10 13:32:09', NULL, '2026-04-10 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nPremios sin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-04-10:491f0e2bf9e8d939c0fe83083fb2d213', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(173, 'Copa hemofilia', 2, '2026-04-17 22:00:00', 2, 1, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-04-17 22:00:00', '2026-04-17 22:00:00', '2026-05-10 13:32:09', NULL, '2026-04-17 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nPremios sin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-04-17:446db1f27e3166b69eca2699dfe19764', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(174, 'Copa Martires de Chicago', 2, '2026-05-01 22:00:00', 2, 6, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-05-01 22:00:00', '2026-05-01 22:00:00', '2026-05-10 13:32:09', NULL, '2026-05-01 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nEquipos y goles tomados del ultimo mensaje del 01/05/2026; premios del 02/05/2026.\nwhatsapp-awards-only:2026-05-01:9d06b9dabc1c38e5a2e2dccdb052a751', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:32:09', '2026-05-10 13:33:32'),
-(175, 'Copa Genocidio Armenio', 2, '2026-04-24 22:00:00', 2, 1, 0.0, 0, 0, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-04-24 22:00:00', '2026-04-24 22:00:00', '2026-05-10 13:33:45', NULL, '2026-04-24 21:00:00', NULL, 'Importado desde WhatsApp sin puntajes\nAMBIGUA: el mensaje fue enviado el 25/04/2026 pero dice \"viernes 10 de abril\".\nwhatsapp-awards-only:2026-04-24:ec04aa286994ee84a9fa80029f4d4dcc', 'Premios sin puntajes importados desde WhatsApp', 2, '2026-05-10 13:33:45', '2026-05-10 13:34:09'),
-(176, 'cancha1 - kicker', 1, '2026-05-11 21:00:00', 2, 9, 0.0, 1, 3, 0, 3, 60, NULL, 'finalizado', 'manual', '2026-05-12 02:40:01', '2026-05-12 02:40:01', '2026-05-15 05:05:04', '2026-05-15 05:43:51', '2026-05-11 20:00:00', NULL, NULL, NULL, 2, '2026-05-11 03:31:54', '2026-05-15 05:43:51'),
-(178, 'Cancer de ojos', NULL, '2026-05-15 22:00:00', 2, 6, 0.5, 1, 3, 0, 3, 60, NULL, 'programado', 'none', NULL, NULL, NULL, NULL, '2026-05-15 21:00:00', NULL, NULL, NULL, 2, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(181, NULL, NULL, '2026-05-18 00:00:00', 2, 8, 0.5, 1, 3, 0, 1, 60, NULL, 'finalizado', 'manual', '2026-05-19 01:37:11', '2026-05-19 01:37:11', '2026-05-19 01:37:34', '2026-05-19 13:08:41', '2026-05-17 23:00:00', NULL, NULL, NULL, 2, '2026-05-18 03:21:49', '2026-05-19 13:08:41'),
-(182, NULL, NULL, '2026-05-19 03:00:00', 2, 9, 0.7, 1, 3, 0, 1, 60, NULL, 'sorteado', 'random', '2026-05-19 13:09:07', '2026-05-19 13:09:07', NULL, NULL, '2026-05-19 02:00:00', NULL, NULL, NULL, 2, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(184, 'Padre Mujica', 1, '2026-05-25 21:00:00', 2, 9, 1.1, 1, 3, 0, 1, 60, NULL, 'sorteado', 'random', '2026-05-24 00:45:36', '2026-05-24 00:45:36', NULL, NULL, '2026-05-25 20:00:00', NULL, NULL, NULL, 2, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(185, 'Día de la patria', NULL, '2026-05-25 21:00:00', 2, 9, 0.5, 1, 3, 0, 1, 60, NULL, 'programado', 'none', NULL, NULL, NULL, NULL, '2026-05-25 20:00:00', NULL, NULL, NULL, 2, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(186, NULL, NULL, '2026-05-24 21:00:00', 2, 7, 0.5, 1, 3, 0, 1, 60, NULL, 'programado', 'none', NULL, NULL, NULL, NULL, '2026-05-24 20:00:00', NULL, NULL, NULL, 2, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(187, 'Día de la patria', NULL, '2026-05-25 21:00:00', 2, 9, 0.5, 1, 3, 0, 1, 60, NULL, 'programado', 'none', NULL, NULL, NULL, NULL, '2026-05-25 20:00:00', NULL, NULL, NULL, 2, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(188, 'cancha1 - kicker', 1, '2026-06-01 21:00:00', 2, 9, 1.2, 1, 3, 0, 1, 60, NULL, 'programado', 'none', NULL, NULL, NULL, NULL, '2026-06-01 20:00:00', NULL, NULL, NULL, 2, '2026-05-31 22:27:12', '2026-06-01 23:49:34');
-
--- --------------------------------------------------------
+LOCK TABLES `matches` WRITE;
+/*!40000 ALTER TABLE `matches` DISABLE KEYS */;
+INSERT INTO `matches` VALUES (132,'GUILLE VS FACU',2,'2025-10-24 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-10-24 22:00:00','2025-10-24 22:00:00','2026-05-10 12:53:43',NULL,'2025-10-24 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-10-24:ee257fae00e5bd5e5bc43cc81fce3638','Fecha 24 de octubre',2,'2026-05-10 12:53:43','2026-05-10 12:53:57'),(133,'Marian vs Pela',1,'2025-10-27 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-10-27 21:00:00','2025-10-27 21:00:00','2026-05-10 12:53:43',NULL,'2025-10-27 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-10-27:cd998571e00112fec820d21492a9c2be','Fecha 27 de octubre',2,'2026-05-10 12:53:43','2026-05-10 12:53:57'),(134,'Braian vs C?sar',2,'2025-10-31 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-10-31 22:00:00','2025-10-31 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-10-31 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-10-31:ef0de2f5244162d65e3e82983120a078','Fecha 31 de octubre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(135,'Franco Vs Cristian',1,'2025-11-03 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-11-03 21:00:00','2025-11-03 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-11-03 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-11-03:7b0b9f87b19494271774e782f065dcbd','Fecha 3 de noviembre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(136,'Pablo K vs Victor',1,'2025-11-10 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-11-10 21:00:00','2025-11-10 21:00:00','2026-05-10 12:53:43',NULL,'2025-11-10 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-11-10:433d0eaa0feea389ad1e581e6b9d9347','Fecha 10 de noviembre',2,'2026-05-10 12:53:43','2026-05-10 12:53:57'),(137,'Javi vs Facu',2,'2025-11-14 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-11-14 22:00:00','2025-11-14 22:00:00','2026-05-10 12:53:43',NULL,'2025-11-14 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-11-14:453ac23c31a58824d01e08849937f3ad','Fecha 14 de noviembre',2,'2026-05-10 12:53:43','2026-05-10 12:53:57'),(138,'CESAR VS FRANCO',1,'2025-11-17 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-11-17 21:00:00','2025-11-17 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-11-17 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-11-17:a5567c877f78236710a19ae05487a7e5','Fecha 17 de noviembre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(139,'ANIBAL VS CUERVO',2,'2025-11-21 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-11-21 22:00:00','2025-11-21 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-11-21 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-11-21:b1cb68e2813d81d4b544f696fdf9f000','Fecha 21 de noviembre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(140,'Fecha 24 de noviembre',1,'2025-11-24 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-11-24 21:00:00','2025-11-24 21:00:00','2026-05-10 12:53:43',NULL,'2025-11-24 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-11-24:bb8d65f03f567c516ac420d8c761ba70','Fecha 24 de noviembre',2,'2026-05-10 12:53:43','2026-05-10 12:53:57'),(141,'Fecha 28 de noviembre',2,'2025-11-28 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-11-28 22:00:00','2025-11-28 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-11-28 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-11-28:273035eaa8de2a5edb8668888291df91','Fecha 28 de noviembre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(142,'Fecha 1 de diciembre',1,'2025-12-01 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-12-01 21:00:00','2025-12-01 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-12-01 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-12-01:b557ec22137f50ba0ec7a3c45ea758b5','Fecha 1 de diciembre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(143,'Fecha 5 de diciembre',2,'2025-12-05 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-12-05 22:00:00','2025-12-05 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-12-05 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-12-05:2de0d5e9774d51505239ff8e74cfe2e4','Fecha 5 de diciembre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(144,'Fecha 8 de diciembre',1,'2025-12-08 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-12-08 21:00:00','2025-12-08 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2025-12-08 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-12-08:cdb51a50c2b0debaabff3606c68e0d00','Fecha 8 de diciembre',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(145,'Fecha 12 de diciembre',2,'2025-12-12 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2025-12-12 22:00:00','2025-12-12 22:00:00','2026-05-10 12:53:43',NULL,'2025-12-12 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2025-12-12:abc4de396d6d7f03be7ed5558edf54d7','Fecha 12 de diciembre',2,'2026-05-10 12:53:43','2026-05-10 12:53:57'),(146,'MARCELO VS BRAIAN.',1,'2026-01-05 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-05 21:00:00','2026-01-05 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-01-05 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-05:c3193eda496f29c6c40ca3d0a6d0ee15','Fecha 5 de enero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(147,'Fecha 9 de enero',2,'2026-01-09 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-09 22:00:00','2026-01-09 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-01-09 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-09:4a3cc4fed6e429b46f691d6f30717ee0','Fecha 9 de enero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(148,'Marcelo vs Marian',1,'2026-01-12 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-12 21:00:00','2026-01-12 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-01-12 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-12:0b2300d4b46b9635a7f4d81bad2aa973','Fecha 12 de enero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(149,'Brian vs Gonza',2,'2026-01-16 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-16 22:00:00','2026-01-16 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-01-16 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-16:264a2b655aeecfe78c60c63b3de8559f','Fecha 16 de enero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(150,'Fecha 19 de enero',1,'2026-01-19 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-19 21:00:00','2026-01-19 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-01-19 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-19:46fb31531bc68d8735170d5c99df8ffd','Fecha 19 de enero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(151,'Fecha 23 de enero',2,'2026-01-23 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-23 22:00:00','2026-01-23 22:00:00','2026-05-10 12:53:43',NULL,'2026-01-23 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-23:c829e6210fbe5d00604b57c4fb95135c','Fecha 23 de enero',2,'2026-05-10 12:53:43','2026-05-10 12:53:57'),(152,'Fecha 26 de enero',1,'2026-01-26 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-26 21:00:00','2026-01-26 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-01-26 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-26:093937a8ead5d8c02c59c2285ba8dce5','Fecha 26 de enero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(153,'Fecha 30 de enero',2,'2026-01-30 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-30 22:00:00','2026-01-30 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-01-30 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-01-30:68a00f98cf9d724d6c0fa1bec7cd363c','Fecha 30 de enero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(154,'Fecha 2 de febrero',1,'2026-02-02 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-02 21:00:00','2026-02-02 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-02 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-02:9f77a2f0af42f4adf9623ce51cff67b5','Fecha 2 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(155,'Fecha 6 de febrero',2,'2026-02-06 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-06 22:00:00','2026-02-06 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-06 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-06:680da89b7a6e6ed1a8d4863dee500eb5','Fecha 6 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(156,'Fecha 9 de febrero',1,'2026-02-09 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-09 21:00:00','2026-02-09 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-09 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-09:f91909f43922e5e1a459f0c097f5f0f5','Fecha 9 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(157,'Fecha 13 de febrero',2,'2026-02-13 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-13 22:00:00','2026-02-13 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-13 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-13:efbde822cd90c654129bd69589b8feaa','Fecha 13 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(158,'Fecha 16 de febrero',1,'2026-02-16 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-16 21:00:00','2026-02-16 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-16 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-16:67dcc97f5d86579671a6aeb4ab17ab64','Fecha 16 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(159,'Fecha 20 de febrero',2,'2026-02-20 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-20 22:00:00','2026-02-20 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-20 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-20:a2791dc1e2261db67ba39e634a094834','Fecha 20 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(160,'Fecha 23 de febrero',1,'2026-02-23 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-23 21:00:00','2026-02-23 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-23 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-23:8c1c5329c45a7a7b76b1405d8390faaf','Fecha 23 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(161,'Fecha 27 de febrero',2,'2026-02-27 22:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-02-27 22:00:00','2026-02-27 22:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-02-27 21:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-02-27:b6b120301b97551c18ba3be54f363d66','Fecha 27 de febrero',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(162,'Fecha 2 de marzo',1,'2026-03-02 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-03-02 21:00:00','2026-03-02 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-03-02 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-03-02:74a8f58dd6fbdd2f2afc4a53e4995952','Fecha 2 de marzo',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(163,'Fecha 9 de marzo',1,'2026-03-09 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-03-09 21:00:00','2026-03-09 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-03-09 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-03-09:6eb5fca33b8c6d2bfb8c133fb5064c0c','Fecha 9 de marzo',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(164,'Fecha 16 de marzo',1,'2026-03-16 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-03-16 21:00:00','2026-03-16 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-03-16 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-03-16:004b7589b5d432fabd994c11d25df9c6','Fecha 16 de marzo',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(165,'Fecha 23 de marzo',1,'2026-03-23 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-03-23 21:00:00','2026-03-23 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-03-23 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-03-23:4537949e1bf92669c01e7380516f6557','Fecha 23 de marzo',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(166,'Fecha 30 de marzo',1,'2026-03-30 21:00:00',2,9,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-03-30 21:00:00','2026-03-30 21:00:00','2026-05-10 12:53:43','2026-05-10 12:53:43','2026-03-30 20:00:00',NULL,'Importado desde WhatsApp\nwhatsapp:2026-03-30:35dc0e997c5d5fd36577e9a37326040b','Fecha 30 de marzo',2,'2026-05-10 12:53:43','2026-05-13 05:10:24'),(167,'Premios miercoles 14',2,'2026-01-14 22:00:00',2,1,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-14 22:00:00','2026-01-14 22:00:00','2026-05-10 13:32:09',NULL,'2026-01-14 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nPremios detectados en mensaje del 21/01/2026. Sin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-01-14:fb0a64cbb0c5e0db0b45bffc2c44f01d','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(168,'Premios miercoles 28',2,'2026-01-28 22:00:00',2,1,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-01-28 22:00:00','2026-01-28 22:00:00','2026-05-10 13:32:09',NULL,'2026-01-28 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nSin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-01-28:9991d06e719a41f8ff9354b0aee9a050','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(169,'Premios miercoles 4 de Marzo',2,'2026-03-04 22:00:00',2,1,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-03-04 22:00:00','2026-03-04 22:00:00','2026-05-10 13:32:09',NULL,'2026-03-04 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nSin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-03-04:5836bdde4915c967dfc4844ba83969b5','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(170,'Premios viernes 27 de Marzo',2,'2026-03-27 22:00:00',2,1,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-03-27 22:00:00','2026-03-27 22:00:00','2026-05-10 13:32:09',NULL,'2026-03-27 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nSin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-03-27:eaaccfcb22613ba28c6f6e03110ca657','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(171,'Copa Heroes de Malvinas',2,'2026-04-03 22:00:00',2,6,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-04-03 22:00:00','2026-04-03 22:00:00','2026-05-10 13:32:09',NULL,'2026-04-03 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nEquipos tomados del ultimo mensaje Viernes 22 hs techada Kikers; premios del 04/04/2026.\nwhatsapp-awards-only:2026-04-03:e99d09f8fb446707a341028e01e9454c','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(172,'Copa Bernardo Houssay',2,'2026-04-10 22:00:00',2,1,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-04-10 22:00:00','2026-04-10 22:00:00','2026-05-10 13:32:09',NULL,'2026-04-10 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nPremios sin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-04-10:491f0e2bf9e8d939c0fe83083fb2d213','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(173,'Copa hemofilia',2,'2026-04-17 22:00:00',2,1,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-04-17 22:00:00','2026-04-17 22:00:00','2026-05-10 13:32:09',NULL,'2026-04-17 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nPremios sin equipos en el chat filtrado.\nwhatsapp-awards-only:2026-04-17:446db1f27e3166b69eca2699dfe19764','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(174,'Copa Martires de Chicago',2,'2026-05-01 22:00:00',2,6,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-05-01 22:00:00','2026-05-01 22:00:00','2026-05-10 13:32:09',NULL,'2026-05-01 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nEquipos y goles tomados del ultimo mensaje del 01/05/2026; premios del 02/05/2026.\nwhatsapp-awards-only:2026-05-01:9d06b9dabc1c38e5a2e2dccdb052a751','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:32:09','2026-05-10 13:33:32'),(175,'Copa Genocidio Armenio',2,'2026-04-24 22:00:00',2,1,0.0,0,0,0,3,60,NULL,'finalizado','manual','2026-04-24 22:00:00','2026-04-24 22:00:00','2026-05-10 13:33:45',NULL,'2026-04-24 21:00:00',NULL,'Importado desde WhatsApp sin puntajes\nAMBIGUA: el mensaje fue enviado el 25/04/2026 pero dice \"viernes 10 de abril\".\nwhatsapp-awards-only:2026-04-24:ec04aa286994ee84a9fa80029f4d4dcc','Premios sin puntajes importados desde WhatsApp',2,'2026-05-10 13:33:45','2026-05-10 13:34:09'),(176,'cancha1 - kicker',1,'2026-05-11 21:00:00',2,9,0.0,1,3,0,3,60,NULL,'finalizado','manual','2026-05-12 02:40:01','2026-05-12 02:40:01','2026-05-15 05:05:04','2026-05-15 05:43:51','2026-05-11 20:00:00',NULL,NULL,NULL,2,'2026-05-11 03:31:54','2026-05-15 05:43:51'),(178,'Cancer de ojos',NULL,'2026-05-15 22:00:00',2,6,0.5,1,3,0,3,60,NULL,'programado','none',NULL,NULL,NULL,NULL,'2026-05-15 21:00:00',NULL,NULL,NULL,2,'2026-05-15 15:49:46','2026-05-15 15:49:46'),(181,NULL,NULL,'2026-05-18 00:00:00',2,8,0.5,1,3,0,1,60,NULL,'finalizado','manual','2026-05-19 01:37:11','2026-05-19 01:37:11','2026-05-19 01:37:34','2026-05-19 13:08:41','2026-05-17 23:00:00',NULL,NULL,NULL,2,'2026-05-18 03:21:49','2026-05-19 13:08:41'),(182,NULL,NULL,'2026-05-19 03:00:00',2,9,0.7,1,3,0,1,60,NULL,'sorteado','random','2026-05-19 13:09:07','2026-05-19 13:09:07',NULL,NULL,'2026-05-19 02:00:00',NULL,NULL,NULL,2,'2026-05-19 06:11:24','2026-05-19 13:09:07'),(184,'Padre Mujica',1,'2026-05-25 21:00:00',2,9,1.1,1,3,0,1,60,NULL,'sorteado','random','2026-05-24 00:45:36','2026-05-24 00:45:36',NULL,NULL,'2026-05-25 20:00:00',NULL,NULL,NULL,2,'2026-05-24 00:18:59','2026-05-24 00:45:36'),(185,'D?a de la patria',NULL,'2026-05-25 21:00:00',2,9,0.5,1,3,0,1,60,NULL,'programado','none',NULL,NULL,NULL,NULL,'2026-05-25 20:00:00',NULL,NULL,NULL,2,'2026-05-24 21:03:44','2026-05-24 21:03:44'),(186,NULL,NULL,'2026-05-24 21:00:00',2,7,0.5,1,3,0,1,60,NULL,'programado','none',NULL,NULL,NULL,NULL,'2026-05-24 20:00:00',NULL,NULL,NULL,2,'2026-05-25 00:42:53','2026-05-25 00:42:53'),(187,'D?a de la patria',NULL,'2026-05-25 21:00:00',2,9,0.5,1,3,0,1,60,NULL,'programado','none',NULL,NULL,NULL,NULL,'2026-05-25 20:00:00',NULL,NULL,NULL,2,'2026-05-25 00:46:37','2026-05-25 00:46:37'),(188,'cancha1 - kicker',1,'2026-06-01 21:00:00',2,9,1.2,1,3,0,1,60,NULL,'programado','none',NULL,NULL,NULL,NULL,'2026-06-01 20:00:00',NULL,NULL,NULL,2,'2026-05-31 22:27:12','2026-06-01 23:49:34');
+/*!40000 ALTER TABLE `matches` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Estructura de tabla para la tabla `match_awards`
+-- Table structure for table `players`
 --
 
-CREATE TABLE `match_awards` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `award_code` varchar(40) NOT NULL,
-  `player_id` int(10) UNSIGNED NOT NULL,
-  `notes` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `match_awards`
---
-
-INSERT INTO `match_awards` (`id`, `match_id`, `award_code`, `player_id`, `notes`, `created_at`, `updated_at`) VALUES
-(763, 132, 'player_of_match', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(764, 132, 'goal_of_week', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(765, 132, 'lyrical', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(766, 132, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(767, 132, 'capocannoniere', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(768, 132, 'tractor', 41, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(769, 132, 'guinda', 59, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(770, 133, 'player_of_match', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(771, 133, 'goal_of_week', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(772, 133, 'lyrical', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(773, 133, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(774, 133, 'capocannoniere', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(775, 133, 'tractor', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(776, 133, 'guinda', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(777, 133, 'putita', 44, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(778, 134, 'player_of_match', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(779, 134, 'goal_of_week', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(780, 134, 'lyrical', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(781, 134, 'wall', 44, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(782, 134, 'capocannoniere', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(783, 134, 'tractor', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(784, 134, 'guinda', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(785, 134, 'putita', 61, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(786, 135, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(787, 135, 'goal_of_week', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(788, 135, 'lyrical', 22, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(789, 135, 'wall', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(790, 135, 'capocannoniere', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(791, 135, 'tractor', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(792, 136, 'player_of_match', 12, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(793, 136, 'goal_of_week', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(794, 136, 'lyrical', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(795, 136, 'wall', 18, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(796, 136, 'capocannoniere', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(797, 136, 'tractor', 40, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(798, 136, 'guinda', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(799, 136, 'putita', 30, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(800, 136, 'ghost', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(801, 137, 'player_of_match', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(802, 137, 'goal_of_week', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(803, 137, 'lyrical', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(804, 137, 'wall', 61, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(805, 137, 'capocannoniere', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(806, 137, 'tractor', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(807, 137, 'guinda', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(808, 137, 'putita', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(809, 137, 'ghost', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(810, 138, 'player_of_match', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(811, 138, 'goal_of_week', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(812, 138, 'lyrical', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(813, 138, 'wall', 24, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(814, 138, 'tractor', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(815, 138, 'guinda', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(816, 138, 'putita', 9, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(817, 138, 'ghost', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(818, 139, 'player_of_match', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(819, 139, 'goal_of_week', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(820, 139, 'lyrical', 61, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(821, 139, 'wall', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(822, 139, 'capocannoniere', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(823, 139, 'tractor', 22, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(824, 139, 'guinda', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(825, 139, 'ghost', 13, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(826, 140, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(827, 140, 'goal_of_week', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(828, 140, 'lyrical', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(829, 140, 'wall', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(830, 140, 'capocannoniere', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(831, 140, 'tractor', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(832, 140, 'guinda', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(833, 140, 'putita', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(834, 140, 'ghost', 18, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(835, 141, 'player_of_match', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(836, 141, 'goal_of_week', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(837, 141, 'lyrical', 59, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(838, 141, 'wall', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(839, 141, 'capocannoniere', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(840, 141, 'tractor', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(841, 141, 'guinda', 19, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(842, 142, 'player_of_match', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(843, 142, 'goal_of_week', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(844, 142, 'lyrical', 18, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(845, 142, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(846, 142, 'tractor', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(847, 142, 'guinda', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(848, 142, 'ghost', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(849, 143, 'player_of_match', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(850, 143, 'goal_of_week', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(851, 143, 'lyrical', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(852, 143, 'wall', 30, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(853, 143, 'capocannoniere', 42, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(854, 143, 'tractor', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(855, 143, 'guinda', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(856, 143, 'ghost', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(857, 144, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(858, 144, 'goal_of_week', 18, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(859, 144, 'lyrical', 46, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(860, 144, 'wall', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(861, 144, 'capocannoniere', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(862, 144, 'tractor', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(863, 144, 'guinda', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(864, 144, 'putita', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(865, 144, 'ghost', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(866, 144, 'keeper', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(867, 145, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(868, 145, 'goal_of_week', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(869, 145, 'lyrical', 18, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(870, 145, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(871, 145, 'capocannoniere', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(872, 145, 'tractor', 9, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(873, 145, 'guinda', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(874, 145, 'putita', 61, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(875, 145, 'ghost', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(876, 145, 'keeper', 2, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(877, 146, 'player_of_match', 41, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(878, 146, 'lyrical', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(879, 146, 'tractor', 43, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(880, 146, 'keeper', 24, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(881, 146, 'terminator', 9, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(882, 146, 'goodfellas', 47, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(883, 147, 'player_of_match', 49, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(884, 147, 'goal_of_week', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(885, 147, 'lyrical', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(886, 147, 'wall', 19, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(887, 147, 'tractor', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(888, 147, 'keeper', 49, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(889, 147, 'goodfellas', 23, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(890, 148, 'player_of_match', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(891, 148, 'goal_of_week', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(892, 148, 'lyrical', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(893, 148, 'wall', 48, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(894, 148, 'tractor', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(895, 148, 'keeper', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(896, 148, 'terminator', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(897, 148, 'goodfellas', 22, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(898, 149, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(899, 149, 'goal_of_week', 8, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(900, 149, 'lyrical', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(901, 149, 'wall', 25, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(902, 149, 'tractor', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(903, 149, 'keeper', 23, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(904, 149, 'goodfellas', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(905, 150, 'player_of_match', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(906, 150, 'goal_of_week', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(907, 150, 'lyrical', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(908, 150, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(909, 150, 'tractor', 30, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(910, 150, 'keeper', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(911, 150, 'terminator', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(912, 150, 'goodfellas', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(913, 151, 'player_of_match', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(914, 151, 'goal_of_week', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(915, 151, 'wall', 46, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(916, 151, 'tractor', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(917, 151, 'goodfellas', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(918, 152, 'player_of_match', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(919, 152, 'goal_of_week', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(920, 152, 'wall', 46, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(921, 152, 'tractor', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(922, 152, 'keeper', 60, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(923, 152, 'terminator', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(924, 153, 'player_of_match', 8, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(925, 153, 'goal_of_week', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(926, 153, 'lyrical', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(927, 153, 'wall', 46, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(928, 153, 'tractor', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(929, 153, 'keeper', 49, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(930, 153, 'terminator', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(931, 153, 'goodfellas', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(932, 154, 'player_of_match', 46, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(933, 154, 'goal_of_week', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(934, 154, 'lyrical', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(935, 154, 'wall', 46, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(936, 154, 'tractor', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(937, 154, 'keeper', 60, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(938, 154, 'terminator', 25, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(939, 154, 'goodfellas', 9, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(940, 155, 'wall', 49, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(941, 155, 'keeper', 61, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(942, 155, 'terminator', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(943, 156, 'player_of_match', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(944, 156, 'lyrical', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(945, 156, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(946, 156, 'tractor', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(947, 156, 'terminator', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(948, 157, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(949, 157, 'goal_of_week', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(950, 157, 'lyrical', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(951, 157, 'wall', 57, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(952, 157, 'tractor', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(953, 157, 'keeper', 48, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(954, 157, 'goodfellas', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(955, 158, 'player_of_match', 12, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(956, 158, 'goal_of_week', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(957, 158, 'lyrical', 12, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(958, 158, 'wall', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(959, 158, 'tractor', 41, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(960, 158, 'keeper', 48, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(961, 158, 'terminator', 43, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(962, 158, 'goodfellas', 48, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(963, 159, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(964, 159, 'goal_of_week', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(965, 159, 'lyrical', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(966, 159, 'wall', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(967, 159, 'tractor', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(968, 159, 'keeper', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(969, 159, 'terminator', 25, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(970, 159, 'goodfellas', 4, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(971, 160, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(972, 160, 'goal_of_week', 8, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(973, 160, 'lyrical', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(974, 160, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(975, 160, 'tractor', 43, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(976, 160, 'keeper', 48, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(977, 160, 'terminator', 30, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(978, 161, 'player_of_match', 10, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(979, 161, 'goal_of_week', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(980, 161, 'lyrical', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(981, 161, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(982, 161, 'tractor', 1, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(983, 161, 'goodfellas', 18, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(984, 162, 'player_of_match', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(985, 162, 'goal_of_week', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(986, 162, 'lyrical', 22, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(987, 162, 'wall', 30, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(988, 162, 'tractor', 43, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(989, 162, 'keeper', 27, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(990, 162, 'terminator', 18, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(991, 162, 'goodfellas', 27, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(992, 163, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(993, 163, 'goal_of_week', 43, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(994, 163, 'lyrical', 38, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(995, 163, 'wall', 46, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(996, 163, 'tractor', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(997, 163, 'keeper', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(998, 163, 'terminator', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(999, 163, 'goodfellas', 5, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1000, 164, 'player_of_match', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1001, 164, 'goal_of_week', 6, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1002, 164, 'lyrical', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1003, 164, 'wall', 43, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1004, 164, 'tractor', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1005, 164, 'keeper', 24, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1006, 164, 'terminator', 27, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1007, 165, 'player_of_match', 29, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1008, 165, 'goal_of_week', 29, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1009, 165, 'lyrical', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1010, 165, 'wall', 14, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1011, 165, 'tractor', 11, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1012, 165, 'keeper', 24, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1013, 165, 'goodfellas', 24, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1014, 166, 'player_of_match', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1015, 166, 'goal_of_week', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1016, 166, 'lyrical', 7, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1017, 166, 'wall', 41, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1018, 166, 'tractor', 15, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1019, 166, 'keeper', 13, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1020, 166, 'goodfellas', 17, NULL, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(1021, 167, 'player_of_match', 27, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1022, 167, 'goal_of_week', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1023, 167, 'lyrical', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1024, 167, 'wall', 25, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1025, 167, 'tractor', 22, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1026, 167, 'goodfellas', 35, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1027, 168, 'player_of_match', 12, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1028, 168, 'goal_of_week', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1029, 168, 'lyrical', 22, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1030, 168, 'wall', 25, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1031, 168, 'terminator', 25, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1032, 168, 'tractor', 37, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1033, 168, 'goodfellas', 37, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1034, 169, 'player_of_match', 48, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1035, 169, 'goal_of_week', 18, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1036, 169, 'lyrical', 10, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1037, 169, 'wall', 48, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1038, 169, 'terminator', 30, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1039, 169, 'tractor', 30, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1040, 169, 'goodfellas', 24, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1041, 170, 'player_of_match', 55, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1042, 170, 'goal_of_week', 40, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1043, 170, 'lyrical', 55, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1044, 170, 'wall', 2, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1045, 170, 'terminator', 55, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1046, 170, 'tractor', 6, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1047, 170, 'goodfellas', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1048, 171, 'player_of_match', 36, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1049, 171, 'goal_of_week', 7, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1050, 171, 'lyrical', 13, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1051, 171, 'wall', 2, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1052, 171, 'terminator', 17, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1053, 171, 'tractor', 35, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1054, 171, 'guinda', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1055, 171, 'goodfellas', 6, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1056, 172, 'player_of_match', 36, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1057, 172, 'goal_of_week', 36, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1058, 172, 'lyrical', 55, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1059, 172, 'wall', 17, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1060, 172, 'terminator', 17, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1061, 172, 'tractor', 30, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1062, 172, 'guinda', 17, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1063, 172, 'goodfellas', 43, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1064, 173, 'player_of_match', 2, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1065, 173, 'goal_of_week', 23, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1066, 173, 'lyrical', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1067, 173, 'wall', 17, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1068, 173, 'tractor', 30, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1069, 173, 'guinda', 40, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1070, 173, 'goodfellas', 6, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1071, 174, 'player_of_match', 32, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1072, 174, 'goal_of_week', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1073, 174, 'lyrical', 1, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1074, 174, 'wall', 17, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1075, 174, 'terminator', 2, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1076, 174, 'tractor', 31, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1077, 174, 'guinda', 17, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1078, 174, 'goodfellas', 40, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(1079, 175, 'player_of_match', 10, NULL, '2026-05-10 13:33:45', '2026-05-10 13:33:45'),
-(1080, 175, 'goal_of_week', 1, NULL, '2026-05-10 13:33:45', '2026-05-10 13:33:45'),
-(1081, 175, 'lyrical', 10, NULL, '2026-05-10 13:33:45', '2026-05-10 13:33:45'),
-(1082, 175, 'wall', 13, NULL, '2026-05-10 13:33:45', '2026-05-10 13:33:45'),
-(1083, 175, 'tractor', 31, NULL, '2026-05-10 13:33:45', '2026-05-10 13:33:45'),
-(1084, 175, 'guinda', 10, NULL, '2026-05-10 13:33:45', '2026-05-10 13:33:45'),
-(1085, 175, 'goodfellas', 40, NULL, '2026-05-10 13:33:45', '2026-05-10 13:33:45'),
-(1086, 176, 'player_of_match', 11, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04'),
-(1087, 176, 'goal_of_week', 8, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04'),
-(1088, 176, 'lyrical', 11, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04'),
-(1089, 176, 'wall', 17, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04'),
-(1090, 176, 'capocannoniere', 29, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04'),
-(1091, 176, 'terminator', 11, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04'),
-(1092, 176, 'tractor', 31, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04'),
-(1093, 176, 'guinda', 1, NULL, '2026-05-15 05:05:04', '2026-05-15 05:05:04');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_director_award_votes`
---
-
-CREATE TABLE `match_director_award_votes` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `voter_id` int(10) UNSIGNED NOT NULL,
-  `award_code` varchar(40) NOT NULL,
-  `player_id` int(10) UNSIGNED NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_director_publications`
---
-
-CREATE TABLE `match_director_publications` (
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `published_at` datetime NOT NULL,
-  `reason` enum('all_voted','deadline','admin') NOT NULL,
-  `eligible_voters` smallint(5) UNSIGNED NOT NULL DEFAULT 0,
-  `submitted_voters` smallint(5) UNSIGNED NOT NULL DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_director_rating_votes`
---
-
-CREATE TABLE `match_director_rating_votes` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `voter_id` int(10) UNSIGNED NOT NULL,
-  `player_id` int(10) UNSIGNED NOT NULL,
-  `rating` decimal(3,1) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_director_vote_invites`
---
-
-CREATE TABLE `match_director_vote_invites` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `player_id` int(10) UNSIGNED NOT NULL,
-  `voter_member_id` int(10) UNSIGNED NOT NULL,
-  `token` varchar(5) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_draw_options`
---
-
-CREATE TABLE `match_draw_options` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `option_number` tinyint(3) UNSIGNED NOT NULL,
-  `teams_json` mediumtext NOT NULL,
-  `total_diff` decimal(5,2) NOT NULL DEFAULT 0.00,
-  `generated_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `selected_at` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_draw_option_votes`
---
-
-CREATE TABLE `match_draw_option_votes` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `option_id` int(10) UNSIGNED NOT NULL,
-  `user_id` int(10) UNSIGNED NOT NULL,
-  `player_id` int(10) UNSIGNED NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_players`
---
-
-CREATE TABLE `match_players` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `player_id` int(10) UNSIGNED NOT NULL,
-  `team_number` tinyint(3) UNSIGNED DEFAULT NULL,
-  `assigned_position` enum('ARQ','DEF','LAT','MED','DEL') DEFAULT NULL,
-  `is_goalkeeper` tinyint(1) NOT NULL DEFAULT 0,
-  `lineup_order` smallint(5) UNSIGNED DEFAULT NULL,
-  `formation_line_order` tinyint(3) UNSIGNED DEFAULT NULL,
-  `availability_status` enum('convocado','confirmado','baja') NOT NULL DEFAULT 'convocado',
-  `goals` smallint(5) UNSIGNED NOT NULL DEFAULT 0,
-  `rating` decimal(3,1) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `match_players`
---
-
-INSERT INTO `match_players` (`id`, `match_id`, `player_id`, `team_number`, `assigned_position`, `is_goalkeeper`, `lineup_order`, `formation_line_order`, `availability_status`, `goals`, `rating`, `created_at`, `updated_at`) VALUES
-(2188, 132, 18, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2189, 132, 27, 1, 'ARQ', 1, 2, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2190, 132, 10, 1, 'DEL', 0, 3, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2191, 132, 6, 1, 'DEL', 0, 4, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2192, 132, 13, 1, 'DEL', 0, 5, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2193, 132, 59, 1, 'MED', 0, 6, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2194, 132, 8, 1, 'MED', 0, 7, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2195, 132, 1, 1, 'MED', 0, 8, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2196, 132, 15, 1, 'DEL', 0, 9, 4, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2197, 132, 30, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2198, 132, 19, 2, 'DEF', 0, 2, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2199, 132, 14, 2, 'DEF', 0, 3, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2200, 132, 7, 2, 'MED', 0, 4, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2201, 132, 4, 2, 'MED', 0, 5, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2202, 132, 40, 2, 'DEF', 0, 6, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2203, 132, 5, 2, 'DEF', 0, 7, 5, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2204, 132, 41, 2, 'MED', 0, 8, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2205, 132, 38, 2, 'DEL', 0, 9, 1, 'confirmado', 0, 10.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2206, 133, 38, 1, 'DEL', 0, 1, 1, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2207, 133, 5, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2208, 133, 14, 1, 'DEF', 0, 3, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2209, 133, 10, 1, 'DEL', 0, 4, 2, 'confirmado', 0, 9.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2210, 133, 12, 1, 'MED', 0, 5, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2211, 133, 43, 1, 'DEF', 0, 6, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2212, 133, 40, 1, 'DEF', 0, 7, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2213, 133, 61, 1, 'DEF', 0, 8, 5, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2214, 133, 18, 1, 'DEF', 0, 9, 6, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2215, 133, 6, 2, 'DEL', 0, 1, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2216, 133, 24, 2, 'DEF', 0, 2, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2217, 133, 11, 2, 'DEF', 0, 3, 2, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2218, 133, 7, 2, 'MED', 0, 4, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2219, 133, 17, 2, 'DEF', 0, 5, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2220, 133, 44, 2, 'DEF', 0, 6, 4, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2221, 133, 22, 2, 'MED', 0, 7, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2222, 133, 15, 2, 'DEL', 0, 8, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2223, 133, 9, 2, 'MED', 0, 9, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2224, 134, 17, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2225, 134, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2226, 134, 40, 1, 'DEF', 0, 3, 3, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2227, 134, 7, 1, 'MED', 0, 4, 1, 'confirmado', 4, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2228, 134, 8, 1, 'MED', 0, 5, 2, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2229, 134, 38, 1, 'DEL', 0, 6, 1, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2230, 134, 41, 1, 'MED', 0, 7, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2231, 134, 23, 1, 'DEL', 0, 8, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2232, 134, 18, 1, 'DEF', 0, 9, 4, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2233, 134, 10, 2, 'DEL', 0, 1, 1, 'confirmado', 4, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2234, 134, 43, 2, 'DEF', 0, 2, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2235, 134, 44, 2, 'DEF', 0, 3, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2236, 134, 6, 2, 'DEL', 0, 4, 2, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2237, 134, 5, 2, 'DEF', 0, 5, 3, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2238, 134, 15, 2, 'DEL', 0, 6, 3, 'confirmado', 4, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2239, 134, 1, 2, 'MED', 0, 7, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2240, 134, 61, 2, 'DEF', 0, 8, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2241, 134, 59, 2, 'MED', 0, 9, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2242, 135, 61, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2243, 135, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2244, 135, 11, 1, 'DEF', 0, 3, 3, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2245, 135, 24, 1, 'DEF', 0, 4, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2246, 135, 12, 1, 'MED', 0, 5, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2247, 135, 40, 1, 'DEF', 0, 6, 5, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2248, 135, 6, 1, 'DEL', 0, 7, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2249, 135, 38, 1, 'DEL', 0, 8, 2, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2250, 135, 15, 1, 'DEL', 0, 9, 3, 'confirmado', 2, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2251, 135, 23, 2, 'DEL', 0, 1, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2252, 135, 44, 2, 'DEF', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2253, 135, 17, 2, 'DEF', 0, 3, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2254, 135, 5, 2, 'DEF', 0, 4, 3, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2255, 135, 10, 2, 'DEL', 0, 5, 2, 'confirmado', 2, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2256, 135, 22, 2, 'MED', 0, 6, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2257, 135, 7, 2, 'MED', 0, 7, 2, 'confirmado', 7, 9.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2258, 135, 1, 2, 'MED', 0, 8, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2259, 135, 18, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2260, 136, 44, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2261, 136, 12, 1, 'MED', 0, 2, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2262, 136, 14, 1, 'DEF', 0, 3, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2263, 136, 9, 1, 'MED', 0, 4, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2264, 136, 24, 1, 'DEF', 0, 5, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2265, 136, 6, 1, 'DEL', 0, 6, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2266, 136, 15, 1, 'DEL', 0, 7, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2267, 136, 18, 1, 'DEF', 0, 8, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2268, 136, 1, 1, 'MED', 0, 9, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2269, 136, 40, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2270, 136, 10, 2, 'DEL', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2271, 136, 22, 2, 'MED', 0, 3, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2272, 136, 5, 2, 'DEF', 0, 4, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2273, 136, 30, 2, 'DEF', 0, 5, 3, 'confirmado', 0, 4.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2274, 136, 17, 2, 'DEF', 0, 6, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2275, 136, 38, 2, 'DEL', 0, 7, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2276, 136, 61, 2, 'DEF', 0, 8, 5, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2277, 136, 23, 2, 'DEL', 0, 9, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2278, 137, 5, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2279, 137, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2280, 137, 30, 1, 'DEF', 0, 3, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2281, 137, 59, 1, 'MED', 0, 4, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2282, 137, 6, 1, 'DEL', 0, 5, 1, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2283, 137, 15, 1, 'DEL', 0, 6, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2284, 137, 38, 1, 'DEL', 0, 7, 3, 'confirmado', 0, 10.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2285, 137, 61, 1, 'DEF', 0, 8, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2286, 137, 23, 1, 'DEL', 0, 9, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2287, 137, 27, 2, 'ARQ', 1, 1, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2288, 137, 17, 2, 'DEF', 0, 2, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2289, 137, 19, 2, 'DEF', 0, 3, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2290, 137, 7, 2, 'MED', 0, 4, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2291, 137, 40, 2, 'DEF', 0, 5, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2292, 137, 8, 2, 'MED', 0, 6, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2293, 137, 1, 2, 'MED', 0, 7, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2294, 137, 18, 2, 'DEF', 0, 8, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2295, 137, 13, 2, 'DEL', 0, 9, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2296, 138, 61, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2297, 138, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2298, 138, 11, 1, 'DEF', 0, 3, 3, 'confirmado', 1, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2299, 138, 7, 1, 'MED', 0, 4, 1, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2300, 138, 22, 1, 'MED', 0, 5, 2, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2301, 138, 40, 1, 'DEF', 0, 6, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2302, 138, 1, 1, 'MED', 0, 7, 3, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2303, 138, 15, 1, 'DEL', 0, 8, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2304, 138, 24, 1, 'DEF', 0, 9, 5, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2305, 138, 17, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2306, 138, 10, 2, 'DEL', 0, 2, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2307, 138, 12, 2, 'MED', 0, 3, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2308, 138, 6, 2, 'DEL', 0, 4, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2309, 138, 44, 2, 'DEF', 0, 5, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2310, 138, 9, 2, 'MED', 0, 6, 2, 'confirmado', 0, 4.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2311, 138, 38, 2, 'DEL', 0, 7, 3, 'confirmado', 1, 5.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2312, 138, 18, 2, 'DEF', 0, 8, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2313, 138, 5, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2314, 139, 13, 1, 'DEL', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2315, 139, 22, 1, 'MED', 0, 2, 1, 'confirmado', 1, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2316, 139, 17, 1, 'DEF', 0, 3, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2317, 139, 38, 1, 'DEL', 0, 4, 2, 'confirmado', 5, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2318, 139, 40, 1, 'DEF', 0, 5, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2319, 139, 8, 1, 'MED', 0, 6, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2320, 139, 59, 1, 'MED', 0, 7, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2321, 139, 61, 1, 'DEF', 0, 8, 3, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2322, 139, 35, 1, 'ARQ', 1, 9, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2323, 139, 7, 2, 'MED', 0, 1, 1, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2324, 139, 6, 2, 'DEL', 0, 2, 1, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2325, 139, 5, 2, 'DEF', 0, 3, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2326, 139, 30, 2, 'DEF', 0, 4, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2327, 139, 41, 2, 'MED', 0, 5, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2328, 139, 15, 2, 'DEL', 0, 6, 2, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2329, 139, 1, 2, 'MED', 0, 7, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2330, 139, 23, 2, 'DEL', 0, 8, 3, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2331, 139, 18, 2, 'DEF', 0, 9, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2332, 140, 23, 1, 'DEL', 0, 1, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2333, 140, 19, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2334, 140, 12, 1, 'MED', 0, 3, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2335, 140, 17, 1, 'DEF', 0, 4, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2336, 140, 43, 1, 'DEF', 0, 5, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2337, 140, 41, 1, 'MED', 0, 6, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2338, 140, 61, 1, 'DEF', 0, 7, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2339, 140, 15, 1, 'DEL', 0, 8, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2340, 140, 18, 1, 'DEF', 0, 9, 5, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2341, 140, 30, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2342, 140, 24, 2, 'DEF', 0, 2, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2343, 140, 10, 2, 'DEL', 0, 3, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2344, 140, 7, 2, 'MED', 0, 4, 1, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2345, 140, 6, 2, 'DEL', 0, 5, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2346, 140, 38, 2, 'DEL', 0, 6, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2347, 140, 2, 2, 'DEF', 0, 7, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2348, 140, 13, 2, 'DEL', 0, 8, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2349, 140, 1, 2, 'MED', 0, 9, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2350, 141, 18, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2351, 141, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 0, 9.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2352, 141, 17, 1, 'DEF', 0, 3, 3, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2353, 141, 5, 1, 'DEF', 0, 4, 4, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2354, 141, 1, 1, 'MED', 0, 5, 1, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2355, 141, 2, 1, 'DEF', 0, 6, 5, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2356, 141, 10, 1, 'DEL', 0, 7, 1, 'confirmado', 3, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2357, 141, 38, 1, 'DEL', 0, 8, 2, 'confirmado', 5, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2358, 141, 8, 1, 'MED', 0, 9, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2359, 141, 19, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2360, 141, 44, 2, 'DEF', 0, 2, 2, 'confirmado', 2, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2361, 141, 30, 2, 'DEF', 0, 3, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2362, 141, 59, 2, 'MED', 0, 4, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2363, 141, 13, 2, 'DEL', 0, 5, 1, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2364, 141, 61, 2, 'DEF', 0, 6, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2365, 141, 7, 2, 'MED', 0, 7, 2, 'confirmado', 3, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2366, 141, 6, 2, 'DEL', 0, 8, 2, 'confirmado', 2, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2367, 141, 15, 2, 'DEL', 0, 9, 3, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2368, 142, 6, 1, 'DEL', 0, 1, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2369, 142, 14, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2370, 142, 5, 1, 'DEF', 0, 3, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2371, 142, 7, 1, 'MED', 0, 4, 1, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2372, 142, 11, 1, 'DEF', 0, 5, 3, 'confirmado', 2, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2373, 142, 38, 1, 'DEL', 0, 6, 2, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2374, 142, 30, 1, 'DEF', 0, 7, 4, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2375, 142, 18, 1, 'DEF', 0, 8, 5, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2376, 142, 61, 1, 'DEF', 0, 9, 6, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2377, 142, 12, 2, 'MED', 0, 1, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 13:20:41'),
-(2378, 142, 17, 2, 'DEF', 0, 2, 1, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2379, 142, 24, 2, 'DEF', 0, 3, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2380, 142, 22, 2, 'MED', 0, 4, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2381, 142, 44, 2, 'DEF', 0, 5, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2382, 142, 40, 2, 'DEF', 0, 6, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2383, 142, 1, 2, 'MED', 0, 7, 3, 'confirmado', 1, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2384, 142, 15, 2, 'DEL', 0, 8, 1, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2385, 142, 23, 2, 'DEL', 0, 9, 2, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2386, 143, 27, 1, 'ARQ', 1, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2387, 143, 14, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2388, 143, 30, 1, 'DEF', 0, 3, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2389, 143, 6, 1, 'DEL', 0, 4, 1, 'confirmado', 2, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2390, 143, 8, 1, 'MED', 0, 5, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2391, 143, 16, 1, 'DEF', 0, 6, 3, 'confirmado', 3, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2392, 143, 42, 1, 'DEL', 0, 7, 2, 'confirmado', 3, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2393, 143, 1, 1, 'MED', 0, 8, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2394, 143, 18, 1, 'DEF', 0, 9, 4, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2395, 143, 41, 2, 'MED', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2396, 143, 17, 2, 'DEF', 0, 2, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2397, 143, 59, 2, 'MED', 0, 3, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2398, 143, 7, 2, 'MED', 0, 4, 3, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2399, 143, 38, 2, 'DEL', 0, 5, 1, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2400, 143, 2, 2, 'DEF', 0, 6, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2401, 143, 15, 2, 'DEL', 0, 7, 2, 'confirmado', 3, 5.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2402, 143, 4, 2, 'MED', 0, 8, 4, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2403, 143, 23, 2, 'DEL', 0, 9, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2404, 144, 38, 1, 'DEL', 0, 1, 1, 'confirmado', 1, 5.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2405, 144, 14, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2406, 144, 12, 1, 'MED', 0, 3, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2407, 144, 22, 1, 'MED', 0, 4, 2, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2408, 144, 6, 1, 'DEL', 0, 5, 2, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2409, 144, 30, 1, 'DEF', 0, 6, 2, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2410, 144, 1, 1, 'MED', 0, 7, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2411, 144, 41, 1, 'MED', 0, 8, 4, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2412, 144, 24, 1, 'DEF', 0, 9, 3, 'confirmado', 0, 4.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2413, 144, 11, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2414, 144, 44, 2, 'DEF', 0, 2, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2415, 144, 5, 2, 'DEF', 0, 3, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2416, 144, 7, 2, 'MED', 0, 4, 1, 'confirmado', 6, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2417, 144, 17, 2, 'DEF', 0, 5, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2418, 144, 46, 2, 'MED', 0, 6, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2419, 144, 15, 2, 'DEL', 0, 7, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2420, 144, 18, 2, 'DEF', 0, 8, 5, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2421, 145, 61, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2422, 145, 5, 1, 'DEF', 0, 2, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2423, 145, 17, 1, 'DEF', 0, 3, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2424, 145, 22, 1, 'MED', 0, 4, 1, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2425, 145, 38, 1, 'DEL', 0, 5, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2426, 145, 1, 1, 'MED', 0, 6, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2427, 145, 15, 1, 'DEL', 0, 7, 2, 'confirmado', 0, 4.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2428, 145, 2, 1, 'DEF', 0, 8, 4, 'confirmado', 0, 4.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2429, 145, 18, 1, 'DEF', 0, 9, 5, 'confirmado', 0, 4.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2430, 145, 30, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2431, 145, 14, 2, 'DEF', 0, 2, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2432, 145, 6, 2, 'DEL', 0, 3, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2433, 145, 9, 2, 'MED', 0, 4, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2434, 145, 7, 2, 'MED', 0, 5, 2, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2435, 145, 8, 2, 'MED', 0, 6, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2436, 145, 59, 2, 'MED', 0, 7, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2437, 145, 41, 2, 'MED', 0, 8, 5, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2438, 145, 23, 2, 'DEL', 0, 9, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2439, 146, 1, 1, 'MED', 0, 1, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2440, 146, 24, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2441, 146, 11, 1, 'DEF', 0, 3, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2442, 146, 43, 1, 'DEF', 0, 4, 3, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2443, 146, 22, 1, 'MED', 0, 5, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2444, 146, 5, 1, 'DEF', 0, 6, 4, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2445, 146, 6, 1, 'DEL', 0, 7, 1, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2446, 146, 38, 1, 'DEL', 0, 8, 2, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2447, 146, 47, 1, 'MED', 0, 9, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2448, 146, 10, 2, 'DEL', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2449, 146, 23, 2, 'DEL', 0, 2, 2, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2450, 146, 14, 2, 'DEF', 0, 3, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2451, 146, 12, 2, 'MED', 0, 4, 1, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2452, 146, 17, 2, 'DEF', 0, 5, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2453, 146, 9, 2, 'MED', 0, 6, 2, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2454, 146, 48, 2, 'MED', 0, 7, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2455, 146, 41, 2, 'MED', 0, 8, 4, 'confirmado', 1, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2456, 146, 15, 2, 'DEL', 0, 9, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2457, 147, 23, 1, 'DEL', 0, 1, 1, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2458, 147, 49, 1, 'MED', 0, 2, 1, 'confirmado', 0, 9.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2459, 147, 10, 1, 'DEL', 0, 3, 2, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2460, 147, 17, 1, 'DEF', 0, 4, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2461, 147, 6, 1, 'DEL', 0, 5, 3, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2462, 147, 15, 1, 'DEL', 0, 6, 4, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2463, 147, 48, 1, 'MED', 0, 7, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2464, 147, 33, 1, 'DEF', 0, 8, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2465, 147, 19, 1, 'DEF', 0, 9, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2466, 147, 5, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2467, 147, 13, 2, 'DEL', 0, 2, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2468, 147, 7, 2, 'MED', 0, 3, 1, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2469, 147, 38, 2, 'DEL', 0, 4, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2470, 147, 1, 2, 'MED', 0, 5, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2471, 147, 3, 2, 'DEL', 0, 6, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2472, 147, 14, 2, 'DEF', 0, 7, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2473, 147, 30, 2, 'DEF', 0, 8, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2474, 147, 2, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2475, 148, 1, 1, 'MED', 0, 1, 1, 'confirmado', 2, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2476, 148, 11, 1, 'DEF', 0, 2, 1, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2477, 148, 22, 1, 'MED', 0, 3, 2, 'confirmado', 1, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2478, 148, 9, 1, 'MED', 0, 4, 3, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2479, 148, 7, 1, 'MED', 0, 5, 4, 'confirmado', 3, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2480, 148, 43, 1, 'DEF', 0, 6, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2481, 148, 48, 1, 'MED', 0, 7, 5, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2482, 148, 23, 1, 'DEL', 0, 8, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2483, 148, 5, 1, 'DEF', 0, 9, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2484, 148, 38, 2, 'DEL', 0, 1, 1, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2485, 148, 10, 2, 'DEL', 0, 2, 2, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2486, 148, 6, 2, 'DEL', 0, 3, 3, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2487, 148, 17, 2, 'DEF', 0, 4, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2488, 148, 15, 2, 'DEL', 0, 5, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2489, 148, 14, 2, 'DEF', 0, 6, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2490, 148, 12, 2, 'MED', 0, 7, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2491, 148, 30, 2, 'DEF', 0, 8, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2492, 148, 24, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2493, 149, 10, 1, 'DEL', 0, 1, 1, 'confirmado', 3, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2494, 149, 7, 1, 'MED', 0, 2, 1, 'confirmado', 6, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2495, 149, 8, 1, 'MED', 0, 3, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2496, 149, 6, 1, 'DEL', 0, 4, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2497, 149, 30, 1, 'DEF', 0, 5, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2498, 149, 1, 1, 'MED', 0, 6, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2499, 149, 51, 1, 'MED', 0, 7, 4, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2500, 149, 25, 1, 'DEF', 0, 8, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2501, 149, 23, 1, 'DEL', 0, 9, 3, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2502, 149, 27, 2, 'ARQ', 1, 1, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2503, 149, 14, 2, 'DEF', 0, 2, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2504, 149, 17, 2, 'DEF', 0, 3, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2505, 149, 38, 2, 'DEL', 0, 4, 1, 'confirmado', 3, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2506, 149, 52, 2, 'MED', 0, 5, 1, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2507, 149, 16, 2, 'DEF', 0, 6, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2508, 149, 4, 2, 'MED', 0, 7, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2509, 149, 15, 2, 'DEL', 0, 8, 2, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2510, 149, 33, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2511, 150, 12, 1, 'MED', 0, 1, 1, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2512, 150, 7, 1, 'MED', 0, 2, 2, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2513, 150, 22, 1, 'MED', 0, 3, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2514, 150, 51, 1, 'MED', 0, 4, 4, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2515, 150, 46, 1, 'MED', 0, 5, 5, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2516, 150, 48, 1, 'MED', 0, 6, 6, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2517, 150, 1, 1, 'MED', 0, 7, 7, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2518, 150, 53, 1, 'MED', 0, 8, 8, 'confirmado', 1, 5.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2519, 150, 23, 1, 'DEL', 0, 9, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2520, 150, 14, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2521, 150, 11, 2, 'DEF', 0, 2, 2, 'confirmado', 1, 9.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2522, 150, 10, 2, 'DEL', 0, 3, 1, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2523, 150, 6, 2, 'DEL', 0, 4, 2, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2524, 150, 17, 2, 'DEF', 0, 5, 3, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2525, 150, 8, 2, 'MED', 0, 6, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2526, 150, 5, 2, 'DEF', 0, 7, 4, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2527, 150, 38, 2, 'DEL', 0, 8, 3, 'confirmado', 3, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2528, 150, 30, 2, 'DEF', 0, 9, 5, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2529, 151, 13, 1, 'DEL', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2530, 151, 7, 1, 'MED', 0, 2, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2531, 151, 6, 1, 'DEL', 0, 3, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2532, 151, 46, 1, 'MED', 0, 4, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2533, 151, 17, 1, 'DEF', 0, 5, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2534, 151, 4, 1, 'MED', 0, 6, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2535, 151, 1, 1, 'MED', 0, 7, 4, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2536, 151, 15, 1, 'DEL', 0, 8, 3, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2537, 151, 23, 1, 'DEL', 0, 9, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2538, 151, 14, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2539, 151, 55, 2, 'MED', 0, 2, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2540, 151, 22, 2, 'MED', 0, 3, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2541, 151, 38, 2, 'DEL', 0, 4, 1, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2542, 151, 49, 2, 'MED', 0, 5, 3, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2543, 151, 8, 2, 'MED', 0, 6, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2544, 151, 5, 2, 'DEF', 0, 7, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2545, 151, 33, 2, 'DEF', 0, 8, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2546, 151, 52, 2, 'MED', 0, 9, 5, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2547, 152, 6, 1, 'DEL', 0, 1, 1, 'confirmado', 4, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2548, 152, 11, 1, 'DEF', 0, 2, 1, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2549, 152, 22, 1, 'MED', 0, 3, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2550, 152, 46, 1, 'MED', 0, 4, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2551, 152, 1, 1, 'MED', 0, 5, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2552, 152, 8, 1, 'MED', 0, 6, 4, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2553, 152, 15, 1, 'DEL', 0, 7, 2, 'confirmado', 2, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2554, 152, 35, 1, 'ARQ', 1, 8, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2555, 152, 60, 1, 'MED', 0, 9, 5, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2556, 152, 17, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2557, 152, 14, 2, 'DEF', 0, 2, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2558, 152, 7, 2, 'MED', 0, 3, 1, 'confirmado', 2, 5.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2559, 152, 12, 2, 'MED', 0, 4, 2, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2560, 152, 9, 2, 'MED', 0, 5, 3, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2561, 152, 38, 2, 'DEL', 0, 6, 1, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2562, 152, 61, 2, 'DEF', 0, 7, 3, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2563, 152, 23, 2, 'DEL', 0, 8, 2, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2564, 152, 5, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2565, 153, 61, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2566, 153, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2567, 153, 46, 1, 'MED', 0, 3, 1, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2568, 153, 8, 1, 'MED', 0, 4, 2, 'confirmado', 3, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2569, 153, 9, 1, 'MED', 0, 5, 3, 'confirmado', 2, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2570, 153, 15, 1, 'DEL', 0, 6, 1, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2571, 153, 33, 1, 'DEF', 0, 7, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2572, 153, 13, 1, 'DEL', 0, 8, 2, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2573, 153, 29, 1, 'MED', 0, 9, 4, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2574, 153, 7, 2, 'MED', 0, 1, 1, 'confirmado', 3, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2575, 153, 40, 2, 'DEF', 0, 2, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2576, 153, 17, 2, 'DEF', 0, 3, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2577, 153, 41, 2, 'MED', 0, 4, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2578, 153, 6, 2, 'DEL', 0, 5, 1, 'confirmado', 2, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2579, 153, 52, 2, 'MED', 0, 6, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2580, 153, 1, 2, 'MED', 0, 7, 4, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2581, 153, 4, 2, 'MED', 0, 8, 5, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2582, 153, 49, 2, 'MED', 0, 9, 6, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2583, 154, 27, 1, 'ARQ', 1, 1, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2584, 154, 1, 1, 'MED', 0, 2, 1, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2585, 154, 11, 1, 'DEF', 0, 3, 1, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2586, 154, 7, 1, 'MED', 0, 4, 2, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2587, 154, 25, 1, 'DEF', 0, 5, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2588, 154, 5, 1, 'DEF', 0, 6, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2589, 154, 4, 1, 'MED', 0, 7, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2590, 154, 17, 1, 'DEF', 0, 8, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2591, 154, 60, 2, 'MED', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2592, 154, 9, 2, 'MED', 0, 2, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2593, 154, 14, 2, 'DEF', 0, 3, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2594, 154, 12, 2, 'MED', 0, 4, 3, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2595, 154, 46, 2, 'MED', 0, 5, 4, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2596, 154, 40, 2, 'DEF', 0, 6, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2597, 154, 8, 2, 'MED', 0, 7, 5, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2598, 154, 15, 2, 'DEL', 0, 8, 1, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2599, 154, 61, 2, 'DEF', 0, 9, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2600, 155, 18, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2601, 155, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2602, 155, 30, 1, 'DEF', 0, 3, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2603, 155, 56, 1, 'MED', 0, 4, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2604, 155, 3, 1, 'DEL', 0, 5, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2605, 155, 17, 1, 'DEF', 0, 6, 4, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2606, 155, 15, 1, 'DEL', 0, 7, 2, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2607, 155, 57, 1, 'MED', 0, 8, 2, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2608, 155, 49, 1, 'MED', 0, 9, 3, 'confirmado', 0, 9.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2609, 155, 10, 2, 'DEL', 0, 1, 1, 'confirmado', 2, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2610, 155, 46, 2, 'MED', 0, 2, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2611, 155, 48, 2, 'MED', 0, 3, 2, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2612, 155, 2, 2, 'DEF', 0, 4, 1, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2613, 155, 52, 2, 'MED', 0, 5, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2614, 155, 7, 2, 'MED', 0, 6, 4, 'confirmado', 1, 4.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2615, 155, 1, 2, 'MED', 0, 7, 5, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2616, 155, 13, 2, 'DEL', 0, 8, 2, 'confirmado', 1, 4.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2617, 155, 61, 2, 'DEF', 0, 9, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2618, 156, 14, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2619, 156, 11, 1, 'DEF', 0, 2, 2, 'confirmado', 2, 9.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2620, 156, 12, 1, 'MED', 0, 3, 1, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2621, 156, 2, 1, 'DEF', 0, 4, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2622, 156, 24, 1, 'DEF', 0, 5, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2623, 156, 8, 1, 'MED', 0, 6, 2, 'confirmado', 4, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2624, 156, 17, 1, 'DEF', 0, 7, 5, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2625, 156, 23, 1, 'DEL', 0, 8, 1, 'confirmado', 2, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2626, 156, 35, 1, 'ARQ', 1, 9, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2627, 156, 30, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2628, 156, 7, 2, 'MED', 0, 2, 1, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2629, 156, 10, 2, 'DEL', 0, 3, 1, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2630, 156, 46, 2, 'MED', 0, 4, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2631, 156, 4, 2, 'MED', 0, 5, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2632, 156, 9, 2, 'MED', 0, 6, 4, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2633, 156, 15, 2, 'DEL', 0, 7, 2, 'confirmado', 6, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2634, 156, 1, 2, 'MED', 0, 8, 5, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2635, 156, 18, 2, 'DEF', 0, 9, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2636, 157, 23, 1, 'DEL', 0, 1, 1, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2637, 157, 49, 1, 'MED', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2638, 157, 5, 1, 'DEF', 0, 3, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2639, 157, 18, 1, 'DEF', 0, 4, 2, 'confirmado', 1, 4.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2640, 157, 14, 1, 'DEF', 0, 5, 3, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2641, 157, 43, 1, 'DEF', 0, 6, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2642, 157, 8, 1, 'MED', 0, 7, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2643, 157, 17, 1, 'DEF', 0, 8, 5, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2644, 157, 6, 1, 'DEL', 0, 9, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2645, 157, 9, 2, 'MED', 0, 1, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2646, 157, 48, 2, 'MED', 0, 2, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2647, 157, 1, 2, 'MED', 0, 3, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2648, 157, 13, 2, 'DEL', 0, 4, 1, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2649, 157, 57, 2, 'MED', 0, 5, 4, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2650, 157, 56, 2, 'MED', 0, 6, 5, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2651, 157, 10, 2, 'DEL', 0, 7, 2, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2652, 157, 7, 2, 'MED', 0, 8, 6, 'confirmado', 1, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2653, 157, 15, 2, 'DEL', 0, 9, 3, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2654, 158, 9, 1, 'MED', 0, 1, 1, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2655, 158, 12, 1, 'MED', 0, 2, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2656, 158, 27, 1, 'ARQ', 1, 3, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2657, 158, 41, 1, 'MED', 0, 4, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2658, 158, 10, 1, 'DEL', 0, 5, 1, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2659, 158, 8, 1, 'MED', 0, 6, 4, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2660, 158, 15, 1, 'DEL', 0, 7, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2661, 158, 57, 1, 'MED', 0, 8, 5, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2662, 158, 24, 1, 'DEF', 0, 9, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2663, 158, 6, 2, 'DEL', 0, 1, 1, 'confirmado', 1, 4.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2664, 158, 48, 2, 'MED', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2665, 158, 43, 2, 'DEF', 0, 3, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2666, 158, 58, 2, 'MED', 0, 4, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2667, 158, 61, 2, 'DEF', 0, 5, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2668, 158, 7, 2, 'MED', 0, 6, 3, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2669, 158, 17, 2, 'DEF', 0, 7, 3, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2670, 158, 1, 2, 'MED', 0, 8, 4, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2671, 158, 62, 2, 'MED', 0, 9, 5, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 13:20:41'),
-(2672, 159, 13, 1, 'DEL', 0, 1, 1, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2673, 159, 14, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2674, 159, 6, 1, 'DEL', 0, 3, 2, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2675, 159, 8, 1, 'MED', 0, 4, 1, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2676, 159, 33, 1, 'DEF', 0, 5, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43');
-INSERT INTO `match_players` (`id`, `match_id`, `player_id`, `team_number`, `assigned_position`, `is_goalkeeper`, `lineup_order`, `formation_line_order`, `availability_status`, `goals`, `rating`, `created_at`, `updated_at`) VALUES
-(2677, 159, 15, 1, 'DEL', 0, 6, 3, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2678, 159, 47, 1, 'MED', 0, 7, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2679, 159, 25, 1, 'DEF', 0, 8, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2680, 159, 52, 1, 'MED', 0, 9, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2681, 159, 17, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2682, 159, 7, 2, 'MED', 0, 2, 1, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2683, 159, 9, 2, 'MED', 0, 3, 2, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2684, 159, 4, 2, 'MED', 0, 4, 3, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2685, 159, 5, 2, 'DEF', 0, 5, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2686, 159, 41, 2, 'MED', 0, 6, 4, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2687, 159, 1, 2, 'MED', 0, 7, 5, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2688, 159, 30, 2, 'DEF', 0, 8, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2689, 159, 61, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2690, 160, 1, 1, 'MED', 0, 1, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2691, 160, 14, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2692, 160, 43, 1, 'DEF', 0, 3, 2, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2693, 160, 7, 1, 'MED', 0, 4, 2, 'confirmado', 4, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2694, 160, 22, 1, 'MED', 0, 5, 3, 'confirmado', 2, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2695, 160, 48, 1, 'MED', 0, 6, 4, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2696, 160, 30, 1, 'DEF', 0, 7, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2697, 160, 6, 1, 'DEL', 0, 8, 1, 'confirmado', 4, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2698, 160, 2, 1, 'DEF', 0, 9, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2699, 160, 23, 2, 'DEL', 0, 1, 1, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2700, 160, 10, 2, 'DEL', 0, 2, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2701, 160, 12, 2, 'MED', 0, 3, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2702, 160, 8, 2, 'MED', 0, 4, 2, 'confirmado', 3, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2703, 160, 9, 2, 'MED', 0, 5, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2704, 160, 17, 2, 'DEF', 0, 6, 1, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2705, 160, 37, 2, 'DEL', 0, 7, 3, 'confirmado', 0, 4.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2706, 160, 24, 2, 'DEF', 0, 8, 2, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2707, 160, 15, 2, 'DEL', 0, 9, 4, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2708, 161, 18, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2709, 161, 14, 1, 'DEF', 0, 2, 2, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2710, 161, 6, 1, 'DEL', 0, 3, 1, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2711, 161, 30, 1, 'DEF', 0, 4, 3, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2712, 161, 3, 1, 'DEL', 0, 5, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2713, 161, 17, 1, 'DEF', 0, 6, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2714, 161, 47, 1, 'MED', 0, 7, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2715, 161, 57, 1, 'MED', 0, 8, 2, 'confirmado', 4, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2716, 161, 5, 1, 'DEF', 0, 9, 5, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2717, 161, 7, 2, 'MED', 0, 1, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2718, 161, 10, 2, 'DEL', 0, 2, 1, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2719, 161, 48, 2, 'MED', 0, 3, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2720, 161, 8, 2, 'MED', 0, 4, 3, 'confirmado', 3, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2721, 161, 1, 2, 'MED', 0, 5, 4, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2722, 161, 38, 2, 'DEL', 0, 6, 2, 'confirmado', 5, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2723, 161, 40, 2, 'DEF', 0, 7, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2724, 161, 13, 2, 'DEL', 0, 8, 3, 'confirmado', 2, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2725, 161, 33, 2, 'DEF', 0, 9, 2, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2726, 162, 38, 1, 'DEL', 0, 1, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2727, 162, 14, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2728, 162, 43, 1, 'DEF', 0, 3, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2729, 162, 46, 1, 'MED', 0, 4, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2730, 162, 5, 1, 'DEF', 0, 5, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2731, 162, 24, 1, 'DEF', 0, 6, 4, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2732, 162, 9, 1, 'MED', 0, 7, 2, 'confirmado', 2, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2733, 162, 1, 1, 'MED', 0, 8, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2734, 162, 15, 1, 'DEL', 0, 9, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2735, 162, 12, 2, 'MED', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 13:20:41'),
-(2736, 162, 22, 2, 'MED', 0, 2, 2, 'confirmado', 1, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2737, 162, 30, 2, 'DEF', 0, 3, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2738, 162, 27, 2, 'ARQ', 1, 4, 1, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2739, 162, 41, 2, 'MED', 0, 5, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2740, 162, 18, 2, 'DEF', 0, 6, 2, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2741, 162, 8, 2, 'MED', 0, 7, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2742, 162, 6, 2, 'DEL', 0, 8, 1, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2743, 162, 17, 2, 'DEF', 0, 9, 3, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2744, 163, 17, 1, 'DEF', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2745, 163, 10, 1, 'DEL', 0, 2, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2746, 163, 7, 1, 'MED', 0, 3, 1, 'confirmado', 3, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2747, 163, 46, 1, 'MED', 0, 4, 2, 'confirmado', 1, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2748, 163, 5, 1, 'DEF', 0, 5, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2749, 163, 6, 1, 'DEL', 0, 6, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2750, 163, 41, 1, 'MED', 0, 7, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2751, 163, 1, 1, 'MED', 0, 8, 4, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2752, 163, 15, 1, 'DEL', 0, 9, 3, 'confirmado', 3, 7.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2753, 163, 9, 2, 'MED', 0, 1, 1, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2754, 163, 12, 2, 'MED', 0, 2, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 13:20:41'),
-(2755, 163, 29, 2, 'MED', 0, 3, 3, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2756, 163, 43, 2, 'DEF', 0, 4, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2757, 163, 24, 2, 'DEF', 0, 5, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2758, 163, 22, 2, 'MED', 0, 6, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2759, 163, 8, 2, 'MED', 0, 7, 5, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2760, 163, 38, 2, 'DEL', 0, 8, 1, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2761, 163, 18, 2, 'DEF', 0, 9, 3, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2762, 164, 9, 1, 'MED', 0, 1, 1, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2763, 164, 11, 1, 'DEF', 0, 2, 1, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2764, 164, 22, 1, 'MED', 0, 3, 2, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2765, 164, 43, 1, 'DEF', 0, 4, 2, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2766, 164, 17, 1, 'DEF', 0, 5, 3, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2767, 164, 41, 1, 'MED', 0, 6, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2768, 164, 6, 1, 'DEL', 0, 7, 1, 'confirmado', 4, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2769, 164, 15, 1, 'DEL', 0, 8, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2770, 164, 24, 1, 'DEF', 0, 9, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2771, 164, 27, 2, 'ARQ', 1, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2772, 164, 12, 2, 'MED', 0, 2, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2773, 164, 14, 2, 'DEF', 0, 3, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2774, 164, 7, 2, 'MED', 0, 4, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2775, 164, 8, 2, 'MED', 0, 5, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2776, 164, 40, 2, 'DEF', 0, 6, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2777, 164, 38, 2, 'DEL', 0, 7, 1, 'confirmado', 0, 5.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2778, 164, 1, 2, 'MED', 0, 8, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2779, 164, 47, 2, 'MED', 0, 9, 5, 'confirmado', 1, 5.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2780, 165, 13, 1, 'DEL', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2781, 165, 7, 1, 'MED', 0, 2, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2782, 165, 11, 1, 'DEF', 0, 3, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2783, 165, 16, 1, 'DEF', 0, 4, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2784, 165, 9, 1, 'MED', 0, 5, 2, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2785, 165, 38, 1, 'DEL', 0, 6, 2, 'confirmado', 3, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2786, 165, 17, 1, 'DEF', 0, 7, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2787, 165, 15, 1, 'DEL', 0, 8, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2788, 165, 57, 1, 'MED', 0, 9, 3, 'confirmado', 1, 6.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2789, 165, 5, 2, 'DEF', 0, 1, 1, 'confirmado', 0, 5.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2790, 165, 14, 2, 'DEF', 0, 2, 2, 'confirmado', 0, 7.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2791, 165, 29, 2, 'MED', 0, 3, 1, 'confirmado', 4, 8.5, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2792, 165, 12, 2, 'MED', 0, 4, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 13:20:41'),
-(2793, 165, 43, 2, 'DEF', 0, 5, 3, 'confirmado', 2, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2794, 165, 6, 2, 'DEL', 0, 6, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2795, 165, 41, 2, 'MED', 0, 7, 3, 'confirmado', 0, 6.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2796, 165, 1, 2, 'MED', 0, 8, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2797, 165, 24, 2, 'DEF', 0, 9, 4, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2798, 166, 13, 1, 'DEL', 0, 1, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2799, 166, 7, 1, 'MED', 0, 2, 1, 'confirmado', 5, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2800, 166, 12, 1, 'MED', 0, 3, 2, 'confirmado', 2, 9.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2801, 166, 40, 1, 'DEF', 0, 4, 1, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2802, 166, 5, 1, 'DEF', 0, 5, 2, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2803, 166, 9, 1, 'MED', 0, 6, 3, 'confirmado', 0, 8.5, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2804, 166, 41, 1, 'MED', 0, 7, 4, 'confirmado', 0, 8.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2805, 166, 15, 1, 'DEL', 0, 8, 2, 'confirmado', 3, 8.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2806, 166, 18, 1, 'DEF', 0, 9, 3, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2807, 166, 38, 2, 'DEL', 0, 1, 1, 'confirmado', 1, 6.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2808, 166, 6, 2, 'DEL', 0, 2, 2, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2809, 166, 43, 2, 'DEF', 0, 3, 1, 'confirmado', 0, 7.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2810, 166, 30, 2, 'DEF', 0, 4, 2, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2811, 166, 24, 2, 'DEF', 0, 5, 3, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2812, 166, 22, 2, 'MED', 0, 6, 1, 'confirmado', 1, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2813, 166, 17, 2, 'DEF', 0, 7, 4, 'confirmado', 0, 6.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2814, 166, 1, 2, 'MED', 0, 8, 2, 'confirmado', 2, 7.0, '2026-05-10 12:53:43', '2026-05-10 14:01:28'),
-(2815, 166, 57, 2, 'MED', 0, 9, 3, 'confirmado', 0, 1.0, '2026-05-10 12:53:43', '2026-05-10 12:53:43'),
-(2816, 171, 10, 1, 'DEL', 0, 1, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2817, 171, 7, 1, 'MED', 0, 2, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2818, 171, 40, 1, 'DEF', 0, 3, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2819, 171, 13, 1, 'DEL', 0, 4, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2820, 171, 18, 1, 'DEF', 0, 5, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2821, 171, 23, 1, 'DEL', 0, 6, 3, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2822, 171, 36, 2, 'MED', 0, 1, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2823, 171, 6, 2, 'DEL', 0, 2, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2824, 171, 17, 2, 'DEF', 0, 3, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2825, 171, 1, 2, 'MED', 0, 4, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2826, 171, 2, 2, 'DEF', 0, 5, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2827, 171, 35, 2, 'ARQ', 1, 6, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2828, 174, 32, 1, 'MED', 0, 1, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2829, 174, 31, 1, 'MED', 0, 2, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2830, 174, 17, 1, 'DEF', 0, 3, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2831, 174, 6, 1, 'DEL', 0, 4, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2832, 174, 1, 1, 'MED', 0, 5, 3, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2833, 174, 2, 1, 'DEF', 0, 6, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2834, 174, 10, 2, 'DEL', 0, 1, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2835, 174, 58, 2, 'MED', 0, 2, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2836, 174, 40, 2, 'DEF', 0, 3, 1, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2837, 174, 8, 2, 'MED', 0, 4, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2838, 174, 18, 2, 'DEF', 0, 5, 2, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:53:17'),
-(2839, 174, 34, 2, 'DEF', 0, 6, 3, 'confirmado', 0, NULL, '2026-05-10 13:32:09', '2026-05-10 13:32:09'),
-(2840, 176, 31, 2, 'MED', 0, 1, 1, 'convocado', 0, 7.5, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2841, 176, 32, 1, 'DEL', 0, 1, 1, 'convocado', 0, 8.5, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2842, 176, 17, 1, 'DEF', 0, 2, 1, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2843, 176, 7, 2, 'DEL', 0, 2, 1, 'convocado', 0, 8.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2844, 176, 30, 2, 'DEF', 0, 3, 1, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2845, 176, 35, 2, 'ARQ', 1, 4, 1, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2846, 176, 24, 1, 'ARQ', 1, 3, 1, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2847, 176, 22, 1, 'MED', 0, 4, 1, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2848, 176, 11, 2, 'DEF', 0, 5, 2, 'convocado', 0, 8.5, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2849, 176, 1, 1, 'MED', 0, 5, 2, 'convocado', 0, 6.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2850, 176, 47, 2, 'MED', 0, 6, 2, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2851, 176, 8, 2, 'MED', 0, 7, 3, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2852, 176, 14, 2, 'DEF', 0, 8, 3, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2853, 176, 40, 1, 'DEF', 0, 6, 2, 'convocado', 0, 7.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2854, 176, 6, 2, 'DEL', 0, 9, 2, 'convocado', 0, 8.5, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2855, 176, 29, 1, 'DEL', 0, 7, 2, 'convocado', 0, 8.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2856, 176, 44, 1, 'DEF', 0, 8, 3, 'convocado', 0, 5.0, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2857, 176, 12, 1, 'MED', 0, 9, 3, 'convocado', 0, 6.5, '2026-05-11 03:31:54', '2026-05-15 05:05:04'),
-(2876, 178, 31, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2877, 178, 10, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2878, 178, 17, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2879, 178, 34, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2880, 178, 30, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2881, 178, 1, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2882, 178, 38, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2883, 178, 39, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2884, 178, 47, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2885, 178, 6, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2886, 178, 43, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2887, 178, 2, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-15 15:49:46', '2026-05-15 15:49:46'),
-(2924, 181, 31, 1, 'LAT', 0, 1, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 13:08:29'),
-(2926, 181, 10, 2, 'DEL', 0, 1, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 01:37:11'),
-(2927, 181, 32, 1, 'LAT', 0, 2, 2, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 13:08:29'),
-(2928, 181, 17, 2, 'DEF', 0, 2, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 01:37:11'),
-(2930, 181, 35, 1, 'ARQ', 1, 4, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 01:37:11'),
-(2931, 181, 24, 2, 'ARQ', 1, 3, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 01:37:11'),
-(2932, 181, 22, 1, 'MED', 0, 5, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 13:08:29'),
-(2933, 181, 11, 2, 'LAT', 0, 4, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 13:08:29'),
-(2935, 181, 15, 2, 'DEL', 0, 5, 2, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 01:37:11'),
-(2936, 181, 8, 1, 'MED', 0, 6, 2, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 13:08:29'),
-(2937, 181, 14, 2, 'LAT', 0, 6, 2, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 13:08:29'),
-(2938, 181, 40, 2, 'MED', 0, 7, 1, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 13:08:29'),
-(2939, 181, 6, 1, 'DEL', 0, 7, 2, 'convocado', 0, NULL, '2026-05-18 03:21:49', '2026-05-19 01:39:19'),
-(2947, 181, 7, 1, 'DEL', 0, 3, 1, 'convocado', 0, NULL, '2026-05-18 13:11:52', '2026-05-19 01:39:19'),
-(3008, 181, 43, 2, 'MED', 0, 8, 2, 'convocado', 0, NULL, '2026-05-18 13:54:53', '2026-05-19 13:08:29'),
-(3009, 181, 12, 1, 'DEF', 0, 8, 1, 'convocado', 0, NULL, '2026-05-18 13:54:53', '2026-05-19 13:08:29'),
-(3010, 182, 31, 1, 'LAT', 0, 1, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3011, 182, 10, 1, 'MED', 0, 2, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3012, 182, 32, 2, 'DEL', 0, 1, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3013, 182, 17, 2, 'DEF', 0, 2, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3014, 182, 23, 1, 'DEL', 0, 3, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3015, 182, 7, 1, 'DEL', 0, 4, 2, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3016, 182, 35, 1, 'ARQ', 1, 5, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3017, 182, 24, 2, 'ARQ', 1, 3, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3018, 182, 22, 1, 'MED', 0, 6, 2, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3019, 182, 11, 2, 'LAT', 0, 4, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3020, 182, 1, 2, 'MED', 0, 5, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3021, 182, 15, 2, 'DEL', 0, 6, 2, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3022, 182, 8, 2, 'MED', 0, 7, 2, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3023, 182, 14, 1, 'DEF', 0, 7, 1, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3024, 182, 40, 2, 'MED', 0, 8, 3, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3025, 182, 6, 1, 'DEL', 0, 8, 3, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3026, 182, 43, 2, 'LAT', 0, 9, 2, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3027, 182, 12, 1, 'LAT', 0, 9, 2, 'convocado', 0, NULL, '2026-05-19 06:11:24', '2026-05-19 13:09:07'),
-(3046, 184, 31, 1, 'MED', 0, 1, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3047, 184, 13, 2, 'DEL', 0, 1, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3048, 184, 10, 1, 'MED', 0, 2, 2, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3049, 184, 17, 1, 'DEF', 0, 3, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3050, 184, 7, 1, 'DEL', 0, 4, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3051, 184, 35, 1, 'ARQ', 1, 5, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3052, 184, 24, 1, 'LAT', 0, 6, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3053, 184, 22, 2, 'LAT', 0, 2, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3054, 184, 5, 2, 'DEF', 0, 3, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3055, 184, 1, 2, 'MED', 0, 4, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3056, 184, 38, 1, 'DEL', 0, 7, 2, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3057, 184, 15, 2, 'DEL', 0, 5, 2, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3058, 184, 8, 2, 'MED', 0, 6, 2, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3059, 184, 6, 1, 'DEL', 0, 8, 3, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3060, 184, 43, 1, 'LAT', 0, 9, 2, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3061, 184, 64, 2, 'ARQ', 1, 7, 1, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3062, 184, 29, 2, 'MED', 0, 8, 3, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3063, 184, 12, 2, 'LAT', 0, 9, 2, 'convocado', 0, NULL, '2026-05-24 00:18:59', '2026-05-24 00:45:36'),
-(3082, 185, 31, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3083, 185, 13, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3084, 185, 10, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3085, 185, 17, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3086, 185, 7, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3087, 185, 24, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3088, 185, 22, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3089, 185, 5, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3090, 185, 37, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3091, 185, 1, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3092, 185, 38, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3093, 185, 15, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3094, 185, 8, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3095, 185, 6, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3096, 185, 43, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3097, 185, 64, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3098, 185, 29, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3099, 185, 12, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-24 21:03:44', '2026-05-24 21:03:44'),
-(3100, 186, 31, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3101, 186, 13, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3102, 186, 10, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3103, 186, 17, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3104, 186, 7, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3105, 186, 22, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3106, 186, 5, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3107, 186, 37, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3108, 186, 38, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3109, 186, 15, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3110, 186, 6, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3111, 186, 43, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3112, 186, 29, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3113, 186, 12, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:42:53', '2026-05-25 00:42:53'),
-(3114, 187, 31, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3115, 187, 13, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3116, 187, 10, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3117, 187, 17, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3118, 187, 7, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3119, 187, 24, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3120, 187, 22, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3121, 187, 5, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3122, 187, 37, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3123, 187, 1, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3124, 187, 38, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3125, 187, 15, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3126, 187, 8, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3127, 187, 6, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3128, 187, 43, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3129, 187, 64, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3130, 187, 29, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3131, 187, 12, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-25 00:46:37', '2026-05-25 00:46:37'),
-(3132, 188, 13, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3133, 188, 17, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3134, 188, 23, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3135, 188, 7, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3136, 188, 35, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3137, 188, 24, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3138, 188, 22, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3139, 188, 5, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3140, 188, 11, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3141, 188, 1, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3142, 188, 38, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3143, 188, 8, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3144, 188, 14, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3145, 188, 6, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3146, 188, 43, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3147, 188, 29, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3148, 188, 44, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34'),
-(3149, 188, 12, NULL, NULL, 0, NULL, NULL, 'convocado', 0, NULL, '2026-05-31 22:27:12', '2026-06-01 23:49:34');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_round_robin_results`
---
-
-CREATE TABLE `match_round_robin_results` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `home_team_number` tinyint(3) UNSIGNED NOT NULL,
-  `away_team_number` tinyint(3) UNSIGNED NOT NULL,
-  `leg` tinyint(3) UNSIGNED NOT NULL,
-  `home_goals` smallint(5) UNSIGNED DEFAULT NULL,
-  `away_goals` smallint(5) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `match_teams`
---
-
-CREATE TABLE `match_teams` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `match_id` int(10) UNSIGNED NOT NULL,
-  `team_number` tinyint(3) UNSIGNED NOT NULL,
-  `team_name` varchar(80) DEFAULT NULL,
-  `captain_player_id` int(10) UNSIGNED DEFAULT NULL,
-  `total_skill` decimal(5,1) NOT NULL DEFAULT 0.0,
-  `formation_name` varchar(80) DEFAULT NULL,
-  `formation_data` text DEFAULT NULL,
-  `color_name` varchar(40) DEFAULT NULL,
-  `goals` smallint(5) UNSIGNED NOT NULL DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `match_teams`
---
-
-INSERT INTO `match_teams` (`id`, `match_id`, `team_number`, `team_name`, `captain_player_id`, `total_skill`, `formation_name`, `formation_data`, `color_name`, `goals`, `created_at`, `updated_at`) VALUES
-(230, 132, 1, 'Equipo 1', 18, 30.1, '1-1-0-3-4', '[{\"id\":18,\"position\":\"DEF\"},{\"id\":27,\"position\":\"ARQ\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":59,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]', 'ROSA', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(231, 132, 2, 'Equipo 2', 30, 28.4, '0-5-0-3-1', '[{\"id\":30,\"position\":\"DEF\"},{\"id\":19,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"}]', 'AZUL', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(232, 133, 1, 'Equipo 1', 38, 29.2, '0-6-0-1-2', '[{\"id\":38,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":12,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"}]', 'ROSA', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(233, 133, 2, 'Equipo 2', 6, 35.4, '0-4-0-3-2', '[{\"id\":6,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":9,\"position\":\"MED\"}]', 'AZUL', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(234, 134, 1, 'Equipo 1', 17, 27.8, '0-4-0-3-2', '[{\"id\":17,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":41,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]', 'AZUL', 9, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(235, 134, 2, 'Equipo 2', 10, 30.9, '0-4-0-2-3', '[{\"id\":10,\"position\":\"DEL\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"}]', 'ROSA', 11, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(236, 135, 1, 'Equipo 1', 61, 32.3, '0-5-0-1-3', '[{\"id\":61,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"}]', 'ROSA', 6, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(237, 135, 2, 'Equipo 2', 23, 29.7, '0-4-0-3-2', '[{\"id\":23,\"position\":\"DEL\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":22,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"}]', 'AZUL', 10, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(238, 136, 1, 'Equipo 1', 44, 30.1, '0-4-0-3-2', '[{\"id\":44,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"}]', 'AZUL', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(239, 136, 2, 'Equipo 2', 40, 28.8, '0-5-0-1-3', '[{\"id\":40,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":22,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]', 'ROSA', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(240, 137, 1, 'Equipo 1', NULL, 27.9, '0-4-0-1-4', '[{\"id\":5,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]', 'ROSA', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(241, 137, 2, 'Equipo 2', NULL, 29.2, '1-4-0-3-1', '[{\"id\":27,\"position\":\"ARQ\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":19,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"}]', 'AZUL', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(242, 138, 1, 'Equipo 1', 61, 32.5, '0-5-0-3-1', '[{\"id\":61,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"}]', 'ROSA', 7, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(243, 138, 2, 'Equipo 2', 17, 31.1, '0-4-0-2-3', '[{\"id\":17,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":12,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"}]', 'AZUL', 3, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(244, 139, 1, 'Equipo 1', 13, 29.0, '1-3-0-3-2', '[{\"id\":13,\"position\":\"DEL\"},{\"id\":22,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":59,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":35,\"position\":\"ARQ\"}]', 'ROSA', 7, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(245, 139, 2, 'Equipo 2', 7, 26.9, '0-3-0-3-3', '[{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]', 'AZUL', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(246, 140, 1, 'Equipo 1', NULL, 27.8, '0-5-0-2-2', '[{\"id\":23,\"position\":\"DEL\"},{\"id\":19,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]', 'ROSA', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(247, 140, 2, 'Equipo 2', NULL, 29.7, '0-3-0-2-4', '[{\"id\":30,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"}]', 'AZUL', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(248, 141, 1, 'Equipo 1', NULL, 27.9, '0-5-0-2-2', '[{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"}]', 'ROSA', 11, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(249, 141, 2, 'Equipo 2', NULL, 30.6, '0-4-0-2-3', '[{\"id\":19,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"}]', 'AZUL', 9, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(250, 142, 1, 'Equipo 1', NULL, 30.1, '0-6-0-1-2', '[{\"id\":6,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":61,\"position\":\"DEF\"}]', 'ROSA', 8, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(251, 142, 2, 'Equipo 2', NULL, 28.9, '0-4-0-3-2', '[{\"id\":45,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":23,\"position\":\"DEL\"}]', 'AZUL', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(252, 143, 1, 'Equipo 1', NULL, 28.3, '1-4-0-2-2', '[{\"id\":27,\"position\":\"ARQ\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":16,\"position\":\"DEF\"},{\"id\":42,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"}]', 'ROSA', 10, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(253, 143, 2, 'Equipo 2', NULL, 27.1, '0-2-0-4-3', '[{\"id\":41,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":59,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":4,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"}]', 'AZUL', 8, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(254, 144, 1, 'Equipo 1', NULL, 31.0, '0-3-0-4-2', '[{\"id\":38,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"}]', 'ROSA', 4, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(255, 144, 2, 'Equipo 2', NULL, 27.8, '0-5-0-2-1', '[{\"id\":11,\"position\":\"DEF\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":46,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]', 'AZUL', 9, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(256, 145, 1, 'Equipo 1', NULL, 26.2, '0-5-0-2-2', '[{\"id\":61,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"}]', 'ROSA', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(257, 145, 2, 'Equipo 2', NULL, 30.7, '0-2-0-5-2', '[{\"id\":30,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":9,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":59,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"}]', 'AZUL', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(258, 146, 1, 'Equipo 1', 1, 32.0, '0-4-0-3-2', '[{\"id\":1,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":47,\"position\":\"MED\"}]', 'ROSA', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(259, 146, 2, 'Equipo 2', 10, 31.8, '0-2-0-4-3', '[{\"id\":10,\"position\":\"DEL\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]', 'AZUL', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(260, 147, 1, 'Equipo 1', NULL, 30.4, '0-3-0-2-4', '[{\"id\":23,\"position\":\"DEL\"},{\"id\":49,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":48,\"position\":\"MED\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":19,\"position\":\"DEF\"}]', 'ROSA', 6, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(261, 147, 2, 'Equipo 2', NULL, 28.3, '0-4-0-2-3', '[{\"id\":5,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":3,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":2,\"position\":\"DEF\"}]', 'AZUL', 3, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(262, 148, 1, 'Equipo 1', 1, 32.0, '0-3-0-5-1', '[{\"id\":1,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":48,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"}]', 'ROSA', 10, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(263, 148, 2, 'Equipo 2', 38, 33.0, '0-4-0-1-4', '[{\"id\":38,\"position\":\"DEL\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"}]', 'AZUL', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(264, 149, 1, 'Equipo 1', 10, 30.8, '0-2-0-4-3', '[{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":51,\"position\":\"MED\"},{\"id\":25,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]', 'ROSA', 12, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(265, 149, 2, 'Equipo 2', 27, 29.0, '1-4-0-2-2', '[{\"id\":27,\"position\":\"ARQ\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":52,\"position\":\"MED\"},{\"id\":16,\"position\":\"DEF\"},{\"id\":4,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":33,\"position\":\"DEF\"}]', 'AZUL', 7, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(266, 150, 1, 'Equipo 1', NULL, 29.5, '0-0-0-8-1', '[{\"id\":45,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":51,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":53,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"}]', 'ROSA', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(267, 150, 2, 'Equipo 2', NULL, 33.7, '0-5-0-1-3', '[{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"}]', 'AZUL', 9, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(268, 151, 1, 'Equipo 1', NULL, 29.2, '0-1-0-4-4', '[{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":46,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":4,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":23,\"position\":\"DEL\"}]', 'ROSA', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(269, 151, 2, 'Equipo 2', NULL, 29.9, '0-3-0-5-1', '[{\"id\":14,\"position\":\"DEF\"},{\"id\":55,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":49,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":52,\"position\":\"MED\"}]', 'AZUL', 0, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(270, 152, 1, 'Equipo 1', NULL, 32.4, '1-1-0-5-2', '[{\"id\":6,\"position\":\"DEL\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":60,\"position\":\"MED\"}]', 'ROSA', 9, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(271, 152, 2, 'Equipo 2', NULL, 30.6, '0-4-0-3-2', '[{\"id\":17,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":12,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":5,\"position\":\"DEF\"}]', 'AZUL', 8, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(272, 153, 1, 'Equipo 1', NULL, 31.0, '0-3-0-4-2', '[{\"id\":61,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":46,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":29,\"position\":\"MED\"}]', 'AZUL', 9, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(273, 153, 2, 'Equipo 2', NULL, 29.6, '0-2-0-6-1', '[{\"id\":7,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":52,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":49,\"position\":\"MED\"}]', 'ROSA', 7, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(274, 154, 1, 'Equipo 1', NULL, 28.3, '1-4-0-3-0', '[{\"id\":27,\"position\":\"ARQ\"},{\"id\":1,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":25,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":4,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"}]', 'ROSA', 4, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(275, 154, 2, 'Equipo 2', NULL, 31.0, '0-3-0-5-1', '[{\"id\":60,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"}]', 'AZUL', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(276, 155, 1, 'Equipo 1', NULL, 28.6, '0-4-0-3-2', '[{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":56,\"position\":\"MED\"},{\"id\":3,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"},{\"id\":49,\"position\":\"MED\"}]', 'AZUL', 3, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(277, 155, 2, 'Equipo 2', NULL, 29.1, '0-2-0-5-2', '[{\"id\":10,\"position\":\"DEL\"},{\"id\":46,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":52,\"position\":\"MED\"},{\"id\":7,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":61,\"position\":\"DEF\"}]', 'ROSA', 4, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(278, 156, 1, 'Equipo 1', NULL, 29.4, '1-5-0-2-1', '[{\"id\":14,\"position\":\"DEF\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":45,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"}]', 'AZUL', 12, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(279, 156, 2, 'Equipo 2', NULL, 28.7, '0-2-0-5-2', '[{\"id\":30,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":46,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"}]', 'ROSA', 10, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(280, 157, 1, 'Equipo 1', NULL, 28.8, '0-5-0-2-2', '[{\"id\":23,\"position\":\"DEL\"},{\"id\":49,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"}]', 'AZUL', 2, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(281, 157, 2, 'Equipo 2', NULL, 31.5, '0-0-0-6-3', '[{\"id\":9,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"},{\"id\":56,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]', 'ROSA', 6, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(282, 158, 1, 'Equipo 1', NULL, 33.0, '1-1-0-5-2', '[{\"id\":9,\"position\":\"MED\"},{\"id\":12,\"position\":\"MED\"},{\"id\":27,\"position\":\"ARQ\"},{\"id\":41,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"}]', 'AZUL', 6, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(283, 158, 2, 'Equipo 2', NULL, 31.1, '0-3-0-5-1', '[{\"id\":6,\"position\":\"DEL\"},{\"id\":48,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":58,\"position\":\"MED\"},{\"id\":61,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":45,\"position\":\"MED\"}]', 'ROSA', 3, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(284, 159, 1, 'Equipo 1', NULL, 30.3, '0-3-0-3-3', '[{\"id\":13,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":33,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":47,\"position\":\"MED\"},{\"id\":25,\"position\":\"DEF\"},{\"id\":52,\"position\":\"MED\"}]', 'AZUL', 4, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(285, 159, 2, 'Equipo 2', NULL, 28.4, '0-4-0-5-0', '[{\"id\":17,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":4,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":61,\"position\":\"DEF\"}]', 'ROSA', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(286, 160, 1, 'Equipo 1', NULL, 31.1, '0-4-0-4-1', '[{\"id\":1,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":48,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":2,\"position\":\"DEF\"}]', 'ROSA', 11, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(287, 160, 2, 'Equipo 2', NULL, 31.5, '0-2-0-3-4', '[{\"id\":23,\"position\":\"DEL\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":12,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":9,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":37,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"}]', 'AZUL', 6, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(288, 161, 1, 'Equipo 1', NULL, 29.0, '0-5-0-2-2', '[{\"id\":18,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":3,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":47,\"position\":\"MED\"},{\"id\":57,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"}]', 'ROSA', 10, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(289, 161, 2, 'Equipo 2', NULL, 30.0, '0-2-0-4-3', '[{\"id\":7,\"position\":\"MED\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":48,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":33,\"position\":\"DEF\"}]', 'AZUL', 12, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(290, 162, 1, 'Equipo 1', NULL, 29.5, '0-4-0-3-2', '[{\"id\":38,\"position\":\"DEL\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":46,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]', 'ROSA', 4, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(291, 162, 2, 'Equipo 2', NULL, 30.1, '1-3-0-4-1', '[{\"id\":45,\"position\":\"MED\"},{\"id\":22,\"position\":\"MED\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":27,\"position\":\"ARQ\"},{\"id\":41,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"}]', 'AZUL', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(292, 163, 1, 'Equipo 1', NULL, 32.3, '0-2-0-4-3', '[{\"id\":17,\"position\":\"DEF\"},{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":46,\"position\":\"MED\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":41,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"}]', 'ROSA', 7, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(293, 163, 2, 'Equipo 2', NULL, 30.8, '0-3-0-5-1', '[{\"id\":9,\"position\":\"MED\"},{\"id\":45,\"position\":\"MED\"},{\"id\":29,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]', 'AZUL', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(294, 164, 1, 'Equipo 1', NULL, 34.1, '0-4-0-3-2', '[{\"id\":9,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":41,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":24,\"position\":\"DEF\"}]', 'AZUL', 7, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(295, 164, 2, 'Equipo 2', NULL, 31.8, '1-2-0-5-1', '[{\"id\":27,\"position\":\"ARQ\"},{\"id\":12,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":7,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":47,\"position\":\"MED\"}]', 'ROSA', 3, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(296, 165, 1, 'Equipo 1', NULL, 32.5, '0-3-0-3-3', '[{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":16,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":57,\"position\":\"MED\"}]', 'AZUL', 6, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(297, 165, 2, 'Equipo 2', NULL, 31.4, '0-4-0-4-1', '[{\"id\":5,\"position\":\"DEF\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":29,\"position\":\"MED\"},{\"id\":45,\"position\":\"MED\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":41,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":24,\"position\":\"DEF\"}]', 'ROSA', 7, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(298, 166, 1, 'Equipo 1', NULL, 29.1, '0-3-0-4-2', '[{\"id\":13,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":12,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":9,\"position\":\"MED\"},{\"id\":41,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"}]', 'AZUL', 10, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(299, 166, 2, 'Equipo 2', NULL, 30.6, '0-4-0-3-2', '[{\"id\":38,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":43,\"position\":\"DEF\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":24,\"position\":\"DEF\"},{\"id\":22,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":57,\"position\":\"MED\"}]', 'ROSA', 5, '2026-05-10 12:53:43', '2026-05-19 05:59:51'),
-(300, 171, 1, 'Equipo naranja', NULL, 18.8, '0-2-0-1-3', '[{\"id\":10,\"position\":\"DEL\"},{\"id\":7,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":13,\"position\":\"DEL\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":23,\"position\":\"DEL\"}]', 'NARANJA', 0, '2026-05-10 13:32:09', '2026-05-19 05:59:51'),
-(301, 171, 2, 'Descamisados', NULL, 20.1, '1-2-0-2-1', '[{\"id\":36,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"},{\"id\":35,\"position\":\"ARQ\"}]', 'BLANCO', 0, '2026-05-10 13:32:09', '2026-05-19 05:59:51'),
-(302, 174, 1, 'Descamisados FC', NULL, 20.2, '0-2-0-3-1', '[{\"id\":32,\"position\":\"MED\"},{\"id\":31,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":1,\"position\":\"MED\"},{\"id\":2,\"position\":\"DEF\"}]', 'BLANCO', 0, '2026-05-10 13:32:09', '2026-05-19 05:59:51'),
-(303, 174, 2, 'Equipo naranja', NULL, 18.3, '0-3-0-2-1', '[{\"id\":10,\"position\":\"DEL\"},{\"id\":58,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":8,\"position\":\"MED\"},{\"id\":18,\"position\":\"DEF\"},{\"id\":34,\"position\":\"DEF\"}]', 'NARANJA', 0, '2026-05-10 13:32:09', '2026-05-19 05:59:51'),
-(306, 176, 1, 'Equipo 1', NULL, 33.9, '1-3-0-3-2', '[{\"id\":32,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"ARQ\"},{\"id\":22,\"position\":\"MED\"},{\"id\":1,\"position\":\"MED\"},{\"id\":40,\"position\":\"DEF\"},{\"id\":29,\"position\":\"DEL\"},{\"id\":44,\"position\":\"DEF\"},{\"id\":12,\"position\":\"MED\"}]', 'ROSA', 0, '2026-05-12 02:40:01', '2026-05-19 05:59:51'),
-(307, 176, 2, 'Equipo 2', NULL, 32.4, '1-3-0-3-2', '[{\"id\":31,\"position\":\"MED\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":30,\"position\":\"DEF\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":11,\"position\":\"DEF\"},{\"id\":47,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"}]', 'AZUL', 0, '2026-05-12 02:40:01', '2026-05-19 05:59:51'),
-(310, 181, 1, 'Equipo 1', NULL, 31.7, '3-2-2', '[{\"id\":31,\"position\":\"LAT\"},{\"id\":32,\"position\":\"LAT\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":22,\"position\":\"MED\"},{\"id\":8,\"position\":\"MED\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":12,\"position\":\"DEF\"}]', 'ROSA', 0, '2026-05-19 01:37:11', '2026-05-25 21:48:20'),
-(311, 181, 2, 'Equipo 2', NULL, 32.8, '3-2-2', '[{\"id\":10,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"ARQ\"},{\"id\":11,\"position\":\"LAT\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":14,\"position\":\"LAT\"},{\"id\":40,\"position\":\"MED\"},{\"id\":43,\"position\":\"MED\"}]', 'AZUL', 0, '2026-05-19 01:37:11', '2026-05-25 21:48:20'),
-(314, 182, 1, 'Equipo 1', NULL, 34.0, '3-2-3', '[{\"id\":31,\"position\":\"LAT\"},{\"id\":10,\"position\":\"MED\"},{\"id\":23,\"position\":\"DEL\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":22,\"position\":\"MED\"},{\"id\":14,\"position\":\"DEF\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":12,\"position\":\"LAT\"}]', 'ROSA', 0, '2026-05-19 13:09:07', '2026-05-19 13:09:07'),
-(315, 182, 2, 'Equipo 2', NULL, 34.8, '3-3-2', '[{\"id\":32,\"position\":\"DEL\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":24,\"position\":\"ARQ\"},{\"id\":11,\"position\":\"LAT\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":40,\"position\":\"MED\"},{\"id\":43,\"position\":\"LAT\"}]', 'AZUL', 0, '2026-05-19 13:09:07', '2026-05-19 13:09:07'),
-(316, 184, 1, 'Equipo 1', NULL, 32.9, '3-2-3', '[{\"id\":31,\"position\":\"MED\"},{\"id\":10,\"position\":\"MED\"},{\"id\":17,\"position\":\"DEF\"},{\"id\":7,\"position\":\"DEL\"},{\"id\":35,\"position\":\"ARQ\"},{\"id\":24,\"position\":\"LAT\"},{\"id\":38,\"position\":\"DEL\"},{\"id\":6,\"position\":\"DEL\"},{\"id\":43,\"position\":\"LAT\"}]', 'ROSA', 0, '2026-05-24 00:45:36', '2026-05-24 00:45:36'),
-(317, 184, 2, 'Equipo 2', NULL, 32.2, '3-3-2', '[{\"id\":13,\"position\":\"DEL\"},{\"id\":22,\"position\":\"LAT\"},{\"id\":5,\"position\":\"DEF\"},{\"id\":1,\"position\":\"MED\"},{\"id\":15,\"position\":\"DEL\"},{\"id\":8,\"position\":\"MED\"},{\"id\":64,\"position\":\"ARQ\"},{\"id\":29,\"position\":\"MED\"},{\"id\":12,\"position\":\"LAT\"}]', 'AZUL', 0, '2026-05-24 00:45:36', '2026-05-24 00:45:36');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `players`
---
-
+DROP TABLE IF EXISTS `players`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `players` (
-  `id` int(10) UNSIGNED NOT NULL,
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
   `positions` varchar(20) NOT NULL,
   `pace` enum('rapido','lento') NOT NULL DEFAULT 'rapido',
@@ -1664,80 +578,32 @@ CREATE TABLE `players` (
   `photo_path` varchar(255) DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_players_name` (`name`),
+  KEY `idx_players_active` (`active`)
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `players`
+-- Dumping data for table `players`
 --
 
-INSERT INTO `players` (`id`, `name`, `positions`, `pace`, `skill`, `technique`, `rhythm`, `defense_physical`, `attack`, `teamwork`, `mentality`, `regularity`, `goalkeeper_skill`, `photo_path`, `active`, `created_at`, `updated_at`) VALUES
-(1, 'MARCELO', 'MED/LAT', 'lento', 2.3, 3.4, 1.0, 2.3, 2.2, 4.0, 1.0, 1.2, NULL, 'uploads/players/player-1-a52c24b60792adf3.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:58:47'),
-(2, 'RODRI SUAREZ', 'DEF/ARQ', 'lento', 2.5, 1.0, 2.0, 3.0, 1.0, 5.0, 3.0, 2.0, 3.0, 'uploads/players/player-2-a2cc26482d5bb135.png', 1, '2026-03-18 03:59:04', '2026-06-01 05:19:27'),
-(3, 'ALEJO', 'DEL', 'rapido', 3.8, 4.0, 4.0, 3.0, 4.0, 4.0, 3.0, 3.5, NULL, NULL, 0, '2026-03-18 03:59:04', '2026-05-25 22:16:48'),
-(4, 'FRANQUITO', 'MED', 'rapido', 3.4, 3.0, 5.0, 2.0, 3.0, 3.0, 3.0, 4.0, NULL, NULL, 1, '2026-03-18 03:59:04', '2026-05-25 22:16:48'),
-(5, 'JAVI', 'DEF/ARQ', 'lento', 3.2, 2.7, 3.0, 3.7, 2.0, 3.0, 4.0, 3.0, 3.0, 'uploads/players/player-5-7d59a02f5882a75e.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:53:16'),
-(6, 'PELA', 'DEL/MED', 'rapido', 3.8, 4.1, 4.3, 3.6, 4.6, 1.0, 4.0, 3.0, NULL, 'uploads/players/player-6-c0c87cb9971098ec.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:49:03'),
-(7, 'CUERVO', 'DEL/DEF', 'rapido', 4.5, 5.4, 4.0, 3.6, 6.0, 2.3, 3.0, 4.1, NULL, 'uploads/players/player-7-5819744c55597d91.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:57:05'),
-(8, 'NICO', 'MED/LAT', 'lento', 3.6, 4.0, 3.0, 2.5, 4.0, 4.0, 4.0, 3.0, NULL, 'uploads/players/player-8-c063b231f729e90b.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:49:32'),
-(9, 'AUGUSTO', 'MED/LAT', 'rapido', 3.9, 5.0, 4.0, 4.0, 4.0, 4.0, 2.0, 3.0, NULL, NULL, 1, '2026-03-18 03:59:04', '2026-05-19 06:05:44'),
-(10, 'BRIAN', 'DEL/MED', 'rapido', 4.9, 6.0, 4.0, 5.0, 5.0, 4.0, 4.0, 5.0, NULL, 'uploads/players/player-10-86836ff1a55a64d3.png', 1, '2026-03-18 03:59:04', '2026-06-01 05:19:27'),
-(11, 'MANU', 'LAT/MED', 'rapido', 4.8, 4.5, 6.0, 4.9, 4.3, 3.7, 3.4, 4.9, NULL, 'uploads/players/player-11-cb5aad66658062ca.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:51:29'),
-(12, 'VIKINGO', 'MED/LAT', 'rapido', 3.9, 4.2, 6.0, 3.9, 3.0, 1.9, 3.0, 3.4, NULL, 'uploads/players/player-12-d779f7d12a9f25b2.png', 1, '2026-03-18 03:59:04', '2026-06-01 20:02:58'),
-(13, 'ANIBAL', 'DEL', 'lento', 2.6, 3.0, 1.0, 2.0, 4.0, 2.0, 2.6, 2.0, NULL, 'uploads/players/player-13-5e2bb8a8aecf1c3e.png', 1, '2026-03-18 03:59:04', '2026-06-01 20:01:59'),
-(14, 'PABLO', 'DEF/LAT', 'rapido', 4.2, 3.3, 4.2, 5.0, 3.0, 3.7, 4.6, 4.6, NULL, 'uploads/players/player-14-7ced868a71da3574.png', 1, '2026-03-18 03:59:04', '2026-06-01 20:01:33'),
-(15, 'MAURI', 'DEL', 'rapido', 3.2, 2.0, 4.0, 2.0, 4.0, 3.0, 3.0, 2.0, NULL, 'uploads/players/player-15-be2d5275c69ea87a.png', 1, '2026-03-18 03:59:04', '2026-06-01 05:19:27'),
-(16, 'ALE CUERVO', 'LAT/MED', 'lento', 2.3, 2.0, 3.0, 2.0, 2.0, 3.0, 2.0, 2.0, NULL, NULL, 1, '2026-03-18 03:59:04', '2026-05-25 22:16:48'),
-(17, 'CESAR', 'DEF/LAT', 'rapido', 3.9, 4.3, 3.1, 4.8, 2.9, 3.7, 3.0, 4.0, NULL, 'uploads/players/player-17-d28fe883e00d9e28.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:56:21'),
-(18, 'GUILLE', 'LAT/ARQ', 'lento', 1.7, 2.0, 1.0, 2.0, 1.0, 3.0, 2.0, 2.0, 3.0, 'uploads/players/player-18-72f0eac4516654bc.png', 1, '2026-03-18 03:59:04', '2026-06-01 05:19:27'),
-(19, 'SEBACORTEZ', 'DEF/ARQ', 'lento', 2.9, 4.0, 2.0, 3.0, 4.0, 2.0, 3.0, 3.0, 3.0, 'uploads/players/player-19-25006ca57e0eca8c.png', 1, '2026-03-18 03:59:04', '2026-06-01 05:19:27'),
-(22, 'ISMA', 'MED/LAT', 'rapido', 4.1, 4.9, 4.0, 3.9, 3.2, 4.0, 3.7, 3.7, NULL, 'uploads/players/player-22-c852e339dc842ab5.png', 1, '2026-03-18 03:59:04', '2026-06-01 20:02:30'),
-(23, 'CRISTIAN', 'DEL/ARQ', 'lento', 2.1, 2.0, 1.4, 1.4, 2.2, 2.0, 3.9, 3.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-06-01 19:46:16'),
-(24, 'FRANCOK', 'ARQ/LAT', 'rapido', 2.9, 1.2, 3.6, 3.0, 1.0, 3.0, 3.0, 2.0, 3.2, 'uploads/players/player-24-aa991162398df52b.png', 1, '2026-03-18 03:59:04', '2026-06-01 19:57:59'),
-(25, 'TIMO', 'DEF', 'rapido', 3.5, 2.0, 4.0, 5.0, 2.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-03-18 03:59:04', '2026-05-25 22:16:48'),
-(27, 'GONZA', 'ARQ/DEF', 'lento', 3.1, 3.0, 3.0, 3.0, 4.0, 4.0, 3.0, 3.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-10 13:01:53'),
-(29, 'TEBO', 'MED/DEL', 'rapido', 4.8, 4.9, 6.0, 4.5, 4.0, 3.0, 4.2, 6.0, NULL, NULL, 1, '2026-05-05 01:50:25', '2026-06-01 19:46:49'),
-(30, 'FACU', 'DEF/DEL', 'rapido', 3.6, 2.0, 4.0, 6.0, 1.0, 2.0, 4.0, 2.0, NULL, 'uploads/players/player-30-234798d02cd7a738.png', 1, '2026-05-05 09:51:56', '2026-06-01 05:19:27'),
-(31, 'ALEXIS', 'LAT/MED', 'rapido', 4.1, 3.0, 6.0, 4.0, 3.0, 3.0, 4.0, 4.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-25 22:16:48'),
-(32, 'CAMILO', 'MED/DEL', 'rapido', 4.4, 5.0, 5.0, 3.0, 4.0, 4.0, 4.0, 4.0, NULL, 'uploads/players/player-32-f633ec407a872c13.png', 1, '2026-05-10 12:34:45', '2026-06-01 05:19:27'),
-(33, 'COMANCHE', 'LAT/MED', 'lento', 2.6, 4.0, 2.0, 3.0, 2.0, 2.0, 3.0, 3.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-19 06:05:44'),
-(34, 'ELIAN', 'DEF/DEL', 'lento', 2.0, 2.0, 1.0, 2.0, 2.0, 3.0, 3.0, 2.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-19 05:59:51'),
-(35, 'FRANCISCO', 'ARQ/DEL', 'lento', 2.3, 1.0, 3.0, 1.0, 1.0, 2.0, 3.0, 2.0, 3.0, NULL, 1, '2026-05-10 12:34:45', '2026-05-23 21:03:57'),
-(36, 'FRANCO COMOLLI', 'MED/DEL', 'rapido', 5.9, 6.0, 6.0, 6.0, 6.0, 4.0, 6.0, 6.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-25 22:16:48'),
-(37, 'JEAN FRANCO', 'DEL', 'lento', 2.6, 3.0, 3.0, 2.0, 2.0, 3.0, 4.0, 2.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-23 21:15:23'),
-(38, 'MARIAN', 'DEL/MED', 'lento', 2.8, 4.0, 1.0, 2.0, 4.0, 3.0, 2.0, 1.0, NULL, 'uploads/players/player-38-6246664d7fa5f51a.png', 1, '2026-05-10 12:34:45', '2026-06-01 05:19:27'),
-(39, 'MATI BRAIAN', 'DEF/MED', 'rapido', 3.4, 3.0, 5.0, 3.0, 4.0, 2.0, 3.0, 4.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-25 22:16:48'),
-(40, 'PABLO CASTILLO', 'LAT/MED', 'lento', 3.1, 4.0, 2.0, 4.0, 2.0, 4.0, 3.0, 3.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-25 22:16:48'),
-(41, 'PABLO GARCIA', 'MED/LAT', 'lento', 2.1, 1.0, 3.0, 2.0, 3.0, 2.0, 2.0, 3.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-25 22:16:48'),
-(42, 'PULY', 'DEL/MED', 'lento', 2.5, 5.0, 1.0, 1.0, 3.0, 3.0, 1.0, 1.0, NULL, NULL, 1, '2026-05-10 12:34:45', '2026-05-25 22:16:48'),
-(43, 'RODRI CHAVEZ', 'LAT/MED', 'rapido', 4.1, 3.3, 4.6, 4.2, 3.2, 3.4, 4.9, 4.8, NULL, 'uploads/players/player-43-a08f689f7de72dd3.png', 1, '2026-05-10 12:34:45', '2026-06-01 20:00:27'),
-(44, 'VICTOR', 'DEF/LAT', 'lento', 3.7, 4.0, 2.3, 5.0, 2.0, 3.9, 3.0, 3.9, NULL, 'uploads/players/player-44-9a0e4813e8797a13.png', 1, '2026-05-10 12:34:45', '2026-06-01 19:59:48'),
-(46, 'Mariano Planas', 'DEF', 'rapido', 4.1, 3.0, 4.0, 5.0, 2.0, 5.0, 4.0, 4.0, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-25 22:16:48'),
-(47, 'MAXI', 'MED', 'lento', 2.5, 3.0, 2.0, 2.0, 2.0, 4.0, 2.0, 2.0, NULL, NULL, 1, '2026-05-10 12:43:29', '2026-05-25 22:16:48'),
-(48, 'Octavio', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-23 23:56:58'),
-(49, 'Piki', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-23 21:02:36'),
-(51, 'Roman', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-23 21:01:54'),
-(52, 'Matias C', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-23 21:03:31'),
-(53, 'Marcos', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-14 17:37:28'),
-(55, 'Mati Rosales', 'MED/LAT', 'rapido', 3.3, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 4.0, NULL, NULL, 1, '2026-05-10 12:43:29', '2026-05-25 22:16:48'),
-(56, 'DARIO', 'MED', 'lento', 2.5, 2.0, 3.0, 3.0, 3.0, 2.0, 3.0, 3.0, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-25 22:16:48'),
-(57, 'BETO', 'DEL/MED', 'lento', 3.1, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0, 4.0, NULL, NULL, 1, '2026-05-10 12:43:29', '2026-05-25 22:16:48'),
-(58, 'Mati', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 12:43:29', '2026-05-23 21:01:17'),
-(59, 'Rodri Rojas', 'MED', 'rapido', 3.5, 3.0, 4.0, 3.0, 3.0, 4.0, 3.0, 4.0, NULL, NULL, 0, '2026-05-10 12:44:36', '2026-05-25 22:16:48'),
-(60, 'Manuel', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 12:44:59', '2026-05-25 00:53:04'),
-(61, 'FRANCO', 'DEF/MED', 'lento', 2.6, 2.0, 2.0, 2.0, 3.0, 4.0, 4.0, 3.0, NULL, NULL, 0, '2026-05-10 12:46:46', '2026-05-25 22:16:48'),
-(62, 'Lucas2', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-10 13:20:41', '2026-05-23 21:01:02'),
-(63, 'Lucas (fusionado en VIKINGO)', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.5, NULL, NULL, 0, '2026-05-19 06:05:44', '2026-05-19 06:05:44'),
-(64, 'SANTI', 'ARQ/MED', 'rapido', 4.2, 5.0, 4.0, 3.0, 3.0, 3.0, 3.0, 4.0, 5.0, NULL, 1, '2026-05-23 20:59:36', '2026-05-25 00:44:55');
-
--- --------------------------------------------------------
+LOCK TABLES `players` WRITE;
+/*!40000 ALTER TABLE `players` DISABLE KEYS */;
+INSERT INTO `players` VALUES (1,'MARCELO','MED/LAT','lento',2.8,3.7,2.2,1.8,2.7,4.2,1.4,2.6,3.3,'uploads/players/player-1-a52c24b60792adf3.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(2,'RODRI SUAREZ','DEF/ARQ','lento',3.3,2.8,3.0,3.7,2.2,3.6,3.9,3.9,3.9,'uploads/players/player-2-a2cc26482d5bb135.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(3,'ALEJO','DEL','rapido',3.8,4.0,3.9,3.0,3.9,4.0,3.0,3.5,3.3,NULL,0,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(4,'FRANQUITO','MED','rapido',3.7,3.9,4.3,3.0,3.4,3.3,3.3,4.0,3.6,NULL,1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(5,'JAVI','DEF/ARQ','lento',3.3,3.2,3.0,3.7,2.8,3.3,3.9,3.0,4.8,'uploads/players/player-5-7d59a02f5882a75e.png',1,'2026-03-18 03:59:04','2026-06-03 01:24:37'),(6,'PELA','DEL/MED','rapido',3.8,4.3,3.6,3.6,4.3,2.8,4.3,2.2,3.6,'uploads/players/player-6-c0c87cb9971098ec.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(7,'CUERVO','DEL/DEF','rapido',4.4,5.4,3.6,3.6,6.0,2.8,3.3,2.8,NULL,'uploads/players/player-7-5819744c55597d91.png',1,'2026-03-18 03:59:04','2026-06-03 01:34:24'),(8,'NICO','MED/LAT','rapido',3.5,3.9,3.3,2.6,3.9,3.9,3.3,3.3,3.3,'uploads/players/player-8-c063b231f729e90b.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(9,'AUGUSTO','MED/LAT','rapido',3.8,4.3,4.3,3.3,3.7,3.9,2.8,2.6,3.6,NULL,1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(10,'BRIAN','DEL/MED','rapido',4.7,5.4,3.9,3.9,5.4,4.3,2.8,4.8,NULL,'uploads/players/player-10-86836ff1a55a64d3.png',1,'2026-03-18 03:59:04','2026-06-03 01:33:27'),(11,'MANU','LAT/MED','rapido',4.8,4.3,6.0,4.8,4.2,4.3,3.3,4.8,NULL,'uploads/players/player-11-cb5aad66658062ca.png',1,'2026-03-18 03:59:04','2026-06-03 01:27:32'),(12,'VIKINGO','MED/LAT','rapido',3.6,4.2,4.8,3.9,3.6,2.6,2.6,2.2,3.9,'uploads/players/player-12-d779f7d12a9f25b2.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(13,'ANIBAL','DEL','lento',2.6,3.6,1.4,1.8,3.7,1.8,2.2,2.8,4.3,'uploads/players/player-13-5e2bb8a8aecf1c3e.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(14,'PABLO','DEF/LAT','rapido',4.5,3.9,3.9,5.0,3.0,3.9,5.4,5.4,NULL,'uploads/players/player-14-7ced868a71da3574.png',1,'2026-03-18 03:59:04','2026-06-03 01:35:10'),(15,'MAURI','DEL','rapido',3.6,3.3,4.0,2.6,3.9,3.3,3.9,3.6,3.3,'uploads/players/player-15-be2d5275c69ea87a.png',1,'2026-03-18 03:59:04','2026-06-03 01:24:37'),(16,'ALE CUERVO','LAT/MED','lento',2.8,3.3,3.0,2.6,2.8,3.0,2.2,2.8,3.6,NULL,1,'2026-03-18 03:59:04','2026-06-03 01:24:37'),(17,'CESAR','DEF/LAT','rapido',4.1,4.3,3.3,4.6,3.6,4.1,3.6,4.8,NULL,'uploads/players/player-17-d28fe883e00d9e28.png',1,'2026-03-18 03:59:04','2026-06-03 01:36:32'),(18,'GUILLE','LAT/ARQ','lento',2.1,2.6,1.4,1.4,2.2,2.8,3.9,2.8,3.3,'uploads/players/player-18-72f0eac4516654bc.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(19,'SEBACORTEZ','DEF/ARQ','lento',3.7,3.9,2.8,4.1,3.3,3.6,4.3,3.0,4.8,'uploads/players/player-19-25006ca57e0eca8c.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(22,'ISMA','MED/LAT','rapido',4.3,4.8,3.9,3.9,3.6,4.6,4.3,4.3,3.6,'uploads/players/player-22-c852e339dc842ab5.png',1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(23,'CRISTIAN','DEL/ARQ','lento',2.6,2.8,2.2,1.4,2.6,2.8,3.9,2.8,3.6,NULL,1,'2026-03-18 03:59:04','2026-06-03 01:31:58'),(24,'FRANCOK','ARQ/LAT','rapido',3.4,2.6,3.6,2.8,1.4,3.0,3.0,3.3,3.9,'uploads/players/player-24-aa991162398df52b.png',1,'2026-03-18 03:59:04','2026-06-03 01:24:37'),(25,'TIMO','DEF','rapido',3.3,2.2,4.0,4.1,2.0,3.0,3.0,3.5,3.3,NULL,0,'2026-03-18 03:59:04','2026-06-03 01:12:25'),(27,'GONZA','ARQ/DEF','lento',3.6,3.0,3.0,3.9,2.6,3.3,3.3,3.9,3.9,NULL,1,'2026-03-18 03:59:04','2026-06-03 01:24:37'),(29,'TEBO','MED/DEL','rapido',4.7,4.8,4.8,3.9,4.3,4.2,4.8,5.4,3.9,NULL,1,'2026-05-05 01:50:25','2026-06-03 01:31:58'),(30,'FACU','DEF/DEL','lento',3.2,2.9,2.8,4.1,2.6,3.0,2.6,3.9,2.8,'uploads/players/player-30-234798d02cd7a738.png',1,'2026-05-05 09:51:56','2026-06-03 01:31:58'),(31,'ALEXIS','LAT/MED','rapido',4.1,3.9,4.8,3.6,3.6,3.3,4.3,4.8,3.3,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(32,'CAMILO','MED/DEL','rapido',4.2,5.0,4.3,3.0,3.9,4.0,4.0,4.0,3.3,'uploads/players/player-32-f633ec407a872c13.png',1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(33,'COMANCHE','LAT/MED','lento',2.6,3.6,2.0,2.7,2.8,1.8,3.0,3.0,3.9,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:24:37'),(34,'ELIAN','DEF/DEL','lento',2.0,2.9,1.4,1.4,2.2,2.8,2.8,2.0,3.3,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(35,'FRANCISCO','ARQ/DEL','lento',2.9,1.4,3.0,2.2,1.4,2.2,3.6,2.8,3.6,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:24:37'),(36,'FRANCO COMOLLI','MED/DEL','rapido',4.9,5.0,4.8,4.3,4.3,4.8,4.8,5.4,3.3,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(37,'JEAN FRANCO','DEL','lento',2.6,3.0,3.0,2.0,2.0,3.0,4.0,2.2,2.6,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:12:25'),(38,'MARIAN','DEL/MED','lento',3.4,4.1,2.2,1.8,4.3,3.6,2.8,3.3,3.9,'uploads/players/player-38-6246664d7fa5f51a.png',1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(39,'MATI BRAIAN','DEF/MED','rapido',3.6,3.9,4.8,3.3,3.6,2.6,2.8,3.3,3.4,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(40,'PABLO CASTILLO','LAT/MED','lento',3.6,3.9,3.0,3.9,3.0,4.3,3.6,3.0,3.3,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(41,'PABLO GARCIA','MED/LAT','rapido',3.2,2.7,3.3,3.0,2.3,3.3,4.3,3.9,3.3,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(42,'PULY','DEL/MED','lento',2.9,5.0,2.2,1.0,3.0,3.0,2.2,2.2,3.3,NULL,1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(43,'RODRI CHAVEZ','LAT/MED','rapido',4.3,3.9,4.3,4.1,3.6,4.3,4.8,4.8,3.6,'uploads/players/player-43-a08f689f7de72dd3.png',1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(44,'VICTOR','DEF/LAT','rapido',4.1,4.6,3.3,4.2,3.3,4.8,3.9,3.9,3.6,'uploads/players/player-44-9a0e4813e8797a13.png',1,'2026-05-10 12:34:45','2026-06-03 01:31:58'),(46,'Mariano Planas','DEF','rapido',3.8,3.0,4.0,4.1,2.0,5.0,4.0,3.3,3.3,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(47,'MAXI','MED','lento',2.7,3.6,2.0,1.8,2.8,3.0,2.8,2.2,2.5,NULL,1,'2026-05-10 12:43:29','2026-06-03 01:24:37'),(48,'Octavio','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,3.3,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(49,'Piki','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,5.4,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(51,'Roman','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,3.6,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(52,'Matias C','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,3.2,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(53,'Marcos','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,3.2,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(55,'MATI ROSALES','MED/LAT','rapido',4.7,6.0,3.6,4.1,3.9,5.4,3.9,4.3,NULL,NULL,1,'2026-05-10 12:43:29','2026-06-03 01:35:40'),(56,'DARIO','MED','lento',2.5,2.0,3.0,3.0,3.0,2.0,3.0,3.0,2.5,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(57,'BETO','DEL/MED','lento',3.2,3.6,2.2,1.8,3.7,3.0,3.6,4.0,3.3,NULL,1,'2026-05-10 12:43:29','2026-06-03 01:31:58'),(58,'Mati','MED','rapido',3.3,3.0,4.0,3.3,3.0,3.0,3.0,3.5,3.2,NULL,0,'2026-05-10 12:43:29','2026-06-03 01:12:25'),(59,'Rodri Rojas','MED','rapido',3.5,3.0,4.0,3.0,3.0,4.0,3.0,4.0,3.3,NULL,0,'2026-05-10 12:44:36','2026-06-03 01:12:25'),(60,'Manuel','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,3.2,NULL,0,'2026-05-10 12:44:59','2026-06-03 01:12:25'),(61,'FRANCO','DEF/MED','lento',2.8,2.9,2.2,3.0,3.0,2.8,3.0,3.3,3.3,NULL,0,'2026-05-10 12:46:46','2026-06-03 01:31:58'),(62,'Lucas2','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,3.2,NULL,0,'2026-05-10 13:20:41','2026-06-03 01:12:25'),(63,'Lucas (fusionado en VIKINGO)','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,3.0,3.5,3.2,NULL,0,'2026-05-19 06:05:44','2026-06-03 01:12:25'),(64,'SANTI','ARQ/MED','rapido',3.5,5.0,4.0,3.0,3.0,3.0,3.0,4.0,3.3,NULL,1,'2026-05-23 20:59:36','2026-06-03 01:12:25');
+/*!40000 ALTER TABLE `players` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Estructura de tabla para la tabla `players_backup_before_regularity_20260505`
+-- Table structure for table `players_backup_before_regularity_20260505`
 --
 
+DROP TABLE IF EXISTS `players_backup_before_regularity_20260505`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `players_backup_before_regularity_20260505` (
-  `id` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `id` int(10) unsigned NOT NULL DEFAULT 0,
   `name` varchar(120) NOT NULL,
   `positions` varchar(20) NOT NULL,
   `pace` enum('rapido','lento') NOT NULL DEFAULT 'rapido',
@@ -1752,458 +618,99 @@ CREATE TABLE `players_backup_before_regularity_20260505` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `players_backup_before_regularity_20260505`
+-- Dumping data for table `players_backup_before_regularity_20260505`
 --
 
-INSERT INTO `players_backup_before_regularity_20260505` (`id`, `name`, `positions`, `pace`, `skill`, `technique`, `rhythm`, `defense_physical`, `attack`, `teamwork`, `goalkeeper_skill`, `active`, `created_at`, `updated_at`) VALUES
-(1, 'MARCELO', 'MED', 'lento', 2.5, 5.0, 2.0, 2.0, 2.0, 1.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 17:40:50'),
-(2, 'RODRI SUAREZ', 'ARQ/DEF', 'lento', 2.7, 1.0, 2.0, 3.0, 1.0, 3.0, 3.0, 1, '2026-03-18 03:59:04', '2026-05-05 12:23:05'),
-(3, 'ALEJO', 'DEL', 'lento', 3.6, 4.0, 3.0, 4.0, 3.0, 4.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 16:45:21'),
-(4, 'FRANQUITO', 'MED', 'lento', 2.4, 2.0, 3.0, 2.0, 2.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 12:14:54'),
-(5, 'JAVI', 'DEF', 'lento', 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:53:52'),
-(6, 'PELA', 'DEL', 'lento', 4.2, 4.0, 3.0, 5.0, 6.0, 2.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 03:36:38'),
-(7, 'CUERVO', 'MED/DEL', 'lento', 4.6, 6.0, 3.0, 5.0, 6.0, 2.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:53:52'),
-(8, 'NICO', 'MED', 'rapido', 3.7, 4.0, 4.0, 2.0, 5.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 16:32:08'),
-(9, 'AUGUSTO', 'MED', 'rapido', 3.7, 5.0, 5.0, 3.0, 3.0, 2.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 11:38:47'),
-(10, 'BRIAN', 'DEL', 'lento', 4.8, 6.0, 3.0, 3.0, 6.0, 6.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 12:05:46'),
-(11, 'MANU', 'DEF/MED', 'rapido', 5.3, 5.0, 6.0, 6.0, 5.0, 4.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 11:14:17'),
-(12, 'VIKINGO', 'DEF/MED', 'rapido', 4.6, 4.0, 6.0, 3.0, 5.0, 5.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:49:30'),
-(13, 'ANIBAL', 'ARQ/DEL', 'lento', 3.0, 3.0, 2.0, 2.0, 3.0, 2.0, 4.0, 1, '2026-03-18 03:59:04', '2026-05-05 11:22:51'),
-(14, 'PABLO', 'DEF', 'rapido', 4.0, 3.0, 4.0, 6.0, 3.0, 4.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 12:22:05'),
-(15, 'MAURI', 'DEL', 'lento', 3.5, 3.0, 3.0, 3.0, 5.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 03:37:58'),
-(16, 'ALE CUERVO', 'DEF', 'lento', 2.7, 2.0, 3.0, 3.0, 3.0, 2.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 17:39:41'),
-(17, 'CESAR', 'DEF', 'lento', 4.0, 4.0, 3.0, 6.0, 3.0, 4.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:53:52'),
-(18, 'GUILLE', 'ARQ/DEF', 'lento', 1.9, 1.0, 1.0, 1.0, 1.0, 3.0, 2.0, 1, '2026-03-18 03:59:04', '2026-05-05 12:39:53'),
-(19, 'SEBACORTEZ', 'DEF', 'lento', 3.4, 4.0, 2.0, 3.0, 4.0, 4.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:00:13'),
-(20, 'TANQUE', 'DEL', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, NULL, 0, '2026-03-18 03:59:04', '2026-05-05 02:06:47'),
-(21, 'SANTI', 'MED', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:00:13'),
-(22, 'ISMA', 'MED', 'rapido', 4.4, 5.0, 4.0, 3.0, 5.0, 5.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:00:13'),
-(23, 'CRISTIAN', 'DEL', 'lento', 1.7, 1.0, 2.0, 2.0, 1.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 17:48:56'),
-(24, 'FRANCOK', 'DEF', 'rapido', 3.2, 3.0, 4.0, 3.0, 3.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:00:13'),
-(25, 'TIMO', 'DEF', 'rapido', 3.2, 2.0, 4.0, 5.0, 2.0, 3.0, NULL, 1, '2026-03-18 03:59:04', '2026-05-05 02:09:07'),
-(26, 'MATI ARQ', 'ARQ', 'rapido', 2.7, 2.5, 4.0, 3.0, 2.5, 2.5, 2.5, 1, '2026-03-18 03:59:04', '2026-05-05 02:29:14'),
-(27, 'GONZA', 'ARQ', 'rapido', 3.9, 4.0, 4.0, 3.0, 4.0, 4.0, 4.0, 1, '2026-03-18 03:59:04', '2026-05-05 02:00:13'),
-(28, 'RODRI CHAVEZ', 'DEF/MED', 'rapido', 4.1, 4.0, 5.0, 4.0, 3.0, 5.0, NULL, 1, '2026-05-03 02:38:06', '2026-05-05 16:32:37'),
-(29, 'TEBO', 'MED/DEL', 'rapido', 5.0, 5.0, 6.0, 4.0, 5.0, 5.0, NULL, 1, '2026-05-05 01:50:25', '2026-05-05 03:51:02'),
-(30, 'FACU', 'DEF/DEL', 'lento', 2.8, 1.0, 2.0, 5.0, 3.0, 3.0, NULL, 1, '2026-05-05 09:51:56', '2026-05-05 12:33:00'),
-(31, 'ALEXIS', 'MED', 'rapido', 4.4, 5.0, 6.0, 3.0, 4.0, 4.0, NULL, 1, '2026-05-05 01:45:55', '2026-05-05 16:45:43'),
-(32, 'FRANCISCO', 'ARQ/DEL', 'rapido', 2.7, 2.5, 4.0, 3.0, 2.5, 2.5, 2.5, 1, '2026-05-05 01:46:27', '2026-05-05 06:03:58'),
-(33, 'PABLO CASTILLO', 'DEF/MED', 'lento', 2.5, 2.5, 2.0, 3.0, 2.5, 2.5, NULL, 1, '2026-05-05 01:48:34', '2026-05-05 05:58:47'),
-(34, 'CAMILO', 'MED', 'rapido', 4.5, 5.0, 6.0, 4.0, 4.0, 3.0, NULL, 1, '2026-05-05 16:36:44', '2026-05-05 16:36:44'),
-(35, 'PABLO GARCIA', 'DEF/MED', 'rapido', 3.0, 1.0, 4.0, 5.0, 2.0, 3.0, NULL, 1, '2026-05-05 16:37:36', '2026-05-05 16:37:36'),
-(36, 'COMANCHE', 'DEF/MED', 'lento', 2.7, 4.0, 3.0, 3.0, 2.0, 1.0, NULL, 1, '2026-05-05 16:41:04', '2026-05-05 16:42:04');
-
--- --------------------------------------------------------
+LOCK TABLES `players_backup_before_regularity_20260505` WRITE;
+/*!40000 ALTER TABLE `players_backup_before_regularity_20260505` DISABLE KEYS */;
+INSERT INTO `players_backup_before_regularity_20260505` VALUES (1,'MARCELO','MED','lento',2.5,5.0,2.0,2.0,2.0,1.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 17:40:50'),(2,'RODRI SUAREZ','ARQ/DEF','lento',2.7,1.0,2.0,3.0,1.0,3.0,3.0,1,'2026-03-18 03:59:04','2026-05-05 12:23:05'),(3,'ALEJO','DEL','lento',3.6,4.0,3.0,4.0,3.0,4.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 16:45:21'),(4,'FRANQUITO','MED','lento',2.4,2.0,3.0,2.0,2.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 12:14:54'),(5,'JAVI','DEF','lento',3.0,3.0,3.0,3.0,3.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:53:52'),(6,'PELA','DEL','lento',4.2,4.0,3.0,5.0,6.0,2.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 03:36:38'),(7,'CUERVO','MED/DEL','lento',4.6,6.0,3.0,5.0,6.0,2.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:53:52'),(8,'NICO','MED','rapido',3.7,4.0,4.0,2.0,5.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 16:32:08'),(9,'AUGUSTO','MED','rapido',3.7,5.0,5.0,3.0,3.0,2.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 11:38:47'),(10,'BRIAN','DEL','lento',4.8,6.0,3.0,3.0,6.0,6.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 12:05:46'),(11,'MANU','DEF/MED','rapido',5.3,5.0,6.0,6.0,5.0,4.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 11:14:17'),(12,'VIKINGO','DEF/MED','rapido',4.6,4.0,6.0,3.0,5.0,5.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:49:30'),(13,'ANIBAL','ARQ/DEL','lento',3.0,3.0,2.0,2.0,3.0,2.0,4.0,1,'2026-03-18 03:59:04','2026-05-05 11:22:51'),(14,'PABLO','DEF','rapido',4.0,3.0,4.0,6.0,3.0,4.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 12:22:05'),(15,'MAURI','DEL','lento',3.5,3.0,3.0,3.0,5.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 03:37:58'),(16,'ALE CUERVO','DEF','lento',2.7,2.0,3.0,3.0,3.0,2.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 17:39:41'),(17,'CESAR','DEF','lento',4.0,4.0,3.0,6.0,3.0,4.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:53:52'),(18,'GUILLE','ARQ/DEF','lento',1.9,1.0,1.0,1.0,1.0,3.0,2.0,1,'2026-03-18 03:59:04','2026-05-05 12:39:53'),(19,'SEBACORTEZ','DEF','lento',3.4,4.0,2.0,3.0,4.0,4.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:00:13'),(20,'TANQUE','DEL','rapido',3.2,3.0,4.0,3.0,3.0,3.0,NULL,0,'2026-03-18 03:59:04','2026-05-05 02:06:47'),(21,'SANTI','MED','rapido',3.2,3.0,4.0,3.0,3.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:00:13'),(22,'ISMA','MED','rapido',4.4,5.0,4.0,3.0,5.0,5.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:00:13'),(23,'CRISTIAN','DEL','lento',1.7,1.0,2.0,2.0,1.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 17:48:56'),(24,'FRANCOK','DEF','rapido',3.2,3.0,4.0,3.0,3.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:00:13'),(25,'TIMO','DEF','rapido',3.2,2.0,4.0,5.0,2.0,3.0,NULL,1,'2026-03-18 03:59:04','2026-05-05 02:09:07'),(26,'MATI ARQ','ARQ','rapido',2.7,2.5,4.0,3.0,2.5,2.5,2.5,1,'2026-03-18 03:59:04','2026-05-05 02:29:14'),(27,'GONZA','ARQ','rapido',3.9,4.0,4.0,3.0,4.0,4.0,4.0,1,'2026-03-18 03:59:04','2026-05-05 02:00:13'),(28,'RODRI CHAVEZ','DEF/MED','rapido',4.1,4.0,5.0,4.0,3.0,5.0,NULL,1,'2026-05-03 02:38:06','2026-05-05 16:32:37'),(29,'TEBO','MED/DEL','rapido',5.0,5.0,6.0,4.0,5.0,5.0,NULL,1,'2026-05-05 01:50:25','2026-05-05 03:51:02'),(30,'FACU','DEF/DEL','lento',2.8,1.0,2.0,5.0,3.0,3.0,NULL,1,'2026-05-05 09:51:56','2026-05-05 12:33:00'),(31,'ALEXIS','MED','rapido',4.4,5.0,6.0,3.0,4.0,4.0,NULL,1,'2026-05-05 01:45:55','2026-05-05 16:45:43'),(32,'FRANCISCO','ARQ/DEL','rapido',2.7,2.5,4.0,3.0,2.5,2.5,2.5,1,'2026-05-05 01:46:27','2026-05-05 06:03:58'),(33,'PABLO CASTILLO','DEF/MED','lento',2.5,2.5,2.0,3.0,2.5,2.5,NULL,1,'2026-05-05 01:48:34','2026-05-05 05:58:47'),(34,'CAMILO','MED','rapido',4.5,5.0,6.0,4.0,4.0,3.0,NULL,1,'2026-05-05 16:36:44','2026-05-05 16:36:44'),(35,'PABLO GARCIA','DEF/MED','rapido',3.0,1.0,4.0,5.0,2.0,3.0,NULL,1,'2026-05-05 16:37:36','2026-05-05 16:37:36'),(36,'COMANCHE','DEF/MED','lento',2.7,4.0,3.0,3.0,2.0,1.0,NULL,1,'2026-05-05 16:41:04','2026-05-05 16:42:04');
+/*!40000 ALTER TABLE `players_backup_before_regularity_20260505` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Estructura de tabla para la tabla `rental_courts`
+-- Table structure for table `rental_courts`
 --
 
+DROP TABLE IF EXISTS `rental_courts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `rental_courts` (
-  `id` int(10) UNSIGNED NOT NULL,
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `court_key` varchar(40) NOT NULL,
   `place` varchar(120) NOT NULL,
-  `weekday` tinyint(3) UNSIGNED NOT NULL,
+  `weekday` tinyint(3) unsigned NOT NULL,
   `time_value` time NOT NULL,
-  `total_players` tinyint(3) UNSIGNED NOT NULL,
+  `total_players` tinyint(3) unsigned NOT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_rental_court_key` (`court_key`),
+  KEY `idx_rental_court_active` (`active`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `rental_courts`
+-- Dumping data for table `rental_courts`
 --
 
-INSERT INTO `rental_courts` (`id`, `court_key`, `place`, `weekday`, `time_value`, `total_players`, `active`, `created_at`, `updated_at`) VALUES
-(1, 'cancha1', 'kicker', 1, '21:00:00', 18, 1, '2026-05-09 00:08:24', '2026-05-09 00:08:24'),
-(2, 'cancha2', 'kicker', 5, '22:00:00', 12, 1, '2026-05-09 00:08:24', '2026-05-09 00:08:24');
-
--- --------------------------------------------------------
+LOCK TABLES `rental_courts` WRITE;
+/*!40000 ALTER TABLE `rental_courts` DISABLE KEYS */;
+INSERT INTO `rental_courts` VALUES (1,'cancha1','kicker',1,'21:00:00',18,1,'2026-05-09 00:08:24','2026-05-09 00:08:24'),(2,'cancha2','kicker',5,'22:00:00',12,1,'2026-05-09 00:08:24','2026-05-09 00:08:24');
+/*!40000 ALTER TABLE `rental_courts` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Estructura de tabla para la tabla `site_users`
+-- Table structure for table `site_users`
 --
 
+DROP TABLE IF EXISTS `site_users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `site_users` (
-  `id` int(10) UNSIGNED NOT NULL,
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `username` varchar(80) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `password_needs_reset` tinyint(1) NOT NULL DEFAULT 0,
   `role` enum('usuario','jugador','directivo','admin') NOT NULL DEFAULT 'usuario',
-  `player_id` int(10) UNSIGNED DEFAULT NULL,
+  `player_id` int(10) unsigned DEFAULT NULL,
   `can_vote` tinyint(1) NOT NULL DEFAULT 0,
-  `preferred_stats_court_id` int(10) UNSIGNED DEFAULT NULL,
+  `preferred_stats_court_id` int(10) unsigned DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_site_users_username` (`username`),
+  UNIQUE KEY `uniq_site_users_player` (`player_id`),
+  KEY `idx_site_users_role` (`role`),
+  CONSTRAINT `fk_site_users_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Volcado de datos para la tabla `site_users`
+-- Dumping data for table `site_users`
 --
 
-INSERT INTO `site_users` (`id`, `username`, `password_hash`, `password_needs_reset`, `role`, `player_id`, `can_vote`, `preferred_stats_court_id`, `active`, `created_at`, `updated_at`) VALUES
-(1, 'manuso', '$2y$10$2hZHWzBBPHSE8RAG9BpM3uxve1meuRQVIBUKgGPaviexoHrfc/apm', 0, 'jugador', 11, 0, NULL, 1, '2026-05-09 00:36:12', '2026-05-10 12:39:56'),
-(2, 'FranciscoG', '$2y$12$VK8BK29JqRHUK3rA.2Vct.ZP0yeE0.mwxmtqHvTyJUBwmfFpVj5Zm', 0, 'jugador', 35, 0, NULL, 1, '2026-05-11 17:48:46', '2026-05-12 02:36:44'),
-(3, 'Cristian', '$2y$12$WsOHlzquJCRr4qrc/EAknO998eQS2Kzn49G5Jx9dXH4pMyjVk91Ge', 0, 'jugador', 23, 0, NULL, 1, '2026-05-14 18:16:42', '2026-05-15 18:08:57');
+LOCK TABLES `site_users` WRITE;
+/*!40000 ALTER TABLE `site_users` DISABLE KEYS */;
+INSERT INTO `site_users` VALUES (1,'manuso','$2y$10$2hZHWzBBPHSE8RAG9BpM3uxve1meuRQVIBUKgGPaviexoHrfc/apm',0,'jugador',11,0,NULL,1,'2026-05-09 00:36:12','2026-05-10 12:39:56'),(2,'FranciscoG','$2y$12$VK8BK29JqRHUK3rA.2Vct.ZP0yeE0.mwxmtqHvTyJUBwmfFpVj5Zm',0,'jugador',35,0,NULL,1,'2026-05-11 17:48:46','2026-05-12 02:36:44'),(3,'Cristian','$2y$12$WsOHlzquJCRr4qrc/EAknO998eQS2Kzn49G5Jx9dXH4pMyjVk91Ge',0,'jugador',23,0,NULL,1,'2026-05-14 18:16:42','2026-05-15 18:08:57');
+/*!40000 ALTER TABLE `site_users` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
--- Índices para tablas volcadas
+-- Dumping routines for database 'u552541920_futbol'
 --
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
---
--- Indices de la tabla `app_settings`
---
-ALTER TABLE `app_settings`
-  ADD PRIMARY KEY (`setting_key`);
-
---
--- Indices de la tabla `captain_drafts`
---
-ALTER TABLE `captain_drafts`
-  ADD PRIMARY KEY (`match_id`),
-  ADD KEY `fk_captain_drafts_captain1` (`captain1_player_id`),
-  ADD KEY `fk_captain_drafts_captain2` (`captain2_player_id`);
-
---
--- Indices de la tabla `captain_picks`
---
-ALTER TABLE `captain_picks`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_captain_pick_player` (`match_id`,`player_id`),
-  ADD UNIQUE KEY `uniq_captain_pick_order` (`match_id`,`pick_order`),
-  ADD KEY `idx_captain_pick_match_team` (`match_id`,`team_number`),
-  ADD KEY `fk_captain_picks_player` (`player_id`),
-  ADD KEY `fk_captain_picks_picker` (`picked_by_player_id`);
-
---
--- Indices de la tabla `directive_members`
---
-ALTER TABLE `directive_members`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_directive_member_name` (`name`),
-  ADD UNIQUE KEY `uniq_directive_member_site_user` (`site_user_id`);
-
---
--- Indices de la tabla `matches`
---
-ALTER TABLE `matches`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `idx_matches_public_token` (`public_token`),
-  ADD KEY `idx_matches_date` (`match_date`),
-  ADD KEY `idx_matches_status` (`status`),
-  ADD KEY `idx_matches_draw_mode` (`draw_mode`);
-
---
--- Indices de la tabla `match_awards`
---
-ALTER TABLE `match_awards`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_match_award` (`match_id`,`award_code`),
-  ADD KEY `idx_awards_player` (`player_id`,`award_code`);
-
---
--- Indices de la tabla `match_director_award_votes`
---
-ALTER TABLE `match_director_award_votes`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_director_award_vote` (`match_id`,`voter_id`,`award_code`),
-  ADD KEY `idx_director_award_match_code` (`match_id`,`award_code`),
-  ADD KEY `fk_director_award_voter` (`voter_id`),
-  ADD KEY `fk_director_award_player` (`player_id`);
-
---
--- Indices de la tabla `match_director_publications`
---
-ALTER TABLE `match_director_publications`
-  ADD PRIMARY KEY (`match_id`);
-
---
--- Indices de la tabla `match_director_rating_votes`
---
-ALTER TABLE `match_director_rating_votes`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_director_rating_vote` (`match_id`,`voter_id`,`player_id`),
-  ADD KEY `idx_director_rating_match_player` (`match_id`,`player_id`),
-  ADD KEY `fk_director_rating_voter` (`voter_id`),
-  ADD KEY `fk_director_rating_player` (`player_id`);
-
---
--- Indices de la tabla `match_director_vote_invites`
---
-ALTER TABLE `match_director_vote_invites`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_director_vote_invite_match_player` (`match_id`,`player_id`),
-  ADD UNIQUE KEY `uniq_director_vote_invite_token` (`token`),
-  ADD KEY `idx_director_vote_invite_match` (`match_id`),
-  ADD KEY `fk_director_vote_invite_player` (`player_id`),
-  ADD KEY `fk_director_vote_invite_voter` (`voter_member_id`);
-
---
--- Indices de la tabla `match_draw_options`
---
-ALTER TABLE `match_draw_options`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_match_draw_option` (`match_id`,`option_number`),
-  ADD KEY `idx_match_draw_option_match` (`match_id`);
-
---
--- Indices de la tabla `match_draw_option_votes`
---
-ALTER TABLE `match_draw_option_votes`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_match_draw_vote_user` (`match_id`,`user_id`),
-  ADD KEY `idx_match_draw_vote_option` (`option_id`),
-  ADD KEY `fk_match_draw_votes_user` (`user_id`),
-  ADD KEY `fk_match_draw_votes_player` (`player_id`);
-
---
--- Indices de la tabla `match_players`
---
-ALTER TABLE `match_players`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_match_player` (`match_id`,`player_id`),
-  ADD KEY `idx_match_team` (`match_id`,`team_number`),
-  ADD KEY `idx_player_stats` (`player_id`,`goals`,`rating`),
-  ADD KEY `idx_match_lineup` (`match_id`,`team_number`,`assigned_position`,`lineup_order`),
-  ADD KEY `idx_match_availability` (`match_id`,`availability_status`);
-
---
--- Indices de la tabla `match_round_robin_results`
---
-ALTER TABLE `match_round_robin_results`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_round_robin_fixture` (`match_id`,`home_team_number`,`away_team_number`,`leg`),
-  ADD KEY `idx_round_robin_match` (`match_id`);
-
---
--- Indices de la tabla `match_teams`
---
-ALTER TABLE `match_teams`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_match_team` (`match_id`,`team_number`),
-  ADD KEY `idx_match_teams_captain` (`captain_player_id`);
-
---
--- Indices de la tabla `players`
---
-ALTER TABLE `players`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_players_name` (`name`),
-  ADD KEY `idx_players_active` (`active`);
-
---
--- Indices de la tabla `rental_courts`
---
-ALTER TABLE `rental_courts`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_rental_court_key` (`court_key`),
-  ADD KEY `idx_rental_court_active` (`active`);
-
---
--- Indices de la tabla `site_users`
---
-ALTER TABLE `site_users`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_site_users_username` (`username`),
-  ADD UNIQUE KEY `uniq_site_users_player` (`player_id`),
-  ADD KEY `idx_site_users_role` (`role`);
-
---
--- AUTO_INCREMENT de las tablas volcadas
---
-
---
--- AUTO_INCREMENT de la tabla `captain_picks`
---
-ALTER TABLE `captain_picks`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=130;
-
---
--- AUTO_INCREMENT de la tabla `directive_members`
---
-ALTER TABLE `directive_members`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
-
---
--- AUTO_INCREMENT de la tabla `matches`
---
-ALTER TABLE `matches`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=189;
-
---
--- AUTO_INCREMENT de la tabla `match_awards`
---
-ALTER TABLE `match_awards`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1094;
-
---
--- AUTO_INCREMENT de la tabla `match_director_award_votes`
---
-ALTER TABLE `match_director_award_votes`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
-
---
--- AUTO_INCREMENT de la tabla `match_director_rating_votes`
---
-ALTER TABLE `match_director_rating_votes`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
-
---
--- AUTO_INCREMENT de la tabla `match_director_vote_invites`
---
-ALTER TABLE `match_director_vote_invites`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
-
---
--- AUTO_INCREMENT de la tabla `match_draw_options`
---
-ALTER TABLE `match_draw_options`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
-
---
--- AUTO_INCREMENT de la tabla `match_draw_option_votes`
---
-ALTER TABLE `match_draw_option_votes`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT de la tabla `match_players`
---
-ALTER TABLE `match_players`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3150;
-
---
--- AUTO_INCREMENT de la tabla `match_round_robin_results`
---
-ALTER TABLE `match_round_robin_results`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=559;
-
---
--- AUTO_INCREMENT de la tabla `match_teams`
---
-ALTER TABLE `match_teams`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=324;
-
---
--- AUTO_INCREMENT de la tabla `players`
---
-ALTER TABLE `players`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
-
---
--- AUTO_INCREMENT de la tabla `rental_courts`
---
-ALTER TABLE `rental_courts`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT de la tabla `site_users`
---
-ALTER TABLE `site_users`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- Restricciones para tablas volcadas
---
-
---
--- Filtros para la tabla `captain_drafts`
---
-ALTER TABLE `captain_drafts`
-  ADD CONSTRAINT `fk_captain_drafts_captain1` FOREIGN KEY (`captain1_player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_captain_drafts_captain2` FOREIGN KEY (`captain2_player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_captain_drafts_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `captain_picks`
---
-ALTER TABLE `captain_picks`
-  ADD CONSTRAINT `fk_captain_picks_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_captain_picks_picker` FOREIGN KEY (`picked_by_player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_captain_picks_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_awards`
---
-ALTER TABLE `match_awards`
-  ADD CONSTRAINT `fk_match_awards_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_match_awards_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_director_award_votes`
---
-ALTER TABLE `match_director_award_votes`
-  ADD CONSTRAINT `fk_director_award_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_director_award_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_director_award_voter` FOREIGN KEY (`voter_id`) REFERENCES `directive_members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_director_publications`
---
-ALTER TABLE `match_director_publications`
-  ADD CONSTRAINT `fk_director_publication_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_director_rating_votes`
---
-ALTER TABLE `match_director_rating_votes`
-  ADD CONSTRAINT `fk_director_rating_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_director_rating_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_director_rating_voter` FOREIGN KEY (`voter_id`) REFERENCES `directive_members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_director_vote_invites`
---
-ALTER TABLE `match_director_vote_invites`
-  ADD CONSTRAINT `fk_director_vote_invite_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_director_vote_invite_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_director_vote_invite_voter` FOREIGN KEY (`voter_member_id`) REFERENCES `directive_members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_draw_options`
---
-ALTER TABLE `match_draw_options`
-  ADD CONSTRAINT `fk_match_draw_options_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_draw_option_votes`
---
-ALTER TABLE `match_draw_option_votes`
-  ADD CONSTRAINT `fk_match_draw_votes_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_match_draw_votes_option` FOREIGN KEY (`option_id`) REFERENCES `match_draw_options` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_match_draw_votes_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_match_draw_votes_user` FOREIGN KEY (`user_id`) REFERENCES `site_users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_players`
---
-ALTER TABLE `match_players`
-  ADD CONSTRAINT `fk_match_players_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_match_players_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_round_robin_results`
---
-ALTER TABLE `match_round_robin_results`
-  ADD CONSTRAINT `fk_round_robin_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `match_teams`
---
-ALTER TABLE `match_teams`
-  ADD CONSTRAINT `fk_match_teams_match` FOREIGN KEY (`match_id`) REFERENCES `matches` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `site_users`
---
-ALTER TABLE `site_users`
-  ADD CONSTRAINT `fk_site_users_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-COMMIT;
-
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-06-02 22:37:52
