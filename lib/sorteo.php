@@ -78,6 +78,22 @@ function draw_pitch_line_minimum(string $position, int $teamSize): int
     return 0;
 }
 
+function draw_logical_line_minimum(string $position, int $teamSize): int
+{
+    $position = strtoupper(trim($position));
+    if ($position === 'ARQ') {
+        return 1;
+    }
+    if (!in_array($position, player_field_lines(), true)) {
+        return 0;
+    }
+    $fieldPlayers = max(0, $teamSize - 1);
+    if ($position === 'LAT') {
+        return $fieldPlayers >= 8 ? 2 : ($fieldPlayers >= count(player_field_lines()) ? 1 : 0);
+    }
+    return $fieldPlayers >= count(player_field_lines()) ? 1 : 0;
+}
+
 function draw_line_limit(string $position, int $teamSize): int
 {
     $position = strtoupper(trim($position));
@@ -103,7 +119,11 @@ function draw_line_counts_fit_limits(array $lineCounts, int $teamSize): bool
         }
     }
     foreach (player_field_lines() as $line) {
-        if ((int) ($lineCounts[$line] ?? 0) > draw_line_limit($line, $teamSize)) {
+        $count = (int) ($lineCounts[$line] ?? 0);
+        if ($count < draw_logical_line_minimum($line, $teamSize)) {
+            return false;
+        }
+        if ($count > draw_line_limit($line, $teamSize)) {
             return false;
         }
     }
@@ -256,6 +276,52 @@ function build_team_position_assignment(array $team): array
         }
     }
 
+    foreach (player_field_lines() as $requiredLine) {
+        $guard = 0;
+        while ($guard < $teamSize) {
+            $guard++;
+            $lineCount = $countLines($assignment);
+            if (($lineCount[$requiredLine] ?? 0) >= draw_logical_line_minimum($requiredLine, $teamSize)) {
+                break;
+            }
+
+            $candidate = null;
+            $candidateLoss = null;
+            $candidateRating = null;
+            foreach ($team as $player) {
+                $id = (int) $player['id'];
+                $currentLine = (string) ($assignment[$id] ?? 'MED');
+                if ($currentLine === $requiredLine || $currentLine === 'ARQ') {
+                    continue;
+                }
+                if (($lineCount[$currentLine] ?? 0) <= draw_logical_line_minimum($currentLine, $teamSize)) {
+                    continue;
+                }
+                $pitchCount = draw_pitch_line_counts($lineCount);
+                $currentPitchLine = draw_pitch_line($currentLine);
+                if (($pitchCount[$currentPitchLine] ?? 0) <= draw_pitch_line_minimum($currentPitchLine, $teamSize)) {
+                    continue;
+                }
+                $currentRating = player_position_rating($player, $currentLine);
+                $requiredRating = player_position_rating($player, $requiredLine);
+                $loss = $currentRating - $requiredRating;
+                if (
+                    $candidate === null
+                    || $loss < $candidateLoss
+                    || ($loss === $candidateLoss && $requiredRating > $candidateRating)
+                ) {
+                    $candidate = $player;
+                    $candidateLoss = $loss;
+                    $candidateRating = $requiredRating;
+                }
+            }
+            if ($candidate === null) {
+                break;
+            }
+            $assignment[(int) $candidate['id']] = $requiredLine;
+        }
+    }
+
     $changed = true;
     while ($changed) {
         $changed = false;
@@ -280,7 +346,11 @@ function build_team_position_assignment(array $team): array
             $movable = [];
             foreach ($team as $player) {
                 $id = (int) $player['id'];
-                if (!in_array(($assignment[$id] ?? ''), $fromLines, true)) {
+                $currentAssignedLine = (string) ($assignment[$id] ?? '');
+                if (!in_array($currentAssignedLine, $fromLines, true)) {
+                    continue;
+                }
+                if (($lineCount[$currentAssignedLine] ?? 0) <= draw_logical_line_minimum($currentAssignedLine, $teamSize)) {
                     continue;
                 }
                 $prefs = $preferences[$id] ?? [];
@@ -400,6 +470,10 @@ function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
         return false;
     }
 
+    if (draw_platinum_spread($teams) > 1) {
+        return false;
+    }
+
     return (max($slowCounts) - min($slowCounts)) <= 1;
 }
 
@@ -481,6 +555,133 @@ function draw_team_low_liability_spread(array $teams): float
     return $values ? (max($values) - min($values)) : 0.0;
 }
 
+function draw_position_balance_penalty(array $teams): float
+{
+    if (!$teams) {
+        return 0.0;
+    }
+
+    $teamSize = max(array_map('count', $teams));
+    $countsByLine = array_fill_keys(player_field_lines(), []);
+    $missingPenalty = 0.0;
+
+    foreach ($teams as $team) {
+        $assignmentData = build_team_position_assignment($team);
+        $counts = $assignmentData['line_counts'];
+        foreach (player_field_lines() as $line) {
+            $count = (int) ($counts[$line] ?? 0);
+            $countsByLine[$line][] = $count;
+            $minimum = draw_logical_line_minimum($line, $teamSize);
+            if ($count < $minimum) {
+                $missingPenalty += ($minimum - $count) * 500.0;
+            }
+        }
+    }
+
+    $spreadPenalty = 0.0;
+    foreach ($countsByLine as $lineCounts) {
+        $spreadPenalty += draw_count_spread($lineCounts) * 140.0;
+    }
+
+    return $missingPenalty + $spreadPenalty;
+}
+
+function draw_player_card_overall(float $rating): int
+{
+    $rating = max(1.0, min(6.0, $rating));
+    $anchors = [
+        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
+        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
+        [5.2, 93], [5.3, 94], [6.0, 99],
+    ];
+    $last = count($anchors) - 1;
+    for ($i = 0; $i < $last; $i++) {
+        [$fromRating, $fromOverall] = $anchors[$i];
+        [$toRating, $toOverall] = $anchors[$i + 1];
+        if ($rating <= $toRating) {
+            $ratio = ($rating - $fromRating) / ($toRating - $fromRating);
+            return (int) round($fromOverall + (($toOverall - $fromOverall) * $ratio));
+        }
+    }
+    return 99;
+}
+
+function draw_player_card_tier(float $rating): string
+{
+    $overall = draw_player_card_overall($rating);
+    if ($overall >= 88) {
+        return 'supreme';
+    }
+    if ($overall >= 84) {
+        return 'elite';
+    }
+    if ($overall >= 76) {
+        return 'gold';
+    }
+    if ($overall >= 66) {
+        return 'silver';
+    }
+    return 'bronze';
+}
+
+function draw_player_is_platinum(array $player): bool
+{
+    return draw_player_card_tier(player_best_natural_rating($player)) === 'supreme';
+}
+
+function draw_team_card_tier_counts(array $team): array
+{
+    $counts = array_fill_keys(['bronze', 'silver', 'gold', 'elite', 'supreme'], 0);
+    $assignmentData = build_team_position_assignment($team);
+    $assigned = $assignmentData['assignment'];
+    foreach ($team as $player) {
+        $playerId = (int) $player['id'];
+        $line = $assigned[$playerId] ?? player_best_natural_position($player);
+        $tier = draw_player_card_tier(player_position_rating($player, $line));
+        $counts[$tier] = ($counts[$tier] ?? 0) + 1;
+    }
+    return $counts;
+}
+
+function draw_teams_card_tier_counts(array $teams): array
+{
+    $countsByTier = array_fill_keys(['bronze', 'silver', 'gold', 'elite', 'supreme'], []);
+    foreach ($teams as $team) {
+        $counts = draw_team_card_tier_counts($team);
+        foreach ($counts as $tier => $count) {
+            $countsByTier[$tier][] = $count;
+        }
+    }
+    return $countsByTier;
+}
+
+function draw_platinum_spread(array $teams): int
+{
+    return draw_count_spread(draw_teams_card_tier_counts($teams)['supreme'] ?? []);
+}
+
+function draw_tier_balance_penalty(array $teams): float
+{
+    if (!$teams) {
+        return 0.0;
+    }
+
+    $tierWeights = [
+        'bronze' => 35.0,
+        'silver' => 45.0,
+        'gold' => 70.0,
+        'elite' => 110.0,
+        'supreme' => 150.0,
+    ];
+    $countsByTier = draw_teams_card_tier_counts($teams);
+
+    $penalty = 0.0;
+    foreach ($tierWeights as $tier => $weight) {
+        $penalty += draw_count_spread($countsByTier[$tier] ?? []) * $weight;
+    }
+    return $penalty;
+}
+
 function draw_teams_quality_score(array $teams, array $bands): float
 {
     $drawWeights = player_draw_balance_weights();
@@ -529,6 +730,8 @@ function draw_teams_quality_score(array $teams, array $bands): float
     $cost += $highBandSpread * 90.0;
     $cost += draw_team_floor_spread($teams, 2) * 55.0;
     $cost += draw_team_low_liability_spread($teams) * 85.0;
+    $cost += draw_position_balance_penalty($teams);
+    $cost += draw_tier_balance_penalty($teams);
 
     return $cost;
 }
@@ -590,9 +793,28 @@ function draw_exact_two_team_candidate(array $players, int $teamSize, float $max
     $selected = [0];
     $candidateIndexes = range(1, $totalPlayers - 1);
     $targetPicks = $teamSize - 1;
+    $totalPlatinum = count(array_filter($players, 'draw_player_is_platinum'));
+    $minPlatinumPerTeam = intdiv($totalPlatinum, 2);
+    $maxPlatinumPerTeam = (int) ceil($totalPlatinum / 2);
 
-    $visit = static function (int $start, int $remaining) use (&$visit, &$selected, $candidateIndexes, $players, $teamSize, $maxDiff, $bands, &$bestTeams, &$bestScore): void {
+    $visit = static function (int $start, int $remaining) use (&$visit, &$selected, $candidateIndexes, $players, $teamSize, $maxDiff, $bands, &$bestTeams, &$bestScore, $minPlatinumPerTeam, $maxPlatinumPerTeam): void {
+        $selectedPlatinum = count(array_filter($selected, static fn(int $index): bool => draw_player_is_platinum($players[$index])));
+        if ($selectedPlatinum > $maxPlatinumPerTeam) {
+            return;
+        }
+        $remainingPlatinum = 0;
+        for ($i = $start; $i < count($candidateIndexes); $i++) {
+            if (draw_player_is_platinum($players[$candidateIndexes[$i]])) {
+                $remainingPlatinum++;
+            }
+        }
+        if (($selectedPlatinum + $remainingPlatinum) < $minPlatinumPerTeam) {
+            return;
+        }
         if ($remaining === 0) {
+            if ($selectedPlatinum < $minPlatinumPerTeam || $selectedPlatinum > $maxPlatinumPerTeam) {
+                return;
+            }
             $selectedSet = array_flip($selected);
             $left = [];
             $right = [];
@@ -723,14 +945,17 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
 
         $gkIds = array_map(static fn(array $p): int => (int) $p['id'], $starterGk);
         $fieldPool = array_values(array_filter($players, static fn(array $p): bool => !in_array((int) $p['id'], $gkIds, true)));
-        $slowField = array_values(array_filter($fieldPool, static fn(array $p): bool => player_is_low_rhythm($p)));
-        $fastField = array_values(array_filter($fieldPool, static fn(array $p): bool => !player_is_low_rhythm($p)));
+        $platinumPool = array_values(array_filter($fieldPool, 'draw_player_is_platinum'));
+        $platinumIds = array_flip(array_map(static fn(array $p): int => (int) $p['id'], $platinumPool));
+        $nonPlatinumFieldPool = array_values(array_filter($fieldPool, static fn(array $p): bool => !isset($platinumIds[(int) $p['id']])));
+        $slowField = array_values(array_filter($nonPlatinumFieldPool, static fn(array $p): bool => player_is_low_rhythm($p)));
+        $fastField = array_values(array_filter($nonPlatinumFieldPool, static fn(array $p): bool => !player_is_low_rhythm($p)));
         shuffle($slowField);
         shuffle($fastField);
         $fieldOrder = match ($try % 4) {
             0 => array_merge($slowField, $fastField),
-            1 => $fieldPool,
-            2 => $fieldPool,
+            1 => $nonPlatinumFieldPool,
+            2 => $nonPlatinumFieldPool,
             default => array_merge($fastField, $slowField),
         };
         if (($try % 4) === 1) {
@@ -803,6 +1028,8 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                 $projectedTeams = $teams;
                 $projectedTeams[$teamIndex][] = $player;
                 $cost += draw_team_low_liability_spread($projectedTeams) * 85.0;
+                $cost += draw_position_balance_penalty($projectedTeams);
+                $cost += draw_tier_balance_penalty($projectedTeams);
                 if (count($available) > 1) {
                     $exploration = match ($try % 6) {
                         0 => 30.0,
@@ -822,6 +1049,24 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
 
         for ($i = 0; $i < $numTeams; $i++) {
             $addPlayerToTeam($starterGk[$i], $i);
+        }
+
+        shuffle($platinumPool);
+        usort($platinumPool, static fn(array $a, array $b): int => player_best_natural_rating($b) <=> player_best_natural_rating($a));
+        foreach ($platinumPool as $player) {
+            $platinumCounts = array_map(static fn(array $team): int => draw_team_card_tier_counts($team)['supreme'] ?? 0, $teams);
+            $minimumPlatinumCount = min($platinumCounts);
+            $available = [];
+            for ($t = 0; $t < $numTeams; $t++) {
+                if (count($teams[$t]) < $teamSize && $platinumCounts[$t] === $minimumPlatinumCount) {
+                    $available[] = $t;
+                }
+            }
+            if (!$available) {
+                break;
+            }
+            $target = $chooseBestTeam($player, $available);
+            $addPlayerToTeam($player, $target);
         }
 
         foreach ($fieldOrder as $player) {

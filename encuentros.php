@@ -530,7 +530,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $matchDate = trim((string) ($_POST['match_date'] ?? ''));
         $numTeams = max(2, min(4, (int) ($_POST['num_teams'] ?? 2)));
         $playersPerTeam = max(1, min(12, (int) ($_POST['players_per_team'] ?? 9)));
-        $maxDiff = 0.5;
+        $maxDiff = 0.7;
         $allowRedraw = (int) ($_POST['allow_redraw'] ?? ($adminSettings['allow_redraw_default'] ?? 1)) === 1 ? 1 : 0;
         $redrawLimit = max(0, min(20, (int) ($_POST['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 3))));
         $multiDrawCount = max(1, min(10, (int) ($_POST['multi_draw_count'] ?? ($adminSettings['multi_draw_count_default'] ?? 3))));
@@ -747,7 +747,7 @@ $form = $editing ?: [
     'match_date' => date('Y-m-d H:i'),
     'num_teams' => 2,
     'players_per_team' => 9,
-    'max_diff' => 0.5,
+    'max_diff' => 0.7,
     'status' => 'programado',
     'notes' => '',
 ];

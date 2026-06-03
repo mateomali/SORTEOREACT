@@ -89,7 +89,7 @@
   const playersById = new Map(players.map((player) => [String(player.id), player]));
   const numTeams = Math.max(2, Number(config.numTeams || 2));
   const playersPerTeam = Math.max(1, Number(config.playersPerTeam || Math.ceil(players.length / numTeams)));
-  const maxDiff = Math.max(0.1, Number(config.maxDiff || 0.5));
+  const maxDiff = Math.max(0.1, Number(config.maxDiff || 1));
   const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
   const requiredPitchLines = ['ARQ', 'DEF', 'MED', 'DEL'];
   const fieldStatWeights = {
@@ -238,9 +238,9 @@
     if (line !== 'DEF') return lines[line] || [];
     const lateral = lines.LAT || [];
     const defenders = lines.DEF || [];
-    return lateral.length > 1
-      ? [...lateral.slice(0, 1), ...defenders, ...lateral.slice(1)]
-      : [...lateral, ...defenders];
+    if (!lateral.length) return defenders;
+    const leftCount = Math.ceil(lateral.length / 2);
+    return [...lateral.slice(0, leftCount), ...defenders, ...lateral.slice(leftCount)];
   };
 
   const tacticLabel = (lines) => [

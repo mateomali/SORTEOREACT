@@ -516,7 +516,7 @@ CREATE TABLE `matches` (
   `match_date` datetime NOT NULL,
   `num_teams` tinyint(3) unsigned NOT NULL DEFAULT 2,
   `players_per_team` tinyint(3) unsigned NOT NULL DEFAULT 9,
-  `max_diff` decimal(4,1) NOT NULL DEFAULT 2.0,
+  `max_diff` decimal(4,1) NOT NULL DEFAULT 0.7,
   `allow_redraw` tinyint(1) NOT NULL DEFAULT 1,
   `redraw_limit` tinyint(3) unsigned NOT NULL DEFAULT 3,
   `redraw_count` tinyint(3) unsigned NOT NULL DEFAULT 0,

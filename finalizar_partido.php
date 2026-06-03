@@ -1287,7 +1287,7 @@ require __DIR__ . '/includes/header.php';
           <script type="application/json" data-finish-team-analysis-config><?= json_encode([
             'numTeams' => (int) ($selectedMatch['num_teams'] ?? count($matchTeams)),
             'playersPerTeam' => (int) ($selectedMatch['players_per_team'] ?? 1),
-            'maxDiff' => (float) ($selectedMatch['max_diff'] ?? 0.5),
+            'maxDiff' => (float) ($selectedMatch['max_diff'] ?? 0.7),
             'players' => array_map(static fn(array $p): array => [
                 'id' => (int) $p['id'],
                 'name' => (string) $p['name'],

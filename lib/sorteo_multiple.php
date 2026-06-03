@@ -144,7 +144,7 @@ function multiple_draw_generate(int $matchId, int $count, bool $replace = false)
         throw new RuntimeException('La cantidad de jugadores debe ser divisible por la cantidad de equipos.');
     }
     $count = max(1, min(10, $count));
-    $maxDiff = max(0.1, (float) ($match['max_diff'] ?? 0.5));
+    $maxDiff = max(0.1, (float) ($match['max_diff'] ?? 0.7));
     $colors = [1 => 'ROSA', 2 => 'AZUL', 3 => 'NARANJA', 4 => 'NEGRO'];
 
     $pdo = db();

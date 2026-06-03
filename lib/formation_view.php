@@ -108,6 +108,23 @@ function formation_view_group_players(array $players): array
     return $lines;
 }
 
+function formation_view_defense_line_players(array $lines): array
+{
+    $lateralPlayers = array_values($lines['LAT'] ?? []);
+    $defenderPlayers = array_values($lines['DEF'] ?? []);
+
+    if (!$lateralPlayers) {
+        return $defenderPlayers;
+    }
+
+    $leftCount = (int) ceil(count($lateralPlayers) / 2);
+    return array_merge(
+        array_slice($lateralPlayers, 0, $leftCount),
+        $defenderPlayers,
+        array_slice($lateralPlayers, $leftCount)
+    );
+}
+
 function formation_view_render_pitch(array $teams, array $options = []): string
 {
     $highlightPlayerId = (int) ($options['highlight_player_id'] ?? 0);
@@ -157,13 +174,8 @@ function formation_view_render_team(array $team, array $options = []): string
 
     foreach (player_pitch_lines() as $line) {
         $linePlayers = $line === 'DEF'
-            ? array_merge($lines['LAT'] ?? [], $lines['DEF'] ?? [])
+            ? formation_view_defense_line_players($lines)
             : ($lines[$line] ?? []);
-        if ($line === 'DEF' && count($lines['LAT'] ?? []) > 1) {
-            $latPlayers = $lines['LAT'] ?? [];
-            $defPlayers = $lines['DEF'] ?? [];
-            $linePlayers = array_merge(array_slice($latPlayers, 0, 1), $defPlayers, array_slice($latPlayers, 1));
-        }
         $html .= '<div class="formation-line">';
         $html .= '<div class="line-label">' . h($line === 'DEF' && ($lines['LAT'] ?? []) ? 'DEF/LAT' : $line) . '</div>';
         $html .= '<div class="line-players">';
@@ -202,8 +214,10 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
     $photoPath = player_photo_path($player);
     $photoClass = player_has_custom_photo($player) ? ' is-custom' : ' is-default';
 
-    $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-player-skill="' . h((string) $rating) . '">';
+    $laneRole = $position === 'LAT' ? ' data-lane-role="lateral"' : '';
+    $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-player-skill="' . h((string) $rating) . '"' . $laneRole . '>';
     $html .= '<span class="player-card-rating" title="Puntaje general"><strong>' . h((string) formation_view_card_rating($rating)) . '</strong><span>GEN</span></span>';
+    $html .= '<span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>';
     $html .= '<span class="formation-card-photo' . h($photoClass) . '" aria-hidden="true"><img src="' . h($photoPath) . '" alt=""></span>';
     $html .= '<strong class="formation-player-name">' . h((string) ($player['name'] ?? 'Jugador')) . '</strong>';
     $html .= '<span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada">' . h($position ?: 'GEN') . '</span>';

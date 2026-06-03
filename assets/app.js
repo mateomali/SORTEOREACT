@@ -218,6 +218,11 @@
       if (label) label.textContent = card.classList.contains('formation-card-sin-stat') ? 'GEN' : (position || 'GEN');
       const positionLabel = card.querySelector('.formation-card-position');
       if (positionLabel) positionLabel.textContent = position || 'GEN';
+      if (position === 'LAT') {
+        card.dataset.laneRole = 'lateral';
+      } else {
+        delete card.dataset.laneRole;
+      }
       updatePlayerCardTier(card, adjustedRating);
       updatePlayerCardPositionState(card, position);
     };
@@ -229,6 +234,21 @@
       if (positions.includes(current)) return current;
       const natural = cardPositions(card).find((position) => positions.includes(position));
       return natural || positions[0];
+    };
+    const orderDefenseLinePlayers = (formation) => {
+      formationLines(formation).forEach((line) => {
+        if (!linePositions(line).includes('LAT')) return;
+        const parent = linePlayers(line);
+        if (!parent) return;
+        const cards = Array.from(parent.querySelectorAll('[data-static-formation-player]'));
+        const laterals = cards.filter((card) => String(card.dataset.assignedPosition || '').toUpperCase() === 'LAT');
+        const defenders = cards.filter((card) => String(card.dataset.assignedPosition || '').toUpperCase() !== 'LAT');
+        if (!laterals.length) return;
+        const leftCount = Math.ceil(laterals.length / 2);
+        [...laterals.slice(0, leftCount), ...defenders, ...laterals.slice(leftCount)].forEach((card) => {
+          parent.appendChild(card);
+        });
+      });
     };
     const ensureUndoButton = (formation) => {
       if (formationLocked(formation)) return;
@@ -347,6 +367,7 @@
         if (assigned) card.dataset.assignedPosition = assigned;
         updatePlayerCardRating(card);
       });
+      orderDefenseLinePlayers(formation);
     };
     const wouldKeepSingleGoalkeeper = (formation, source, target) => {
       let goalkeepers = 0;
@@ -2828,7 +2849,7 @@
     const players = Array.isArray(config.players) ? config.players : [];
     const numTeams = Number(config.numTeams || 2);
     const playersPerTeam = Number(config.playersPerTeam || 1);
-    const maxDiff = Math.max(0.1, Number(config.maxDiff || 0.5));
+    const maxDiff = Math.max(0.1, Number(config.maxDiff || 1));
     const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
     const requiredPitchLines = ['ARQ', 'DEF', 'MED', 'DEL'];
     const fieldStatWeights = {
