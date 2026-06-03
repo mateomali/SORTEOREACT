@@ -352,6 +352,14 @@ function playerCardStats(player, assignedPosition) {
   ];
 }
 
+function playerPositionRatings(player, assignedPosition = '') {
+  const natural = getOrderedPlayerPositions(player);
+  const positions = Array.from(new Set([...natural, String(assignedPosition || '').toUpperCase()].filter((position) => FORMATION_LINES.includes(position))));
+  return positions
+    .map((position) => ({ position, value: playerCardRating(adjustedPositionRating(player, position)), natural: natural.includes(position) }))
+    .sort((left, right) => right.value - left.value || POSITION_ORDER[left.position] - POSITION_ORDER[right.position]);
+}
+
 function playerRegularityForm(player) {
   const rating = statValue(player, 'regularidad');
   if (rating >= 4.5) return 'up';
@@ -1286,6 +1294,11 @@ export function SorteoLegacyPageIsland({ root }) {
   const redrawsRemaining = Math.max(0, payload.redrawLimit - persistedRedrawCount - redrawsUsedThisSession);
   const generateButtonLabel = nextGenerationIsRedraw ? `Rehacer sorteo (${redrawsRemaining} restantes)` : 'Generar equipos';
   const generateDisabled = generating || (nextGenerationIsRedraw && (!payload.allowRedraw || redrawsRemaining <= 0));
+  const manualChangeCount = useMemo(() => {
+    const assignmentCount = Object.keys(assignments || {}).length;
+    const formationCount = Object.values(teamFormations || {}).filter((value) => value && value !== 'auto').length;
+    return assignmentCount + formationCount;
+  }, [assignments, teamFormations]);
 
   const teamColorTaken = useCallback((colorName, ownIndex) => teamColors.some((item, index) => index !== ownIndex && item === colorName), [teamColors]);
 
@@ -1948,7 +1961,8 @@ export function SorteoLegacyPageIsland({ root }) {
       setHasSavedDraw(true);
       setGeneratedOnce(false);
       setError('');
-      setSuccess(data.message || 'Sorteo guardado correctamente en la fecha.');
+      const manualMessage = manualChangeCount > 0 ? ` Se conservaron ${manualChangeCount} ajuste${manualChangeCount === 1 ? '' : 's'} manual${manualChangeCount === 1 ? '' : 'es'} de cancha.` : '';
+      setSuccess(`${data.message || 'Sorteo guardado correctamente en la fecha.'}${manualMessage}`);
       window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 700);
     } catch (saveError) {
       setSuccess('');
@@ -2353,6 +2367,11 @@ export function SorteoLegacyPageIsland({ root }) {
                 {touchMoveSource ? `Seleccionado: ${touchMoveSource.playerName}. Toca otro jugador para intercambiar o una linea para moverlo.` : 'Toca una carta para seleccionarla. Luego toca otra carta o una linea.'}
               </div>
             ) : null}
+            {manualChangeCount > 0 ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
+                Hay {manualChangeCount} ajuste{manualChangeCount === 1 ? '' : 's'} manual{manualChangeCount === 1 ? '' : 'es'} en cancha. Al guardar se conservaran las posiciones actuales.
+              </div>
+            ) : null}
           </div>
 
           {teams && analysisVisible && drawAnalysis ? (
@@ -2473,10 +2492,32 @@ export function SorteoLegacyPageIsland({ root }) {
         <>
           <button className="fixed inset-0 z-[80] bg-black/70" type="button" aria-label="Cerrar ficha" onClick={() => setPreview(null)} />
           <section className="fixed inset-0 z-[90] grid place-items-center overflow-auto p-4" role="dialog" aria-modal="true" aria-label={`Ficha de ${preview.player.nombre}`}>
-            <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible">
-              <div className="origin-center scale-[1.72] sm:scale-[1.9]">
-                <FullPlayerCard player={preview.player} assignedPosition={preview.assignedPosition} />
+            <div className="grid w-full max-w-3xl items-center gap-4 md:grid-cols-[minmax(260px,1fr)_260px]">
+              <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible justify-self-center">
+                <div className="origin-center scale-[1.72] sm:scale-[1.9]">
+                  <FullPlayerCard player={preview.player} assignedPosition={preview.assignedPosition} />
+                </div>
               </div>
+              <aside className="grid gap-3 rounded-lg border border-white/15 bg-black/72 p-3 text-white shadow-sm">
+                <div>
+                  <h3 className="m-0 text-base font-black">{preview.player.nombre}</h3>
+                  <p className="m-0 text-xs font-semibold text-white/70">Puntaje por posicion</p>
+                </div>
+                <div className="grid gap-1.5">
+                  {playerPositionRatings(preview.player, preview.assignedPosition).map((rating) => (
+                    <div key={rating.position} className={`grid grid-cols-[42px_minmax(0,1fr)_44px] items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-black ${rating.position === preview.assignedPosition ? 'border-lime-200 bg-lime-200/15' : 'border-white/15 bg-white/8'}`}>
+                      <span>{rating.position}</span>
+                      <span className="h-2 overflow-hidden rounded bg-white/15">
+                        <i className="block h-full rounded bg-lime-200" style={{ width: `${Math.max(12, Math.min(100, rating.value))}%` }} />
+                      </span>
+                      <span className="text-right">{rating.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="m-0 text-xs font-semibold leading-relaxed text-white/70">
+                  El puntaje usa las habilidades relevantes para cada posicion y ajuste por regularidad.
+                </p>
+              </aside>
             </div>
             <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-lg border border-white/20 bg-black/70 text-white transition-colors hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" type="button" onClick={() => setPreview(null)} aria-label="Cerrar ficha">
               <Icon name="x" />

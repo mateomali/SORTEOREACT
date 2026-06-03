@@ -70,4 +70,25 @@ foreach ($teams as $teamIndex => $team) {
 
 assert_true(max($platinumCounts) - min($platinumCounts) <= 1, 'Los platinum deben quedar repartidos equitativamente.');
 
+$keeperRawOnly = test_player(50, 'Arquero Raw', 'ARQ', 3.0, [
+    'goalkeeper_skill' => 5.0,
+    'defense_physical' => 2.0,
+    'rhythm' => 2.0,
+    'technique' => 2.0,
+    'teamwork' => 2.0,
+    'mentality' => 2.0,
+]);
+$keeperComplete = test_player(51, 'Arquero Completo', 'ARQ', 3.0, [
+    'goalkeeper_skill' => 5.0,
+    'defense_physical' => 5.0,
+    'rhythm' => 5.0,
+    'technique' => 5.0,
+    'teamwork' => 5.0,
+    'mentality' => 5.0,
+]);
+assert_true(
+    player_position_rating($keeperComplete, 'ARQ') > player_position_rating($keeperRawOnly, 'ARQ'),
+    'El puntaje ARQ debe ponderar caracteristicas principales, no solo habilidad de arquero.'
+);
+
 echo "OK sorteo rules\n";
