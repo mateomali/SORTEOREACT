@@ -91,4 +91,31 @@ assert_true(
     'El puntaje ARQ debe ponderar caracteristicas principales, no solo habilidad de arquero.'
 );
 
+$threeTeamPlayers = [
+    test_player(101, 'Arquero 1', 'ARQ', 4.4, ['goalkeeper_skill' => 5.2]),
+    test_player(102, 'Arquero 2', 'ARQ', 4.2, ['goalkeeper_skill' => 5.1]),
+    test_player(103, 'Arquero 3', 'ARQ', 4.1, ['goalkeeper_skill' => 5.0]),
+];
+for ($i = 0; $i < 3; $i++) {
+    $base = 110 + ($i * 8);
+    $threeTeamPlayers[] = test_player($base + 1, "LAT {$i}A", 'LAT', 4.0);
+    $threeTeamPlayers[] = test_player($base + 2, "LAT {$i}B", 'LAT', 3.9);
+    $threeTeamPlayers[] = test_player($base + 3, "DEF {$i}", 'DEF', 3.8);
+    $threeTeamPlayers[] = test_player($base + 4, "MED {$i}A", 'MED', 4.0);
+    $threeTeamPlayers[] = test_player($base + 5, "MED {$i}B", 'MED/DEL', 3.9);
+    $threeTeamPlayers[] = test_player($base + 6, "DEL {$i}A", 'DEL', 4.0);
+    $threeTeamPlayers[] = test_player($base + 7, "DEL {$i}B", 'DEL/MED', 3.8);
+    $threeTeamPlayers[] = test_player($base + 8, "DEF {$i}B", 'DEF/LAT', 3.7);
+}
+$threeTeams = generate_valid_teams($threeTeamPlayers, 3, 6.0, 3000, 10);
+assert_true(is_array($threeTeams), 'Debe generar equipos validos para 3 equipos.');
+foreach ($threeTeams as $teamIndex => $team) {
+    $lineCounts = $team['line_counts'] ?? [];
+    assert_true(($lineCounts['ARQ'] ?? 0) === 1, "Equipo triple {$teamIndex} debe tener 1 arquero.");
+    assert_true(($lineCounts['LAT'] ?? 0) >= 2, "Equipo triple {$teamIndex} debe tener 2 laterales.");
+    assert_true(($lineCounts['DEF'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir defensa.");
+    assert_true(($lineCounts['MED'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir medio.");
+    assert_true(($lineCounts['DEL'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir delantero.");
+}
+
 echo "OK sorteo rules\n";
