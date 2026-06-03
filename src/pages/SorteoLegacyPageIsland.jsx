@@ -1086,7 +1086,7 @@ function FullPlayerCard({ player, assignedPosition }) {
 }
 
 function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableProps = {}, onOpen }) {
-  const { dragging = false, selected = false, ...domDraggableProps } = draggableProps;
+  const { dragging = false, selected = false, locked = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRating(player, assignedPosition);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
@@ -1106,7 +1106,7 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
   return (
     <button
       type="button"
-      className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
+      className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
       style={{ ...cardTextStyle, background: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
       onClick={(event) => {
         event.stopPropagation();
@@ -1121,6 +1121,9 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
       <span className="absolute left-[9%] right-[8%] top-[10.1%] z-20 h-[56.1%] bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/38" aria-hidden="true" />
       {isLateral ? (
         <span className="sorteo-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
+      ) : null}
+      {locked ? (
+        <span className="absolute right-[8%] top-[8%] z-40 grid h-4 w-4 place-items-center rounded-full border border-[#07130f]/45 bg-amber-200 text-[9px] font-black text-[#07130f]" aria-hidden="true">L</span>
       ) : null}
       <span className={`absolute left-[14.2%] top-[15.8%] z-30 grid h-[29.8%] w-[23.2%] content-start justify-items-center ${palette.text}`} style={cardTextStyle} data-sorteo-card-text="1">
         <strong className="text-[.6rem] font-black leading-[.8] min-[380px]:text-[.66rem] sm:text-[.9rem] xl:text-[1.12rem]" style={cardTextStyle} data-sorteo-card-text="1">{playerCardRating(adjusted)}</strong>
@@ -1262,6 +1265,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [analysisVisible, setAnalysisVisible] = useState(false);
   const [touchMoveMode, setTouchMoveMode] = useState(false);
   const [touchMoveSource, setTouchMoveSource] = useState(null);
+  const [lockedPlayerPositions, setLockedPlayerPositions] = useState({});
   const seenDrawSignatures = useRef(new Set(payload.savedDrawSignature ? [payload.savedDrawSignature] : []));
   const teamsContainerRef = useRef(null);
 
@@ -1299,6 +1303,7 @@ export function SorteoLegacyPageIsland({ root }) {
     const formationCount = Object.values(teamFormations || {}).filter((value) => value && value !== 'auto').length;
     return assignmentCount + formationCount;
   }, [assignments, teamFormations]);
+  const lockedPositionCount = useMemo(() => Object.keys(lockedPlayerPositions || {}).length, [lockedPlayerPositions]);
 
   const teamColorTaken = useCallback((colorName, ownIndex) => teamColors.some((item, index) => index !== ownIndex && item === colorName), [teamColors]);
 
@@ -1422,6 +1427,7 @@ export function SorteoLegacyPageIsland({ root }) {
       if (signature) seenDrawSignatures.current.add(signature);
       setTeams(result.teams);
       setAssignments({});
+      setLockedPlayerPositions({});
       setTeamFormations({});
       setUndoStacks({});
       setAnalysisVisible(false);
@@ -1620,11 +1626,11 @@ export function SorteoLegacyPageIsland({ root }) {
     setTeamFormations((current) => ({ ...current, [teamIndex]: value }));
     if (value === 'auto') {
       const teamKeys = new Set(teams[teamIndex].map(playerKey));
-      setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !teamKeys.has(key))));
+      setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !teamKeys.has(key) || lockedPlayerPositions[key])));
       return;
     }
     const nextAssignments = applyFormationToTeam(teams[teamIndex], value);
-    setAssignments((current) => ({ ...current, ...nextAssignments }));
+    setAssignments((current) => ({ ...current, ...nextAssignments, ...lockedPlayerPositions }));
   };
 
   const lineDelta = (teamIndex, line, delta) => {
@@ -1637,12 +1643,14 @@ export function SorteoLegacyPageIsland({ root }) {
       if ((counts[line] || 0) >= fieldLineLimit(line, team.length)) return;
       const candidate = team
         .filter((player) => currentAssignments[playerKey(player)] !== line && currentAssignments[playerKey(player)] !== 'ARQ')
+        .filter((player) => !lockedPlayerPositions[playerKey(player)])
         .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
       if (candidate) setAssignments((current) => ({ ...current, [playerKey(candidate)]: line }));
       return;
     }
     const candidate = team
       .filter((player) => currentAssignments[playerKey(player)] === line)
+      .filter((player) => !lockedPlayerPositions[playerKey(player)])
       .filter(() => (teamLineCounts(team, currentAssignments)[line] || 0) > fieldLineMinimum(line, team.length))
       .sort((a, b) => adjustedPositionRating(a, line) - adjustedPositionRating(b, line))[0];
     if (candidate) {
@@ -1670,6 +1678,7 @@ export function SorteoLegacyPageIsland({ root }) {
           const currentLine = currentAssignments[playerKey(player)];
           return currentLine !== 'ARQ' && currentLine !== 'DEF' && currentLine !== 'LAT';
         })
+        .filter((player) => !lockedPlayerPositions[playerKey(player)])
         .flatMap((player) => ['DEF', 'LAT']
           .filter((targetLine) => (counts[targetLine] || 0) < perPositionLimit)
           .map((targetLine) => ({ player, targetLine, rating: adjustedPositionRating(player, targetLine) })))
@@ -1680,6 +1689,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
     const candidate = team
       .filter((player) => ['DEF', 'LAT'].includes(currentAssignments[playerKey(player)]))
+      .filter((player) => !lockedPlayerPositions[playerKey(player)])
       .filter(() => (counts.DEF || 0) + (counts.LAT || 0) > fieldLineMinimum('DEF', team.length))
       .sort((a, b) => {
         const assignedA = currentAssignments[playerKey(a)];
@@ -1692,17 +1702,43 @@ export function SorteoLegacyPageIsland({ root }) {
     }
   };
 
+  const toggleLockedPosition = (player, assignedPosition) => {
+    const key = playerKey(player);
+    const position = String(assignedPosition || getPrimaryPlayerPosition(player)).toUpperCase();
+    setLockedPlayerPositions((current) => {
+      const next = { ...current };
+      if (next[key]) {
+        delete next[key];
+      } else if (FORMATION_LINES.includes(position)) {
+        next[key] = position;
+      }
+      return next;
+    });
+    setAssignments((current) => {
+      if (lockedPlayerPositions[key]) return current;
+      return FORMATION_LINES.includes(position) ? { ...current, [key]: position } : current;
+    });
+  };
+
   const movePlayer = (source, targetTeamIndex, targetLine = null, targetPlayerKey = null) => {
     if (!teams || source == null) return;
     const sourceTeamIndex = Number(source.teamIndex);
     const key = String(source.playerKey);
     if (!Number.isFinite(sourceTeamIndex) || !teams[sourceTeamIndex]) return;
     const sourcePlayer = teams[sourceTeamIndex]?.find((player) => playerKey(player) === key);
+    if (lockedPlayerPositions[key]) {
+      setError(`${sourcePlayer?.nombre || 'El jugador'} tiene la posicion bloqueada.`);
+      return;
+    }
     if (sourcePlayer && isFixedGoalkeeper(sourcePlayer) && targetLine && targetLine !== 'ARQ') {
       setError(`${sourcePlayer.nombre} esta fijado como arquero y no puede cambiar de posicion.`);
       return;
     }
     const targetPlayer = targetPlayerKey ? teams[targetTeamIndex]?.find((player) => playerKey(player) === String(targetPlayerKey)) : null;
+    if (targetPlayerKey && lockedPlayerPositions[String(targetPlayerKey)]) {
+      setError(`${targetPlayer?.nombre || 'El jugador destino'} tiene la posicion bloqueada.`);
+      return;
+    }
     if (targetPlayer && isFixedGoalkeeper(targetPlayer)) {
       setError(`${targetPlayer.nombre} esta fijado como arquero y no puede moverse por intercambio.`);
       return;
@@ -1832,6 +1868,10 @@ export function SorteoLegacyPageIsland({ root }) {
       return;
     }
     const key = playerKey(player);
+    if (lockedPlayerPositions[key]) {
+      setError(`${player.nombre} tiene la posicion bloqueada.`);
+      return;
+    }
     if (isFixedGoalkeeper(player)) {
       setError(`${player.nombre} esta fijado como arquero y no puede cambiar de posicion.`);
       return;
@@ -2288,9 +2328,10 @@ export function SorteoLegacyPageIsland({ root }) {
                                         laneRole={assigned === 'LAT' ? 'lateral' : ''}
                                         onOpen={() => !dragState && handleTouchCard(teamIndex, player, assigned)}
                                         draggableProps={{
-                                          draggable: !isFixedGoalkeeper(player),
+                                          draggable: !isFixedGoalkeeper(player) && !lockedPlayerPositions[playerKey(player)],
                                           dragging: dragState?.playerKey === playerKey(player),
                                           selected: touchMoveSource?.teamIndex === teamIndex && touchMoveSource?.playerKey === playerKey(player),
+                                          locked: Boolean(lockedPlayerPositions[playerKey(player)]),
                                           onDragStart: (event) => handleDragStart(event, teamIndex, player, assigned),
                                           onDragOver: (event) => {
                                             event.preventDefault();
@@ -2369,7 +2410,7 @@ export function SorteoLegacyPageIsland({ root }) {
             ) : null}
             {manualChangeCount > 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
-                Hay {manualChangeCount} ajuste{manualChangeCount === 1 ? '' : 's'} manual{manualChangeCount === 1 ? '' : 'es'} en cancha. Al guardar se conservaran las posiciones actuales.
+                Hay {manualChangeCount} ajuste{manualChangeCount === 1 ? '' : 's'} manual{manualChangeCount === 1 ? '' : 'es'} en cancha{lockedPositionCount > 0 ? `, con ${lockedPositionCount} posicion${lockedPositionCount === 1 ? '' : 'es'} bloqueada${lockedPositionCount === 1 ? '' : 's'}` : ''}. Al guardar se conservaran las posiciones actuales.
               </div>
             ) : null}
           </div>
@@ -2517,6 +2558,13 @@ export function SorteoLegacyPageIsland({ root }) {
                 <p className="m-0 text-xs font-semibold leading-relaxed text-white/70">
                   El puntaje usa las habilidades relevantes para cada posicion y ajuste por regularidad.
                 </p>
+                <button
+                  className="min-h-10 rounded-md border border-white/20 bg-white/10 px-3 text-sm font-black text-white transition-colors hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  type="button"
+                  onClick={() => toggleLockedPosition(preview.player, preview.assignedPosition)}
+                >
+                  {lockedPlayerPositions[playerKey(preview.player)] ? 'Desbloquear posicion' : `Bloquear en ${preview.assignedPosition}`}
+                </button>
               </aside>
             </div>
             <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-lg border border-white/20 bg-black/70 text-white transition-colors hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" type="button" onClick={() => setPreview(null)} aria-label="Cerrar ficha">
