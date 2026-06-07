@@ -741,6 +741,10 @@ INSERT INTO `site_users` VALUES (1,'manuso','$2y$10$2hZHWzBBPHSE8RAG9BpM3uxve1me
 UNLOCK TABLES;
 
 --
+-- Dumping events for database 'u552541920_futbol'
+--
+
+--
 -- Dumping routines for database 'u552541920_futbol'
 --
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -753,4 +757,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-03 17:14:27
+-- Dump completed on 2026-06-07 14:19:00
