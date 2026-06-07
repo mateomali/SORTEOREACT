@@ -1363,7 +1363,14 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
         $latestCanFinalize = (string) $latestMatch['status'] === 'sorteado'
             || ((string) $latestMatch['status'] === 'finalizado' && !$latestHasSavedResult);
         $latestIsFinalized = $latestHasSavedResult;
-        $latestCanEditCaptainFormation = $latestCanFinalize;
+        $latestCanEditCaptainFormation = $latestCanFinalize && count($latestTeams) > 0;
+        $latestRatingStatus = $historyRatingCounts[$latestId] ?? ['player_count' => (int) $latestMatch['participants_count'], 'rated_count' => 0];
+        $latestMissingAwards = $latestIsFinalized && (($historyAwardCounts[$latestId] ?? 0) === 0);
+        $latestMissingRating = $latestIsFinalized && (int) $latestRatingStatus['player_count'] > 0 && (int) $latestRatingStatus['rated_count'] < (int) $latestRatingStatus['player_count'];
+        $latestNeedsValuations = $latestMissingAwards || $latestMissingRating;
+        $latestFormationUrl = 'finalizar_partido.php?match_id=' . $latestId . '&edit_formations=1#formaciones';
+        $latestFinishUrl = 'finalizar_partido.php?match_id=' . $latestId . '&show_score=1#resultado';
+        $latestValuationsUrl = 'finalizar_partido.php?match_id=' . $latestId . '&edit_details=1#valoraciones';
         $latestPlayersPerTeam = (int) ($latestMatch['players_per_team'] ?? ((int) $latestMatch['participants_count'] / max(1, (int) $latestMatch['num_teams'])));
         $latestExpectedPlayers = (int) $latestMatch['num_teams'] * max(1, $latestPlayersPerTeam);
         $latestParticipantsCount = (int) $latestMatch['participants_count'];
@@ -1390,15 +1397,18 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
             <a class="btn btn-muted" href="equipos_manual.php?match_id=<?= $latestId ?>">Manual</a>
           <?php elseif ($latestCanFinalize): ?>
             <?php if ($latestCanEditCaptainFormation): ?>
-              <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>&amp;edit_formations=1#formaciones">Formaciones</a>
+              <a class="btn btn-muted" href="<?= h($latestFormationUrl) ?>">Formaciones</a>
             <?php endif; ?>
             <form method="post">
               <input type="hidden" name="action" value="undo_draw">
               <input type="hidden" name="id" value="<?= $latestId ?>">
               <button class="btn btn-warning" type="submit" data-confirm="¿Deshacer el sorteo? Se borrarán equipos, capitanes y variantes para volver a sortear.">Deshacer sorteo</button>
             </form>
-            <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="finalizar_partido.php?match_id=<?= $latestId ?>">Cargar resultado</a>
+            <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="<?= h($latestFinishUrl) ?>">Finalizar</a>
           <?php elseif ($latestIsFinalized): ?>
+            <?php if ($latestNeedsValuations): ?>
+              <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="<?= h($latestValuationsUrl) ?>">Valoraciones</a>
+            <?php endif; ?>
             <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>">Ver resultado</a>
           <?php endif; ?>
           <a class="btn btn-muted" href="exportar_fecha.php?match_id=<?= $latestId ?>&amp;mode=completo" data-no-partial>Exportar CSV</a>
@@ -1436,12 +1446,16 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               || ((string) $m['status'] === 'finalizado' && !$hasSavedResult);
           $isFinalized = $hasSavedResult;
           $isScheduled = (string) $m['status'] === 'programado';
-          $canEditCaptainFormation = $canFinalize;
+          $canEditCaptainFormation = $canFinalize && count($historyTeams) > 0;
           $cardPage = intdiv($matchIndex, $matchesPerPage) + 1;
           $participantsCount = (int) $m['participants_count'];
           $ratingStatus = $historyRatingCounts[$matchId] ?? ['player_count' => $participantsCount, 'rated_count' => 0];
           $missingAwards = $isFinalized && (($historyAwardCounts[$matchId] ?? 0) === 0);
           $missingRating = $isFinalized && (int) $ratingStatus['player_count'] > 0 && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
+          $needsValuations = $missingAwards || $missingRating;
+          $formationUrl = 'finalizar_partido.php?match_id=' . $matchId . '&edit_formations=1#formaciones';
+          $finishUrl = 'finalizar_partido.php?match_id=' . $matchId . '&show_score=1#resultado';
+          $valuationsUrl = 'finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones';
           $statusClass = $isFinalized ? 'done' : ($canFinalize ? 'ready' : 'warn');
           $historyScoreboard = admin_render_match_scoreboard($m, $historyTeams, $historyCaptainNames);
           $matchCourt = $rentalCourtsById[(int) ($m['rental_court_id'] ?? 0)] ?? null;
@@ -1504,7 +1518,9 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
             <?php if ($isScheduled): ?>
               Listo para editar, sortear o iniciar modo capitanes.
             <?php elseif ($canFinalize): ?>
-              Equipos generados. Solo resta finalizar la fecha.
+              Equipos generados. Puedes ajustar formaciones o finalizar con resultado.
+            <?php elseif ($needsValuations): ?>
+              Resultado cargado. Faltan puntajes o premios por completar.
             <?php else: ?>
               Fecha cerrada. Resultado y detalle disponibles.
             <?php endif; ?>
@@ -1521,9 +1537,9 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
               <span class="btn btn-disabled icon-dice" data-short=""><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
               <?php if ($canEditCaptainFormation): ?>
-                <a class="btn btn-muted icon-captain" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>&amp;edit_formations=1#formaciones">Formaciones</a>
+                <a class="btn btn-muted icon-captain" data-short="" href="<?= h($formationUrl) ?>">Formaciones</a>
               <?php else: ?>
-                <span class="btn btn-disabled icon-captain" data-short="">Capitanes</span>
+                <span class="btn btn-disabled icon-captain" data-short="">Formaciones</span>
               <?php endif; ?>
               <?php if ($canFinalize): ?>
                 <form method="post">
@@ -1535,8 +1551,11 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
             <?php endif; ?>
 
             <?php if ($canFinalize): ?>
-              <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar</a>
+              <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="<?= h($finishUrl) ?>">Finalizar</a>
             <?php elseif ($isFinalized): ?>
+              <?php if ($needsValuations): ?>
+                <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="<?= h($valuationsUrl) ?>">Valoraciones</a>
+              <?php endif; ?>
               <a class="btn btn-muted" data-short="V" href="finalizar_partido.php?match_id=<?= $matchId ?>" title="Ver resultado">Ver</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-finish" data-short="" title="Primero hay que generar equipos por sorteo o capitanes">Finalizar</span>
@@ -1570,7 +1589,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
                 <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
                 <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Equipos manuales</a>
               <?php elseif ($canEditCaptainFormation): ?>
-                <a class="btn btn-muted icon-captain" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>&amp;edit_formations=1#formaciones">Editar formaciones</a>
+                <a class="btn btn-muted icon-captain" data-short="" href="<?= h($formationUrl) ?>">Editar formaciones</a>
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>
@@ -1582,8 +1601,11 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <?php endif; ?>
 
               <?php if ($canFinalize): ?>
-                <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Finalizar fecha</a>
+                <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="<?= h($finishUrl) ?>">Finalizar fecha</a>
               <?php elseif ($isFinalized): ?>
+                <?php if ($needsValuations): ?>
+                  <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="<?= h($valuationsUrl) ?>">Cargar valoraciones</a>
+                <?php endif; ?>
                 <a class="btn btn-muted" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
               <?php endif; ?>
 

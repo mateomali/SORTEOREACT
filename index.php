@@ -183,7 +183,7 @@ function home_adjusted_position_rating(array $player, string $position): float
         return player_overall_rating($player);
     }
 
-    return max(1.0, min(6.0, home_position_base_rating($player, $position)));
+    return max(1.0, min(6.0, home_position_base_rating($player, $position) * player_position_fit_factor($player, $position)));
 }
 
 $pdo = db();
@@ -978,7 +978,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                       : ($displayLines[$line] ?? []);
                   $lineLabel = $line === 'DEF' && !empty($displayLines['LAT']) ? 'DEF/LAT' : $line;
                 ?>
-                <div class="formation-line">
+                <div class="formation-line<?= $line === 'DEF' && !empty($displayLines['LAT']) ? ' is-projected-defense' : '' ?>">
                   <div class="line-label"><?= h($lineLabel) ?></div>
                   <div class="line-players">
                     <?php if (empty($linePlayers)): ?>
@@ -1017,8 +1017,10 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           data-player-mentality="<?= h(number_format(player_effective_stat($player, 'mentality'), 1, '.', '')) ?>"
                           data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
+                          <?= $assignedLine === 'LAT' ? 'data-lane-role="lateral"' : '' ?>
                         >
                           <?= render_player_card_rating($formationBaseRating, 'GEN') ?>
+                          <span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
                           <span class="formation-card-photo<?= h($formationPhotoClass) ?>" aria-hidden="true"><img src="<?= h($formationPhotoPath) ?>" alt=""></span>
                           <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
                           <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>

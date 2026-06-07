@@ -176,7 +176,11 @@ function formation_view_render_team(array $team, array $options = []): string
         $linePlayers = $line === 'DEF'
             ? formation_view_defense_line_players($lines)
             : ($lines[$line] ?? []);
-        $html .= '<div class="formation-line">';
+        $lineClasses = 'formation-line';
+        if ($line === 'DEF' && ($lines['LAT'] ?? [])) {
+            $lineClasses .= ' is-projected-defense';
+        }
+        $html .= '<div class="' . h($lineClasses) . '">';
         $html .= '<div class="line-label">' . h($line === 'DEF' && ($lines['LAT'] ?? []) ? 'DEF/LAT' : $line) . '</div>';
         $html .= '<div class="line-players">';
         if (!$linePlayers) {

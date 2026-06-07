@@ -157,6 +157,16 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       const primaryPositionOf = (player) => String(player.primary_position || playerPositions(player)[0] || 'MED').toUpperCase();
       const pitchLineForPosition = (position) => String(position || '').toUpperCase() === 'LAT' ? 'DEF' : String(position || '').toUpperCase();
       const hasSecondaryPosition = (player, position) => playerPositions(player).slice(1).includes(position);
+      const positionFitFactor = (player, position) => {
+        const normalized = String(position || '').toUpperCase();
+        if (!normalized) return 1;
+        const naturalPositions = playerPositions(player);
+        const naturalIndex = naturalPositions.indexOf(normalized);
+        if (naturalIndex === 0) return 1;
+        if (naturalIndex === 1) return 0.95;
+        const naturalLines = naturalPositions.map(pitchLineForPosition);
+        return naturalLines.includes(pitchLineForPosition(normalized)) ? 0.90 : 0.90;
+      };
       const findFormationGoalkeeper = (players) => (
         players.find(player => primaryPositionOf(player) === 'ARQ')
         || players.find(player => hasSecondaryPosition(player, 'ARQ'))
@@ -670,7 +680,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
           return Math.max(1, Math.min(6, Number(player.skill || 0)));
         }
         const base = positionBaseRating(player, position);
-        return Math.max(1, Math.min(6, base));
+        return Math.max(1, Math.min(6, base * positionFitFactor(player, position)));
       };
 
       const naturalPositionRating = (player) => {
@@ -1138,7 +1148,7 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
             ? lineControls.map(controlLine => `<button class="captain-editor-line-control captain-line-control is-plus" type="button" data-field-line="${controlLine}" data-field-line-delta="1" aria-label="Agregar jugador a ${controlLine}">+</button>`).join('')
             : '';
           return `
-            <div class="captain-editor-line formation-line captain-formation-line ${canTuneLine ? 'has-line-tools' : ''} ${pos === 'DEF' ? 'is-defense-line' : ''}">
+            <div class="captain-editor-line formation-line captain-formation-line ${canTuneLine ? 'has-line-tools' : ''} ${pos === 'DEF' ? 'is-defense-line' : ''} ${pos === 'DEF' && linePlayers.some(player => (formationDrafts[teamNumber]?.[player.id] || player.assigned_position || player.primary_position || pos) === 'LAT') ? 'is-projected-defense' : ''}">
               ${labelHtml}
               <div class="captain-editor-line-players line-players" data-formation-line="${pos}" data-drop-team="${teamNumber}">
                 ${linePlayers.length ? linePlayers.map(player => {
@@ -1152,9 +1162,11 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
                   const penaltyPercent = positionPenaltyPercent(player, assignedPosition);
                   const cardTitle = `General ${formatSkill(generalRating)} | Ajustada ${assignedPosition} ${formatSkill(adjustedRating)}${secondaryPosition ? ` | Secundaria: ${assignedPosition}. Primaria: ${primaryPosition}` : ''}`;
                   const positionChanged = primaryPosition !== '' && assignedPosition !== primaryPosition;
+                  const laneRole = assignedPosition === 'LAT' ? ' data-lane-role="lateral"' : '';
                   return `
-                  <div class="captain-editor-player formation-player captain-formation-player card-pro-relieve formation-card-sin-stat ${cardViewClass} formation-card-tier-${playerCardTier(adjustedRating)} ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${assignedPosition}" data-drag-team="${teamNumber}" title="${escapeHtml(cardTitle)}">
+                  <div class="captain-editor-player formation-player captain-formation-player card-pro-relieve formation-card-sin-stat ${cardViewClass} formation-card-tier-${playerCardTier(adjustedRating)} ${readOnly ? 'is-readonly' : ''} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="${readOnly ? 'false' : 'true'}" data-drag-player-id="${player.id}" data-drag-position="${assignedPosition}" data-drag-team="${teamNumber}"${laneRole} title="${escapeHtml(cardTitle)}">
                     ${playerCardRatingHtml(adjustedRating, 'GEN')}
+                    <span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
                     ${playerCardPhotoHtml(player)}
                     <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
                     <span class="captain-position-pill formation-player-meta formation-player-position formation-card-position ${secondaryPosition ? 'is-assigned-secondary' : 'is-primary'}">${escapeHtml(assignedPosition)}${secondaryPosition ? '<em class="formation-secondary-badge">2a</em>' : ''}</span>

@@ -130,6 +130,17 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       .map((pos) => pos.trim().toUpperCase())
       .filter(Boolean);
     const primaryPosition = (player) => playerPositions(player)[0] || '';
+    const pitchLineForPosition = (position) => String(position || '').toUpperCase() === 'LAT' ? 'DEF' : String(position || '').toUpperCase();
+    const positionFitFactor = (player, position) => {
+      const normalized = String(position || '').toUpperCase();
+      if (!normalized) return 1;
+      const naturalPositions = playerPositions(player);
+      const naturalIndex = naturalPositions.indexOf(normalized);
+      if (naturalIndex === 0) return 1;
+      if (naturalIndex === 1) return 0.95;
+      const naturalLines = naturalPositions.map(pitchLineForPosition);
+      return naturalLines.includes(pitchLineForPosition(normalized)) ? 0.90 : 0.90;
+    };
     const isPositionChanged = (player, assignedPosition) => {
       const primary = primaryPosition(player);
       return primary !== '' && String(assignedPosition || '').toUpperCase() !== primary;
@@ -193,7 +204,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
           defense_physical: 0.08,
         });
       }
-      return applyRegularityAdjustment(rating, player);
+      return Math.max(1, Math.min(6, applyRegularityAdjustment(rating, player) * positionFitFactor(player, position)));
     };
     const renderTeamCharacteristics = (players) => {
       if (!players.length) return '';
@@ -234,9 +245,11 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             const assignedPosition = player.assigned_position || player.primary_position || position;
             const adjustedRating = adjustedPositionRating(player, assignedPosition);
             const changedClass = isPositionChanged(player, assignedPosition) ? ' is-position-changed' : '';
+            const laneRole = assignedPosition === 'LAT' ? ' data-lane-role="lateral"' : '';
             return `
-              <div class="formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)}${changedClass}" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}" data-player-positions="${escapeHtml(player.positions || player.primary_position || '')}">
+              <div class="formation-player formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)}${changedClass}" draggable="false" data-static-formation-player data-static-player-key="${escapeHtml(player.id || player.name)}" data-team-number="${teamNumber}" data-assigned-position="${assignedPosition}" data-player-skill="${Number(player.skill || 0)}" data-player-positions="${escapeHtml(player.positions || player.primary_position || '')}"${laneRole}>
                 ${playerCardRatingHtml(adjustedRating, 'GEN')}
+                <span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
                 ${playerCardPhotoHtml(player)}
                 <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
                 <span class="formation-player-meta formation-player-position formation-card-position">${escapeHtml(assignedPosition)}</span>
@@ -247,7 +260,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
           : '<span class="formation-player empty-slot">-</span>';
 
         return `
-          <div class="formation-line">
+          <div class="formation-line${position === 'DEF' && linePlayers.some((player) => (player.assigned_position || player.primary_position || 'MED') === 'LAT') ? ' is-projected-defense' : ''}">
             <div class="line-label">${position === 'DEF' && linePlayers.some((player) => (player.assigned_position || player.primary_position || 'MED') === 'LAT') ? 'DEF/LAT' : position}</div>
             <div class="line-players">${playerHtml}</div>
           </div>

@@ -46,6 +46,17 @@ function pitchLineForPosition(position) {
   return String(position || '').toUpperCase() === 'LAT' ? 'DEF' : String(position || '').toUpperCase();
 }
 
+function positionFitFactor(jugador, assignedPosition) {
+  const position = String(assignedPosition || '').toUpperCase();
+  if (!position) return 1;
+  const naturalPositions = getOrderedPlayerPositions(jugador);
+  const naturalIndex = naturalPositions.indexOf(position);
+  if (naturalIndex === 0) return 1;
+  if (naturalIndex === 1) return 0.95;
+  const naturalLines = naturalPositions.map(pitchLineForPosition);
+  return naturalLines.includes(pitchLineForPosition(position)) ? 0.90 : 0.90;
+}
+
 function pitchLineCountsFromLogical(logicalCounts = {}) {
   return {
     ARQ: Number(logicalCounts.ARQ || 0),
@@ -515,13 +526,13 @@ function adjustedPositionRating(jugador, assignedPosition) {
   const position = String(assignedPosition || '').toUpperCase();
   if (!position) return Math.max(1, Math.min(6, Number(jugador.puntuacion || 0)));
   const baseRating = positionBaseRating(jugador, position);
-  return applyRegularityAdjustment(baseRating, jugador);
+  return Math.max(1, Math.min(6, applyRegularityAdjustment(baseRating, jugador) * positionFitFactor(jugador, position)));
 }
 
 function positionPenaltyPercent(jugador, assignedPosition) {
   const position = String(assignedPosition || '').toUpperCase();
   if (!position || getOrderedPlayerPositions(jugador).includes(position)) return 0;
-  const generalRating = Number(jugador.puntuacion || 0);
+  const generalRating = bestNaturalPlayerRating(jugador);
   const adjustedRating = adjustedPositionRating(jugador, position);
   if (!generalRating || adjustedRating >= generalRating) return 0;
   return Math.max(1, Math.min(99, Math.round((1 - (adjustedRating / generalRating)) * 100)));
@@ -2603,7 +2614,7 @@ function mostrarEquipos(equipos) {
             : jugadoresPorLinea[pos];
           const lineControls = pos === 'DEF' ? ['DEF', 'LAT'] : [pos];
           return `
-          <div class="formation-line captain-formation-line ${pos === 'ARQ' ? '' : 'has-line-tools'} ${pos === 'DEF' ? 'is-defense-line' : ''}">
+          <div class="formation-line captain-formation-line ${pos === 'ARQ' ? '' : 'has-line-tools'} ${pos === 'DEF' ? 'is-defense-line' : ''} ${pos === 'DEF' && jugadoresPorLinea.LAT.length ? 'is-projected-defense' : ''}">
             ${pos === 'ARQ' ? `
               <div class="line-label captain-line-label"><span><strong>${etiquetasPosicion[pos]}</strong><small>${jugadoresPorLinea[pos].length}/1</small></span></div>
             ` : `
@@ -2631,9 +2642,11 @@ function mostrarEquipos(equipos) {
                   ? ` | Secundaria: ${assignedPosition}. Primaria: ${primaryPosition}`
                   : (outOfPosition ? ' | Fuera de posicion natural' : '');
                 const cardTitle = `General ${formatRating(generalRating)} | Ajustada ${assignedPosition} ${formatRating(adjustedRating)}${roleNote}`;
+                const laneRole = assignedPosition === 'LAT' ? ' data-lane-role="lateral"' : '';
                 return `
-                <div class="formation-player captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}" title="${escapeHtml(cardTitle)}">
+                <div class="formation-player captain-formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-${playerCardTier(adjustedRating)} ${outOfPosition ? 'is-out-of-position' : ''} ${secondaryPosition ? 'is-secondary-position' : ''} ${positionChanged ? 'is-position-changed' : ''}" draggable="true" data-sorteo-drag-player="1" data-team-index="${index}" data-player-key="${playerKey(j)}" data-assigned-position="${assignedPosition}"${laneRole} title="${escapeHtml(cardTitle)}">
                   ${playerCardRatingHtml(adjustedRating, 'GEN')}
+                  <span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
                   ${playerCardPhotoHtml(j)}
                   <strong class="formation-player-name">${escapeHtml(j.nombre)} ${isLowRhythmPlayer(j) ? '&#128034;' : ''}</strong>
                   <span class="captain-position-pill formation-player-meta formation-player-position formation-card-position ${secondaryPosition ? 'is-assigned-secondary' : ''}">${assignedPosition}${secondaryPosition ? ' <em class="formation-secondary-badge">2a</em>' : ''}</span>
@@ -2995,8 +3008,31 @@ function setCleanSorteoDragPayload(event, playerCard) {
   event.dataTransfer.setDragImage(canvas, 0, 0);
 }
 
-function formationDropTargetFromPoint(clientX, clientY, ghost = null) {
+function expandedFormationCardFromPoint(clientX, clientY, root = document) {
+  let best = null;
+  root.querySelectorAll('[data-sorteo-drag-player]').forEach((card) => {
+    if (card.classList.contains('is-dragging')) return;
+    const rect = card.getBoundingClientRect();
+    const expandedLeft = rect.left - 14;
+    const expandedRight = rect.right + 14;
+    const expandedTop = rect.top - 10;
+    const expandedBottom = rect.bottom + 10;
+    if (clientX < expandedLeft || clientX > expandedRight || clientY < expandedTop || clientY > expandedBottom) return;
+    const centerX = rect.left + (rect.width / 2);
+    const centerY = rect.top + (rect.height / 2);
+    const distance = Math.hypot(clientX - centerX, clientY - centerY);
+    if (!best || distance < best.distance) best = { card, distance };
+  });
+  return best?.card || null;
+}
+
+function formationDropTargetFromPoint(clientX, clientY, ghost = null, root = document) {
   if (ghost) ghost.style.display = 'none';
+  const expandedCard = expandedFormationCardFromPoint(clientX, clientY, root);
+  if (expandedCard) {
+    if (ghost) ghost.style.display = '';
+    return expandedCard;
+  }
   const target = document.elementFromPoint(clientX, clientY);
   if (ghost) ghost.style.display = '';
   return target?.closest?.('[data-sorteo-drag-player], [data-sorteo-drop-line], [data-sorteo-drop-team], [data-sorteo-team-card]') || null;
@@ -3121,7 +3157,7 @@ function startSorteoFormationPointerDrag(event, card, root) {
     }
     moveEvent.preventDefault();
     moveDragVisuals(moveEvent);
-    markSorteoFormationDragTarget(formationDropTargetFromPoint(moveEvent.clientX, moveEvent.clientY, ghost), root);
+    markSorteoFormationDragTarget(formationDropTargetFromPoint(moveEvent.clientX, moveEvent.clientY, ghost, root), root);
   };
 
   const onPointerUp = (upEvent) => {
@@ -3130,7 +3166,7 @@ function startSorteoFormationPointerDrag(event, card, root) {
     window.removeEventListener('pointercancel', onPointerUp, true);
 
     const target = hasMoved
-      ? formationDropTargetFromPoint(upEvent.clientX, upEvent.clientY, ghost) || formationPointerDragTarget
+      ? formationDropTargetFromPoint(upEvent.clientX, upEvent.clientY, ghost, root) || formationPointerDragTarget
       : null;
     if (target) {
       handleSorteoFormationDrop(formationPointerDragState, target);
@@ -3242,7 +3278,8 @@ function bindSorteoLegacyEvents() {
   });
 
   root.addEventListener('dragover', (event) => {
-    const targetCard = event.target.closest('[data-sorteo-drag-player]');
+    const expandedCard = expandedFormationCardFromPoint(event.clientX, event.clientY, root);
+    const targetCard = expandedCard || event.target.closest('[data-sorteo-drag-player]');
     const targetLine = event.target.closest('[data-sorteo-drop-line]');
     const targetField = event.target.closest('[data-sorteo-drop-team]');
     if (!targetCard && !targetLine && (!targetField || !root.contains(targetField))) return;
@@ -3270,7 +3307,8 @@ function bindSorteoLegacyEvents() {
   });
 
   root.addEventListener('drop', (event) => {
-    const targetCard = event.target.closest('[data-sorteo-drag-player]');
+    const expandedCard = expandedFormationCardFromPoint(event.clientX, event.clientY, root);
+    const targetCard = expandedCard || event.target.closest('[data-sorteo-drag-player]');
     const targetLine = event.target.closest('[data-sorteo-drop-line]');
     const targetField = event.target.closest('[data-sorteo-drop-team]');
     if (!targetCard && !targetLine && (!targetField || !root.contains(targetField))) return;

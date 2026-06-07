@@ -400,14 +400,14 @@ function player_position_rating(array $player, string $position): float
         foreach (player_goalkeeper_stat_weights() as $field => $weight) {
             $total += player_effective_stat($player, $field) * $weight;
         }
-        return round(player_apply_regularity_adjustment($total, $player), 1);
+        return round(player_apply_regularity_adjustment($total, $player) * player_position_fit_factor($player, $position), 1);
     }
 
     $total = 0.0;
     foreach (player_field_stat_weights($position) as $field => $weight) {
         $total += player_effective_stat($player, $field) * $weight;
     }
-    return round(player_apply_regularity_adjustment($total, $player), 1);
+    return round(player_apply_regularity_adjustment($total, $player) * player_position_fit_factor($player, $position), 1);
 }
 
 function player_best_natural_position(array $player): string
@@ -490,6 +490,26 @@ function player_pitch_line(string $position): string
 {
     $position = strtoupper(trim($position));
     return $position === 'LAT' ? 'DEF' : $position;
+}
+
+function player_position_fit_factor(array $player, string $position): float
+{
+    $position = strtoupper(trim($position));
+    if ($position === '') {
+        return 1.0;
+    }
+
+    $naturalPositions = parse_positions_csv((string) ($player['positions'] ?? ''));
+    $naturalIndex = array_search($position, $naturalPositions, true);
+    if ($naturalIndex === 0) {
+        return 1.0;
+    }
+    if ($naturalIndex === 1) {
+        return 0.95;
+    }
+
+    $naturalLines = array_map(static fn(string $naturalPosition): string => player_pitch_line($naturalPosition), $naturalPositions);
+    return in_array(player_pitch_line($position), $naturalLines, true) ? 0.90 : 0.90;
 }
 
 function parse_positions_csv(string $positions): array

@@ -149,9 +149,9 @@
   const positionFitFactor = (player, position) => {
     const index = positionIndex(player, position);
     if (index === 0) return 1;
-    if (index === 1) return 0.94;
+    if (index === 1) return 0.95;
     const naturalLines = parsePositions(player).map(pitchLine);
-    return naturalLines.includes(pitchLine(position)) ? 0.86 : 0.72;
+    return naturalLines.includes(pitchLine(position)) ? 0.90 : 0.90;
   };
   const pitchLine = (position) => (position === 'LAT' ? 'DEF' : position);
   const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;

@@ -2979,9 +2979,9 @@
     const playerPositionFitFactor = (player, position) => {
       const index = playerPositionIndex(player, position);
       if (index === 0) return 1;
-      if (index === 1) return 0.94;
+      if (index === 1) return 0.95;
       const naturalLines = parsePlayerPositions(player).map(pitchLine);
-      return naturalLines.includes(pitchLine(position)) ? 0.86 : 0.72;
+      return naturalLines.includes(pitchLine(position)) ? 0.90 : 0.90;
     };
     const mainLineLimit = () => Math.max(0, Math.floor(playersPerTeam / 3));
     const defenseSideLimit = () => Math.max(0, Math.floor(playersPerTeam / 4));

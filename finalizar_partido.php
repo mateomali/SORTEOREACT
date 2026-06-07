@@ -908,6 +908,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_score') {
     $matchId = (int) ($_POST['match_id'] ?? 0);
     $teamGoalsData = $_POST['team_goals'] ?? [];
+    $returnToFormations = (string) ($_POST['return_to_formations'] ?? '') === '1';
+    $scoreReturnUrl = 'finalizar_partido.php?match_id=' . $matchId . ($returnToFormations ? '&edit_formations=1&show_score=1#resultado' : '');
+    $scoreSuccessUrl = 'finalizar_partido.php?match_id=' . $matchId . ($returnToFormations ? '&edit_formations=1&edit_details=1#valoraciones' : '');
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
@@ -916,19 +919,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
         flash('error', 'Solo se puede cargar resultado de una fecha con equipos ya formados.');
-        redirect('finalizar_partido.php?match_id=' . $matchId);
+        redirect($scoreReturnUrl);
     }
 
     $teams = repo_match_teams($matchId);
     if (!$teams) {
         flash('error', 'Faltan datos de equipos. Vuelve a generar el sorteo o completa capitanes.');
-        redirect('finalizar_partido.php?match_id=' . $matchId);
+        redirect($scoreReturnUrl);
     }
     foreach ($teams as $team) {
         $teamNumber = (int) $team['team_number'];
         if (!isset($teamGoalsData[$teamNumber]) || trim((string) $teamGoalsData[$teamNumber]) === '') {
             flash('error', 'Carga el resultado de la fecha.');
-            redirect('finalizar_partido.php?match_id=' . $matchId);
+            redirect($scoreReturnUrl);
         }
     }
 
@@ -945,7 +948,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         }
         flash('error', 'No se pudo guardar el resultado: ' . $e->getMessage());
     }
-    redirect('finalizar_partido.php?match_id=' . $matchId);
+    redirect($scoreSuccessUrl);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action'] ?? ''), ['save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'], true)) {
@@ -957,6 +960,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
     $shouldFinalizeRoundRobin = $roundRobinAction === 'finalize_round_robin_date';
     $roundRobinLegs = normalize_round_robin_legs($_POST['round_robin_legs'] ?? 1);
     $isAjax = (string) ($_POST['ajax'] ?? '') === '1';
+    $returnToFormations = (string) ($_POST['return_to_formations'] ?? '') === '1';
+    $roundRobinReturnUrl = 'finalizar_partido.php?match_id=' . $matchId . ($returnToFormations ? '&edit_formations=1&show_score=1#resultado' : '');
+    $roundRobinSuccessUrl = 'finalizar_partido.php?match_id=' . $matchId . ($returnToFormations ? '&edit_formations=1&edit_details=1#valoraciones' : '');
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
@@ -971,14 +977,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
             finish_json_response(['ok' => false, 'message' => 'La modalidad todos contra todos solo aplica a fechas con mas de 2 equipos.'], 422);
         }
         flash('error', 'La modalidad todos contra todos solo aplica a fechas con mas de 2 equipos.');
-        redirect('finalizar_partido.php?match_id=' . $matchId);
+        redirect($roundRobinReturnUrl);
     }
     if (!in_array((string) $match['status'], ['sorteado', 'finalizado'], true)) {
         if ($isAjax) {
             finish_json_response(['ok' => false, 'message' => 'Solo se puede cargar resultado de una fecha con equipos ya formados.'], 422);
         }
         flash('error', 'Solo se puede cargar resultado de una fecha con equipos ya formados.');
-        redirect('finalizar_partido.php?match_id=' . $matchId);
+        redirect($roundRobinReturnUrl);
     }
 
     $teams = repo_match_teams($matchId);
@@ -987,7 +993,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
             finish_json_response(['ok' => false, 'message' => 'Faltan datos de equipos. Vuelve a generar el sorteo o completa capitanes.'], 422);
         }
         flash('error', 'Faltan datos de equipos. Vuelve a generar el sorteo o completa capitanes.');
-        redirect('finalizar_partido.php?match_id=' . $matchId);
+        redirect($roundRobinReturnUrl);
     }
 
     $fixtures = round_robin_fixtures($teams, $roundRobinLegs);
@@ -1041,11 +1047,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
             $teamLabels = repo_match_team_labels($match, $teams);
             $winnerLabel = $winner ? ($teamLabels[(int) $winner['team_number']] ?? ('Equipo ' . (int) $winner['team_number'])) : 'ganador';
             flash('success', 'Ganador actual: ' . $winnerLabel . '.');
-            redirect('finalizar_partido.php?match_id=' . $matchId);
+            redirect($roundRobinReturnUrl);
         }
         if ($shouldFinalizeRoundRobin) {
             flash('success', 'Fecha finalizada. Resultado guardado.');
-            redirect('finalizar_partido.php?match_id=' . $matchId);
+            redirect($roundRobinSuccessUrl);
         }
         flash('success', 'Resultados parciales guardados.');
     } catch (Throwable $e) {
@@ -1057,7 +1063,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
         }
         flash('error', 'No se pudo guardar el fixture: ' . $e->getMessage());
     }
-    redirect('finalizar_partido.php?match_id=' . $matchId);
+    redirect($roundRobinReturnUrl);
 }
 
 $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
@@ -1069,6 +1075,8 @@ $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : 
 $valuationsLocked = $selectedMatch ? valuations_locked_after_deadline($selectedMatch) : false;
 $editDetails = !$valuationsLocked && ($forceEditDetails || (isset($_GET['edit_details']) && $_GET['edit_details'] === '1'));
 $editFormations = isset($_GET['edit_formations']) && $_GET['edit_formations'] === '1';
+$showScorePanel = !$editFormations || (isset($_GET['show_score']) && $_GET['show_score'] === '1') || $editDetails;
+$formationOnlyView = $editFormations && !$showScorePanel;
 $backUrl = 'editar_partidos.php';
 $referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
 if ($referer !== '') {
@@ -1083,21 +1091,26 @@ if ($referer !== '') {
 
 $title = 'Finalizar fecha | ' . APP_NAME;
 $activePage = 'finalizar_partido.php';
+$bodyClass = $editFormations ? 'page-finalizar-partido page-sorteo-legacy sorteo-page' : 'page-finalizar-partido';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head">
-  <div>
-    <h1>Finalizar fecha</h1>
-    <p class="small-muted">Carga goles y calificacion por jugador para cerrar la fecha y sumar estadisticas.</p>
-  </div>
-  <a class="btn btn-muted" href="<?= h($backUrl) ?>">Volver</a>
-</section>
+<?php if (!$formationOnlyView): ?>
+  <section class="page-head">
+    <div>
+      <h1>Finalizar fecha</h1>
+      <p class="small-muted">Carga goles y calificacion por jugador para cerrar la fecha y sumar estadisticas.</p>
+    </div>
+    <a class="btn btn-muted" href="<?= h($backUrl) ?>">Volver</a>
+  </section>
+<?php endif; ?>
 
 <?php if ($selectedMatch): ?>
-  <section class="card mb-3.5">
-    <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
-    <p class="small-muted">Estado actual: <strong><?= h((string) $selectedMatch['status']) ?></strong></p>
+  <section class="<?= $formationOnlyView ? 'mb-3.5' : 'card mb-3.5' ?>">
+    <?php if (!$formationOnlyView): ?>
+      <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
+      <p class="small-muted">Estado actual: <strong><?= h((string) $selectedMatch['status']) ?></strong></p>
+    <?php endif; ?>
     <?php if (!$groupedTeams): ?>
       <p>No hay equipos sorteados todavia para esta fecha.</p>
     <?php else: ?>
@@ -1135,15 +1148,19 @@ require __DIR__ . '/includes/header.php';
             ? build_match_share_summary($selectedMatch, $matchTeams, $teamLabels, $groupedTeams, $awardDefinitions, $savedAwards)
             : '';
       ?>
-      <section class="finish-score-shell">
+      <?php if ($showScorePanel): ?>
+      <section class="finish-score-shell" id="resultado">
         <?php if ($isRoundRobinMatch): ?>
           <details class="card finish-collapse finish-round-robin-fixture" data-round-robin-fixture-details <?= $scoreSaved ? '' : 'open' ?>>
             <summary>
               <span>Fixture todos contra todos</span>
               <small><?= $scoreSaved ? 'Compactado' : 'Cargar resultados' ?></small>
             </summary>
-          <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>" data-round-robin-form>
+          <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?><?= $editFormations ? '&edit_formations=1&show_score=1#resultado' : '' ?>" data-round-robin-form>
             <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+            <?php if ($editFormations): ?>
+              <input type="hidden" name="return_to_formations" value="1">
+            <?php endif; ?>
             <div class="finish-score-head">
               <div>
                 <p class="small-muted">Carga ida y vuelta. El sistema calcula puntos, diferencia de gol y goles totales por equipo.</p>
@@ -1213,9 +1230,12 @@ require __DIR__ . '/includes/header.php';
           </details>
         <?php else: ?>
           <div class="card">
-          <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>" data-no-partial>
+          <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?><?= $editFormations ? '&edit_formations=1&show_score=1#resultado' : '' ?>" data-no-partial>
             <input type="hidden" name="action" value="save_score">
             <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+            <?php if ($editFormations): ?>
+              <input type="hidden" name="return_to_formations" value="1">
+            <?php endif; ?>
             <div class="finish-score-head">
               <div>
                 <h3>Resultado de la fecha</h3>
@@ -1247,6 +1267,7 @@ require __DIR__ . '/includes/header.php';
           </div>
         <?php endif; ?>
       </section>
+      <?php endif; ?>
 
       <?php if ($canShareMatchSummary): ?>
         <section class="card finish-share-card">
@@ -1280,8 +1301,96 @@ require __DIR__ . '/includes/header.php';
                   }
               }
           }
+          $formationEditorPlayers = array_map(static fn(array $p): array => [
+              'id' => (int) $p['id'],
+              'nombre' => (string) $p['name'],
+              'posicion' => (string) ($p['positions'] ?? ''),
+              'ritmo' => ((string) ($p['pace'] ?? '') === 'lento') ? 'lento' : 'rapido',
+              'photo_path' => player_photo_path($p),
+              'has_custom_photo' => player_has_custom_photo($p),
+              'puntuacion' => player_overall_rating($p),
+              'tecnica' => player_effective_stat($p, 'technique'),
+              'ritmo_stat' => player_effective_stat($p, 'rhythm'),
+              'solidez' => player_effective_stat($p, 'defense_physical'),
+              'ataque' => player_effective_stat($p, 'attack'),
+              'compromiso' => player_effective_stat($p, 'teamwork'),
+              'mentalidad' => player_effective_stat($p, 'mentality'),
+              'regularidad' => player_effective_stat($p, 'regularity'),
+              'habilidad_arquero' => player_effective_stat($p, 'goalkeeper_skill'),
+              'selected' => true,
+              'assigned_position' => finish_player_position($p),
+          ], $participants);
+          $formationPlayersById = [];
+          foreach ($formationEditorPlayers as $playerPayload) {
+              $formationPlayersById[(int) $playerPayload['id']] = $playerPayload;
+          }
+          $formationInitialTeams = [];
+          $formationTeamColors = [];
+          foreach ($matchTeams as $team) {
+              $teamNumber = (int) $team['team_number'];
+              $formationTeamColors[] = finish_normalize_shirt($team['color_name'] ?? '', $teamNumber);
+              $formationInitialTeams[] = array_values(array_filter(array_map(static function (array $player) use ($formationPlayersById): ?array {
+                  $playerId = (int) $player['id'];
+                  if (!isset($formationPlayersById[$playerId])) {
+                      return null;
+                  }
+                  return array_merge($formationPlayersById[$playerId], [
+                      'assigned_position' => finish_player_position($player),
+                  ]);
+              }, $teamPlayerRows[$teamNumber] ?? [])));
+          }
+          $drawBalanceWeights = player_draw_balance_weights();
+          $formationEditorPayload = [
+              'mode' => 'formation_editor',
+              'matchId' => (int) $selectedMatch['id'],
+              'match' => [
+                  'id' => (int) $selectedMatch['id'],
+                  'title' => (string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id'])),
+                  'matchDate' => date('d/m/Y H:i', strtotime((string) $selectedMatch['match_date'])),
+                  'numTeams' => (int) ($selectedMatch['num_teams'] ?? count($matchTeams)),
+              ],
+              'loadError' => '',
+              'players' => $formationEditorPlayers,
+              'initialTeams' => $formationInitialTeams,
+              'teamColors' => $formationTeamColors,
+              'pairHistory' => [],
+              'drawBalanceWeights' => [
+                  'general' => $drawBalanceWeights['general'],
+                  'ataque' => $drawBalanceWeights['attack'],
+                  'solidez' => $drawBalanceWeights['defense_physical'],
+                  'ritmo' => $drawBalanceWeights['rhythm'],
+                  'tecnica' => $drawBalanceWeights['technique'],
+                  'compromiso' => $drawBalanceWeights['teamwork'],
+                  'mentalidad' => $drawBalanceWeights['mentality'],
+                  'regularidad' => $drawBalanceWeights['regularity'],
+                  'arquero' => $drawBalanceWeights['goalkeeper_skill'],
+              ],
+              'allowRedraw' => false,
+              'redrawLimit' => 0,
+              'redrawCount' => 0,
+              'hasSavedDraw' => true,
+              'savedDrawSignature' => '',
+              'maxFieldPlayersPerLine' => 5,
+              'numTeams' => (int) ($selectedMatch['num_teams'] ?? count($matchTeams)),
+              'links' => [
+                  'back' => $backUrl,
+                  'finish' => '',
+                  'score' => 'finalizar_partido.php?match_id=' . (int) $selectedMatch['id'] . '&edit_formations=1&show_score=1#resultado',
+              ],
+          ];
+          $formationEditorPayloadJson = json_encode(
+              $formationEditorPayload,
+              JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+          );
         ?>
-        <form method="post" id="formaciones" class="card finish-formation-editor" data-no-partial>
+        <section id="formaciones">
+          <div
+            data-react-root
+            data-react-island="sorteo_legacy_page"
+            data-payload="<?= h($formationEditorPayloadJson !== false ? $formationEditorPayloadJson : '{}') ?>"
+          ></div>
+        </section>
+        <form method="post" id="formaciones-legacy" class="card finish-formation-editor" data-no-partial hidden inert aria-hidden="true">
           <input type="hidden" name="action" value="save_formations">
           <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
           <script type="application/json" data-finish-team-analysis-config><?= json_encode([
@@ -1522,7 +1631,7 @@ require __DIR__ . '/includes/header.php';
           <span><?= h($detailFormError) ?></span>
         </div>
       <?php endif; ?>
-      <?php elseif (!$scoreSaved): ?>
+      <?php elseif (!$scoreSaved && !$formationOnlyView): ?>
         <p class="flash flash-info">Guarda el resultado para habilitar la carga de puntajes y premios.</p>
       <?php endif; ?>
     <?php endif; ?>

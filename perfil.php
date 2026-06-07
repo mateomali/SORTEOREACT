@@ -400,7 +400,7 @@ function profile_adjusted_position_rating(array $player, string $position): floa
     if ($position === '') {
         return player_overall_rating($player);
     }
-    return max(1.0, min(6.0, profile_position_base_rating($player, $position)));
+    return max(1.0, min(6.0, profile_position_base_rating($player, $position) * player_position_fit_factor($player, $position)));
 }
 
 function profile_public_team_players_from_lines(array $lines): array
@@ -550,7 +550,7 @@ function profile_render_match_detail_content(array $match, int $currentPlayerId)
                       : ($lines[$line] ?? []);
                   $lineLabel = $line === 'DEF' && !empty($lines['LAT']) ? 'DEF/LAT' : $line;
                 ?>
-                <div class="formation-line">
+                <div class="formation-line<?= $line === 'DEF' && !empty($lines['LAT']) ? ' is-projected-defense' : '' ?>">
                   <div class="line-label"><?= h($lineLabel) ?></div>
                   <div class="line-players">
                     <?php if (empty($linePlayers)): ?>
@@ -579,6 +579,7 @@ function profile_render_match_detail_content(array $match, int $currentPlayerId)
                           data-player-mentality="<?= h(number_format(player_effective_stat($teamPlayer, 'mentality'), 1, '.', '')) ?>"
                           data-player-regularity="<?= h(number_format(player_effective_stat($teamPlayer, 'regularity'), 1, '.', '')) ?>"
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($teamPlayer, 'goalkeeper_skill'), 1, '.', '')) ?>"
+                          <?= $assignedLine === 'LAT' ? 'data-lane-role="lateral"' : '' ?>
                         >
                           <span class="player-card-rating"><strong><?= h((string) $formationCardRating) ?></strong><span><?= h($assignedLine) ?></span></span>
                           <strong><?= h((string) $teamPlayer['name']) ?></strong>
