@@ -344,7 +344,7 @@ function save_imported_player(PDO $pdo): void
 
     $positionsCsv = join_positions(array_map('strval', $positions));
     if ($positionsCsv === '') {
-        flash('error', 'Debes seleccionar al menos una posicion valida.');
+        flash('error', 'Debes seleccionar al menos una posición válida.');
         return;
     }
 
@@ -964,14 +964,15 @@ require __DIR__ . '/includes/header.php';
 $encounterOverviewStyle = 'background:#fbfdfc;background-color:#fbfdfc;background-image:none;border-color:#cfe0d9;color:#10231d;';
 $encounterOverviewLabelStyle = 'color:#315247;';
 $encounterOverviewValueStyle = 'color:#082017;';
-$encounterHistoryPanelStyle = 'background:#ffffff;background-color:#ffffff;background-image:none;border-color:#cfe0d9;color:#10231d;';
-$encounterCardStyle = 'background:#fbfdfc;background-color:#fbfdfc;background-image:none;border-color:#dbe7e2;color:#10231d;';
+$encounterLatestPanelStyle = 'background:#f2fbf6;background-color:#f2fbf6;background-image:none;border-color:#acd9c2;color:#10231d;';
+$encounterHistoryPanelStyle = 'background:#f7faf8;background-color:#f7faf8;background-image:none;border-color:#d9e6e0;color:#10231d;';
+$encounterCardStyle = 'background:#ffffff;background-color:#ffffff;background-image:none;border-color:#dbe7e2;color:#10231d;';
 $encounterDateStyle = 'color:#047857;font-weight:900;';
 $encounterTitleStyle = 'color:#082017;';
 $encounterBadgeStyle = 'background:#ecfdf5;background-color:#ecfdf5;background-image:none;border-color:#b9dfcd;color:#063d2b;';
 $encounterNoteStyle = 'color:#315247;';
-$encounterActionsStyle = 'background:#f3f8f6;background-color:#f3f8f6;background-image:none;border-color:#dbe7e2;color:#10231d;';
-$encounterLatestStyle = 'background:#f2fbf6;background-color:#f2fbf6;background-image:none;border-color:#b9dfcd;color:#10231d;';
+$encounterActionsStyle = 'background:#f1f6f4;background-color:#f1f6f4;background-image:none;border-color:#dbe7e2;color:#10231d;';
+$encounterLatestStyle = 'background:#ffffff;background-color:#ffffff;background-image:none;border-color:#b9dfcd;color:#10231d;';
 $encounterMutedTextStyle = 'color:#315247;';
 $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;background-image:none;border-color:#022c22;color:#ffffff;-webkit-text-fill-color:#ffffff;';
 ?>
@@ -1012,7 +1013,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
   <section class="<?= $showCreateSection && !$showEditSection ? 'bg-emerald-950/72 p-4 text-lime-50 max-[760px]:p-3' : 'card encounter-drawer-body' ?>">
   <div class="<?= $showCreateSection && !$showEditSection ? 'mb-4 grid items-start gap-3 border-b border-lime-200/20 pb-4 md:grid-cols-[minmax(0,1fr)_auto] max-[760px]:grid-cols-1 max-[760px]:gap-2 max-[760px]:pb-3' : '' ?>">
     <div>
-      <span class="<?= $showCreateSection && !$showEditSection ? 'mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-[#07130f]' : '' ?>"><?= $form['id'] ? 'Edicion' : 'Nueva fecha' ?></span>
+        <span class="<?= $showCreateSection && !$showEditSection ? 'mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-[#07130f]' : '' ?>"><?= $form['id'] ? 'Edición' : 'Nueva fecha' ?></span>
       <h3 class="<?= $showCreateSection && !$showEditSection ? 'm-0 text-2xl font-extrabold leading-tight text-lime-50 max-[760px]:text-xl' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'Crear nueva fecha' ?></h3>
     </div>
     <div class="<?= $showCreateSection && !$showEditSection ? 'flex flex-wrap gap-2 md:justify-end max-[760px]:grid max-[760px]:grid-cols-3 max-[760px]:gap-1.5' : '' ?>" aria-label="Resumen de cupos">
@@ -1053,7 +1054,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
 
     <div class="<?= $showCreateSection && !$showEditSection ? 'grid grid-cols-1 gap-3 md:grid-cols-2' : 'form-grid' ?>">
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
-        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Titulo (opcional)</label>
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Título (opcional)</label>
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="text" name="title" value="<?= h((string) ($form['title'] ?? '')) ?>" placeholder="<?= h($titlePlaceholder) ?>">
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
@@ -1073,7 +1074,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
         <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-date-changed>Fecha actualizada por cancha</span>
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
-        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Numero de equipos</label>
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Número de equipos</label>
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams data-rental-court-field-input>
         <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
@@ -1083,9 +1084,9 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
         <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 text-sm font-semibold text-emerald-100/85 shadow-sm shadow-emerald-950/15 md:col-span-2' : 'form-row' ?>">
-        <strong class="block text-xs font-black uppercase text-lime-100/85">Configuracion aplicada</strong>
-        <span>Rehacer sorteo: <?= (int) $form['allow_redraw'] === 1 ? 'si' : 'no' ?> | Veces permitidas: <?= h((string) $form['redraw_limit']) ?> | Sorteo multiple: <?= h((string) $form['multi_draw_count']) ?> opciones | Cierre: <?= h((string) $form['multi_draw_lock_minutes']) ?> min antes.</span>
-        <a class="mt-2 inline-flex w-fit rounded-lg border border-lime-200/35 bg-emerald-950/70 px-2.5 py-1 text-xs font-black text-lime-100 no-underline" href="configuracion.php">Editar configuracion</a>
+        <strong class="block text-xs font-black uppercase text-lime-100/85">Configuración aplicada</strong>
+        <span>Rehacer sorteo: <?= (int) $form['allow_redraw'] === 1 ? 'sí' : 'no' ?> | Veces permitidas: <?= h((string) $form['redraw_limit']) ?>.</span>
+        <a class="mt-2 inline-flex w-fit rounded-lg border border-lime-200/35 bg-emerald-950/70 px-2.5 py-1 text-xs font-black text-lime-100 no-underline" href="configuracion.php">Editar configuración</a>
       </div>
     </div>
 
@@ -1200,12 +1201,12 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
                             <div class="mb-2">
                               <label class="mb-1.5 block text-sm font-bold text-emerald-100" for="<?= h($missingFormId) ?>-pace">Ritmo</label>
                               <select class="w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25" id="<?= h($missingFormId) ?>-pace" name="pace" form="<?= h($createFormId) ?>">
-                                <option value="rapido">Rapido</option>
+                                <option value="rapido">Rápido</option>
                                 <option value="lento">Lento</option>
                               </select>
                             </div>
                             <div class="mb-2">
-                              <label class="mb-1.5 block text-sm font-bold text-emerald-100" for="<?= h($missingFormId) ?>-skill">Puntuacion Base (1 a 6)</label>
+                              <label class="mb-1.5 block text-sm font-bold text-emerald-100" for="<?= h($missingFormId) ?>-skill">Puntuación Base (1 a 6)</label>
                               <input class="w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25" id="<?= h($missingFormId) ?>-skill" type="number" name="skill" min="1" max="6" step="0.5" value="1.0" form="<?= h($createFormId) ?>">
                             </div>
                             <div class="mb-2">
@@ -1305,7 +1306,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
             </article>
           <?php endforeach; ?>
         </div>
-        <p class="hidden text-sm text-emerald-100/82" data-participant-empty>No hay jugadores que coincidan con la busqueda.</p>
+        <p class="hidden text-sm text-emerald-100/82" data-participant-empty>No hay jugadores que coincidan con la búsqueda.</p>
       </section>
 
       <section class="min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16 lg:sticky lg:top-3 max-[760px]:hidden">
@@ -1346,18 +1347,14 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
 <?php endif; ?>
 
 <?php if ($showEditSection): ?>
-<section class="card encounters-history" style="<?= h($encounterHistoryPanelStyle) ?>">
-  <div class="section-toolbar">
-    <div>
-      <h3>Historial de fechas</h3>
-      <p class="small-muted" style="color:#375647;">Resumen rapido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> fechas cargadas.</p>
+<?php if ($matches && $latestMatch): ?>
+  <section class="card encounter-latest-section" style="<?= h($encounterLatestPanelStyle) ?>">
+    <div class="section-toolbar">
+      <div>
+        <h3>Última fecha creada</h3>
+        <p class="small-muted" style="color:#375647;">Acciones principales para la fecha más reciente.</p>
+      </div>
     </div>
-  </div>
-
-  <?php if (!$matches): ?>
-    <p>No hay fechas cargadas.</p>
-  <?php else: ?>
-    <?php if ($latestMatch): ?>
       <?php
         $latestId = (int) $latestMatch['id'];
         $latestIsScheduled = (string) $latestMatch['status'] === 'programado';
@@ -1374,7 +1371,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
       ?>
       <article class="encounter-latest-card" style="<?= h($encounterLatestStyle) ?>">
         <div>
-          <span class="encounter-latest-kicker" style="<?= h($encounterBadgeStyle) ?>">Ultima fecha cargada</span>
+          <span class="encounter-latest-kicker" style="<?= h($encounterBadgeStyle) ?>">Última fecha cargada</span>
           <h4 style="<?= h($encounterTitleStyle) ?>"><?= h((string) ($latestMatch['title'] ?: ('Fecha #' . $latestMatch['id']))) ?></h4>
           <p style="<?= h($encounterMutedTextStyle) ?>">
             <?= h(date('d/m/Y H:i', strtotime((string) $latestMatch['match_date']))) ?>
@@ -1389,7 +1386,6 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
           <?php if ($latestIsScheduled): ?>
             <a class="btn btn-muted" href="<?= h($matchFormPage) ?>?edit=<?= $latestId ?>">Editar</a>
             <a class="btn btn-warning" href="sorteo_legacy_csv.php?match_id=<?= $latestId ?>">Sortear</a>
-            <a class="btn btn-warning" href="sorteo_multiple.php?match_id=<?= $latestId ?>">Multiple</a>
             <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="capitanes.php?match_id=<?= $latestId ?>">Capitanes</a>
             <a class="btn btn-muted" href="equipos_manual.php?match_id=<?= $latestId ?>">Manual</a>
           <?php elseif ($latestCanFinalize): ?>
@@ -1399,7 +1395,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
             <form method="post">
               <input type="hidden" name="action" value="undo_draw">
               <input type="hidden" name="id" value="<?= $latestId ?>">
-              <button class="btn btn-warning" type="submit" data-confirm="Deshacer el sorteo? Se borraran equipos, capitanes y variantes para volver a sortear.">Deshacer sorteo</button>
+              <button class="btn btn-warning" type="submit" data-confirm="¿Deshacer el sorteo? Se borrarán equipos, capitanes y variantes para volver a sortear.">Deshacer sorteo</button>
             </form>
             <a class="btn btn-primary" style="<?= h($encounterPrimaryActionStyle) ?>" href="finalizar_partido.php?match_id=<?= $latestId ?>">Cargar resultado</a>
           <?php elseif ($latestIsFinalized): ?>
@@ -1408,7 +1404,20 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
           <a class="btn btn-muted" href="exportar_fecha.php?match_id=<?= $latestId ?>&amp;mode=completo" data-no-partial>Exportar CSV</a>
         </div>
       </article>
-    <?php endif; ?>
+  </section>
+<?php endif; ?>
+
+<section class="card encounters-history" style="<?= h($encounterHistoryPanelStyle) ?>">
+  <div class="section-toolbar">
+    <div>
+      <h3>Historial de fechas</h3>
+      <p class="small-muted" style="color:#375647;">Resumen rápido de estado, resultado y acciones disponibles. <?= h((string) $totalMatches) ?> fechas cargadas.</p>
+    </div>
+  </div>
+
+  <?php if (!$matches): ?>
+    <p>No hay fechas cargadas.</p>
+  <?php else: ?>
 
     <div
       data-react-root
@@ -1416,7 +1425,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
       data-total="<?= h((string) $totalMatches) ?>"
       data-current-page="<?= h((string) $currentPage) ?>"
     ></div>
-    <p class="small-muted encounter-history-empty" data-encounter-history-empty hidden>No hay fechas que coincidan con la busqueda.</p>
+    <p class="small-muted encounter-history-empty" data-encounter-history-empty hidden>No hay fechas que coincidan con la búsqueda.</p>
     <div class="encounter-card-grid" data-encounter-current-page="<?= h((string) $currentPage) ?>">
       <?php foreach ($matches as $matchIndex => $m): ?>
         <?php
@@ -1505,7 +1514,6 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
             <?php if ($isScheduled): ?>
               <a class="btn btn-muted icon-pencil encounter-icon-action" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>" aria-label="Editar fecha" title="Editar"></a>
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
-              <a class="btn btn-warning icon-dice" data-short="" href="sorteo_multiple.php?match_id=<?= $matchId ?>">Multiple</a>
               <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
               <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Manual</a>
               <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=convocados" data-no-partial>CSV</a>
@@ -1521,7 +1529,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
                 <form method="post">
                   <input type="hidden" name="action" value="undo_draw">
                   <input type="hidden" name="id" value="<?= $matchId ?>">
-                  <button class="btn btn-warning encounter-undo-draw-action" data-short="D" data-confirm="Deshacer el sorteo? Se borraran equipos, capitanes y variantes para volver a sortear." aria-label="Deshacer sorteo" title="Deshacer sorteo">Deshacer</button>
+                  <button class="btn btn-warning encounter-undo-draw-action" data-short="D" data-confirm="¿Deshacer el sorteo? Se borrarán equipos, capitanes y variantes para volver a sortear." aria-label="Deshacer sorteo" title="Deshacer sorteo">Deshacer</button>
                 </form>
               <?php endif; ?>
             <?php endif; ?>
@@ -1542,13 +1550,13 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar fecha y sus datos?" aria-label="Eliminar fecha" title="Eliminar">X</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="¿Eliminar fecha y sus datos?" aria-label="Eliminar fecha" title="Eliminar">X</button>
               </form>
             <?php else: ?>
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="Eliminar esta fecha? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados." aria-label="Eliminar fecha" title="Eliminar">X</button>
+                <button class="btn btn-danger encounter-delete-action" data-short="X" data-confirm="¿Eliminar esta fecha? Se borrarán convocados, equipos, capitanes, puntajes, goles y premios asociados." aria-label="Eliminar fecha" title="Eliminar">X</button>
               </form>
             <?php endif; ?>
           </div>
@@ -1559,7 +1567,6 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <?php if ($isScheduled): ?>
                 <a class="btn btn-muted icon-pencil" data-short="" href="<?= h($matchFormPage) ?>?edit=<?= $matchId ?>">Editar fecha</a>
                 <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear equipos</a>
-                <a class="btn btn-warning icon-dice" data-short="" href="sorteo_multiple.php?match_id=<?= $matchId ?>">Sorteo multiple</a>
                 <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Modo capitanes</a>
                 <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Equipos manuales</a>
               <?php elseif ($canEditCaptainFormation): ?>
@@ -1570,7 +1577,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
                 <form method="post">
                   <input type="hidden" name="action" value="undo_draw">
                   <input type="hidden" name="id" value="<?= $matchId ?>">
-                  <button class="btn btn-warning" data-short="" data-confirm="Deshacer el sorteo? Se borraran equipos, capitanes y variantes para volver a sortear.">Deshacer sorteo</button>
+                  <button class="btn btn-warning" data-short="" data-confirm="¿Deshacer el sorteo? Se borrarán equipos, capitanes y variantes para volver a sortear.">Deshacer sorteo</button>
                 </form>
               <?php endif; ?>
 
@@ -1586,7 +1593,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
-                <button class="btn btn-danger" data-short="" data-confirm="<?= $isScheduled ? 'Eliminar fecha y sus datos?' : 'Eliminar esta fecha? Se borraran convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar fecha</button>
+                <button class="btn btn-danger" data-short="" data-confirm="<?= $isScheduled ? '¿Eliminar fecha y sus datos?' : '¿Eliminar esta fecha? Se borrarán convocados, equipos, capitanes, puntajes, goles y premios asociados.' ?>">Eliminar fecha</button>
               </form>
             </div>
           </details>
@@ -1594,7 +1601,7 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
       <?php endforeach; ?>
     </div>
     <?php if ($totalPages > 1): ?>
-      <nav class="pagination" aria-label="Paginas de fechas">
+      <nav class="pagination" aria-label="Páginas de fechas">
         <?php if ($currentPage > 1): ?>
           <a class="pagination-link" href="<?= h($matchListPage) ?>?page=<?= $currentPage - 1 ?>">Anterior</a>
         <?php else: ?>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
 
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
 const PITCH_LINES = ['ARQ', 'DEF', 'MED', 'DEL'];
@@ -454,6 +455,14 @@ function logicalLineMinimum(position, teamSize) {
   return fieldPlayers >= FIELD_LINES.length ? 1 : 0;
 }
 
+function logicalLineMinimumForCounts(position, teamSize, counts = {}) {
+  const line = String(position || '').toUpperCase();
+  const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
+  if (line === 'DEF' && defenseTotal <= 2) return fieldLineMinimum('DEF', teamSize);
+  if (line === 'LAT' && defenseTotal <= 2) return 0;
+  return logicalLineMinimum(line, teamSize);
+}
+
 function pitchLineCountsFromLogical(logicalCounts = {}) {
   return {
     ARQ: Number(logicalCounts.ARQ || 0),
@@ -467,13 +476,18 @@ function fieldLineCountsFitLimits(counts, teamSize) {
   const pitchCounts = pitchLineCountsFromLogical(counts);
   const max = maxFieldPlayersPerLine(teamSize);
   const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
+  const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
+  const defenseRolesFit = defenseTotal <= 2
+    ? Number(counts?.LAT || 0) === 0
+    : Number(counts?.LAT || 0) === 0 || Number(counts?.DEF || 0) >= 1;
   return (!hasGoalkeeperCount || pitchCounts.ARQ === fieldLineMinimum('ARQ', teamSize))
+    && defenseRolesFit
     && REQUIRED_FIELD_LINES.every((line) => (
       pitchCounts[line] >= fieldLineMinimum(line, teamSize)
       && pitchCounts[line] <= max
     ))
     && FIELD_LINES.every((line) => (
-      Number(counts?.[line] || 0) >= logicalLineMinimum(line, teamSize)
+      Number(counts?.[line] || 0) >= logicalLineMinimumForCounts(line, teamSize, counts)
       && Number(counts?.[line] || 0) <= fieldLineLimit(line, teamSize)
     ));
 }
@@ -487,6 +501,46 @@ function pitchLineCountsFitLimits(counts, teamSize) {
       pitchCounts[line] >= fieldLineMinimum(line, teamSize)
       && pitchCounts[line] <= max
     ));
+}
+
+function lineCountLabel(line, pitchCount = false) {
+  const normalized = String(line || '').toUpperCase();
+  if (pitchCount && normalized === 'DEF') return 'DEF/LAT';
+  return normalized;
+}
+
+function lineCountViolationMessage(counts, teamSize, { includeLogical = true } = {}) {
+  const pitchCounts = pitchLineCountsFromLogical(counts);
+  const max = maxFieldPlayersPerLine(teamSize);
+  const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
+  if (defenseTotal <= 2 && Number(counts?.LAT || 0) > 0) {
+    return 'No se puede mover: con 2 jugadores en DEF/LAT, ambos deben quedar como DEF.';
+  }
+  if (defenseTotal > 2 && Number(counts?.LAT || 0) > 0 && Number(counts?.DEF || 0) < 1) {
+    return 'No se puede mover: para usar LAT tiene que quedar al menos un DEF central.';
+  }
+  const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
+  if (hasGoalkeeperCount) {
+    const requiredGoalkeepers = fieldLineMinimum('ARQ', teamSize);
+    if (pitchCounts.ARQ !== requiredGoalkeepers) {
+      return `No se puede mover: ARQ quedaria con ${pitchCounts.ARQ}/${requiredGoalkeepers}.`;
+    }
+  }
+  for (const line of REQUIRED_FIELD_LINES) {
+    const min = fieldLineMinimum(line, teamSize);
+    const count = pitchCounts[line];
+    if (count < min) return `No se puede mover: ${lineCountLabel(line, true)} quedaria con ${count}. Minimo ${min}.`;
+    if (count > max) return `No se puede mover: ${lineCountLabel(line, true)} quedaria con ${count}. Maximo ${max}.`;
+  }
+  if (!includeLogical) return '';
+  for (const line of FIELD_LINES) {
+    const min = logicalLineMinimumForCounts(line, teamSize, counts);
+    const limit = fieldLineLimit(line, teamSize);
+    const count = Number(counts?.[line] || 0);
+    if (count < min) return `No se puede mover: ${lineCountLabel(line)} quedaria con ${count}. Minimo ${min}.`;
+    if (count > limit) return `No se puede mover: ${lineCountLabel(line)} quedaria con ${count}. Maximo ${limit}.`;
+  }
+  return '';
 }
 
 function teammatePairKey(a, b) {
@@ -595,14 +649,14 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
     while (guard < team.length) {
       guard += 1;
       const counts = teamLineCounts(team, assignment);
-      if ((counts[line] || 0) >= logicalLineMinimum(line, team.length)) break;
+      if ((counts[line] || 0) >= logicalLineMinimumForCounts(line, team.length, counts)) break;
       const pitchCounts = pitchLineCountsFromLogical(counts);
       const candidate = team
         .filter((player) => assignment[playerKey(player)] !== 'ARQ')
         .filter((player) => {
-          const currentLine = assignment[playerKey(player)] || getPrimaryPlayerPosition(player);
-          return currentLine !== line
-            && (counts[currentLine] || 0) > logicalLineMinimum(currentLine, team.length)
+            const currentLine = assignment[playerKey(player)] || getPrimaryPlayerPosition(player);
+            return currentLine !== line
+            && (counts[currentLine] || 0) > logicalLineMinimumForCounts(currentLine, team.length, counts)
             && (pitchCounts[pitchLineForPosition(currentLine)] || 0) > fieldLineMinimum(pitchLineForPosition(currentLine), team.length);
         })
         .sort((a, b) => {
@@ -637,7 +691,7 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
       .filter((player) => originLines.includes(assignment[playerKey(player)]))
       .filter((player) => {
         const assigned = assignment[playerKey(player)];
-        return (counts[assigned] || 0) > logicalLineMinimum(assigned, team.length);
+        return (counts[assigned] || 0) > logicalLineMinimumForCounts(assigned, team.length, counts);
       })
       .sort((a, b) => {
         const assignedA = assignment[playerKey(a)];
@@ -651,7 +705,7 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
     changed = true;
   }
 
-  return assignment;
+  return normalizeCompactDefenseAssignments(team, assignment);
 }
 
 function teamLineCounts(team, assignments) {
@@ -661,6 +715,25 @@ function teamLineCounts(team, assignments) {
     if (counts[position] !== undefined) counts[position] += 1;
   });
   return counts;
+}
+
+function normalizeDefenseLaneAssignments(team, assignments = {}) {
+  const defensePlayers = team.filter((player) => {
+    const assigned = String(assignments[playerKey(player)] || getPrimaryPlayerPosition(player)).toUpperCase();
+    return pitchLineForPosition(assigned) === 'DEF';
+  });
+  if (!defensePlayers.length) return assignments;
+  const next = { ...assignments };
+  const orderedDefense = defenseLinePlayers(defensePlayers, assignments);
+  orderedDefense.forEach((player, index) => {
+    const key = playerKey(player);
+    next[key] = orderedDefense.length >= 3 && (index === 0 || index === orderedDefense.length - 1) ? 'LAT' : 'DEF';
+  });
+  return next;
+}
+
+function normalizeCompactDefenseAssignments(team, assignments = {}) {
+  return normalizeDefenseLaneAssignments(team, assignments);
 }
 
 function teamScore(team, assignmentOverrides = {}) {
@@ -726,7 +799,7 @@ function positionBalancePenalty(teams, assignmentOverrides = {}) {
     FIELD_LINES.forEach((line) => {
       const count = Number(counts[line] || 0);
       countsByLine[line].push(count);
-      const min = logicalLineMinimum(line, teamSize);
+      const min = logicalLineMinimumForCounts(line, teamSize, counts);
       if (count < min) penalty += (min - count) * 500;
     });
   });
@@ -790,7 +863,7 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
       if (pitchCounts[line] > maxFieldPlayersPerLine(teamSize)) penalty += (pitchCounts[line] - maxFieldPlayersPerLine(teamSize)) * 30;
     });
     FIELD_LINES.forEach((line) => {
-      const min = logicalLineMinimum(line, teamSize);
+      const min = logicalLineMinimumForCounts(line, teamSize, counts);
       if (counts[line] < min) penalty += (min - counts[line]) * 500;
       if (counts[line] > fieldLineLimit(line, teamSize)) penalty += (counts[line] - fieldLineLimit(line, teamSize)) * 35;
     });
@@ -987,10 +1060,117 @@ function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights,
   return best ? { teams: best, evaluation: bestEval, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
 }
 
+function assignmentSignatureForTeam(team, assignments = {}) {
+  return team
+    .map((player) => `${playerKey(player)}:${String(assignments[playerKey(player)] || getPrimaryPlayerPosition(player)).toUpperCase()}`)
+    .sort()
+    .join('|');
+}
+
+function assignmentDiffCount(team, left = {}, right = {}) {
+  return team.reduce((total, player) => {
+    const key = playerKey(player);
+    return total + (String(left[key] || getPrimaryPlayerPosition(player)).toUpperCase() === String(right[key] || getPrimaryPlayerPosition(player)).toUpperCase() ? 0 : 1);
+  }, 0);
+}
+
+function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPlayerPositions = {}) {
+  const desiredCounts = {
+    ARQ: Number(counts?.ARQ || 0),
+    DEF: Number(counts?.DEF || 0),
+    LAT: Number(counts?.LAT || 0),
+    MED: Number(counts?.MED || 0),
+    DEL: Number(counts?.DEL || 0),
+  };
+  const next = {};
+  const available = team.slice();
+  const pickForLine = (line, count) => {
+    const picked = [];
+    while (picked.length < count && available.length) {
+      let bestIndex = -1;
+      let bestScore = -Infinity;
+      available.forEach((player, index) => {
+        const key = playerKey(player);
+        const lockedLine = lockedPlayerPositions[key];
+        if (lockedLine && lockedLine !== line) return;
+        const current = String(baseAssignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
+        const stability = current === line ? 0.35 : 0;
+        const score = adjustedPositionRating(player, line) + stability;
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      });
+      if (bestIndex < 0) break;
+      const [player] = available.splice(bestIndex, 1);
+      next[playerKey(player)] = line;
+      picked.push(player);
+    }
+    return picked.length === count;
+  };
+  const fixedGoalkeepers = team.filter((player) => isFixedGoalkeeper(player) || lockedPlayerPositions[playerKey(player)] === 'ARQ');
+  fixedGoalkeepers.forEach((player) => {
+    const index = available.findIndex((candidate) => playerKey(candidate) === playerKey(player));
+    if (index >= 0) available.splice(index, 1);
+    next[playerKey(player)] = 'ARQ';
+  });
+  if (fixedGoalkeepers.length > desiredCounts.ARQ) return null;
+  if (!pickForLine('ARQ', desiredCounts.ARQ - fixedGoalkeepers.length)) return null;
+  if (!pickForLine('DEF', desiredCounts.DEF)) return null;
+  if (!pickForLine('LAT', desiredCounts.LAT)) return null;
+  if (!pickForLine('MED', desiredCounts.MED)) return null;
+  if (!pickForLine('DEL', desiredCounts.DEL)) return null;
+  if (available.length) return null;
+  const normalized = normalizeCompactDefenseAssignments(team, { ...baseAssignments, ...next });
+  const compact = Object.fromEntries(team.map((player) => [playerKey(player), normalized[playerKey(player)] || getPrimaryPlayerPosition(player)]));
+  return fieldLineCountsFitLimits(teamLineCounts(team, compact), team.length) ? compact : null;
+}
+
+function generateTeamFormationVariants(team, baseAssignments = {}, lockedPlayerPositions = {}, targetCount = 3) {
+  if (!team?.length) return [];
+  const base = buildTeamAssignment(team, baseAssignments);
+  const baseSignature = assignmentSignatureForTeam(team, base);
+  const seen = new Set([baseSignature]);
+  const variants = [];
+  const formationOptions = getFormationOptions(team.length);
+  const countCandidates = formationOptions.flatMap((option) => {
+    const parsed = parseFormationValue(option.value);
+    if (!parsed) return [];
+    const defenseSplits = parsed.DEF >= 3
+      ? [{ DEF: Math.max(1, parsed.DEF - 2), LAT: 2 }, { DEF: parsed.DEF, LAT: 0 }]
+      : [{ DEF: parsed.DEF, LAT: 0 }];
+    return defenseSplits.map((split) => ({
+      ARQ: 1,
+      DEF: split.DEF,
+      LAT: split.LAT,
+      MED: parsed.MED,
+      DEL: parsed.DEL,
+      label: `${split.DEF + split.LAT}-${parsed.MED}-${parsed.DEL}`,
+    }));
+  });
+  countCandidates.forEach((counts) => {
+    if (variants.length >= targetCount) return;
+    const assignmentMap = applyPositionCountsToTeam(team, counts, base, lockedPlayerPositions);
+    if (!assignmentMap) return;
+    const signature = assignmentSignatureForTeam(team, assignmentMap);
+    if (seen.has(signature)) return;
+    seen.add(signature);
+    const lineCounts = teamLineCounts(team, assignmentMap);
+    variants.push({
+      assignments: assignmentMap,
+      signature,
+      lineText: formatLineCounts(lineCounts),
+      diffCount: assignmentDiffCount(team, base, assignmentMap),
+      total: teamTotalsSummary(team, assignmentMap).adjusted,
+    });
+  });
+  return variants;
+}
+
 function getFormationOptions(teamSize) {
   const fieldPlayers = Math.max(0, teamSize - 1);
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
-  const minDefense = logicalLineMinimum('DEF', teamSize) + logicalLineMinimum('LAT', teamSize);
+  const minDefense = fieldLineMinimum('DEF', teamSize);
   const minMed = fieldLineMinimum('MED', teamSize);
   const minDel = fieldLineMinimum('DEL', teamSize);
   const candidates = [];
@@ -1016,10 +1196,11 @@ function parseFormationValue(value) {
 }
 
 function splitDefenseFormationCount(team, defenseCount) {
+  const safeDefenseCount = Math.max(0, Number(defenseCount || 0));
+  if (safeDefenseCount <= 2) return { DEF: safeDefenseCount, LAT: 0 };
   const minDef = logicalLineMinimum('DEF', team.length);
   const minLat = logicalLineMinimum('LAT', team.length);
   const maxDefLat = maxDefLatPlayersPerPosition(team.length);
-  const safeDefenseCount = Math.max(0, Number(defenseCount || 0));
   let lat = Math.max(minLat, Math.min(maxDefLat, Math.floor(safeDefenseCount / 2)));
   let def = safeDefenseCount - lat;
   if (def < minDef) {
@@ -1084,6 +1265,8 @@ function iconPath(name) {
     clipboard: <><rect x="8" y="3" width="8" height="4" rx="1" /><path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3" /></>,
     shirt: <><path d="M8 4 5 6 3 11l4 2 1-2v9h8v-9l1 2 4-2-2-5-3-2a4 4 0 0 1-8 0Z" /></>,
     undo: <><path d="M9 14 4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-1" /></>,
+    place: <><path d="M12 3v11" /><path d="m7 9 5 5 5-5" /><path d="M4 21h16" /></>,
+    swap: <><path d="M16 3h5v5" /><path d="M21 3 14 10" /><path d="M8 21H3v-5" /><path d="m3 21 7-7" /></>,
     x: <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>,
   };
   return paths[name] || paths.dice;
@@ -1166,7 +1349,7 @@ function FullPlayerCard({ player, assignedPosition }) {
 }
 
 function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableProps = {}, onOpen }) {
-  const { dragging = false, selected = false, locked = false, ...domDraggableProps } = draggableProps;
+  const { dragging = false, selected = false, locked = false, swapTarget = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRating(player, assignedPosition);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
@@ -1186,7 +1369,7 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
   return (
     <button
       type="button"
-      className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
+      className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
       style={{ ...cardTextStyle, background: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
       onClick={(event) => {
         event.stopPropagation();
@@ -1204,6 +1387,13 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
       ) : null}
       {locked ? (
         <span className="absolute right-[8%] top-[8%] z-40 grid h-4 w-4 place-items-center rounded-full border border-[#07130f]/45 bg-amber-200 text-[9px] font-black text-[#07130f]" aria-hidden="true">L</span>
+      ) : null}
+      {swapTarget ? (
+        <span className="absolute inset-0 z-50 grid place-items-center bg-[#07130f]/58 text-lime-100" aria-hidden="true">
+          <span className="grid h-8 w-8 place-items-center rounded-full border border-lime-100/80 bg-emerald-950/88 shadow-lg shadow-emerald-950/40 max-[760px]:h-6 max-[760px]:w-6">
+            <Icon name="swap" className="h-4 w-4 max-[760px]:h-3.5 max-[760px]:w-3.5" />
+          </span>
+        </span>
       ) : null}
       <span className={`absolute left-[14.2%] top-[15.8%] z-30 grid h-[29.8%] w-[23.2%] content-start justify-items-center ${palette.text}`} style={cardTextStyle} data-sorteo-card-text="1">
         <strong className="text-[.6rem] font-black leading-[.8] min-[380px]:text-[.66rem] sm:text-[.9rem] xl:text-[1.12rem]" style={cardTextStyle} data-sorteo-card-text="1">{playerCardRating(adjusted)}</strong>
@@ -1228,6 +1418,66 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
       </strong>
     </button>
   );
+}
+
+function PitchDropMarker({ line, style = null }) {
+  const isLateral = String(line || '').toUpperCase() === 'LAT';
+  return (
+    <span
+      className="pointer-events-none absolute top-1/2 z-40 grid aspect-[409/620] w-[44px] -translate-y-1/2 place-items-center overflow-hidden rounded-md border-2 border-dashed border-lime-100/80 bg-[#07130f]/50 text-lime-100 min-[380px]:w-[54px] sm:w-[60px] xl:w-[72px] 2xl:w-[78px]"
+      style={style || undefined}
+      data-lane-role={isLateral ? 'lateral' : undefined}
+      aria-hidden="true"
+    >
+      {isLateral ? (
+        <span className="sorteo-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
+      ) : null}
+      <span className="grid h-8 w-8 place-items-center rounded-full border border-lime-100/75 bg-emerald-950/85 max-[760px]:h-6 max-[760px]:w-6">
+        <Icon name="place" className="h-4 w-4 max-[760px]:h-3.5 max-[760px]:w-3.5" />
+      </span>
+    </span>
+  );
+}
+
+function defenseInsertRole(currentLineCount, insertIndex) {
+  const nextCount = Number(currentLineCount || 0) + 1;
+  const boundedIndex = Math.max(0, Math.min(Number(insertIndex || 0), nextCount - 1));
+  return nextCount >= 3 && (boundedIndex === 0 || boundedIndex === nextCount - 1) ? 'LAT' : 'DEF';
+}
+
+function injectFormationExportStyles(clonedDocument) {
+  clonedDocument.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => node.remove());
+  const style = clonedDocument.createElement('style');
+  style.textContent = `
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #f6faf8; color: #07130f; font-family: Arial, sans-serif; }
+    #equipos-generados { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; width: 1400px; max-width: 1400px; padding: 14px; background: #f6faf8; }
+    #equipos-generados > div:first-child { grid-column: 1 / -1; border: 1px solid #b9d4c8; border-radius: 10px; background: #ffffff; padding: 12px; text-align: center; font-size: 22px; font-weight: 900; }
+    #equipos-generados article { display: grid !important; gap: 10px; border: 1px solid #b9d4c8; border-radius: 10px; background: #eef6f1; padding: 10px; color: #07130f; }
+    .sorteo-team-head, #equipos-generados article > div:first-child { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #d2e3da; border-radius: 9px; background: #ffffff; padding: 9px 11px; color: #07130f; }
+    #equipos-generados h3 { margin: 0; color: #07130f; font-size: 17px; font-weight: 900; }
+    #equipos-generados select, .sorteo-team-stats, .formation-undo-button, .sorteo-line-with-tools > div:first-child button, .sorteo-line-with-tools > div:last-child { display: none !important; }
+    .team-formation { display: grid !important; grid-template-rows: repeat(4, minmax(172px, 1fr)); gap: 10px; height: auto !important; min-height: 760px; overflow: visible !important; border: 1px solid #7fb89c; border-radius: 10px; background: linear-gradient(180deg, rgba(9,74,41,.96), rgba(13,70,42,.98)); padding: 14px; color: #f2fff7; }
+    .formation-line { display: grid !important; grid-template-columns: 58px minmax(0, 1fr) !important; align-items: center; gap: 8px; min-height: 172px; border: 0 !important; background: transparent !important; opacity: 1 !important; color: #f4fff8; }
+    .line-label { display: grid !important; justify-items: center; gap: 2px; color: #f4fff8; text-align: center; font-size: 10px; font-weight: 900; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+    .line-label span, .line-label small { display: block !important; color: #f4fff8 !important; background: transparent !important; border: 0 !important; padding: 0 !important; }
+    .line-players { display: flex !important; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; min-height: 172px; overflow: visible !important; border: 0 !important; background: transparent !important; padding: 0 !important; }
+    [data-sorteo-line-player-item="1"] { display: inline-block !important; flex: 0 0 auto; margin: 0 !important; transform: none !important; opacity: 1 !important; }
+    [data-sorteo-drag-player] { position: relative !important; display: block !important; flex: 0 0 96px !important; width: 96px !important; min-width: 96px !important; max-width: 96px !important; aspect-ratio: 409 / 620; border: 0 !important; border-radius: 0 !important; background: #f8d99b !important; color: #07130f !important; padding: 8px 6px !important; overflow: hidden !important; box-shadow: 0 3px 8px rgba(2,14,9,.24); font-family: Arial, sans-serif !important; }
+    [data-sorteo-drag-player] span, [data-sorteo-drag-player] strong { color: #07130f !important; text-shadow: none !important; }
+    [data-sorteo-drag-player] img { display: block !important; object-fit: contain !important; max-width: 100% !important; max-height: 48px !important; margin: 4px auto !important; opacity: .9 !important; }
+    [data-sorteo-drag-player] strong { display: block !important; overflow: hidden !important; text-align: center !important; text-overflow: ellipsis !important; text-transform: uppercase !important; white-space: nowrap !important; font-size: 9px !important; font-weight: 900 !important; line-height: 1.1 !important; }
+    [data-sorteo-card-text="1"] { position: static !important; display: block !important; width: auto !important; height: auto !important; transform: none !important; }
+    [data-sorteo-drag-player] [data-sorteo-card-text="1"]:first-child { text-align: center !important; font-size: 18px !important; font-weight: 950 !important; line-height: 1 !important; }
+    [data-sorteo-drag-player] [data-sorteo-card-text="1"] span { display: block !important; text-align: center !important; font-size: 9px !important; font-weight: 900 !important; }
+    .sorteo-lane-indicator, .formation-card-preview-overlay { display: none !important; }
+  `;
+  clonedDocument.head.appendChild(style);
+  const clonedContainer = clonedDocument.getElementById('equipos-generados');
+  if (clonedContainer) {
+    clonedContainer.style.width = '1400px';
+    clonedContainer.style.maxWidth = '1400px';
+  }
 }
 
 function PlayerFormModal({ mode, player, onClose, onSave }) {
@@ -1344,12 +1594,23 @@ export function SorteoLegacyPageIsland({ root }) {
   const [hasSavedDraw, setHasSavedDraw] = useState(payload.hasSavedDraw);
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
-  const [touchMoveMode, setTouchMoveMode] = useState(false);
-  const [touchMoveSource, setTouchMoveSource] = useState(null);
   const [lockedPlayerPositions, setLockedPlayerPositions] = useState({});
-  const [drawVariants, setDrawVariants] = useState([]);
+  const [drawVariants, setDrawVariants] = useState({});
+  const [activeFormationVariants, setActiveFormationVariants] = useState({});
   const seenDrawSignatures = useRef(new Set(payload.savedDrawSignature ? [payload.savedDrawSignature] : []));
   const teamsContainerRef = useRef(null);
+
+  const updateDragHoverTarget = useCallback((nextTarget) => {
+    setDragHoverTarget((current) => {
+      const currentKey = current
+        ? `${current.teamIndex}|${current.line || ''}|${current.targetLine || ''}|${current.playerKey || ''}|${current.insertIndex ?? ''}|${Math.round(Number(current.insertX ?? -1))}`
+        : '';
+      const nextKey = nextTarget
+        ? `${nextTarget.teamIndex}|${nextTarget.line || ''}|${nextTarget.targetLine || ''}|${nextTarget.playerKey || ''}|${nextTarget.insertIndex ?? ''}|${Math.round(Number(nextTarget.insertX ?? -1))}`
+        : '';
+      return currentKey === nextKey ? current : nextTarget;
+    });
+  }, []);
 
   const selectedPlayers = useMemo(() => (lockedMatch ? players.slice() : players.filter((player) => player.selected)), [lockedMatch, players]);
   const selectedGoalkeepers = useMemo(
@@ -1439,7 +1700,6 @@ export function SorteoLegacyPageIsland({ root }) {
   const generateTeams = useCallback(async () => {
     setError('');
     setSuccess('');
-    setTouchMoveSource(null);
     const rawSelected = lockedMatch ? players.slice() : players.filter((player) => player.selected);
     const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true).map(playerKey));
     if (selectedGoalkeeperKeys.size > numTeams) {
@@ -1510,7 +1770,8 @@ export function SorteoLegacyPageIsland({ root }) {
       setTeams(result.teams);
       setAssignments({});
       setLockedPlayerPositions({});
-      setDrawVariants([]);
+      setDrawVariants({});
+      setActiveFormationVariants({});
       setTeamFormations({});
       setUndoStacks({});
       setAnalysisVisible(false);
@@ -1658,7 +1919,7 @@ export function SorteoLegacyPageIsland({ root }) {
       return FORMATION_LINES
         .filter((line) => {
           const count = Number(summary.counts?.[line] || 0);
-          return count < logicalLineMinimum(line, teamSize) || count > fieldLineLimit(line, teamSize);
+          return count < logicalLineMinimumForCounts(line, teamSize, summary.counts) || count > fieldLineLimit(line, teamSize);
         })
         .map((line) => `${summary.name}: ${line}`);
     });
@@ -1743,9 +2004,52 @@ export function SorteoLegacyPageIsland({ root }) {
     setTeamColors((current) => current.map((item, index) => (index === teamIndex ? colorName : item)));
   };
 
+  const markFormationAsManual = useCallback((...teamIndexes) => {
+    const normalizedIndexes = Array.from(new Set(
+      teamIndexes
+        .map((teamIndex) => Number(teamIndex))
+        .filter((teamIndex) => Number.isFinite(teamIndex) && teamIndex >= 0),
+    ));
+    if (!normalizedIndexes.length) return;
+    setTeamFormations((current) => {
+      let changed = false;
+      const next = { ...current };
+      normalizedIndexes.forEach((teamIndex) => {
+        const key = String(teamIndex);
+        if (next[key] && next[key] !== 'auto') {
+          next[key] = 'auto';
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, []);
+
+  const clearActiveFormationVariant = useCallback((...teamIndexes) => {
+    const normalizedIndexes = Array.from(new Set(
+      teamIndexes
+        .map((teamIndex) => Number(teamIndex))
+        .filter((teamIndex) => Number.isFinite(teamIndex) && teamIndex >= 0),
+    ));
+    if (!normalizedIndexes.length) return;
+    setActiveFormationVariants((current) => {
+      let changed = false;
+      const next = { ...current };
+      normalizedIndexes.forEach((teamIndex) => {
+        const key = String(teamIndex);
+        if (next[key]) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, []);
+
   const applyFormation = (teamIndex, value) => {
     if (!teams?.[teamIndex]) return;
     pushUndo(teamIndex);
+    clearActiveFormationVariant(teamIndex);
     setTeamFormations((current) => ({ ...current, [teamIndex]: value }));
     if (value === 'auto') {
       const teamKeys = new Set(teams[teamIndex].map(playerKey));
@@ -1760,7 +2064,6 @@ export function SorteoLegacyPageIsland({ root }) {
     if (!teams?.[teamIndex]) return;
     const team = teams[teamIndex];
     const currentAssignments = buildTeamAssignment(team, assignments);
-    pushUndo(teamIndex);
     if (delta > 0) {
       const counts = teamLineCounts(team, currentAssignments);
       if ((counts[line] || 0) >= fieldLineLimit(line, team.length)) return;
@@ -1768,7 +2071,12 @@ export function SorteoLegacyPageIsland({ root }) {
         .filter((player) => currentAssignments[playerKey(player)] !== line && currentAssignments[playerKey(player)] !== 'ARQ')
         .filter((player) => !lockedPlayerPositions[playerKey(player)])
         .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
-      if (candidate) setAssignments((current) => ({ ...current, [playerKey(candidate)]: line }));
+      if (candidate) {
+        pushUndo(teamIndex);
+        markFormationAsManual(teamIndex);
+        clearActiveFormationVariant(teamIndex);
+        setAssignments((current) => ({ ...current, [playerKey(candidate)]: line }));
+      }
       return;
     }
     const candidate = team
@@ -1778,6 +2086,9 @@ export function SorteoLegacyPageIsland({ root }) {
       .sort((a, b) => adjustedPositionRating(a, line) - adjustedPositionRating(b, line))[0];
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate) === line ? 'MED' : bestNaturalPlayerPosition(candidate);
+      pushUndo(teamIndex);
+      markFormationAsManual(teamIndex);
+      clearActiveFormationVariant(teamIndex);
       setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' ? 'MED' : fallback }));
     }
   };
@@ -1791,7 +2102,6 @@ export function SorteoLegacyPageIsland({ root }) {
     const team = teams[teamIndex];
     const currentAssignments = buildTeamAssignment(team, assignments);
     const counts = teamLineCounts(team, currentAssignments);
-    pushUndo(teamIndex);
 
     if (delta > 0) {
       const perPositionLimit = maxDefLatPlayersPerPosition(team.length);
@@ -1806,7 +2116,12 @@ export function SorteoLegacyPageIsland({ root }) {
           .filter((targetLine) => (counts[targetLine] || 0) < perPositionLimit)
           .map((targetLine) => ({ player, targetLine, rating: adjustedPositionRating(player, targetLine) })))
         .sort((a, b) => b.rating - a.rating)[0];
-      if (candidate) setAssignments((current) => ({ ...current, [playerKey(candidate.player)]: candidate.targetLine }));
+    if (candidate) {
+      pushUndo(teamIndex);
+      markFormationAsManual(teamIndex);
+      clearActiveFormationVariant(teamIndex);
+      setAssignments((current) => ({ ...current, [playerKey(candidate.player)]: candidate.targetLine }));
+    }
       return;
     }
 
@@ -1821,6 +2136,9 @@ export function SorteoLegacyPageIsland({ root }) {
       })[0];
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate);
+      pushUndo(teamIndex);
+      markFormationAsManual(teamIndex);
+      clearActiveFormationVariant(teamIndex);
       setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' || fallback === 'DEF' || fallback === 'LAT' ? 'MED' : fallback }));
     }
   };
@@ -1843,153 +2161,241 @@ export function SorteoLegacyPageIsland({ root }) {
     });
   };
 
-  const movePlayer = (source, targetTeamIndex, targetLine = null, targetPlayerKey = null) => {
-    if (!teams || source == null) return;
+  const findCrossTeamSwapTargetKey = useCallback((source, targetTeamIndex, targetLine = null) => {
+    if (!teams || source == null) return null;
     const sourceTeamIndex = Number(source.teamIndex);
+    const normalizedTargetTeamIndex = Number(targetTeamIndex);
+    if (!Number.isFinite(sourceTeamIndex) || !Number.isFinite(normalizedTargetTeamIndex) || sourceTeamIndex === normalizedTargetTeamIndex) return null;
+    const sourcePlayerKey = String(source.playerKey || '');
+    const targetTeam = teams[normalizedTargetTeamIndex];
+    if (!targetTeam?.length) return null;
+    const normalizedTargetLine = String(targetLine || '').toUpperCase();
+    const targetAssignments = buildTeamAssignment(targetTeam, assignments);
+    const targetPitchLine = FORMATION_LINES.includes(normalizedTargetLine) ? pitchLineForPosition(normalizedTargetLine) : '';
+    const candidates = targetTeam
+      .filter((player) => {
+        const key = playerKey(player);
+        return key !== sourcePlayerKey && !lockedPlayerPositions[key] && !isFixedGoalkeeper(player);
+      })
+      .map((player) => {
+        const key = playerKey(player);
+        const assigned = targetAssignments[key] || getPrimaryPlayerPosition(player);
+        const sameExactLine = normalizedTargetLine && assigned === normalizedTargetLine ? 1 : 0;
+        const samePitchLine = targetPitchLine && pitchLineForPosition(assigned) === targetPitchLine ? 1 : 0;
+        return {
+          player,
+          assigned,
+          sameExactLine,
+          samePitchLine,
+          rating: adjustedPositionRating(player, assigned),
+        };
+      })
+      .sort((left, right) => (
+        right.sameExactLine - left.sameExactLine
+        || right.samePitchLine - left.samePitchLine
+        || left.rating - right.rating
+        || String(left.player.nombre).localeCompare(String(right.player.nombre))
+      ));
+    return candidates[0] ? playerKey(candidates[0].player) : null;
+  }, [assignments, lockedPlayerPositions, teams]);
+
+  const validateDropTarget = useCallback((source, targetTeamIndex, targetLine = null, targetPlayerKey = null) => {
+    if (!teams || source == null) return { ok: false, message: 'Primero genera los equipos.' };
+    const sourceTeamIndex = Number(source.teamIndex);
+    const normalizedTargetTeamIndex = Number(targetTeamIndex);
     const key = String(source.playerKey);
-    if (!Number.isFinite(sourceTeamIndex) || !teams[sourceTeamIndex]) return;
+    if (!Number.isFinite(sourceTeamIndex) || !teams[sourceTeamIndex]) return { ok: false, message: 'No se encontro el equipo de origen.' };
+    if (!Number.isFinite(normalizedTargetTeamIndex) || !teams[normalizedTargetTeamIndex]) return { ok: false, message: 'No se encontro el equipo destino.' };
+    const resolvedTargetPlayerKey = targetPlayerKey
+      || (sourceTeamIndex !== normalizedTargetTeamIndex ? findCrossTeamSwapTargetKey(source, normalizedTargetTeamIndex, targetLine) : null);
+    if (sourceTeamIndex !== normalizedTargetTeamIndex && !resolvedTargetPlayerKey) {
+      return { ok: false, message: 'Para cambiar de equipo, solta sobre un jugador disponible para intercambiar.' };
+    }
     const sourcePlayer = teams[sourceTeamIndex]?.find((player) => playerKey(player) === key);
+    if (!sourcePlayer) return { ok: false, message: 'No se encontro el jugador que estas moviendo.' };
     if (lockedPlayerPositions[key]) {
-      setError(`${sourcePlayer?.nombre || 'El jugador'} tiene la posicion bloqueada.`);
-      return;
+      return { ok: false, message: `${sourcePlayer?.nombre || 'El jugador'} tiene la posicion bloqueada.` };
     }
     if (sourcePlayer && isFixedGoalkeeper(sourcePlayer) && targetLine && targetLine !== 'ARQ') {
-      setError(`${sourcePlayer.nombre} esta fijado como arquero y no puede cambiar de posicion.`);
-      return;
+      return { ok: false, message: `${sourcePlayer.nombre} esta fijado como arquero y no puede cambiar de posicion.` };
     }
-    const targetPlayer = targetPlayerKey ? teams[targetTeamIndex]?.find((player) => playerKey(player) === String(targetPlayerKey)) : null;
-    if (targetPlayerKey && lockedPlayerPositions[String(targetPlayerKey)]) {
-      setError(`${targetPlayer?.nombre || 'El jugador destino'} tiene la posicion bloqueada.`);
-      return;
+    const targetPlayer = resolvedTargetPlayerKey ? teams[normalizedTargetTeamIndex]?.find((player) => playerKey(player) === String(resolvedTargetPlayerKey)) : null;
+    if (resolvedTargetPlayerKey && lockedPlayerPositions[String(resolvedTargetPlayerKey)]) {
+      return { ok: false, message: `${targetPlayer?.nombre || 'El jugador destino'} tiene la posicion bloqueada.` };
     }
     if (targetPlayer && isFixedGoalkeeper(targetPlayer)) {
-      setError(`${targetPlayer.nombre} esta fijado como arquero y no puede moverse por intercambio.`);
-      return;
+      return { ok: false, message: `${targetPlayer.nombre} esta fijado como arquero y no puede moverse por intercambio.` };
     }
-    if (targetPlayerKey && String(targetPlayerKey) === key) return;
-    const targetKeyForAssignment = targetPlayerKey && teams[targetTeamIndex]?.some((player) => playerKey(player) === String(targetPlayerKey))
-      ? String(targetPlayerKey)
+    if (resolvedTargetPlayerKey && String(resolvedTargetPlayerKey) === key) {
+      return { ok: false, message: 'Es el mismo jugador. Soltalo entre cartas o sobre otro jugador.' };
+    }
+    const targetKeyForAssignment = resolvedTargetPlayerKey && teams[normalizedTargetTeamIndex]?.some((player) => playerKey(player) === String(resolvedTargetPlayerKey))
+      ? String(resolvedTargetPlayerKey)
       : null;
     const sourceLine = String(source.assignedPosition || '').toUpperCase();
-    const lateralReplacementKey = !targetKeyForAssignment
-      && sourceLine === 'LAT'
-      && targetLine
-      && pitchLineForPosition(targetLine) !== 'DEF'
-      && teams[sourceTeamIndex]
-      ? closestDefenderForLateralReplacement(
-        teams[sourceTeamIndex],
-        buildTeamAssignment(teams[sourceTeamIndex], assignments),
-        key,
-        lockedPlayerPositions,
-      )
-      : null;
-    if (targetLine && FORMATION_LINES.includes(targetLine) && teams[targetTeamIndex]) {
+    if (targetLine && !FORMATION_LINES.includes(targetLine)) {
+      return { ok: false, message: 'Esa zona no es una posicion valida de la cancha.' };
+    }
+    if (targetLine && FORMATION_LINES.includes(targetLine) && teams[normalizedTargetTeamIndex]) {
       if (targetPlayer && sourcePlayer) {
-        const proposedTargetTeam = sourceTeamIndex === targetTeamIndex
-          ? teams[targetTeamIndex]
-          : teams[targetTeamIndex].map((player) => (playerKey(player) === String(targetPlayerKey) ? sourcePlayer : player));
+        const proposedTargetTeam = sourceTeamIndex === normalizedTargetTeamIndex
+          ? teams[normalizedTargetTeamIndex]
+          : teams[normalizedTargetTeamIndex].map((player) => (playerKey(player) === String(resolvedTargetPlayerKey) ? sourcePlayer : player));
         const proposedTargetAssignments = buildTeamAssignment(proposedTargetTeam, assignments);
         proposedTargetAssignments[key] = targetLine;
         if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) {
           proposedTargetAssignments[targetKeyForAssignment] = sourceLine;
         }
-        const targetFits = fieldLineCountsFitLimits(
-          teamLineCounts(proposedTargetTeam, proposedTargetAssignments),
-          proposedTargetTeam.length,
-        );
+        const normalizedTargetAssignments = normalizeCompactDefenseAssignments(proposedTargetTeam, proposedTargetAssignments);
+        const proposedTargetCounts = teamLineCounts(proposedTargetTeam, normalizedTargetAssignments);
+        const targetFits = fieldLineCountsFitLimits(proposedTargetCounts, proposedTargetTeam.length);
 
         let sourceFits = true;
-        if (sourceTeamIndex !== targetTeamIndex) {
+        let proposedSourceCounts = null;
+        let proposedSourceTeamSize = 0;
+        if (sourceTeamIndex !== normalizedTargetTeamIndex) {
           const proposedSourceTeam = teams[sourceTeamIndex].map((player) => (playerKey(player) === key ? targetPlayer : player));
           const proposedSourceAssignments = buildTeamAssignment(proposedSourceTeam, assignments);
           if (FORMATION_LINES.includes(sourceLine)) {
             proposedSourceAssignments[targetKeyForAssignment] = sourceLine;
           }
-          sourceFits = fieldLineCountsFitLimits(
-            teamLineCounts(proposedSourceTeam, proposedSourceAssignments),
-            proposedSourceTeam.length,
-          );
+          const normalizedSourceAssignments = normalizeCompactDefenseAssignments(proposedSourceTeam, proposedSourceAssignments);
+          proposedSourceCounts = teamLineCounts(proposedSourceTeam, normalizedSourceAssignments);
+          proposedSourceTeamSize = proposedSourceTeam.length;
+          sourceFits = fieldLineCountsFitLimits(proposedSourceCounts, proposedSourceTeamSize);
         }
 
         if (!targetFits || !sourceFits) {
-          setError(`Limite de formacion: maximo ${maxFieldPlayersPerLine(proposedTargetTeam.length)} por linea.`);
-          return;
+          const message = !targetFits
+            ? lineCountViolationMessage(proposedTargetCounts, proposedTargetTeam.length)
+            : lineCountViolationMessage(proposedSourceCounts, proposedSourceTeamSize);
+          return { ok: false, message: message || `Limite de formacion: maximo ${maxFieldPlayersPerLine(proposedTargetTeam.length)} por linea.` };
         }
       } else {
-        const proposedTeam = sourceTeamIndex === targetTeamIndex || !sourcePlayer
-          ? teams[targetTeamIndex]
-          : [...teams[targetTeamIndex], sourcePlayer];
+        const proposedTeam = sourceTeamIndex === normalizedTargetTeamIndex || !sourcePlayer
+          ? teams[normalizedTargetTeamIndex]
+          : [...teams[normalizedTargetTeamIndex], sourcePlayer];
         const proposedAssignments = buildTeamAssignment(proposedTeam, assignments);
         proposedAssignments[key] = targetLine;
-        if (sourceTeamIndex === targetTeamIndex && lateralReplacementKey) {
-          proposedAssignments[lateralReplacementKey] = 'LAT';
-        }
-        if (!pitchLineCountsFitLimits(teamLineCounts(proposedTeam, proposedAssignments), proposedTeam.length)) {
-          setError(`Limite de formacion: maximo ${maxFieldPlayersPerLine(proposedTeam.length)} por linea.`);
-          return;
+        const normalizedAssignments = normalizeCompactDefenseAssignments(proposedTeam, proposedAssignments);
+        const proposedCounts = teamLineCounts(proposedTeam, normalizedAssignments);
+        if (!fieldLineCountsFitLimits(proposedCounts, proposedTeam.length)) {
+          return {
+            ok: false,
+            message: lineCountViolationMessage(proposedCounts, proposedTeam.length)
+              || `Limite de formacion: maximo ${maxFieldPlayersPerLine(proposedTeam.length)} por linea.`,
+          };
         }
       }
     }
-    pushUndo(targetTeamIndex);
-    if (sourceTeamIndex !== targetTeamIndex) pushUndo(sourceTeamIndex);
-    setTeams((current) => {
-      if (!current) return current;
-      const next = current.map((team) => team.slice());
-      const sourceIndex = next[sourceTeamIndex].findIndex((player) => playerKey(player) === key);
-      if (sourceIndex < 0) return current;
+    return { ok: true, message: '', targetKeyForAssignment, sourceLine, sourcePlayer, resolvedTargetPlayerKey };
+  }, [assignments, findCrossTeamSwapTargetKey, lockedPlayerPositions, teams]);
+
+  const movePlayer = (source, targetTeamIndex, targetLine = null, targetPlayerKey = null, targetInsertIndex = null) => {
+    const validation = validateDropTarget(source, targetTeamIndex, targetLine, targetPlayerKey);
+    if (!validation.ok) {
+      setError(validation.message);
+      return;
+    }
+    const sourceTeamIndex = Number(source.teamIndex);
+    const normalizedTargetTeamIndex = Number(targetTeamIndex);
+    const key = String(source.playerKey);
+    const sourcePlayer = validation.sourcePlayer;
+    const sourceLine = validation.sourceLine;
+    const targetKeyForAssignment = validation.targetKeyForAssignment;
+    const resolvedTargetPlayerKey = validation.resolvedTargetPlayerKey || targetPlayerKey;
+    const buildMovedTeams = (currentTeams) => {
+      if (!currentTeams) return currentTeams;
+      const next = currentTeams.map((team) => team.slice());
+      const sourceIndex = next[sourceTeamIndex]?.findIndex((player) => playerKey(player) === key);
+      if (!Number.isFinite(sourceIndex) || sourceIndex < 0) return currentTeams;
       const [moving] = next[sourceTeamIndex].splice(sourceIndex, 1);
-      if (targetPlayerKey) {
-        const targetIndex = next[targetTeamIndex].findIndex((player) => playerKey(player) === String(targetPlayerKey));
+      if (resolvedTargetPlayerKey) {
+        const targetIndex = next[normalizedTargetTeamIndex]?.findIndex((player) => playerKey(player) === String(resolvedTargetPlayerKey));
         if (targetIndex >= 0) {
-          const [target] = next[targetTeamIndex].splice(targetIndex, 1, moving);
+          const [target] = next[normalizedTargetTeamIndex].splice(targetIndex, 1, moving);
           next[sourceTeamIndex].splice(sourceIndex, 0, target);
           return next;
         }
       }
-      next[targetTeamIndex].push(moving);
+      if (targetLine && FORMATION_LINES.includes(targetLine) && Number.isFinite(targetInsertIndex)) {
+        const nextAssignments = { ...assignments, [key]: sourcePlayer && isFixedGoalkeeper(sourcePlayer) ? 'ARQ' : targetLine };
+        const targetPitchLine = pitchLineForPosition(targetLine);
+        const orderedLinePlayers = targetPitchLine === 'DEF'
+          ? defenseLinePlayers(
+            next[normalizedTargetTeamIndex].filter((player) => pitchLineForPosition(nextAssignments[playerKey(player)] || getPrimaryPlayerPosition(player)) === targetPitchLine),
+            nextAssignments,
+          )
+          : next[normalizedTargetTeamIndex].filter((player) => pitchLineForPosition(nextAssignments[playerKey(player)] || getPrimaryPlayerPosition(player)) === targetPitchLine);
+        const boundedInsertIndex = Math.max(0, Math.min(Number(targetInsertIndex), orderedLinePlayers.length));
+        const beforeKey = orderedLinePlayers[boundedInsertIndex] ? playerKey(orderedLinePlayers[boundedInsertIndex]) : null;
+        if (beforeKey) {
+          const beforeIndex = next[normalizedTargetTeamIndex].findIndex((player) => playerKey(player) === beforeKey);
+          next[normalizedTargetTeamIndex].splice(beforeIndex >= 0 ? beforeIndex : next[normalizedTargetTeamIndex].length, 0, moving);
+          return next;
+        }
+        const lastLinePlayer = orderedLinePlayers[orderedLinePlayers.length - 1] || null;
+        if (lastLinePlayer) {
+          const afterIndex = next[normalizedTargetTeamIndex].findIndex((player) => playerKey(player) === playerKey(lastLinePlayer));
+          next[normalizedTargetTeamIndex].splice(afterIndex >= 0 ? afterIndex + 1 : next[normalizedTargetTeamIndex].length, 0, moving);
+          return next;
+        }
+      }
+      next[normalizedTargetTeamIndex].push(moving);
       return next;
-    });
+    };
+    const movedTeamsSnapshot = buildMovedTeams(teams);
+    pushUndo(normalizedTargetTeamIndex);
+    if (sourceTeamIndex !== normalizedTargetTeamIndex) pushUndo(sourceTeamIndex);
+    markFormationAsManual(normalizedTargetTeamIndex, sourceTeamIndex);
+    clearActiveFormationVariant(normalizedTargetTeamIndex, sourceTeamIndex);
+    setTeams((current) => buildMovedTeams(current));
     if ((targetLine && FORMATION_LINES.includes(targetLine)) || targetKeyForAssignment) {
       setAssignments((current) => {
         const next = { ...current };
         if (targetLine && FORMATION_LINES.includes(targetLine)) next[key] = sourcePlayer && isFixedGoalkeeper(sourcePlayer) ? 'ARQ' : targetLine;
-        if (lateralReplacementKey) next[lateralReplacementKey] = 'LAT';
         if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) next[targetKeyForAssignment] = sourceLine;
-        return next;
+        const teamsForNormalization = movedTeamsSnapshot || teams;
+        let normalized = normalizeCompactDefenseAssignments(teamsForNormalization?.[normalizedTargetTeamIndex] || [], next);
+        if (sourceTeamIndex !== normalizedTargetTeamIndex) {
+          normalized = normalizeCompactDefenseAssignments(teamsForNormalization?.[sourceTeamIndex] || [], normalized);
+        }
+        return normalized;
       });
     }
   };
 
   const canDropSourceOnLine = (source, targetTeamIndex, targetLine) => {
-    if (!teams || !source || !FORMATION_LINES.includes(String(targetLine || '').toUpperCase())) return false;
-    const sourceTeamIndex = Number(source.teamIndex);
-    const key = String(source.playerKey);
-    const line = String(targetLine || '').toUpperCase();
-    if (!Number.isFinite(sourceTeamIndex) || !teams[sourceTeamIndex] || !teams[targetTeamIndex]) return false;
-    const sourcePlayer = teams[sourceTeamIndex]?.find((player) => playerKey(player) === key);
-    if (!sourcePlayer || lockedPlayerPositions[key]) return false;
-    if (isFixedGoalkeeper(sourcePlayer) && line !== 'ARQ') return false;
-    const currentLine = String(source.assignedPosition || '').toUpperCase();
-    if (currentLine === line && sourceTeamIndex === targetTeamIndex) return false;
-    const proposedTeam = sourceTeamIndex === targetTeamIndex
-      ? teams[targetTeamIndex]
-      : [...teams[targetTeamIndex], sourcePlayer];
-    const proposedAssignments = buildTeamAssignment(proposedTeam, assignments);
-    proposedAssignments[key] = line;
-    if (
-      sourceTeamIndex === targetTeamIndex
-      && String(source.assignedPosition || '').toUpperCase() === 'LAT'
-      && pitchLineForPosition(line) !== 'DEF'
-    ) {
-      const replacementKey = closestDefenderForLateralReplacement(
-        teams[sourceTeamIndex],
-        buildTeamAssignment(teams[sourceTeamIndex], assignments),
-        key,
-        lockedPlayerPositions,
-      );
-      if (replacementKey) proposedAssignments[replacementKey] = 'LAT';
+    return validateDropTarget(source, targetTeamIndex, String(targetLine || '').toUpperCase(), null).ok;
+  };
+
+  const lineInsertPlacementFromEvent = (event) => {
+    const sourceKey = dragState?.playerKey ? String(dragState.playerKey) : '';
+    const items = Array.from(event.currentTarget.querySelectorAll('[data-sorteo-line-player-item="1"]'))
+      .filter((item) => item.dataset.playerKey !== sourceKey);
+    const pointerX = event.clientX;
+    const containerRect = event.currentTarget.getBoundingClientRect();
+    const index = items.findIndex((item) => {
+      const rect = item.getBoundingClientRect();
+      return pointerX < rect.left + (rect.width / 2);
+    });
+    const insertIndex = index >= 0 ? index : items.length;
+    const pointerLocalX = pointerX - containerRect.left;
+    let insertX = pointerLocalX;
+    if (items.length) {
+      if (insertIndex <= 0) {
+        const firstLeft = items[0].getBoundingClientRect().left - containerRect.left;
+        insertX = Math.min(pointerLocalX, firstLeft);
+      } else if (insertIndex >= items.length) {
+        const lastRight = items[items.length - 1].getBoundingClientRect().right - containerRect.left;
+        insertX = Math.max(pointerLocalX, lastRight);
+      } else {
+        const previousRect = items[insertIndex - 1].getBoundingClientRect();
+        const nextRect = items[insertIndex].getBoundingClientRect();
+        insertX = ((previousRect.right + nextRect.left) / 2) - containerRect.left;
+      }
     }
-    return pitchLineCountsFitLimits(teamLineCounts(proposedTeam, proposedAssignments), proposedTeam.length);
+    return { insertIndex, insertX };
   };
 
   const dragScoreDelta = (source, targetLine) => {
@@ -2019,7 +2425,7 @@ export function SorteoLegacyPageIsland({ root }) {
     event.dataTransfer.setDragImage(img, 0, 0);
     setDragState({ ...source, player });
     setDragPoint({ x: event.clientX, y: event.clientY });
-    setDragHoverTarget({ teamIndex, line: assignedPosition, playerKey: playerKey(player) });
+    updateDragHoverTarget({ teamIndex, line: pitchLineForPosition(assignedPosition), targetLine: assignedPosition, playerKey: playerKey(player) });
   };
 
   const sourceFromDragEvent = (event) => {
@@ -2041,96 +2447,82 @@ export function SorteoLegacyPageIsland({ root }) {
     const resolvedTeamIndex = targetCard?.dataset?.teamIndex != null
       ? Number(targetCard.dataset.teamIndex)
       : (targetLine?.dataset?.teamIndex != null ? Number(targetLine.dataset.teamIndex) : teamIndex);
-    const resolvedTargetPlayerKey = targetPlayerKey || targetCard?.dataset?.playerKey || null;
+    const tentativeLine = (Number.isFinite(Number(dragHoverTarget?.insertIndex)) ? dragHoverTarget?.targetLine : null)
+      || targetCard?.dataset?.assignedPosition
+      || targetLine?.dataset?.sorteoDropLine
+      || line
+      || null;
+    const hoverIsInsert = dragHoverTarget?.teamIndex === resolvedTeamIndex
+      && (dragHoverTarget?.targetLine || dragHoverTarget?.line) === tentativeLine
+      && Number.isFinite(Number(dragHoverTarget?.insertIndex))
+      && !dragHoverTarget?.playerKey;
+    const resolvedTargetPlayerKey = hoverIsInsert ? null : (targetPlayerKey || targetCard?.dataset?.playerKey || null);
     const resolvedLine = resolvedTargetPlayerKey
       ? (targetCard?.dataset?.assignedPosition || line || null)
-      : (targetLine?.dataset?.sorteoDropLine || line || null);
-    movePlayer(source, Number.isFinite(resolvedTeamIndex) ? resolvedTeamIndex : teamIndex, resolvedLine, resolvedTargetPlayerKey);
+      : tentativeLine;
+    const resolvedInsertIndex = !resolvedTargetPlayerKey
+      && dragHoverTarget?.teamIndex === resolvedTeamIndex
+      && (dragHoverTarget?.targetLine || dragHoverTarget?.line) === resolvedLine
+      && Number.isFinite(Number(dragHoverTarget?.insertIndex))
+      ? Number(dragHoverTarget.insertIndex)
+      : null;
+    movePlayer(source, Number.isFinite(resolvedTeamIndex) ? resolvedTeamIndex : teamIndex, resolvedLine, resolvedTargetPlayerKey, resolvedInsertIndex);
     setDragState(null);
     setDragPoint(null);
     setDragHoverTarget(null);
   };
 
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
-    if (!touchMoveMode) {
-      setPreview({ player, assignedPosition });
-      return;
-    }
-    const key = playerKey(player);
-    if (lockedPlayerPositions[key]) {
-      setError(`${player.nombre} tiene la posicion bloqueada.`);
-      return;
-    }
-    if (isFixedGoalkeeper(player)) {
-      setError(`${player.nombre} esta fijado como arquero y no puede cambiar de posicion.`);
-      return;
-    }
-    if (!touchMoveSource) {
-      setError('');
-      setTouchMoveSource({ teamIndex, playerKey: key, assignedPosition, playerName: player.nombre });
-      return;
-    }
-    if (touchMoveSource.teamIndex === teamIndex && touchMoveSource.playerKey === key) {
-      setTouchMoveSource(null);
-      return;
-    }
-    movePlayer(touchMoveSource, teamIndex, assignedPosition, key);
-    setTouchMoveSource(null);
-  };
-
-  const handleTouchLine = (teamIndex, line) => {
-    if (!touchMoveMode || !touchMoveSource) return;
-    movePlayer(touchMoveSource, teamIndex, line, null);
-    setTouchMoveSource(null);
+    setPreview({ player, assignedPosition });
   };
 
   const generateDrawVariants = async () => {
     setError('');
     setSuccess('');
-    const rawSelected = lockedMatch ? players.slice() : players.filter((player) => player.selected);
-    const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true).map(playerKey));
-    const selectedWithGoalkeepers = rawSelected.map((player) => (
-      selectedGoalkeeperKeys.has(playerKey(player)) ? { ...player, manualGoalkeeper: true } : player
-    ));
-    const prepared = prepareEmergencyGoalkeepers(selectedWithGoalkeepers, numTeams);
-    const candidates = prepared.players;
-    if (!candidates.length || candidates.length % numTeams !== 0) {
-      setError('Primero selecciona una cantidad valida de jugadores.');
+    if (!teams?.length) {
+      setError('Primero genera los equipos.');
       return;
     }
-    const avoidSignatures = new Set(seenDrawSignatures.current);
-    if (teams) avoidSignatures.add(drawSignature(teams));
-    const variants = [];
     setGenerating(true);
-    setGenerationStage('Comparando variantes');
+    setGenerationStage('Comparando formaciones');
     await new Promise((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 20)));
     try {
-      for (let index = 0; index < 8 && variants.length < 3; index += 1) {
-        const result = generateBalancedTeams(candidates, numTeams, Math.min(Math.max(0.5, maxDiff), STRICT_MAX_DIFF), payload.pairHistory, payload.drawBalanceWeights, avoidSignatures);
-        if (!result) continue;
-        const signature = drawSignature(result.teams);
-        if (!signature || avoidSignatures.has(signature)) continue;
-        avoidSignatures.add(signature);
-        variants.push({ ...result, signature });
+      const variantsByTeam = Object.fromEntries(teams.map((team, teamIndex) => [
+        String(teamIndex),
+        generateTeamFormationVariants(team, assignments, lockedPlayerPositions, 3),
+      ]));
+      setDrawVariants(variantsByTeam);
+      setActiveFormationVariants({});
+      const totalVariants = Object.values(variantsByTeam).reduce((sum, list) => sum + list.length, 0);
+      if (totalVariants) {
+        setSuccess(`Se encontraron ${totalVariants} variantes de formacion para comparar.`);
+      } else {
+        setError('No se encontraron variantes de formacion distintas con los jugadores actuales.');
       }
-      setDrawVariants(variants);
-      if (!variants.length) setError('No se encontraron variantes distintas con las reglas actuales.');
     } finally {
       setGenerating(false);
       setGenerationStage('');
     }
   };
 
-  const applyDrawVariant = (variant) => {
-    if (!variant?.teams) return;
-    pushUndo(0);
-    setTeams(variant.teams);
-    setAssignments({});
-    setLockedPlayerPositions({});
-    setTeamFormations({});
-    setDrawVariants([]);
+  const applyTeamFormationVariant = (teamIndex, variant) => {
+    if (!teams?.[teamIndex] || !variant?.assignments) return;
+    pushUndo(teamIndex);
+    markFormationAsManual(teamIndex);
+    const teamKeys = new Set(teams[teamIndex].map(playerKey));
+    setAssignments((current) => {
+      const next = { ...current };
+      teamKeys.forEach((key) => {
+        if (!lockedPlayerPositions[key]) delete next[key];
+      });
+      Object.entries(variant.assignments).forEach(([key, value]) => {
+        next[key] = lockedPlayerPositions[key] || value;
+      });
+      return next;
+    });
+    setActiveFormationVariants((current) => ({ ...current, [String(teamIndex)]: variant.signature }));
     setAnalysisVisible(true);
-    setSuccess(`Variante aplicada. Diferencia ${variant.evaluation.diff.toFixed(1)}.`);
+    setSuccess(`Variante aplicada en ${getTeamDisplayName(teamIndex)}.`);
   };
 
   const downloadTeamsText = () => {
@@ -2174,23 +2566,28 @@ export function SorteoLegacyPageIsland({ root }) {
       setError('Primero genera los equipos.');
       return;
     }
-    if (typeof window.html2canvas !== 'function') {
-      setError('No se pudo cargar el exportador de imagen. Recarga la pagina e intenta de nuevo.');
-      return;
-    }
     setExporting(true);
     try {
-      const canvas = await window.html2canvas(teamsContainerRef.current, {
+      const capture = typeof window.html2canvas === 'function' ? window.html2canvas : html2canvas;
+      const canvas = await capture(teamsContainerRef.current, {
         backgroundColor: '#f6faf8',
         scale: 2,
         useCORS: true,
+        allowTaint: true,
+        imageTimeout: 15000,
+        onclone: injectFormationExportStyles,
       });
       const link = document.createElement('a');
       link.download = `formaciones_goodfellas_${new Date().toISOString().slice(0, 10)}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
-    } catch {
-      setError('Hubo un error al generar la imagen.');
+      link.remove();
+      setError('');
+    } catch (exportError) {
+      console.error('Error al generar JPG:', exportError);
+      setError(exportError?.message ? `No se pudo generar la imagen: ${exportError.message}` : 'Hubo un error al generar la imagen.');
     } finally {
       setExporting(false);
     }
@@ -2249,8 +2646,17 @@ export function SorteoLegacyPageIsland({ root }) {
     }
   };
 
-  const currentDragDelta = dragState && dragHoverTarget?.line
-    ? dragScoreDelta(dragState, dragHoverTarget.line)
+  const currentDragValidation = dragState && dragHoverTarget
+    ? validateDropTarget(
+      dragState,
+      Number(dragHoverTarget.teamIndex),
+      dragHoverTarget.targetLine || dragHoverTarget.line || null,
+      dragHoverTarget.playerKey || null,
+    )
+    : null;
+  const currentDragBlockMessage = currentDragValidation && !currentDragValidation.ok ? currentDragValidation.message : '';
+  const currentDragDelta = !currentDragBlockMessage && dragState && (dragHoverTarget?.targetLine || dragHoverTarget?.line)
+    ? dragScoreDelta(dragState, dragHoverTarget.targetLine || dragHoverTarget.line)
     : null;
   const currentDragDeltaClass = currentDragDelta?.percent > 0
     ? 'border-lime-200 bg-lime-200 text-[#07130f]'
@@ -2518,9 +2924,9 @@ export function SorteoLegacyPageIsland({ root }) {
                             </select>
                           </label>
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
-                            Formacion
+                            Formación
                             <select className={inputClass} value={teamFormations[teamIndex] || 'auto'} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
-                              <option value="auto">Automatica</option>
+                              <option value="auto">Automática</option>
                               {formationOptions.map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
                             </select>
                           </label>
@@ -2545,7 +2951,28 @@ export function SorteoLegacyPageIsland({ root }) {
                             const max = line === 'ARQ' ? 1 : maxFieldPlayersPerLine(team.length);
                             const canTuneLine = line !== 'ARQ';
                             const isDraggingPlayer = Boolean(dragState);
-                            const lineCanAcceptDrop = isDraggingPlayer && canDropSourceOnLine(dragState, teamIndex, line);
+                            const isLineHoverTarget = Boolean(
+                              dragHoverTarget?.teamIndex === teamIndex
+                              && dragHoverTarget?.line === line
+                              && !dragHoverTarget?.playerKey,
+                            );
+                            const markerLeft = isLineHoverTarget && Number.isFinite(Number(dragHoverTarget?.insertX))
+                              ? `clamp(22px, ${Number(dragHoverTarget.insertX)}px, calc(100% - 22px))`
+                              : '50%';
+                            const visibleLineCount = lineList.filter((player) => playerKey(player) !== String(dragState?.playerKey || '')).length;
+                            const visualInsertIndex = isLineHoverTarget && Number.isFinite(Number(dragHoverTarget?.insertIndex))
+                              ? Math.max(0, Math.min(Number(dragHoverTarget.insertIndex), visibleLineCount))
+                              : null;
+                            const markerLine = line === 'DEF' && visualInsertIndex !== null
+                              ? defenseInsertRole(visibleLineCount, visualInsertIndex)
+                              : (dragHoverTarget?.targetLine || line);
+                            const lineValidationTarget = line === 'DEF' && visualInsertIndex !== null ? markerLine : line;
+                            const lineDropValidation = isDraggingPlayer
+                              ? validateDropTarget(dragState, teamIndex, lineValidationTarget, null)
+                              : null;
+                            const lineCanAcceptDrop = Boolean(lineDropValidation?.ok);
+                            const lineBlockMessage = lineDropValidation && !lineDropValidation.ok ? lineDropValidation.message : '';
+                            const isLineDropTarget = Boolean(lineCanAcceptDrop && isLineHoverTarget);
                             const lineDropClass = !isDraggingPlayer
                               ? ''
                               : (lineCanAcceptDrop
@@ -2563,7 +2990,8 @@ export function SorteoLegacyPageIsland({ root }) {
                                 data-team-index={teamIndex}
                                 onDragOver={(event) => {
                                   event.preventDefault();
-                                  if (dragState) setDragHoverTarget({ teamIndex, line });
+                                  if (event.target.closest?.('.line-players')) return;
+                                  if (dragState) updateDragHoverTarget({ teamIndex, line, targetLine: line });
                                 }}
                                 onDrop={(event) => handleDrop(event, teamIndex, line)}
                               >
@@ -2577,43 +3005,101 @@ export function SorteoLegacyPageIsland({ root }) {
                                   ) : null}
                                 </div>
                                 <div
-                                  className="line-players flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/10 !bg-emerald-950/10 p-1 max-[760px]:gap-1 max-[760px]:p-0.5"
+                                  className="line-players relative flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/10 !bg-emerald-950/10 p-1 max-[760px]:gap-1 max-[760px]:p-0.5"
                                   data-sorteo-drop-line={line}
                                   data-team-index={teamIndex}
                                   onDragOver={(event) => {
                                     event.preventDefault();
-                                    if (dragState) setDragHoverTarget({ teamIndex, line });
+                                    event.stopPropagation();
+                                    if (dragState) {
+                                      const placement = lineInsertPlacementFromEvent(event);
+                                      const targetLineForPlacement = line === 'DEF'
+                                        ? defenseInsertRole(
+                                          lineList.filter((player) => playerKey(player) !== String(dragState.playerKey || '')).length,
+                                          placement.insertIndex,
+                                        )
+                                        : line;
+                                      updateDragHoverTarget({ teamIndex, line, targetLine: targetLineForPlacement, ...placement });
+                                    }
                                   }}
                                   onDrop={(event) => handleDrop(event, teamIndex, line)}
-                                  onClick={() => handleTouchLine(teamIndex, line)}
                                 >
+                                  {isDraggingPlayer && !lineCanAcceptDrop ? (
+                                    <span className="pointer-events-none absolute inset-x-2 top-1 z-40 rounded-md border border-red-200 bg-red-100 px-2 py-1 text-center text-[10px] font-black leading-tight text-red-900 shadow-sm max-[760px]:text-[9px]" aria-hidden="true">
+                                      {lineBlockMessage}
+                                    </span>
+                                  ) : null}
+                                  {isLineDropTarget ? (
+                                    <PitchDropMarker line={markerLine} style={{ left: markerLeft }} />
+                                  ) : null}
                                   {lineList.map((player) => {
                                     const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
+                                    const key = playerKey(player);
+                                    const visibleIndex = lineList
+                                      .filter((candidate) => playerKey(candidate) !== String(dragState?.playerKey || ''))
+                                      .findIndex((candidate) => playerKey(candidate) === key);
+                                    const opensGapBefore = visualInsertIndex !== null
+                                      && key !== String(dragState?.playerKey || '')
+                                      && visibleIndex === visualInsertIndex;
+                                    const gapClass = opensGapBefore ? 'ml-[54px] min-[380px]:ml-[64px] sm:ml-[70px] xl:ml-[82px] 2xl:ml-[88px]' : '';
+                                    const isSwapTarget = Boolean(
+                                      dragState
+                                      && dragHoverTarget?.playerKey === key
+                                      && dragHoverTarget?.teamIndex === teamIndex
+                                      && dragState.playerKey !== key,
+                                    );
                                     return (
-                                      <CompactPlayerCard
-                                        key={playerKey(player)}
-                                        player={player}
-                                        assignedPosition={assigned}
-                                        laneRole={assigned === 'LAT' ? 'lateral' : ''}
-                                        onOpen={() => !dragState && handleTouchCard(teamIndex, player, assigned)}
-                                        draggableProps={{
-                                          draggable: !isFixedGoalkeeper(player) && !lockedPlayerPositions[playerKey(player)],
-                                          dragging: dragState?.playerKey === playerKey(player),
-                                          selected: touchMoveSource?.teamIndex === teamIndex && touchMoveSource?.playerKey === playerKey(player),
-                                          locked: Boolean(lockedPlayerPositions[playerKey(player)]),
-                                          onDragStart: (event) => handleDragStart(event, teamIndex, player, assigned),
-                                          onDragOver: (event) => {
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            if (dragState) setDragHoverTarget({ teamIndex, line: assigned, playerKey: playerKey(player) });
-                                          },
-                                          onDrop: (event) => handleDrop(event, teamIndex, assigned, playerKey(player)),
-                                          'data-sorteo-drag-player': '1',
-                                          'data-player-key': playerKey(player),
-                                          'data-team-index': teamIndex,
-                                          'data-assigned-position': assigned,
-                                        }}
-                                      />
+                                      <span
+                                        key={key}
+                                        className={`relative shrink-0 transition-[margin,transform,opacity] duration-150 ease-out ${gapClass}`}
+                                        data-sorteo-line-player-item="1"
+                                        data-player-key={key}
+                                      >
+                                        <CompactPlayerCard
+                                          player={player}
+                                          assignedPosition={assigned}
+                                          laneRole={assigned === 'LAT' ? 'lateral' : ''}
+                                          onOpen={() => !dragState && handleTouchCard(teamIndex, player, assigned)}
+                                          draggableProps={{
+                                            draggable: !isFixedGoalkeeper(player) && !lockedPlayerPositions[key],
+                                            dragging: dragState?.playerKey === key,
+                                            locked: Boolean(lockedPlayerPositions[key]),
+                                            swapTarget: isSwapTarget,
+                                            onDragStart: (event) => handleDragStart(event, teamIndex, player, assigned),
+                                            onDragOver: (event) => {
+                                              event.preventDefault();
+                                              event.stopPropagation();
+                                              if (dragState) {
+                                                const rect = event.currentTarget.getBoundingClientRect();
+                                                const edgeWidth = rect.width * 0.18;
+                                                const onLeftEdge = event.clientX <= rect.left + edgeWidth;
+                                                const onRightEdge = event.clientX >= rect.right - edgeWidth;
+                                                if (onLeftEdge || onRightEdge) {
+                                                  const containerRect = event.currentTarget.parentElement?.parentElement?.getBoundingClientRect();
+                                                  const siblingCards = Array.from(event.currentTarget.parentElement?.parentElement?.querySelectorAll('[data-sorteo-line-player-item="1"]') || [])
+                                                    .filter((item) => item.dataset.playerKey !== String(dragState.playerKey));
+                                                  const cardIndex = siblingCards.indexOf(event.currentTarget.parentElement);
+                                                  const insertIndex = Math.max(0, cardIndex + (onRightEdge ? 1 : 0));
+                                                  const insertX = containerRect
+                                                    ? ((onRightEdge ? rect.right : rect.left) - containerRect.left)
+                                                    : undefined;
+                                                  const targetLineForPlacement = line === 'DEF'
+                                                    ? defenseInsertRole(siblingCards.length, insertIndex)
+                                                    : assigned;
+                                                  updateDragHoverTarget({ teamIndex, line, targetLine: targetLineForPlacement, insertIndex, insertX });
+                                                } else {
+                                                  updateDragHoverTarget({ teamIndex, line, targetLine: assigned, playerKey: key });
+                                                }
+                                              }
+                                            },
+                                            onDrop: (event) => handleDrop(event, teamIndex, assigned, key),
+                                            'data-sorteo-drag-player': '1',
+                                            'data-player-key': key,
+                                            'data-team-index': teamIndex,
+                                            'data-assigned-position': assigned,
+                                          }}
+                                        />
+                                      </span>
                                     );
                                   })}
                                 </div>
@@ -2626,6 +3112,36 @@ export function SorteoLegacyPageIsland({ root }) {
                             );
                           })}
                         </div>
+
+                        {drawVariants[String(teamIndex)]?.length ? (
+                          <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
+                            <strong className="text-xs font-black text-[#07130f]">Variantes de formacion</strong>
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              {drawVariants[String(teamIndex)].map((variant, index) => (
+                                (() => {
+                                  const isActiveVariant = activeFormationVariants[String(teamIndex)] === variant.signature;
+                                  return (
+                                    <button
+                                      key={variant.signature || index}
+                                      className={`grid gap-1 rounded-md border px-3 py-2 text-left text-xs font-bold transition-colors ${
+                                        isActiveVariant
+                                          ? 'border-[#063d2b] bg-[#eaf7f0] text-[#063d2b] ring-2 ring-lime-200/70'
+                                          : 'border-[#d7e6df] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'
+                                      }`}
+                                      type="button"
+                                      onClick={() => applyTeamFormationVariant(teamIndex, variant)}
+                                      aria-pressed={isActiveVariant}
+                                    >
+                                      <span className="font-black text-[#07130f]">Opcion {index + 1}</span>
+                                      <span>{variant.lineText}</span>
+                                      <span>{variant.total.toFixed(1)} pts | {variant.diffCount} cambios</span>
+                                    </button>
+                                  );
+                                })()
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
 
                         <div className="sorteo-team-stats grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
                           <div className="flex flex-wrap gap-1.5 max-[760px]:gap-1">
@@ -2664,40 +3180,15 @@ export function SorteoLegacyPageIsland({ root }) {
                 <Icon name="dice" />
                 Comparar variantes
               </button>
-              <button className={touchMoveMode ? secondaryButtonClass : quietButtonClass} type="button" onClick={() => {
-                setTouchMoveMode((enabled) => !enabled);
-                setTouchMoveSource(null);
-              }} aria-pressed={touchMoveMode}>
-                <Icon name="pencil" />
-                {touchMoveMode ? 'Modo toque activo' : 'Modo toque'}
-              </button>
               <button className={secondaryButtonClass} type="button" onClick={() => setAnalysisVisible((visible) => !visible)} aria-expanded={analysisVisible}>
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}
               </button>
               {lockedMatch ? <button className={primaryButtonClass} type="button" onClick={saveDraw}><Icon name="save" />Guardar sorteo</button> : null}
             </div>
-            {touchMoveMode ? (
-              <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-3 py-2 text-xs font-bold text-[#526b62]">
-                {touchMoveSource ? `Seleccionado: ${touchMoveSource.playerName}. Toca otro jugador para intercambiar o una linea para moverlo.` : 'Toca una carta para seleccionarla. Luego toca otra carta o una linea.'}
-              </div>
-            ) : null}
             {manualChangeCount > 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
                 Hay {manualChangeCount} ajuste{manualChangeCount === 1 ? '' : 's'} manual{manualChangeCount === 1 ? '' : 'es'} en cancha{lockedPositionCount > 0 ? `, con ${lockedPositionCount} posicion${lockedPositionCount === 1 ? '' : 'es'} bloqueada${lockedPositionCount === 1 ? '' : 's'}` : ''}. Al guardar se conservaran las posiciones actuales.
-              </div>
-            ) : null}
-            {drawVariants.length ? (
-              <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
-                <strong className="text-xs font-black text-[#07130f]">Variantes disponibles</strong>
-                <div className="grid gap-2 md:grid-cols-3">
-                  {drawVariants.map((variant, index) => (
-                    <button key={variant.signature || index} className="grid gap-1 rounded-md border border-[#d7e6df] bg-white px-3 py-2 text-left text-xs font-bold text-[#526b62] transition-colors hover:border-[#9fc8b5]" type="button" onClick={() => applyDrawVariant(variant)}>
-                      <span className="font-black text-[#07130f]">Variante {index + 1}</span>
-                      <span>Diff {variant.evaluation.diff.toFixed(1)} | Ritmo {variant.evaluation.slowSpread} | Platinum {variant.evaluation.platinumSpread}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : null}
           </div>
@@ -2871,7 +3362,11 @@ export function SorteoLegacyPageIsland({ root }) {
           <div className="absolute -left-3 -top-3 h-8 w-8 rounded-full bg-lime-200/20 blur-sm" />
           <div className="absolute -left-6 -top-6 h-12 w-12 rounded-full border border-lime-200/35" />
           <div className="relative">
-            {currentDragDelta ? (
+            {currentDragBlockMessage ? (
+              <div className="absolute -right-2 -top-2 z-20 w-44 border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-black leading-tight text-red-900 shadow-sm">
+                {currentDragBlockMessage}
+              </div>
+            ) : currentDragDelta ? (
               <div className={`absolute -right-2 -top-2 z-20 grid min-w-14 justify-items-center border px-2 py-1 text-[11px] font-black leading-tight shadow-sm ${currentDragDeltaClass}`}>
                 <span>{currentDragDeltaText}</span>
                 <span className="text-[9px] font-extrabold opacity-75">{`${currentDragDelta.from} -> ${currentDragDelta.to} ${currentDragDelta.line}`}</span>

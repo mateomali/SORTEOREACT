@@ -82,7 +82,7 @@ export function EncounterHistoryControlsIsland({ root }) {
       <input
         id="encounterHistorySearch"
         type="search"
-        placeholder="Fecha, capitan o resultado..."
+        placeholder="Fecha, capitán o resultado..."
         autoComplete="off"
         value={query}
         onChange={(event) => setQuery(event.target.value)}

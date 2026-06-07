@@ -32,5 +32,8 @@
     "react-dom": "^19.2.5",
     "tailwindcss": "^4.2.4",
     "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
   }
 }

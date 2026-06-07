@@ -9481,23 +9481,28 @@
     -webkit-text-fill-color: #8a1f1f;
   }
 
+  .page-editar-partidos .encounter-latest-section,
   .page-editar-partidos .encounters-history,
   .page-editar-partidos .encounter-card,
   .page-editar-partidos .encounter-latest-card {
     border-color: #cfe0d9;
-    background: #fbfdfc;
+    background: #ffffff;
     color: #10231d;
     box-shadow: 0 6px 18px rgba(11, 42, 30, 0.05);
   }
 
+  .page-editar-partidos .encounter-latest-section {
+    background: #f2fbf6;
+  }
+
   .page-editar-partidos .encounters-history {
-    background: #ffffff;
+    background: #f7faf8;
   }
 
   .page-editar-partidos .encounter-card.is-latest,
   .page-editar-partidos .encounter-latest-card {
     border-color: rgba(0, 163, 108, 0.34);
-    background: #f2fbf6;
+    background: #ffffff;
   }
 
   .page-editar-partidos .encounter-date,
@@ -9508,6 +9513,7 @@
 
   .page-editar-partidos .encounter-state-note,
   .page-editar-partidos .encounter-latest-card p,
+  .page-editar-partidos .encounter-latest-section .small-muted,
   .page-editar-partidos .encounters-history .small-muted {
     color: #315247;
   }
@@ -9535,15 +9541,35 @@
     box-shadow: 0 6px 16px rgba(7, 19, 15, 0.05);
   }
 
+  .page-editar-partidos .encounter-latest-section,
   .page-editar-partidos .encounters-history {
     padding: 16px;
     border-radius: 16px;
   }
 
+  .page-editar-partidos .encounter-latest-section {
+    margin-bottom: 16px;
+    border-color: #acd9c2;
+    border-left: 4px solid #00a36c;
+  }
+
+  .page-editar-partidos .encounters-history {
+    border-color: #d9e6e0;
+  }
+
+  .page-editar-partidos .encounter-latest-section > .section-toolbar,
   .page-editar-partidos .encounters-history > .section-toolbar {
     margin-bottom: 14px;
     border-radius: 14px;
     padding: 12px;
+  }
+
+  .page-editar-partidos .encounter-latest-section > .section-toolbar {
+    background: #e8f6ee;
+  }
+
+  .page-editar-partidos .encounters-history > .section-toolbar {
+    background: #eef4f1;
   }
 
   .page-editar-partidos .encounter-history-search {
@@ -9677,6 +9703,7 @@
 
   .page-editar-partidos .encounter-latest-card {
     border-radius: 16px;
+    margin-bottom: 0;
     padding: 14px;
   }
 
@@ -10276,17 +10303,25 @@
       padding: 8px;
     }
 
+    .page-editar-partidos .encounter-latest-section,
     .page-editar-partidos .encounters-history {
       padding: 8px;
       border-radius: 12px;
     }
 
+    .page-editar-partidos .encounter-latest-section {
+      margin-bottom: 10px;
+      border-left-width: 3px;
+    }
+
+    .page-editar-partidos .encounter-latest-section > .section-toolbar,
     .page-editar-partidos .encounters-history > .section-toolbar {
       margin-bottom: 8px;
       padding: 10px;
       border-radius: 11px;
     }
 
+    .page-editar-partidos .encounter-latest-section > .section-toolbar h3,
     .page-editar-partidos .encounters-history > .section-toolbar h3 {
       font-size: 1rem;
       line-height: 1.1;
@@ -21414,6 +21449,65 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
   }
 }
 
+body.page-mis-valoraciones .valuation-step-button {
+  display: none;
+}
+
+body.page-mis-valoraciones .valuation-general-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: #526b62;
+  font-size: 0.74rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+body.page-mis-valoraciones .valuation-general-value {
+  display: inline-flex;
+  min-width: 38px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #b9dccb;
+  border-radius: 7px;
+  background: #edf8f3;
+  color: #063d2b;
+  font-size: 0.96rem;
+  font-weight: 950;
+  line-height: 1;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+body.page-mis-valoraciones .valuation-general-value.is-live-changed {
+  border-color: #e4b72f;
+  background: #fff3bf;
+  color: #5d4200;
+  font-weight: 950;
+  box-shadow: 0 0 0 3px rgba(228, 183, 47, 0.2);
+}
+
+body.page-mis-valoraciones .valuation-stat-cell,
+body.page-mis-valoraciones .valuation-stat-input {
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+body.page-mis-valoraciones .valuation-stat-cell.is-stat-changed {
+  background: #fff8d7 !important;
+  border-color: #e4b72f !important;
+}
+
+body.page-mis-valoraciones .valuation-stat-input.is-stat-changed {
+  border-color: #e4b72f !important;
+  background: #fffdf0 !important;
+  box-shadow: 0 0 0 2px rgba(228, 183, 47, 0.2) !important;
+}
+
+body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-player-cell {
+  background: #fffdf3 !important;
+}
+
 @media (max-width: 760px) {
   body.page-mis-valoraciones .content {
     padding: 8px;
@@ -21506,10 +21600,16 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
     line-height: 1.15 !important;
   }
 
-  body.page-mis-valoraciones .valuation-player-cell small {
-    margin-top: 2px !important;
-    font-size: 0.72rem !important;
+  body.page-mis-valoraciones .valuation-general-badge {
+    margin-top: 4px !important;
+    font-size: 0.78rem !important;
     line-height: 1.15 !important;
+  }
+
+  body.page-mis-valoraciones .valuation-general-value {
+    min-width: 44px !important;
+    min-height: 28px !important;
+    font-size: 1.08rem !important;
   }
 
   body.page-mis-valoraciones .valuation-position-cell {
@@ -21528,15 +21628,47 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
     background: #f8fbfa !important;
   }
 
-  body.page-mis-valoraciones .valuation-comment-cell {
-    grid-column: 1 / -1 !important;
+  body.page-mis-valoraciones .valuation-stepper {
+    display: grid !important;
+    grid-template-columns: 36px minmax(0, 1fr) 36px !important;
+    align-items: stretch !important;
     gap: 5px !important;
-    padding-top: 3px !important;
+  }
+
+  body.page-mis-valoraciones .valuation-step-button {
+    display: inline-flex !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid #c9d8d1 !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    color: #063d2b !important;
+    font-size: 1.05rem !important;
+    font-weight: 950 !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+  }
+
+  body.page-mis-valoraciones .valuation-step-button[data-valuation-step="-1"] {
+    border-color: #f0c8c8 !important;
+    background: #fff4f4 !important;
+    color: #8a1f1f !important;
+  }
+
+  body.page-mis-valoraciones .valuation-step-button[data-valuation-step="1"] {
+    border-color: #b9dccb !important;
+    background: #edf8f3 !important;
+    color: #063d2b !important;
+  }
+
+  body.page-mis-valoraciones .valuation-step-button:active {
+    background: #e8f5ee !important;
   }
 
   body.page-mis-valoraciones .valuation-position-cell::before,
-  body.page-mis-valoraciones .valuation-stat-cell::before,
-  body.page-mis-valoraciones .valuation-comment-cell::before {
+  body.page-mis-valoraciones .valuation-stat-cell::before {
     content: attr(data-label);
     min-width: 0;
     color: #526b62;
@@ -21567,14 +21699,6 @@ body.page-capitanes .content .captain-editor-field .formation-player.formation-c
     border-radius: 8px !important;
     font-size: 1rem !important;
     line-height: 1 !important;
-  }
-
-  body.page-mis-valoraciones .valuation-comment-input {
-    width: 100% !important;
-    height: 42px !important;
-    min-height: 42px !important;
-    border-radius: 8px !important;
-    font-size: 0.9rem !important;
   }
 
   body.page-mis-valoraciones .valuation-actions {

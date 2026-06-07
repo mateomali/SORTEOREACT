@@ -28,7 +28,7 @@ $brandLogoPath = __DIR__ . '/../assets/goodfellas-logo.png';
 $publicMenu = [
     'index.php' => 'Inicio',
     'jugadores2.php' => 'Jugadores',
-    'estadisticas.php' => 'Estadisticas',
+    'estadisticas.php' => 'Estadísticas',
     'historial.php' => 'Historial',
 ];
 $roleMenu = [];
@@ -38,7 +38,7 @@ if (is_admin()) {
     $roleMenu = [
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
-        'configuracion.php' => 'Configuracion',
+        'configuracion.php' => 'Configuración',
         'usuarios.php' => 'Usuarios',
         'directivos.php' => 'Directivos',
         'mis_valoraciones.php' => 'Valoraciones',

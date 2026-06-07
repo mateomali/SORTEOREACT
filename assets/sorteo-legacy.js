@@ -2288,16 +2288,37 @@ function onTeamLineDelta(teamIndex, line, delta) {
 function onManualPositionChange(teamIndex, playerId, position) {
   const team = lastEquipos && lastEquipos[teamIndex] ? lastEquipos[teamIndex] : [];
   const player = team.find(jugador => playerKey(jugador) === String(playerId));
+  const nextPosition = String(position || '').toUpperCase();
+  let nextCustomCounts = null;
   if (player) {
     const currentAssignment = buildFormationAssignment(team, teamIndex);
+    const currentPosition = getPrimaryPosition(player, currentAssignment);
     const proposedAssignment = new Map(currentAssignment);
-    proposedAssignment.set(player, position);
+    proposedAssignment.set(player, nextPosition);
     if (assignmentGoalkeeperCount(team, proposedAssignment) > 1) {
       alert('Cada equipo puede tener como maximo un arquero.');
       if (lastEquipos) mostrarEquipos(lastEquipos);
       return;
     }
+
+    if (FIELD_LINES.includes(currentPosition) && FIELD_LINES.includes(nextPosition) && currentPosition !== nextPosition) {
+      const currentCounts = countAssignmentLines(currentAssignment);
+      nextCustomCounts = {
+        DEF: Number(currentCounts.DEF || 0),
+        LAT: Number(currentCounts.LAT || 0),
+        MED: Number(currentCounts.MED || 0),
+        DEL: Number(currentCounts.DEL || 0),
+      };
+      nextCustomCounts[currentPosition] = Math.max(0, Number(nextCustomCounts[currentPosition] || 0) - 1);
+      nextCustomCounts[nextPosition] = Number(nextCustomCounts[nextPosition] || 0) + 1;
+    }
+
     if (!fieldLineCountsFitLimits(countAssignmentLines(proposedAssignment), team.length)) {
+      alert(`Limite de formacion: maximo ${maxFieldPlayersPerLine(team.length)} por linea: DEF/LAT, MED y DEL.`);
+      if (lastEquipos) mostrarEquipos(lastEquipos);
+      return;
+    }
+    if (nextCustomCounts && !fieldLineCountsFitLimits(nextCustomCounts, team.length)) {
       alert(`Limite de formacion: maximo ${maxFieldPlayersPerLine(team.length)} por linea: DEF/LAT, MED y DEL.`);
       if (lastEquipos) mostrarEquipos(lastEquipos);
       return;
@@ -2307,8 +2328,11 @@ function onManualPositionChange(teamIndex, playerId, position) {
   if (!customFormations[teamIndex] && lastEquipos && lastEquipos[teamIndex]) {
     customFormations[teamIndex] = defaultFormationCounts(lastEquipos[teamIndex].length);
   }
+  if (nextCustomCounts) {
+    customFormations[teamIndex] = nextCustomCounts;
+  }
   teamFormations[teamIndex] = 'custom';
-  manualAssignments[String(playerId)] = position;
+  manualAssignments[String(playerId)] = nextPosition;
   if (lastEquipos) mostrarEquipos(lastEquipos);
 }
 

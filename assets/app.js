@@ -1140,7 +1140,7 @@
         });
       }
     } catch (error) {
-      showToast('No se pudo actualizar sin recargar. Abriendo la pagina completa.', 'error');
+      showToast('No se pudo actualizar sin recargar. Abriendo la página completa.', 'error');
       window.location.href = url;
     } finally {
       setBusy(content, false);
@@ -1743,7 +1743,7 @@
       if (response.redirected || /login\.php|<!doctype html|<html/i.test(text)) {
         throw new Error('La sesion expiro. Volve a iniciar sesion e intenta guardar nuevamente.');
       }
-      throw new Error('El servidor no devolvio una respuesta valida. Recarga la pagina e intenta nuevamente.');
+      throw new Error('El servidor no devolvió una respuesta válida. Recarga la página e intenta nuevamente.');
     }
   };
   const syncPlayerStatControl = (root, value) => {
@@ -2375,7 +2375,7 @@
       if (preview) {
         preview.hidden = false;
         preview.classList.remove('hidden');
-        preview.textContent = `Proxima fecha calculada: ${selected.dateLabel || selected.date} | ${selected.numTeams || 2} equipos | ${selected.playersPerTeam || 9} jugadores por equipo`;
+        preview.textContent = `Próxima fecha calculada: ${selected.dateLabel || selected.date} | ${selected.numTeams || 2} equipos | ${selected.playersPerTeam || 9} jugadores por equipo`;
       }
       updateImportPlayerLimit();
       updateSelectionCount('participants');
@@ -2429,8 +2429,8 @@
       return 'La sesion admin vencio. Vuelve a ingresar y reintenta.';
     }
     return detail
-      ? `El servidor devolvio HTML en lugar de JSON: ${detail}`
-      : 'El servidor devolvio una pagina HTML en lugar de JSON. Revisa el login o un error PHP del servidor.';
+      ? `El servidor devolvió HTML en lugar de JSON: ${detail}`
+      : 'El servidor devolvió una página HTML en lugar de JSON. Revisa el login o un error PHP del servidor.';
   };
 
   const parseRoundRobinScore = (input) => {
@@ -3130,7 +3130,7 @@
           issues.push({
             severity: 'alta',
             title: `${teamDisplayName(team)} tiene ${(team.lineCounts.ARQ || 0)} arqueros`,
-            detail: 'El sorteo valida un arquero por equipo. Ajusta la posicion o mueve un jugador.',
+            detail: 'El sorteo valida un arquero por equipo. Ajusta la posición o mueve un jugador.',
           });
         }
         if (team.missingLines.length) {
@@ -3522,7 +3522,7 @@
             </section>
           `;
         }).join('')}
-        ${query !== '' && visibleCount === 0 ? '<p class="manual-player-search-empty">No hay jugadores que coincidan con la busqueda.</p>' : ''}
+        ${query !== '' && visibleCount === 0 ? '<p class="manual-player-search-empty">No hay jugadores que coincidan con la búsqueda.</p>' : ''}
       `;
       updateStatus();
     };
