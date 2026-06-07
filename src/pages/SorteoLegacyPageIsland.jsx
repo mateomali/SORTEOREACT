@@ -1167,6 +1167,13 @@ function generateTeamFormationVariants(team, baseAssignments = {}, lockedPlayerP
   return variants;
 }
 
+function chooseBestFormationVariant(variants = []) {
+  if (!variants.length) return null;
+  const bestTotal = Math.max(...variants.map((variant) => Number(variant.total || 0)));
+  const tied = variants.filter((variant) => Math.abs(Number(variant.total || 0) - bestTotal) < 0.0001);
+  return tied[Math.floor(Math.random() * tied.length)] || variants[0];
+}
+
 function getFormationOptions(teamSize) {
   const fieldPlayers = Math.max(0, teamSize - 1);
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
@@ -1697,6 +1704,43 @@ export function SorteoLegacyPageIsland({ root }) {
     setUndoStacks((current) => ({ ...current, [key]: stack.slice(0, -1) }));
   };
 
+  const applyDefaultFormationVariants = useCallback((sourceTeams, baseAssignments = {}, lockedOverrides = lockedPlayerPositions) => {
+    if (!sourceTeams?.length) {
+      setDrawVariants({});
+      setActiveFormationVariants({});
+      setAssignments(baseAssignments);
+      return 0;
+    }
+    const variantsByTeam = Object.fromEntries(sourceTeams.map((team, teamIndex) => [
+      String(teamIndex),
+      generateTeamFormationVariants(team, baseAssignments, lockedOverrides, 3),
+    ]));
+    const defaultVariantsByTeam = Object.fromEntries(
+      Object.entries(variantsByTeam)
+        .map(([teamIndex, variants]) => [teamIndex, chooseBestFormationVariant(variants)])
+        .filter(([, variant]) => Boolean(variant)),
+    );
+    setDrawVariants(variantsByTeam);
+    setActiveFormationVariants(Object.fromEntries(
+      Object.entries(defaultVariantsByTeam).map(([teamIndex, variant]) => [teamIndex, variant.signature]),
+    ));
+    setAssignments(() => {
+      const next = { ...baseAssignments };
+      Object.entries(defaultVariantsByTeam).forEach(([teamIndex, variant]) => {
+        const team = sourceTeams[Number(teamIndex)] || [];
+        team.forEach((player) => {
+          const key = playerKey(player);
+          if (!lockedOverrides[key]) delete next[key];
+        });
+        Object.entries(variant.assignments).forEach(([key, value]) => {
+          next[key] = lockedOverrides[key] || value;
+        });
+      });
+      return next;
+    });
+    return Object.values(variantsByTeam).reduce((sum, list) => sum + list.length, 0);
+  }, [lockedPlayerPositions]);
+
   const generateTeams = useCallback(async () => {
     setError('');
     setSuccess('');
@@ -1768,10 +1812,8 @@ export function SorteoLegacyPageIsland({ root }) {
       const signature = drawSignature(result.teams);
       if (signature) seenDrawSignatures.current.add(signature);
       setTeams(result.teams);
-      setAssignments({});
       setLockedPlayerPositions({});
-      setDrawVariants({});
-      setActiveFormationVariants({});
+      applyDefaultFormationVariants(result.teams, {}, {});
       setTeamFormations({});
       setUndoStacks({});
       setAnalysisVisible(false);
@@ -1790,7 +1832,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setGenerating(false);
       setGenerationStage('');
     }
-  }, [lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, teams]);
+  }, [applyDefaultFormationVariants, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, teams]);
 
   useEffect(() => {
     const previous = window.generarEquipos;
@@ -2476,35 +2518,6 @@ export function SorteoLegacyPageIsland({ root }) {
     setPreview({ player, assignedPosition });
   };
 
-  const generateDrawVariants = async () => {
-    setError('');
-    setSuccess('');
-    if (!teams?.length) {
-      setError('Primero genera los equipos.');
-      return;
-    }
-    setGenerating(true);
-    setGenerationStage('Comparando formaciones');
-    await new Promise((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 20)));
-    try {
-      const variantsByTeam = Object.fromEntries(teams.map((team, teamIndex) => [
-        String(teamIndex),
-        generateTeamFormationVariants(team, assignments, lockedPlayerPositions, 3),
-      ]));
-      setDrawVariants(variantsByTeam);
-      setActiveFormationVariants({});
-      const totalVariants = Object.values(variantsByTeam).reduce((sum, list) => sum + list.length, 0);
-      if (totalVariants) {
-        setSuccess(`Se encontraron ${totalVariants} variantes de formacion para comparar.`);
-      } else {
-        setError('No se encontraron variantes de formacion distintas con los jugadores actuales.');
-      }
-    } finally {
-      setGenerating(false);
-      setGenerationStage('');
-    }
-  };
-
   const applyTeamFormationVariant = (teamIndex, variant) => {
     if (!teams?.[teamIndex] || !variant?.assignments) return;
     pushUndo(teamIndex);
@@ -2941,6 +2954,35 @@ export function SorteoLegacyPageIsland({ root }) {
                           <button className="absolute right-2 top-2 z-20 grid h-8 w-8 place-items-center rounded-lg border border-white/25 bg-emerald-950/65 text-white transition hover:bg-emerald-950 disabled:cursor-not-allowed disabled:opacity-40 max-[760px]:h-7 max-[760px]:w-7" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio">
                             <Icon name="undo" />
                           </button>
+                          {drawVariants[String(teamIndex)]?.length ? (
+                            <div className="absolute left-2 right-12 top-2 z-30 flex flex-wrap gap-1 max-[760px]:left-1.5 max-[760px]:right-10 max-[760px]:top-1.5 max-[760px]:gap-0.5">
+                              {drawVariants[String(teamIndex)].map((variant, index) => {
+                                const isActiveVariant = activeFormationVariants[String(teamIndex)] === variant.signature;
+                                return (
+                                  <button
+                                    key={variant.signature || index}
+                                    className={`inline-flex min-h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-black shadow-sm transition-colors max-[760px]:min-h-6 max-[760px]:px-1.5 max-[760px]:text-[9px] ${
+                                      isActiveVariant
+                                        ? 'border-[#063d2b] bg-[#dff1e8] text-[#063d2b] ring-2 ring-lime-200/70'
+                                        : [
+                                          'border-[#d7e6df] bg-white/92 text-[#07130f] hover:border-[#9fc8b5] hover:bg-white',
+                                          'border-amber-200 bg-amber-50/95 text-[#7a4b00] hover:bg-amber-100',
+                                          'border-rose-200 bg-rose-50/95 text-rose-800 hover:bg-rose-100',
+                                        ][index % 3]
+                                    }`}
+                                    type="button"
+                                    onClick={() => applyTeamFormationVariant(teamIndex, variant)}
+                                    aria-label={`Opcion ${index + 1}: ${variant.lineText}, ${variant.total.toFixed(1)} puntos`}
+                                    aria-pressed={isActiveVariant}
+                                    title={`${variant.lineText} | ${variant.total.toFixed(1)} pts | ${variant.diffCount} cambios`}
+                                  >
+                                    <span>O{index + 1}</span>
+                                    <span className="font-extrabold opacity-80">{variant.total.toFixed(1)}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : null}
                           {PITCH_LINES.map((line) => {
                             const lineList = line === 'DEF'
                               ? defenseLinePlayers(linePlayers.DEF || [], currentAssignments)
@@ -3113,35 +3155,16 @@ export function SorteoLegacyPageIsland({ root }) {
                           })}
                         </div>
 
-                        {drawVariants[String(teamIndex)]?.length ? (
-                          <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
-                            <strong className="text-xs font-black text-[#07130f]">Variantes de formacion</strong>
-                            <div className="grid gap-2 sm:grid-cols-3">
-                              {drawVariants[String(teamIndex)].map((variant, index) => (
-                                (() => {
-                                  const isActiveVariant = activeFormationVariants[String(teamIndex)] === variant.signature;
-                                  return (
-                                    <button
-                                      key={variant.signature || index}
-                                      className={`grid gap-1 rounded-md border px-3 py-2 text-left text-xs font-bold transition-colors ${
-                                        isActiveVariant
-                                          ? 'border-[#063d2b] bg-[#eaf7f0] text-[#063d2b] ring-2 ring-lime-200/70'
-                                          : 'border-[#d7e6df] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'
-                                      }`}
-                                      type="button"
-                                      onClick={() => applyTeamFormationVariant(teamIndex, variant)}
-                                      aria-pressed={isActiveVariant}
-                                    >
-                                      <span className="font-black text-[#07130f]">Opcion {index + 1}</span>
-                                      <span>{variant.lineText}</span>
-                                      <span>{variant.total.toFixed(1)} pts | {variant.diffCount} cambios</span>
-                                    </button>
-                                  );
-                                })()
-                              ))}
-                            </div>
+                        <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                          <div className="min-w-0">
+                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]">
+                              <span className={`h-3 w-3 rounded-full ${color.accent}`} aria-hidden="true" />
+                              {getTeamDisplayName(teamIndex)}
+                            </h3>
+                            <p className="m-0 text-xs font-semibold text-slate-500">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>
                           </div>
-                        ) : null}
+                          <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
+                        </div>
 
                         <div className="sorteo-team-stats grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
                           <div className="flex flex-wrap gap-1.5 max-[760px]:gap-1">
@@ -3176,10 +3199,6 @@ export function SorteoLegacyPageIsland({ root }) {
               <button className={quietButtonClass} type="button" onClick={downloadTeamsJpg} disabled={exporting}><Icon name="download" />{exporting ? 'Generando JPG...' : 'Exportar JPG'}</button>
               <button className={quietButtonClass} type="button" onClick={copyTeams}><Icon name="clipboard" />Copiar</button>
               <button className={quietButtonClass} type="button" onClick={downloadTeamsText}><Icon name="download" />Descargar texto</button>
-              <button className={quietButtonClass} type="button" onClick={generateDrawVariants} disabled={generating}>
-                <Icon name="dice" />
-                Comparar variantes
-              </button>
               <button className={secondaryButtonClass} type="button" onClick={() => setAnalysisVisible((visible) => !visible)} aria-expanded={analysisVisible}>
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}
