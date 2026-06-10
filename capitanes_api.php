@@ -517,6 +517,9 @@ function captain_state(int $matchId): array
             'pace_label' => pace_label((string) $p['pace']),
             'photo_path' => player_photo_path($p),
             'has_custom_photo' => player_has_custom_photo($p),
+            'photo_position_x' => player_photo_position_x($p),
+            'photo_position_y' => player_photo_position_y($p),
+            'photo_zoom' => player_photo_zoom($p),
             'skill' => player_overall_rating($p),
             'base_skill' => (float) $p['skill'],
             'technique' => player_effective_stat($p, 'technique'),
@@ -1012,7 +1015,7 @@ try {
         throw new RuntimeException('No hay draft de capitanes para esta fecha.');
     }
     $availableStmt = $pdo->prepare(
-        'SELECT p.id, p.name, p.positions, p.pace, p.skill, p.photo_path,
+        'SELECT p.id, p.name, p.positions, p.pace, p.skill, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom,
                 p.technique, p.rhythm, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id

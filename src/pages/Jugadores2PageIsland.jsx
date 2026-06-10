@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const cardBackgrounds = {
   bronze: 'assets/card-backgrounds/reference-bronze.png',
@@ -83,6 +83,61 @@ function normalize(value) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+}
+
+function clampPhotoPosition(value, fallback) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : fallback;
+}
+
+function clampPhotoZoom(value, fallback = 100) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) ? Math.max(50, Math.min(180, number)) : fallback;
+}
+
+function playerPhotoPosition(player) {
+  return {
+    x: clampPhotoPosition(player?.photoPositionX, 50),
+    y: clampPhotoPosition(player?.photoPositionY, 50),
+    zoom: clampPhotoZoom(player?.photoZoom, 100),
+  };
+}
+
+function photoTransformStyle({ x, y, zoom }) {
+  const scale = clampPhotoZoom(zoom, 100) / 100;
+  const offsetX = (50 - clampPhotoPosition(x, 50)) * 0.45;
+  const offsetY = (50 - clampPhotoPosition(y, 50)) * 0.45;
+  const objectPosition = `${x}% ${y}%`;
+  const transform = `translate(${offsetX.toFixed(2)}%, ${offsetY.toFixed(2)}%) scale(${scale.toFixed(2)})`;
+  return {
+    position: 'absolute',
+    inset: 0,
+    display: 'block',
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition,
+    transform,
+    transformOrigin: 'center',
+    '--player-photo-object-position': objectPosition,
+    '--player-photo-transform': transform,
+    '--player-photo-transform-origin': 'center',
+  };
+}
+
+function applyPhotoTransform(element, position) {
+  if (!element) return;
+  const style = photoTransformStyle(position);
+  element.style.objectPosition = style.objectPosition;
+  element.style.transform = style.transform;
+  element.style.transformOrigin = style.transformOrigin;
+  element.style.setProperty('--player-photo-object-position', style.objectPosition);
+  element.style.setProperty('--player-photo-transform', style.transform);
+  element.style.setProperty('--player-photo-transform-origin', style.transformOrigin);
+}
+
+function playerPhotoPositionStyle(player) {
+  return player?.hasCustomPhoto ? photoTransformStyle(playerPhotoPosition(player)) : undefined;
 }
 
 function compareText(a, b) {
@@ -210,7 +265,7 @@ function PlayerCard({ player, onOpen, size = 'compact' }) {
         style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
       >
         {player.photo ? (
-          <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" data-player-photo-oval={player.hasCustomPhoto ? '1' : undefined} />
+          <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.hasCustomPhoto ? '1' : undefined} />
         ) : null}
       </span>
 
@@ -404,16 +459,25 @@ function ReadonlyProfile({ player, onRadarOpen }) {
 
 function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   const initialOveralls = useMemo(() => Object.fromEntries(player.allStats.map((stat) => [stat.field, Number(stat.overall) || 64])), [player]);
+  const initialPhotoPosition = useMemo(() => playerPhotoPosition(player), [player]);
+  const mainPhotoPreviewRef = useRef(null);
+  const editorPhotoPreviewRef = useRef(null);
   const [name, setName] = useState(player.name);
   const [primary, setPrimary] = useState(player.primaryPosition || '');
   const [secondary, setSecondary] = useState(player.secondaryPosition || '');
   const [active, setActive] = useState(player.isActive);
   const [overallValues, setOverallValues] = useState(initialOveralls);
-  const [photoUrl, setPhotoUrl] = useState(player.photo);
+  const [photoUrl, setPhotoUrl] = useState(player.photoEdit || player.photo);
   const [photoName, setPhotoName] = useState(player.hasCustomPhoto ? 'Foto actual cargada. Elegi otra para reemplazarla.' : 'JPG, PNG o WEBP hasta 3 MB');
+  const [photoPosition, setPhotoPosition] = useState(initialPhotoPosition);
   const [photoDirty, setPhotoDirty] = useState(false);
+  const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
   const [openHelp, setOpenHelp] = useState(null);
   const hasPreviewPhoto = photoDirty || player.hasCustomPhoto;
+  const photoEditorPreviewStyle = photoTransformStyle(photoPosition);
+  const photoPositionDirty = photoPosition.x !== initialPhotoPosition.x
+    || photoPosition.y !== initialPhotoPosition.y
+    || photoPosition.zoom !== initialPhotoPosition.zoom;
 
   const displayedOverall = useMemo(() => {
     const weights = positionWeights[primary] || positionWeights.MED;
@@ -427,9 +491,27 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
     onOverallPreviewChange?.(player.id, displayedOverall);
   }, [displayedOverall, onOverallPreviewChange, player.id]);
 
+  useEffect(() => {
+    if (!hasPreviewPhoto) return;
+    applyPhotoTransform(mainPhotoPreviewRef.current, photoPosition);
+    applyPhotoTransform(editorPhotoPreviewRef.current, photoPosition);
+  }, [hasPreviewPhoto, photoPosition]);
+
   const setOverall = (field, value) => {
     const next = Math.max(35, Math.min(99, Math.round(Number(value) || 64)));
     setOverallValues((current) => ({ ...current, [field]: next }));
+  };
+
+  const previewPhotoPosition = (axis, value) => {
+    setPhotoPosition((current) => {
+      const next = {
+        ...current,
+        [axis]: axis === 'zoom' ? clampPhotoZoom(value, current.zoom) : clampPhotoPosition(value, current[axis]),
+      };
+      applyPhotoTransform(mainPhotoPreviewRef.current, next);
+      applyPhotoTransform(editorPhotoPreviewRef.current, next);
+      return next;
+    });
   };
 
   const selected = [primary, secondary].filter(Boolean);
@@ -439,12 +521,16 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
     || secondary !== (player.secondaryPosition || '')
     || active !== player.isActive
     || photoDirty
+    || photoPositionDirty
     || Object.keys(initialOveralls).some((field) => (overallValues[field] || 64) !== initialOveralls[field]);
 
   return (
     <form className="grid gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4" method="post" encType="multipart/form-data">
       <input type="hidden" name="action" value="save" />
       <input type="hidden" name="id" value={player.id} />
+      <input type="hidden" name="photo_position_x" value={photoPosition.x} />
+      <input type="hidden" name="photo_position_y" value={photoPosition.y} />
+      <input type="hidden" name="photo_zoom" value={photoPosition.zoom} />
 
       <div className="flex items-center justify-between gap-3 border-b border-emerald-100 pb-3">
         <strong className="text-base font-black text-[#07130f]">Editar jugador</strong>
@@ -482,8 +568,8 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
 
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3 text-center">
-          <span className="mx-auto grid h-40 w-36 place-items-center overflow-hidden rounded-lg border border-[#d7e6df] bg-white">
-            <img className={`h-full w-full ${hasPreviewPhoto ? 'object-cover object-top' : 'object-contain opacity-60'}`} src={photoUrl} alt="" data-player-photo-oval={hasPreviewPhoto ? '1' : undefined} />
+          <span className="relative mx-auto grid h-40 w-36 place-items-center overflow-hidden rounded-lg border border-[#d7e6df] bg-white">
+            <img ref={mainPhotoPreviewRef} className={`h-full w-full ${hasPreviewPhoto ? 'object-cover object-top' : 'object-contain opacity-60'}`} src={photoUrl} alt="" style={hasPreviewPhoto ? photoEditorPreviewStyle : undefined} data-player-photo-oval={hasPreviewPhoto ? '1' : undefined} />
           </span>
           <label className={fileButtonClass}>
             <span>{player.hasCustomPhoto ? 'Cambiar foto' : 'Elegir foto'}</span>
@@ -497,10 +583,83 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
                 if (!file || !file.type.startsWith('image/')) return;
                 setPhotoUrl(URL.createObjectURL(file));
                 setPhotoName(file.name);
+                setPhotoPosition({ x: 50, y: 50, zoom: 100 });
+                setPhotoEditorOpen(true);
                 setPhotoDirty(true);
               }}
             />
           </label>
+          <button
+            className={`min-h-9 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${hasPreviewPhoto ? 'border-[#c9d8d1] bg-white text-[#063d2b] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]' : 'cursor-not-allowed border-[#d7e6df] bg-white text-slate-400'}`}
+            type="button"
+            disabled={!hasPreviewPhoto}
+            onClick={() => setPhotoEditorOpen((open) => !open)}
+            aria-expanded={photoEditorOpen && hasPreviewPhoto}
+          >
+            Editar foto
+          </button>
+          {photoEditorOpen && hasPreviewPhoto ? (
+            <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 text-left">
+              <span className="relative mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-full border border-[#d7e6df] bg-[#f8fbfa]">
+                <img ref={editorPhotoPreviewRef} className="h-full w-full object-cover" src={photoUrl} alt="" style={photoEditorPreviewStyle} />
+              </span>
+              <label className="grid gap-1 text-xs font-extrabold text-slate-600">
+                <span className="flex items-center justify-between gap-2">
+                  Horizontal
+                  <b className="text-[#063d2b]">{photoPosition.x}%</b>
+                </span>
+                <input
+                  className="h-8 w-full cursor-pointer accent-[#063d2b]"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={photoPosition.x}
+                  onInput={(event) => previewPhotoPosition('x', event.currentTarget.value)}
+                  onChange={(event) => previewPhotoPosition('x', event.currentTarget.value)}
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-extrabold text-slate-600">
+                <span className="flex items-center justify-between gap-2">
+                  Vertical
+                  <b className="text-[#063d2b]">{photoPosition.y}%</b>
+                </span>
+                <input
+                  className="h-8 w-full cursor-pointer accent-[#063d2b]"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={photoPosition.y}
+                  onInput={(event) => previewPhotoPosition('y', event.currentTarget.value)}
+                  onChange={(event) => previewPhotoPosition('y', event.currentTarget.value)}
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-extrabold text-slate-600">
+                <span className="flex items-center justify-between gap-2">
+                  Zoom
+                  <b className="text-[#063d2b]">{photoPosition.zoom}%</b>
+                </span>
+                <input
+                  className="h-8 w-full cursor-pointer accent-[#063d2b]"
+                  type="range"
+                  min="50"
+                  max="180"
+                  step="1"
+                  value={photoPosition.zoom}
+                  onInput={(event) => previewPhotoPosition('zoom', event.currentTarget.value)}
+                  onChange={(event) => previewPhotoPosition('zoom', event.currentTarget.value)}
+                />
+              </label>
+              <button
+                className={`min-h-9 rounded-lg border border-[#c9d8d1] bg-[#f8fbfa] px-3 text-xs font-black text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#eef7f2] ${focusRing}`}
+                type="button"
+                onClick={() => setPhotoPosition(photoDirty ? { x: 50, y: 50, zoom: 100 } : initialPhotoPosition)}
+              >
+                Restablecer
+              </button>
+            </div>
+          ) : null}
           <small className="text-xs font-semibold text-slate-500">{photoName}</small>
         </aside>
 

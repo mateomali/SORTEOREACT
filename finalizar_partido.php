@@ -1308,6 +1308,9 @@ require __DIR__ . '/includes/header.php';
               'ritmo' => ((string) ($p['pace'] ?? '') === 'lento') ? 'lento' : 'rapido',
               'photo_path' => player_photo_path($p),
               'has_custom_photo' => player_has_custom_photo($p),
+              'photo_position_x' => player_photo_position_x($p),
+              'photo_position_y' => player_photo_position_y($p),
+              'photo_zoom' => player_photo_zoom($p),
               'puntuacion' => player_overall_rating($p),
               'tecnica' => player_effective_stat($p, 'technique'),
               'ritmo_stat' => player_effective_stat($p, 'rhythm'),
@@ -1413,6 +1416,9 @@ require __DIR__ . '/includes/header.php';
                 'goalkeeper_skill' => player_effective_stat($p, 'goalkeeper_skill'),
                 'photo_path' => player_photo_path($p),
                 'photo_custom' => player_has_custom_photo($p),
+                'photo_position_x' => player_photo_position_x($p),
+                'photo_position_y' => player_photo_position_y($p),
+                'photo_zoom' => player_photo_zoom($p),
             ], $participants),
           ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
           <div class="finish-formation-head">

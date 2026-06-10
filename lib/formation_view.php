@@ -217,12 +217,15 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
     $cardClass = 'formation-player card-pro-relieve formation-card-sin-stat formation-card-compacta formation-card-tier-' . formation_view_card_tier($rating) . ($isHighlighted ? ' is-current-player' : '');
     $photoPath = player_photo_path($player);
     $photoClass = player_has_custom_photo($player) ? ' is-custom' : ' is-default';
+    $photoStyle = player_has_custom_photo($player)
+        ? ' style="position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: ' . h(player_photo_object_position($player)) . '; transform: ' . h(player_photo_transform($player)) . '; transform-origin: center; --player-photo-object-position: ' . h(player_photo_object_position($player)) . '; --player-photo-transform: ' . h(player_photo_transform($player)) . '; --player-photo-transform-origin: center;"'
+        : '';
 
     $laneRole = $position === 'LAT' ? ' data-lane-role="lateral"' : '';
     $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-player-skill="' . h((string) $rating) . '"' . $laneRole . '>';
     $html .= '<span class="player-card-rating" title="Puntaje general"><strong>' . h((string) formation_view_card_rating($rating)) . '</strong><span>GEN</span></span>';
     $html .= '<span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>';
-    $html .= '<span class="formation-card-photo' . h($photoClass) . '" aria-hidden="true"><img src="' . h($photoPath) . '" alt=""></span>';
+    $html .= '<span class="formation-card-photo' . h($photoClass) . '" aria-hidden="true"><img src="' . h($photoPath) . '" alt=""' . $photoStyle . '></span>';
     $html .= '<strong class="formation-player-name">' . h((string) ($player['name'] ?? 'Jugador')) . '</strong>';
     $html .= '<span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada">' . h($position ?: 'GEN') . '</span>';
     [$regularityForm, $regularityLabel] = formation_view_card_regularity_form($player);

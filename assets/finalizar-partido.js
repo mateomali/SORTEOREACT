@@ -130,6 +130,21 @@
     "'": '&#039;',
   })[char]);
 
+  const clampPhotoPosition = (value, fallback) => {
+    const number = Number.parseInt(value, 10);
+    return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : fallback;
+  };
+
+  const photoPositionStyle = (player) => {
+    if (!player.photo_custom) return '';
+    const x = clampPhotoPosition(player.photo_position_x, 50);
+    const y = clampPhotoPosition(player.photo_position_y, 50);
+    const zoom = Math.max(50, Math.min(180, Number.parseInt(player.photo_zoom, 10) || 100)) / 100;
+    const objectPosition = `${x}% ${y}%`;
+    const transform = `translate(${((50 - x) * 0.45).toFixed(2)}%, ${((50 - y) * 0.45).toFixed(2)}%) scale(${zoom.toFixed(2)})`;
+    return ` style="position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: ${objectPosition}; transform: ${transform}; transform-origin: center; --player-photo-object-position: ${objectPosition}; --player-photo-transform: ${transform}; --player-photo-transform-origin: center;"`;
+  };
+
   const statValue = (player, field) => {
     const value = Number(player[field]);
     if (Number.isFinite(value) && value > 0) return value;
@@ -215,12 +230,13 @@
   };
 
   const compactCardBackground = (tier) => ({
-    bronze: 'assets/card-backgrounds/reference-compact-bronze.png',
-    silver: 'assets/card-backgrounds/reference-compact-silver.png',
-    gold: 'assets/card-backgrounds/reference-compact-gold.png',
-    elite: 'assets/card-backgrounds/reference-compact-elite.png',
-    supreme: 'assets/card-backgrounds/reference-compact-supreme.png',
-  }[tier] || 'assets/card-backgrounds/reference-compact-bronze.png');
+    bronze: 'assets/card-backgrounds/ai-compact-bronze.png',
+    silver: 'assets/card-backgrounds/ai-compact-silver.png',
+    gold: 'assets/card-backgrounds/ai-compact-gold.png',
+    elite: 'assets/card-backgrounds/ai-compact-elite.png',
+    platinum: 'assets/card-backgrounds/ai-compact-platinum.png',
+    supreme: 'assets/card-backgrounds/ai-compact-platinum.png',
+  }[tier] || 'assets/card-backgrounds/ai-compact-bronze.png');
 
   const cardRegularity = (player) => {
     const regularity = statValue(player, 'regularity');
@@ -281,7 +297,7 @@
           <span class="${!isNatural ? 'is-out-of-position' : secondary ? 'is-secondary-position' : ''}">${escapeHtml(position)}</span>
           <span class="sorteo-static-player-form is-${regularityForm}" title="${escapeHtml(regularityLabel)}" aria-label="${escapeHtml(regularityLabel)}"></span>
         </span>
-        <span class="sorteo-static-player-photo ${photoClass}" aria-hidden="true"${player.photo_custom ? ' data-player-photo-frame="1"' : ''}><img src="${escapeHtml(photoPath)}" alt=""${player.photo_custom ? ' data-player-photo-oval="1"' : ''}></span>
+        <span class="sorteo-static-player-photo ${photoClass}" aria-hidden="true"${player.photo_custom ? ' data-player-photo-frame="1"' : ''}><img src="${escapeHtml(photoPath)}" alt=""${photoPositionStyle(player)}${player.photo_custom ? ' data-player-photo-oval="1"' : ''}></span>
         <strong class="sorteo-static-player-name">${escapeHtml(name)}</strong>
       </button>
     `;

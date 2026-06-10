@@ -2806,14 +2806,14 @@
   body.page-sorteo-legacy .sorteo-react-page .sorteo-lane-indicator {
     position: absolute;
     z-index: 34;
-    top: 18%;
-    right: 5.6%;
+    top: 23%;
+    right: 7.6%;
     display: grid;
     align-content: center;
     justify-items: center;
     gap: 2%;
-    width: 16%;
-    height: 40%;
+    width: 11%;
+    height: 39%;
     color: var(--sorteo-card-text, #f7fff9);
     opacity: 1;
     pointer-events: none;
@@ -2872,12 +2872,12 @@
   .formation-card-photo.is-custom img,
   .sorteo-static-player-photo.is-custom img,
   .captain-formation-player .formation-card-photo.is-custom img {
-    border-radius: 18% !important;
+    border-radius: inherit !important;
     clip-path: none !important;
     object-fit: cover !important;
-    object-position: center top !important;
-    transform: scale(1.08);
-    transform-origin: center top;
+    object-position: var(--player-photo-object-position, center top) !important;
+    transform: var(--player-photo-transform, none) !important;
+    transform-origin: var(--player-photo-transform-origin, center) !important;
   }
 
   body.page-sorteo-legacy .sorteo-react-page [data-player-photo-frame] {
@@ -2890,8 +2890,9 @@
     border-radius: 50% !important;
     clip-path: none !important;
     object-fit: cover !important;
-    object-position: center top !important;
-    transform: none !important;
+    object-position: var(--player-photo-object-position, center top) !important;
+    transform: var(--player-photo-transform, none) !important;
+    transform-origin: var(--player-photo-transform-origin, center) !important;
   }
 
   @media (max-width: 760px) {
@@ -5234,9 +5235,11 @@
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-card {
-    aspect-ratio: 409 / 620;
-    width: 72px;
-    flex: 0 0 72px;
+    --finish-card-text: #f0b170;
+    --finish-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.76), 0 1px 5px rgba(0, 0, 0, 0.42);
+    aspect-ratio: 1000 / 820;
+    width: 90px;
+    flex: 0 0 90px;
     border: 0;
     padding: 0;
     position: relative;
@@ -5247,6 +5250,34 @@
     filter: drop-shadow(0 4px 7px rgba(2, 14, 9, 0.24));
     font-family: "Barlow Condensed", sans-serif;
     text-align: left;
+    color: var(--finish-card-text);
+    -webkit-text-fill-color: var(--finish-card-text);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card.formation-card-tier-bronze {
+    --finish-card-text: #f0b170;
+    --finish-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.76), 0 1px 5px rgba(0, 0, 0, 0.42);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card.formation-card-tier-silver {
+    --finish-card-text: #f8fbfa;
+    --finish-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.82), 0 1px 4px rgba(220, 228, 225, 0.22);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card.formation-card-tier-gold {
+    --finish-card-text: #f5d867;
+    --finish-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.78), 0 1px 5px rgba(245, 216, 103, 0.32);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card.formation-card-tier-elite {
+    --finish-card-text: #d7b7ff;
+    --finish-card-text-shadow: 0 2px 0 rgba(5, 0, 22, 0.88), 0 0 5px rgba(104, 219, 255, 0.42), 0 0 8px rgba(176, 91, 255, 0.34);
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-card.formation-card-tier-platinum,
+  .finish-formation-pitch-preview .sorteo-static-player-card.formation-card-tier-supreme {
+    --finish-card-text: #dffdf3;
+    --finish-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.82), 0 0 6px rgba(159, 255, 230, 0.34);
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-card:active {
@@ -5267,26 +5298,35 @@
     @apply absolute z-20 bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/38;
     left: 9%;
     right: 8%;
-    top: 10.1%;
-    height: 56.1%;
+    top: 12%;
+    height: 69%;
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-rating {
     @apply absolute z-30 grid content-start justify-items-center text-[#f7fff9] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.45)];
-    left: 14.2%;
-    top: 15.8%;
-    width: 23.2%;
-    height: 29.8%;
+    left: 11.2%;
+    top: 21.5%;
+    width: 18.5%;
+    height: 34%;
+    color: var(--finish-card-text);
+    -webkit-text-fill-color: var(--finish-card-text);
+    text-shadow: var(--finish-card-text-shadow);
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-rating strong {
     @apply font-black leading-[.8] text-[#f7fff9];
     font-size: 1.12rem;
+    color: var(--finish-card-text);
+    -webkit-text-fill-color: var(--finish-card-text);
+    text-shadow: var(--finish-card-text-shadow);
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-rating > span:not(.sorteo-static-player-form) {
     @apply mt-0.5 font-black uppercase leading-none text-[#f7fff9];
     font-size: 0.54rem;
+    color: var(--finish-card-text);
+    -webkit-text-fill-color: var(--finish-card-text);
+    text-shadow: var(--finish-card-text-shadow);
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-rating .is-out-of-position {
@@ -5325,10 +5365,10 @@
   .finish-formation-pitch-preview .sorteo-static-player-photo {
     position: absolute;
     z-index: 10;
-    left: 36.4%;
-    right: 13.3%;
-    top: 14.8%;
-    height: 42.1%;
+    left: 34%;
+    right: 11%;
+    top: 15%;
+    height: 48%;
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -5338,20 +5378,41 @@
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-photo img {
-    @apply h-full w-full object-contain object-top opacity-50;
+    @apply object-contain object-top opacity-50;
+    width: 86%;
+    height: 86%;
+    transform: none !important;
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-photo.is-custom img {
     @apply opacity-100;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: var(--player-photo-object-position, center top) !important;
+    transform: var(--player-photo-transform, none) !important;
+    transform-origin: var(--player-photo-transform-origin, center) !important;
+  }
+
+  .finish-formation-pitch-preview .sorteo-static-player-photo [data-player-photo-oval] {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: var(--player-photo-object-position, center top) !important;
+    transform: var(--player-photo-transform, none) !important;
+    transform-origin: var(--player-photo-transform-origin, center) !important;
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-name {
     @apply absolute z-30 grid place-items-center overflow-hidden px-0.5 text-center font-black uppercase leading-[.92] whitespace-normal break-words text-[#f7fff9] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.45)];
-    left: 8.5%;
-    right: 7.5%;
-    top: 58.8%;
-    height: 18.2%;
+    left: 11.5%;
+    right: 10.5%;
+    top: 66.2%;
+    height: 17.5%;
     font-size: var(--finish-name-size);
+    color: var(--finish-card-text);
+    -webkit-text-fill-color: var(--finish-card-text);
+    text-shadow: var(--finish-card-text-shadow);
   }
 
   .finish-formation-pitch-preview .sorteo-team-stats {
@@ -18963,7 +19024,7 @@ body.page-capitanes .content .formation-undo-button,
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-sin-stat {
-  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-bronze.png");
   --formation-slot-bg: rgba(245, 240, 229, 0.78);
   --formation-slot-line: rgba(7, 19, 15, 0.28);
   position: relative;
@@ -18986,28 +19047,29 @@ body.page-capitanes .content .captain-formation-player.formation-card-sin-stat {
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-bronze {
-  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-bronze.png");
   --formation-slot-bg: rgba(248, 217, 155, 0.78);
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-silver {
-  --formation-card-image: url("./card-backgrounds/reference-compact-silver.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-silver.png");
   --formation-slot-bg: rgba(249, 255, 251, 0.74);
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-gold {
-  --formation-card-image: url("./card-backgrounds/reference-compact-gold.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-gold.png");
   --formation-slot-bg: rgba(255, 240, 157, 0.72);
 }
 
 body.page-capitanes .content .captain-formation-player.formation-card-tier-elite {
-  --formation-card-image: url("./card-backgrounds/reference-compact-elite.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-elite.png");
   --formation-slot-bg: rgba(247, 241, 255, 0.34);
   --formation-slot-line: rgba(243, 237, 255, 0.5);
 }
 
+body.page-capitanes .content .captain-formation-player.formation-card-tier-platinum,
 body.page-capitanes .content .captain-formation-player.formation-card-tier-supreme {
-  --formation-card-image: url("./card-backgrounds/reference-compact-supreme.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-platinum.png");
   --formation-slot-bg: rgba(223, 253, 243, 0.78);
   --formation-slot-line: rgba(159, 255, 230, 0.58);
 }
@@ -19877,7 +19939,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta {
-  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-bronze.png");
   position: relative;
   display: block;
   aspect-ratio: 409 / 710;
@@ -19919,7 +19981,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze {
-  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-bronze.png");
 }
 
 .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver,
@@ -19927,7 +19989,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver {
-  --formation-card-image: url("./card-backgrounds/reference-compact-silver.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-silver.png");
   --formation-slot-bg: color-mix(in srgb, #f5fbf8 58%, transparent);
   --formation-slot-line: rgba(22, 35, 31, 0.18);
 }
@@ -19937,7 +19999,7 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold {
-  --formation-card-image: url("./card-backgrounds/reference-compact-gold.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-gold.png");
   --formation-slot-bg: color-mix(in srgb, #fff09d 54%, transparent);
   --formation-slot-line: rgba(50, 34, 4, 0.2);
 }
@@ -19947,17 +20009,22 @@ body.has-formation-card-preview {
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite {
-  --formation-card-image: url("./card-backgrounds/reference-compact-elite.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-elite.png");
   --formation-slot-bg: color-mix(in srgb, #f7f1ff 34%, transparent);
   --formation-slot-line: rgba(243, 237, 255, 0.38);
 }
 
-.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
+.team-formation .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-platinum,
+  body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-platinum,
+  body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-platinum,
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-platinum,
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-platinum,
+  .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
   body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme,
   body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme {
-  --formation-card-image: url("./card-backgrounds/reference-compact-supreme.png");
+  --formation-card-image: url("./card-backgrounds/ai-compact-platinum.png");
   --formation-slot-bg: color-mix(in srgb, #dffdf3 58%, transparent);
   --formation-slot-line: rgba(159, 255, 230, 0.48);
 }
@@ -20856,17 +20923,21 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
 /* Carta compacta: final card format used by every cancha view. */
 .formation-player.formation-card-sin-stat.formation-card-compacta {
   --formation-compact-card-width: 86px;
-  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png") !important;
+  --formation-compact-card-height: calc(var(--formation-compact-card-width) * 0.82);
+  --formation-card-image: url("./card-backgrounds/ai-compact-bronze.png") !important;
   --formation-card-text: #f0b170 !important;
   --formation-card-separator: rgba(240, 177, 112, 0.34) !important;
+  --formation-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.76), 0 1px 5px rgba(0, 0, 0, 0.42) !important;
   position: relative !important;
   display: block !important;
-  aspect-ratio: 409 / 620 !important;
+  aspect-ratio: 1000 / 820 !important;
   flex: 0 0 var(--formation-compact-card-width) !important;
   width: var(--formation-compact-card-width) !important;
   min-width: var(--formation-compact-card-width) !important;
   max-width: var(--formation-compact-card-width) !important;
-  min-height: 0 !important;
+  height: var(--formation-compact-card-height) !important;
+  min-height: var(--formation-compact-card-height) !important;
+  max-height: var(--formation-compact-card-height) !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: var(--formation-card-image) center / contain no-repeat !important;
@@ -20913,52 +20984,58 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-bronze {
-  --formation-card-image: url("./card-backgrounds/reference-compact-bronze.png") !important;
+  --formation-card-image: url("./card-backgrounds/ai-compact-bronze.png") !important;
   --formation-card-text: #f0b170 !important;
   --formation-card-separator: rgba(240, 177, 112, 0.34) !important;
+  --formation-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.76), 0 1px 5px rgba(0, 0, 0, 0.42) !important;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-silver {
-  --formation-card-image: url("./card-backgrounds/reference-compact-silver.png") !important;
-  --formation-card-text: #e8eeea !important;
-  --formation-card-separator: rgba(232, 238, 234, 0.32) !important;
+  --formation-card-image: url("./card-backgrounds/ai-compact-silver.png") !important;
+  --formation-card-text: #f8fbfa !important;
+  --formation-card-separator: rgba(248, 251, 250, 0.34) !important;
+  --formation-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.82), 0 1px 4px rgba(220, 228, 225, 0.22) !important;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-gold {
-  --formation-card-image: url("./card-backgrounds/reference-compact-gold.png") !important;
+  --formation-card-image: url("./card-backgrounds/ai-compact-gold.png") !important;
   --formation-card-text: #f5d867 !important;
   --formation-card-separator: rgba(245, 216, 103, 0.34) !important;
+  --formation-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.78), 0 1px 5px rgba(245, 216, 103, 0.32) !important;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-elite {
-  --formation-card-image: url("./card-backgrounds/reference-compact-elite.png") !important;
-  --formation-card-text: #a5fff0 !important;
-  --formation-card-separator: rgba(165, 255, 240, 0.34) !important;
+  --formation-card-image: url("./card-backgrounds/ai-compact-elite.png") !important;
+  --formation-card-text: #d7b7ff !important;
+  --formation-card-separator: rgba(215, 183, 255, 0.42) !important;
+  --formation-card-text-shadow: 0 2px 0 rgba(5, 0, 22, 0.88), 0 0 5px rgba(104, 219, 255, 0.42), 0 0 8px rgba(176, 91, 255, 0.34) !important;
 }
 
+.formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-platinum,
 .formation-player.formation-card-sin-stat.formation-card-compacta.formation-card-tier-supreme {
-  --formation-card-image: url("./card-backgrounds/reference-compact-supreme.png") !important;
+  --formation-card-image: url("./card-backgrounds/ai-compact-platinum.png") !important;
   --formation-card-text: #dffdf3 !important;
   --formation-card-separator: rgba(159, 255, 230, 0.38) !important;
+  --formation-card-text-shadow: 0 2px 0 rgba(0, 0, 0, 0.82), 0 0 6px rgba(159, 255, 230, 0.34) !important;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta::before {
   content: "";
   position: absolute;
   z-index: 2;
-  top: 10.1%;
+  top: 12%;
   left: 9%;
   right: 8%;
-  height: 56.1%;
-  background: linear-gradient(180deg, transparent, rgba(7, 19, 15, 0.06), rgba(7, 19, 15, 0.34));
+  height: 69%;
+  background: linear-gradient(180deg, transparent, rgba(7, 19, 15, 0.05), rgba(7, 19, 15, 0.28));
   pointer-events: none;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta .formation-lane-indicator {
   position: absolute !important;
   z-index: 4 !important;
-  top: 21% !important;
-  right: 7.8% !important;
+  top: 20% !important;
+  right: 8% !important;
   display: none !important;
   align-content: center !important;
   justify-items: center !important;
@@ -20988,14 +21065,14 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
 .formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating {
   position: absolute !important;
   z-index: 4 !important;
-  top: 15.8% !important;
-  left: 14.2% !important;
+  top: 21.5% !important;
+  left: 11.2% !important;
   display: grid !important;
   grid-template-rows: auto auto !important;
   align-content: start !important;
   justify-items: center !important;
-  width: 23.2% !important;
-  height: 29.8% !important;
+  width: 18.5% !important;
+  height: 34% !important;
   min-width: 0 !important;
   min-height: 0 !important;
   margin: 0 !important;
@@ -21021,12 +21098,12 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
   overflow: visible !important;
   color: var(--formation-card-text) !important;
   -webkit-text-fill-color: var(--formation-card-text) !important;
-  font-size: clamp(0.74rem, 1.05vw, 1rem) !important;
+  font-size: clamp(0.78rem, 1.08vw, 1.08rem) !important;
   font-weight: 900 !important;
   line-height: 0.8 !important;
   text-align: center !important;
   text-overflow: clip !important;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+  text-shadow: var(--formation-card-text-shadow) !important;
   white-space: nowrap !important;
 }
 
@@ -21037,13 +21114,13 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
 .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position {
   position: absolute !important;
   z-index: 4 !important;
-  top: 29.2% !important;
-  left: 14.2% !important;
+  top: 40.2% !important;
+  left: 11.2% !important;
   right: auto !important;
   display: grid !important;
   place-items: center !important;
-  width: 23.2% !important;
-  height: 8% !important;
+  width: 18.5% !important;
+  height: 10% !important;
   min-width: 0 !important;
   min-height: 0 !important;
   margin: 0 !important;
@@ -21057,7 +21134,7 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
   font-weight: 900 !important;
   line-height: 1 !important;
   text-align: center !important;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+  text-shadow: var(--formation-card-text-shadow) !important;
   text-transform: uppercase !important;
   box-shadow: none !important;
 }
@@ -21080,13 +21157,13 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
 .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity {
   position: absolute !important;
   z-index: 5 !important;
-  top: 39.2% !important;
-  left: 19.6% !important;
+  top: 53% !important;
+  left: 15.4% !important;
   right: auto !important;
   bottom: auto !important;
   display: block !important;
-  width: 11.5% !important;
-  height: 7.7% !important;
+  width: 8.8% !important;
+  height: 12% !important;
   margin: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -21130,13 +21207,13 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
 .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo {
   position: absolute !important;
   z-index: 1 !important;
-  top: 14.8% !important;
-  left: 36.4% !important;
-  right: 13.3% !important;
+  top: 15% !important;
+  left: 34% !important;
+  right: 11% !important;
   display: flex !important;
   align-items: flex-start !important;
   justify-content: center !important;
-  height: 42.1% !important;
+  height: 48% !important;
   margin: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -21149,21 +21226,49 @@ body.page-jugadores .content .mobile-player-list-item:last-child {
   pointer-events: none !important;
 }
 
-.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo img {
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo.is-custom {
+  left: 39% !important;
+  right: auto !important;
+  align-items: center !important;
+  aspect-ratio: 1 / 1 !important;
+  width: auto !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 50% !important;
+  background: rgba(7, 19, 15, 0.08) !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  box-shadow: inset 0 -5px 8px rgba(7, 19, 15, 0.16) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo.is-default img {
   display: block !important;
-  width: 100% !important;
-  height: 100% !important;
+  width: 78% !important;
+  height: 78% !important;
   border-radius: 0 !important;
   filter: none !important;
   object-fit: contain !important;
   object-position: center top !important;
   opacity: 0.56;
+  transform: none !important;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo.is-custom img {
-  object-fit: contain !important;
-  object-position: center top !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: var(--player-photo-object-position, center top) !important;
   opacity: 1 !important;
+  transform: var(--player-photo-transform, none) !important;
+  transform-origin: var(--player-photo-transform-origin, center) !important;
+}
+
+.formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo [data-player-photo-oval] {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: var(--player-photo-object-position, center top) !important;
+  transform: var(--player-photo-transform, none) !important;
+  transform-origin: var(--player-photo-transform-origin, center) !important;
 }
 
 body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo {
@@ -21179,25 +21284,38 @@ body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card
   box-shadow: inset 0 -5px 8px rgba(7, 19, 15, 0.16) !important;
 }
 
-body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo img,
-body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo.is-custom img {
+body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo.is-custom {
+  top: 13.3% !important;
+  left: 38.5% !important;
+  right: auto !important;
+  height: 56.1% !important;
+  aspect-ratio: 1 / 1 !important;
+  width: auto !important;
+}
+
+body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo.is-custom img,
+body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-photo img[data-player-photo-oval] {
+  width: 100% !important;
+  height: 100% !important;
   border-radius: 50% !important;
   object-fit: cover !important;
-  object-position: center top !important;
+  object-position: var(--player-photo-object-position, center top) !important;
   opacity: 1 !important;
+  transform: var(--player-photo-transform, none) !important;
+  transform-origin: var(--player-photo-transform-origin, center) !important;
 }
 
 .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
   position: absolute !important;
   z-index: 4 !important;
-  top: 57.2% !important;
-  left: 8.5% !important;
-  right: 7.5% !important;
+  top: 66.2% !important;
+  left: 11.5% !important;
+  right: 10.5% !important;
   display: -webkit-box !important;
   box-sizing: border-box !important;
   width: auto !important;
   max-width: none !important;
-  height: 21.2% !important;
+  height: 17.5% !important;
   min-height: 0 !important;
   margin: 0 !important;
   border: 0 !important;
@@ -21212,7 +21330,7 @@ body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card
   overflow: hidden !important;
   text-align: center !important;
   text-overflow: ellipsis !important;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.74), 0 1px 5px rgba(0, 0, 0, 0.38) !important;
+  text-shadow: var(--formation-card-text-shadow) !important;
   text-transform: uppercase !important;
   white-space: normal !important;
   overflow-wrap: anywhere !important;
@@ -21235,7 +21353,7 @@ body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card
 .formation-player.formation-card-sin-stat.formation-card-compacta .formation-player-match-rating {
   position: absolute !important;
   z-index: 5 !important;
-  top: 77.2% !important;
+  top: 84.8% !important;
   left: 17.3% !important;
   display: grid !important;
   min-width: 18% !important;
@@ -21256,7 +21374,7 @@ body.page-sorteo-legacy .formation-player.formation-card-sin-stat.formation-card
 .formation-player.formation-card-sin-stat.formation-card-compacta .formation-result-badges {
   position: absolute !important;
   z-index: 5 !important;
-  top: 85.6% !important;
+  top: 91.2% !important;
   left: 13.5% !important;
   right: 11.5% !important;
   display: flex !important;
@@ -21339,7 +21457,7 @@ body.page-index .content #homeMatchDetail .public-teams .formation-player.format
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
-  --formation-compact-card-width: 68px;
+  --formation-compact-card-width: 92px;
 }
 
 body.page-index .content #homeMatchDetail .public-teams .line-players,
@@ -21347,7 +21465,7 @@ body.page-index .content #homeMatchDetail .public-teams .line-players,
   body.page-historial .content .match-history .public-teams .line-players,
   body.page-capitanes .content .captain-editor-field .line-players {
   gap: 7px;
-  min-height: 108px;
+  min-height: 88px;
 }
 
 @media (max-width: 760px) {
@@ -21358,11 +21476,11 @@ body.page-index .content #homeMatchDetail .public-teams .line-players,
   body.page-index .content #homeMatchDetail .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta {
-    --formation-compact-card-width: 60px;
+    --formation-compact-card-width: 66px;
   }
 
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
-    --formation-compact-card-width: 44px;
+    --formation-compact-card-width: 48px;
   }
 
   body.page-index .content #homeMatchDetail .public-teams .line-players,
@@ -21370,13 +21488,13 @@ body.page-index .content #homeMatchDetail .public-teams .line-players,
   body.page-historial .content .match-history .public-teams .line-players,
   body.page-capitanes .content .captain-editor-field .line-players {
     gap: 5px;
-    min-height: 94px;
+    min-height: 78px;
   }
 }
 
 @media (min-width: 380px) and (max-width: 760px) {
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
-    --formation-compact-card-width: 50px;
+    --formation-compact-card-width: 54px;
   }
 }
 
@@ -21432,7 +21550,7 @@ body.page-capitanes .content .captain-editor-field .captain-editor-line.is-defen
 }
 
 body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
-  --formation-compact-card-width: 64px;
+  --formation-compact-card-width: 72px;
 }
 
 /* Laterales: keep the tactical DEF/LAT line, but draw LAT as projected wide players. */
@@ -21459,8 +21577,8 @@ body.page-index .content #homeMatchDetail .public-teams .formation-line.is-proje
 body.page-index .content .match-history .public-teams .formation-line.is-projected-defense > .line-players,
 body.page-historial .content .match-history .public-teams .formation-line.is-projected-defense > .line-players,
 body.page-capitanes .content .captain-editor-field .formation-line.is-projected-defense > .line-players {
-  min-height: 126px !important;
-  padding-bottom: 20px !important;
+  min-height: 104px !important;
+  padding-bottom: 14px !important;
 }
 
 body.page-sorteo-legacy .sorteo-react-page .formation-line.is-projected-defense > .line-players {
@@ -21511,7 +21629,7 @@ body.page-sorteo-legacy .sorteo-react-page .formation-line.is-projected-defense 
   }
 
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
-    --formation-compact-card-width: 48px;
+    --formation-compact-card-width: 56px;
   }
 
   .formation-line.is-projected-defense {
@@ -21519,8 +21637,8 @@ body.page-sorteo-legacy .sorteo-react-page .formation-line.is-projected-defense 
   }
 
   .formation-line.is-projected-defense > .line-players {
-    min-height: 108px !important;
-    padding-bottom: 16px !important;
+    min-height: 88px !important;
+    padding-bottom: 12px !important;
   }
 
   .formation-line.is-projected-defense [data-assigned-position="LAT"],
@@ -21540,13 +21658,13 @@ body.page-sorteo-legacy .sorteo-react-page .formation-line.is-projected-defense 
 
 @media (max-width: 480px) {
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
-    --formation-compact-card-width: 46px;
+    --formation-compact-card-width: 52px;
   }
 }
 
 @media (max-width: 370px) {
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
-    --formation-compact-card-width: 44px;
+    --formation-compact-card-width: 48px;
   }
 }
 

@@ -38,11 +38,11 @@ const cardBackgrounds = {
 };
 
 const compactCardBackgrounds = {
-  bronze: 'assets/card-backgrounds/reference-compact-bronze.png',
-  silver: 'assets/card-backgrounds/reference-compact-silver.png',
-  gold: 'assets/card-backgrounds/reference-compact-gold.png',
-  elite: 'assets/card-backgrounds/reference-compact-elite.png',
-  supreme: 'assets/card-backgrounds/reference-compact-supreme.png',
+  bronze: 'assets/card-backgrounds/ai-compact-bronze.png',
+  silver: 'assets/card-backgrounds/ai-compact-silver.png',
+  gold: 'assets/card-backgrounds/ai-compact-gold.png',
+  elite: 'assets/card-backgrounds/ai-compact-elite.png',
+  supreme: 'assets/card-backgrounds/ai-compact-platinum.png',
 };
 
 const cardPalettes = {
@@ -176,6 +176,41 @@ function normalizePace(raw) {
   return value === 'lento' ? 'lento' : 'rapido';
 }
 
+function clampPhotoPosition(value, fallback) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : fallback;
+}
+
+function clampPhotoZoom(value, fallback = 100) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) ? Math.max(50, Math.min(180, number)) : fallback;
+}
+
+function playerPhotoPositionStyle(player) {
+  if (!player?.has_custom_photo) return undefined;
+  const x = clampPhotoPosition(player.photo_position_x, 50);
+  const y = clampPhotoPosition(player.photo_position_y, 50);
+  const scale = clampPhotoZoom(player.photo_zoom, 100) / 100;
+  const offsetX = (50 - x) * 0.45;
+  const offsetY = (50 - y) * 0.45;
+  const objectPosition = `${x}% ${y}%`;
+  const transform = `translate(${offsetX.toFixed(2)}%, ${offsetY.toFixed(2)}%) scale(${scale.toFixed(2)})`;
+  return {
+    position: 'absolute',
+    inset: 0,
+    display: 'block',
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition,
+    transform,
+    transformOrigin: 'center',
+    '--player-photo-object-position': objectPosition,
+    '--player-photo-transform': transform,
+    '--player-photo-transform-origin': 'center',
+  };
+}
+
 function normalizePlayer(raw, index) {
   const baseRating = normalizeSix(raw.puntuacion ?? raw.rating ?? raw.overall, 3);
   const ritmoStat = normalizeSix(raw.ritmo_stat ?? raw.rhythm, normalizePace(raw.ritmo ?? raw.pace) === 'lento' ? 2 : 4);
@@ -200,6 +235,9 @@ function normalizePlayer(raw, index) {
     habilidad_arquero: normalizeSix(raw.habilidad_arquero ?? raw.goalkeeper_skill, baseRating),
     photo_path: safePhoto,
     has_custom_photo: raw.has_custom_photo === true || safePhoto.startsWith('uploads/players/'),
+    photo_position_x: clampPhotoPosition(raw.photo_position_x ?? raw.photoPositionX, 50),
+    photo_position_y: clampPhotoPosition(raw.photo_position_y ?? raw.photoPositionY, 50),
+    photo_zoom: clampPhotoZoom(raw.photo_zoom ?? raw.photoZoom, 100),
     selected: raw.selected !== false,
   };
 }
@@ -1374,7 +1412,7 @@ function FullPlayerCard({ player, assignedPosition }) {
         style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
         data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
-        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo_path} alt="" data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
+        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
       <strong className={`absolute left-[12.1%] right-[10.9%] top-[53.3%] z-30 grid h-[7.8%] place-items-center overflow-hidden text-ellipsis whitespace-nowrap px-1 text-center font-black uppercase leading-none ${isLongName ? 'text-[.95rem]' : 'text-[1.28rem]'} ${fullCardText}`} data-sorteo-full-card-text="1">
         {player.nombre}
@@ -1403,13 +1441,16 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
   const adjusted = adjustedPositionRating(player, assignedPosition);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
-  const widthClass = 'w-[44px] min-[380px]:w-[54px] sm:w-[60px] xl:w-[72px] 2xl:w-[78px]';
+  const widthClass = 'w-[58px] min-[380px]:w-[64px] sm:w-[70px] xl:w-[82px] 2xl:w-[88px]';
   const outOfPosition = !getOrderedPlayerPositions(player).includes(assignedPosition);
   const secondary = !outOfPosition && assignedPosition !== getPrimaryPlayerPosition(player);
-  const longName = String(player.nombre || '').trim().length > 8 || String(player.nombre || '').includes(' ');
-  const veryLongName = String(player.nombre || '').trim().length > 11 || String(player.nombre || '').trim().split(/\s+/).some((part) => part.length > 8);
-  const nameFontSize = veryLongName ? 'clamp(6.4px, 0.86vw, 11.4px)' : longName ? 'clamp(7.2px, 0.98vw, 12.8px)' : 'clamp(8px, 1.08vw, 14.6px)';
   const nameLines = compactCardNameLines(player.nombre);
+  const multiLineName = nameLines.length > 1;
+  const longName = String(player.nombre || '').trim().length > 9 || String(player.nombre || '').includes(' ');
+  const veryLongName = String(player.nombre || '').trim().length > 12 || String(player.nombre || '').trim().split(/\s+/).some((part) => part.length > 8);
+  const nameFontSize = multiLineName
+    ? (veryLongName ? 'clamp(6.1px, 0.62vw, 8.1px)' : 'clamp(6.5px, 0.66vw, 8.7px)')
+    : longName ? 'clamp(7.4px, 0.8vw, 10.4px)' : 'clamp(8.8px, 0.98vw, 12.8px)';
   const cardTextStyle = {
     '--sorteo-card-text': palette.color,
   };
@@ -1420,8 +1461,15 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
   return (
     <button
       type="button"
-      className={`relative block aspect-[409/620] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 scale-[1.06] ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
-      style={{ ...cardTextStyle, background: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
+      className={`relative block aspect-[1000/940] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 scale-[1.06] ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
+      style={{
+        ...cardTextStyle,
+        backgroundImage: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}")`,
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
+        fontFamily: '"Barlow Condensed", sans-serif',
+      }}
       onClick={(event) => {
         event.stopPropagation();
         onOpen?.();
@@ -1432,7 +1480,7 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
       data-lane-role={isLateral ? 'lateral' : undefined}
       {...domDraggableProps}
     >
-      <span className="absolute left-[9%] right-[8%] top-[10.1%] z-20 h-[56.1%] bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/38" aria-hidden="true" />
+      <span className="absolute left-[7.5%] right-[7%] top-[11.5%] z-20 h-[64%] bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/30" aria-hidden="true" />
       {isLateral ? (
         <span className="sorteo-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
       ) : null}
@@ -1446,28 +1494,28 @@ function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableP
           </span>
         </span>
       ) : null}
-      <span className={`absolute left-[14.2%] top-[15.8%] z-30 grid h-[29.8%] w-[23.2%] content-start justify-items-center ${palette.text}`} style={cardTextStyle} data-sorteo-card-text="1">
-        <strong className="text-[.6rem] font-black leading-[.8] min-[380px]:text-[.66rem] sm:text-[.9rem] xl:text-[1.12rem]" style={cardTextStyle} data-sorteo-card-text="1">{playerCardRating(adjusted)}</strong>
-        <span className="mt-0.5 grid justify-items-center gap-px leading-none">
-          <span className="text-[.28rem] font-black uppercase leading-none min-[380px]:text-[.31rem] sm:text-[.44rem] xl:text-[.54rem]" style={positionTextStyle} data-sorteo-card-position="1">{assignedPosition}</span>
-          <span className="block aspect-square w-[8px] min-[380px]:w-[9px] sm:w-[11px]"><Arrow form={playerRegularityForm(player)} /></span>
+      <span className={`absolute left-[13.2%] top-[16.5%] z-30 grid h-[41%] w-[24%] content-start justify-items-center ${palette.text}`} style={cardTextStyle} data-sorteo-card-text="1">
+        <strong className="text-[.7rem] font-black leading-[.78] min-[380px]:text-[.8rem] sm:text-[.95rem] xl:text-[1.12rem]" style={cardTextStyle} data-sorteo-card-text="1">{playerCardRating(adjusted)}</strong>
+        <span className="mt-[2px] grid justify-items-center gap-px leading-none">
+          <span className="text-[.34rem] font-black uppercase leading-none min-[380px]:text-[.39rem] sm:text-[.48rem] xl:text-[.56rem]" style={positionTextStyle} data-sorteo-card-position="1">{assignedPosition}</span>
+          <span className="block aspect-square w-[8px] min-[380px]:w-[9px] sm:w-[10px] xl:w-[11px]"><Arrow form={playerRegularityForm(player)} /></span>
         </span>
       </span>
       <span
-        className="absolute left-[39%] right-[12.8%] top-[16.2%] z-10 flex h-[35.8%] items-start justify-center overflow-hidden rounded-[50%] border border-white/18 bg-[#07130f]/8 shadow-[inset_0_-5px_8px_rgba(7,19,15,0.16)]"
+        className="absolute left-[38.5%] right-[8.8%] top-[13.3%] z-[25] flex h-[56.1%] items-center justify-center overflow-hidden rounded-[50%] border border-white/18 bg-[#07130f]/8 shadow-[inset_0_-5px_8px_rgba(7,19,15,0.16)]"
         data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
-        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-top' : 'object-contain object-top opacity-50'}`} src={player.photo_path} alt="" data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
+        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-center' : 'object-contain object-center opacity-50'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
       <strong
-        className={`absolute left-[8.5%] right-[7.5%] top-[57.2%] z-30 flex h-[21.2%] items-center justify-center overflow-hidden px-0.5 text-center font-black uppercase ${palette.text}`}
+        className={`absolute left-[12.5%] right-[11.5%] top-[64.8%] z-30 flex h-[23%] items-center justify-center overflow-hidden px-0.5 text-center font-black uppercase ${palette.text}`}
         style={{ ...cardTextStyle, fontSize: nameFontSize }}
         data-sorteo-card-text="1"
       >
         <span
           className="flex max-h-full max-w-full flex-col items-center justify-center overflow-hidden break-words text-center"
           style={{
-            lineHeight: 0.86,
+            lineHeight: multiLineName ? 0.88 : 0.92,
             overflowWrap: 'anywhere',
           }}
         >
@@ -1486,7 +1534,7 @@ function PitchDropMarker({ line, style = null }) {
   const isLateral = String(line || '').toUpperCase() === 'LAT';
   return (
     <span
-      className="pointer-events-none absolute top-1/2 z-40 grid aspect-[409/620] w-[44px] -translate-y-1/2 place-items-center overflow-hidden rounded-md border-2 border-dashed border-lime-100/80 bg-[#07130f]/50 text-lime-100 min-[380px]:w-[54px] sm:w-[60px] xl:w-[72px] 2xl:w-[78px]"
+      className="pointer-events-none absolute top-1/2 z-40 grid aspect-[1000/940] w-[58px] -translate-y-1/2 place-items-center overflow-hidden rounded-md border-2 border-dashed border-lime-100/80 bg-[#07130f]/50 text-lime-100 min-[380px]:w-[64px] sm:w-[70px] xl:w-[82px] 2xl:w-[88px]"
       style={style || undefined}
       data-lane-role={isLateral ? 'lateral' : undefined}
       aria-hidden="true"

@@ -43,6 +43,21 @@ function schema_column_type(PDO $pdo, string $table, string $column): string
     return (string) ($stmt->fetchColumn() ?: '');
 }
 
+function schema_column_default(PDO $pdo, string $table, string $column): ?string
+{
+    $stmt = $pdo->prepare(
+        'SELECT COLUMN_DEFAULT
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table_name
+           AND COLUMN_NAME = :column_name
+         LIMIT 1'
+    );
+    $stmt->execute(['table_name' => $table, 'column_name' => $column]);
+    $value = $stmt->fetchColumn();
+    return $value === false || $value === null ? null : (string) $value;
+}
+
 function schema_table_exists(PDO $pdo, string $table): bool
 {
     $stmt = $pdo->prepare(
@@ -208,6 +223,20 @@ function schema_ensure_draw_mode_manual(PDO $pdo): bool
     return true;
 }
 
+function schema_ensure_player_photo_position_defaults(PDO $pdo): bool
+{
+    if (!schema_column_exists($pdo, 'players', 'photo_position_y')) {
+        return false;
+    }
+
+    if (schema_column_default($pdo, 'players', 'photo_position_y') === '50') {
+        return false;
+    }
+
+    $pdo->exec('ALTER TABLE players MODIFY photo_position_y TINYINT UNSIGNED NOT NULL DEFAULT 50');
+    return true;
+}
+
 function ensure_control_schema(): array
 {
     $pdo = db();
@@ -266,6 +295,9 @@ function ensure_control_schema(): array
         ['players', 'regularity', 'regularity DECIMAL(3,1) NULL AFTER mentality'],
         ['players', 'goalkeeper_skill', 'goalkeeper_skill DECIMAL(3,1) NULL AFTER regularity'],
         ['players', 'photo_path', 'photo_path VARCHAR(255) NULL AFTER goalkeeper_skill'],
+        ['players', 'photo_position_x', 'photo_position_x TINYINT UNSIGNED NOT NULL DEFAULT 50 AFTER photo_path'],
+        ['players', 'photo_position_y', 'photo_position_y TINYINT UNSIGNED NOT NULL DEFAULT 50 AFTER photo_position_x'],
+        ['players', 'photo_zoom', 'photo_zoom TINYINT UNSIGNED NOT NULL DEFAULT 100 AFTER photo_position_y'],
     ];
 
     foreach ($columns as [$table, $column, $definition]) {
@@ -276,6 +308,10 @@ function ensure_control_schema(): array
 
     if (schema_ensure_draw_mode_manual($pdo)) {
         $changes[] = 'enum matches.draw_mode manual';
+    }
+
+    if (schema_ensure_player_photo_position_defaults($pdo)) {
+        $changes[] = 'default players.photo_position_y';
     }
 
     $indexes = [

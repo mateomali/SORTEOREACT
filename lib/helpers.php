@@ -19,18 +19,58 @@ function player_photo_path(array $player): string
     if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/')) {
         return 'assets/players/default-player-silhouette.png';
     }
-    if (!str_starts_with($path, 'uploads/players/transparent/')) {
-        $transparentPath = 'uploads/players/transparent/' . basename($path);
-        if (is_file(__DIR__ . '/../' . $transparentPath)) {
-            return $transparentPath;
-        }
-    }
     return $path;
 }
 
 function player_has_custom_photo(array $player): bool
 {
     return player_photo_path($player) !== 'assets/players/default-player-silhouette.png';
+}
+
+function player_photo_position_value(array $player, string $key, int $fallback): int
+{
+    $raw = $player[$key] ?? null;
+    if ($raw === null || $raw === '') {
+        return $fallback;
+    }
+
+    $value = is_numeric($raw) ? (int) round((float) $raw) : $fallback;
+    return max(0, min(100, $value));
+}
+
+function player_photo_position_x(array $player): int
+{
+    return player_photo_position_value($player, 'photo_position_x', 50);
+}
+
+function player_photo_position_y(array $player): int
+{
+    return player_photo_position_value($player, 'photo_position_y', 50);
+}
+
+function player_photo_zoom(array $player): int
+{
+    $raw = $player['photo_zoom'] ?? null;
+    if ($raw === null || $raw === '') {
+        return 100;
+    }
+
+    $value = is_numeric($raw) ? (int) round((float) $raw) : 100;
+    return max(50, min(180, $value));
+}
+
+function player_photo_object_position(array $player): string
+{
+    return player_photo_position_x($player) . '% ' . player_photo_position_y($player) . '%';
+}
+
+function player_photo_transform(array $player): string
+{
+    $zoom = player_photo_zoom($player) / 100;
+    $x = (50 - player_photo_position_x($player)) * 0.45;
+    $y = (50 - player_photo_position_y($player)) * 0.45;
+
+    return 'translate(' . number_format($x, 2, '.', '') . '%, ' . number_format($y, 2, '.', '') . '%) scale(' . number_format($zoom, 2, '.', '') . ')';
 }
 
 function redirect(string $url): void

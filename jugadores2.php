@@ -39,6 +39,26 @@ function jugadores2_has_player_photo(array $player): bool
     return jugadores2_photo_public_path((string) ($player['photo_path'] ?? '')) !== '';
 }
 
+function jugadores2_photo_position_from_post(string $key, int $fallback): int
+{
+    $raw = $_POST[$key] ?? null;
+    if ($raw === null || $raw === '' || !is_numeric($raw)) {
+        return $fallback;
+    }
+
+    return max(0, min(100, (int) round((float) $raw)));
+}
+
+function jugadores2_photo_zoom_from_post(string $key, int $fallback): int
+{
+    $raw = $_POST[$key] ?? null;
+    if ($raw === null || $raw === '' || !is_numeric($raw)) {
+        return $fallback;
+    }
+
+    return max(50, min(180, (int) round((float) $raw)));
+}
+
 function jugadores2_delete_player_photo(string $path): void
 {
     $publicPath = jugadores2_photo_public_path($path);
@@ -126,6 +146,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = jugadores2_normalize_player_name((string) ($_POST['name'] ?? ''));
         $positionsCsv = join_positions(array_map('strval', $_POST['positions'] ?? []));
         $active = isset($_POST['active']) ? 1 : 0;
+        $photoPositionX = jugadores2_photo_position_from_post('photo_position_x', player_photo_position_x($existingPlayer ?? []));
+        $photoPositionY = jugadores2_photo_position_from_post('photo_position_y', player_photo_position_y($existingPlayer ?? []));
+        $photoZoom = jugadores2_photo_zoom_from_post('photo_zoom', player_photo_zoom($existingPlayer ?? []));
 
         if ($id <= 0 || !$existingPlayer || $name === '' || $positionsCsv === '') {
             flash('error', 'Nombre y posicion son obligatorios.');
@@ -181,7 +204,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              SET name = :name, positions = :positions, pace = :pace, skill = :skill,
                  technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
                  attack = :attack, teamwork = :teamwork, mentality = :mentality, regularity = :regularity,
-                 goalkeeper_skill = :goalkeeper_skill, photo_path = :photo_path, active = :active
+                 goalkeeper_skill = :goalkeeper_skill, photo_path = :photo_path,
+                 photo_position_x = :photo_position_x, photo_position_y = :photo_position_y, photo_zoom = :photo_zoom,
+                 active = :active
              WHERE id = :id'
         );
         $stmt->execute([
@@ -199,6 +224,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'regularity' => $regularity,
             'goalkeeper_skill' => $goalkeeperSkill,
             'photo_path' => $photoPath !== '' ? $photoPath : null,
+            'photo_position_x' => $photoPositionX,
+            'photo_position_y' => $photoPositionY,
+            'photo_zoom' => $photoZoom,
             'active' => $active,
         ]);
         flash('success', 'Jugador actualizado desde jugadores2.');
@@ -275,6 +303,12 @@ function jugadores2_card_tier(int $overall): string
 function jugadores2_card_photo(array $player): string
 {
     return player_photo_path($player);
+}
+
+function jugadores2_edit_photo(array $player): string
+{
+    $path = jugadores2_photo_public_path((string) ($player['photo_path'] ?? ''));
+    return $path !== '' ? $path : jugadores2_card_photo($player);
 }
 
 function jugadores2_regularidad_form(float $value): array
@@ -389,7 +423,11 @@ foreach ($players as $player) {
         'overall' => $overall,
         'tier' => jugadores2_card_tier($overall),
         'photo' => jugadores2_card_photo($player),
+        'photoEdit' => jugadores2_edit_photo($player),
         'hasCustomPhoto' => jugadores2_has_player_photo($player),
+        'photoPositionX' => player_photo_position_x($player),
+        'photoPositionY' => player_photo_position_y($player),
+        'photoZoom' => player_photo_zoom($player),
         'isActive' => (int) ($player['active'] ?? 0) === 1,
         'regularityForm' => $regularityForm,
         'regularityLabel' => $regularityLabel,
