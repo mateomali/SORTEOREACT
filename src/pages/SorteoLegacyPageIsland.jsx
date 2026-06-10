@@ -1210,6 +1210,16 @@ function generateTeamFormationVariants(team, baseAssignments = {}, lockedPlayerP
   const countCandidates = formationOptions.flatMap((option) => {
     const parsed = parseFormationValue(option.value);
     if (!parsed) return [];
+    if (parsed.LAT !== null) {
+      return [{
+        ARQ: 1,
+        DEF: parsed.DEF,
+        LAT: parsed.LAT,
+        MED: parsed.MED,
+        DEL: parsed.DEL,
+        label: `${parsed.DEF + parsed.LAT}-${parsed.MED}-${parsed.DEL}`,
+      }];
+    }
     const defenseSplits = parsed.DEF >= 3
       ? [{ DEF: Math.max(1, parsed.DEF - 2), LAT: 2 }, { DEF: parsed.DEF, LAT: 0 }]
       : [{ DEF: parsed.DEF, LAT: 0 }];
@@ -1251,21 +1261,50 @@ function chooseBestFormationVariant(variants = []) {
 function getFormationOptions(teamSize) {
   const fieldPlayers = Math.max(0, teamSize - 1);
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
-  const minDefense = fieldLineMinimum('DEF', teamSize);
+  const maxDefLat = maxDefLatPlayersPerPosition(teamSize);
+  const minDef = logicalLineMinimum('DEF', teamSize);
+  const minLat = logicalLineMinimum('LAT', teamSize);
   const minMed = fieldLineMinimum('MED', teamSize);
   const minDel = fieldLineMinimum('DEL', teamSize);
   const candidates = [];
-  for (let defense = minDefense; defense <= Math.min(maxPerLine, fieldPlayers); defense += 1) {
-    for (let med = minMed; med <= Math.min(maxPerLine, fieldPlayers - defense); med += 1) {
-      const del = fieldPlayers - defense - med;
-      if (del < minDel || del > maxPerLine) continue;
-      const balance = Math.max(defense, med, del) - Math.min(defense, med, del);
-      candidates.push({ DEF: defense, MED: med, DEL: del, value: `${defense}-${med}-${del}`, balance });
+  for (let def = 0; def <= Math.min(maxDefLat, fieldPlayers); def += 1) {
+    for (let lat = 0; lat <= Math.min(maxDefLat, fieldPlayers - def); lat += 1) {
+      if (def + lat > maxPerLine) continue;
+      for (let med = 0; med <= Math.min(maxPerLine, fieldPlayers - def - lat); med += 1) {
+        const del = fieldPlayers - def - lat - med;
+        if (del < 0 || del > maxPerLine) continue;
+        if (def < minDef || lat < minLat || med < minMed || del < minDel) continue;
+        if (def + lat < fieldLineMinimum('DEF', teamSize)) continue;
+        const values = [def + lat, med, del];
+        const balance = Math.max(...values) - Math.min(...values);
+        candidates.push({ DEF: def, LAT: lat, MED: med, DEL: del, value: `${def}-${lat}-${med}-${del}`, balance });
+      }
     }
   }
-  return candidates
-    .sort((a, b) => a.balance - b.balance || b.MED - a.MED || b.DEF - a.DEF || b.DEL - a.DEL)
-    .slice(0, 5);
+
+  const preferred = [];
+  const addBest = (sorter) => {
+    const option = candidates.slice().sort(sorter).find((item) => !preferred.some((selected) => selected.value === item.value));
+    if (option) preferred.push(option);
+  };
+
+  addBest((a, b) => a.balance - b.balance || b.MED - a.MED || (b.DEF + b.LAT) - (a.DEF + a.LAT) || b.LAT - a.LAT);
+  addBest((a, b) => (b.DEF + b.LAT) - (a.DEF + a.LAT) || a.balance - b.balance);
+  addBest((a, b) => b.MED - a.MED || a.balance - b.balance);
+  addBest((a, b) => b.DEL - a.DEL || a.balance - b.balance);
+
+  return preferred.slice(0, 4);
+}
+
+function formationValueFromCounts(counts = {}) {
+  return `${Number(counts.DEF || 0)}-${Number(counts.LAT || 0)}-${Number(counts.MED || 0)}-${Number(counts.DEL || 0)}`;
+}
+
+function teamFormationSelectValue(team, currentAssignments, selectedValue, inferCurrent = false) {
+  if (selectedValue) return selectedValue;
+  if (!inferCurrent) return 'auto';
+  const value = formationValueFromCounts(teamLineCounts(team, currentAssignments));
+  return getFormationOptions(team.length).some((option) => option.value === value) ? value : 'custom';
 }
 
 function parseFormationValue(value) {
@@ -2185,8 +2224,8 @@ export function SorteoLegacyPageIsland({ root }) {
       const next = { ...current };
       normalizedIndexes.forEach((teamIndex) => {
         const key = String(teamIndex);
-        if (next[key] && next[key] !== 'auto') {
-          next[key] = 'auto';
+        if (next[key] !== 'custom') {
+          next[key] = 'custom';
           changed = true;
         }
       });
@@ -2225,6 +2264,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !teamKeys.has(key) || lockedPlayerPositions[key])));
       return;
     }
+    if (value === 'custom') return;
     const nextAssignments = applyFormationToTeam(teams[teamIndex], value);
     setAssignments((current) => ({ ...current, ...nextAssignments, ...lockedPlayerPositions }));
   };
@@ -3131,6 +3171,12 @@ export function SorteoLegacyPageIsland({ root }) {
                       });
                     const summary = teamTotalsSummary(team, assignments);
                     const formationOptions = getFormationOptions(team.length);
+                    const formationSelectValue = teamFormationSelectValue(
+                      team,
+                      currentAssignments,
+                      teamFormations[teamIndex],
+                      isFormationEditor,
+                    );
                     return (
                       <article key={teamIndex} className="team-card sorteo-team-card team grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2" data-team-index={teamIndex} data-sorteo-team-card="1">
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -3155,9 +3201,10 @@ export function SorteoLegacyPageIsland({ root }) {
                           </label>
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
                             Formación
-                            <select className={inputClass} value={teamFormations[teamIndex] || 'auto'} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
+                            <select className={inputClass} value={formationSelectValue} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
                               <option value="auto">Automática</option>
                               {formationOptions.map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
+                              <option value="custom">Personalizada</option>
                             </select>
                           </label>
                         </div>
