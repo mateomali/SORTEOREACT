@@ -1,7 +1,8 @@
-if (typeof window.goodfellasPlayersCleanup === 'function') {
-  window.goodfellasPlayersCleanup();
-}
-(() => {
+const goodfellasInitPlayers = () => {
+  if (typeof window.goodfellasPlayersCleanup === 'function') {
+    window.goodfellasPlayersCleanup();
+  }
+  (() => {
     const playerPageAbortController = new AbortController();
     window.goodfellasPlayersCleanup = () => playerPageAbortController.abort();
     document.addEventListener('goodfellas:before-partial-render', window.goodfellasPlayersCleanup, { once: true });
@@ -1709,3 +1710,8 @@ if (typeof window.goodfellasPlayersCleanup === 'function') {
       }
     });
   })();
+};
+
+window.goodfellasInitPlayers = goodfellasInitPlayers;
+document.addEventListener('goodfellas:init-players', goodfellasInitPlayers);
+goodfellasInitPlayers();

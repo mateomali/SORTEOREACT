@@ -35,36 +35,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $options = multiple_draw_options($matchId);
 $selectedOptionId = multiple_draw_vote_for_user($matchId, current_user_id());
 $deadline = multiple_draw_deadline($match);
+$voteDrawPayload = [
+    'matchId' => $matchId,
+    'matchLabel' => (string) ($match['title'] ?: ('Fecha #' . $match['id'])),
+    'deadline' => date('d/m/Y H:i', $deadline),
+    'selectedOptionId' => $selectedOptionId,
+    'currentPlayerId' => current_player_id(),
+    'options' => array_map(
+        static fn(array $option): array => [
+            'id' => (int) $option['id'],
+            'option_number' => (int) $option['option_number'],
+            'total_diff' => (float) $option['total_diff'],
+            'vote_count' => (int) ($option['vote_count'] ?? 0),
+            'teams' => $option['teams'] ?? [],
+        ],
+        $options
+    ),
+];
+
 $title = 'Votar sorteo | ' . APP_NAME;
 $activePage = 'perfil.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head multi-draw-page-head multi-draw-vote-head">
-  <div>
-    <h1>Votar sorteo</h1>
-    <p class="small-muted"><?= h((string) ($match['title'] ?: ('Fecha #' . $match['id']))) ?> - podes cambiar tu voto hasta <?= h(date('d/m/Y H:i', $deadline)) ?>.</p>
-  </div>
-  <a class="btn btn-muted" href="perfil.php">Mi perfil</a>
-</section>
-
-<?php if (!$options): ?>
-  <section class="card multi-draw-empty-card">
-    <p class="small-muted">El admin todavia no genero las opciones de sorteo para esta fecha.</p>
-  </section>
-<?php else: ?>
-  <section class="grid gap-3 pb-2 lg:grid-cols-3">
-    <?php foreach ($options as $option): ?>
-      <form method="post" class="min-w-0 rounded-2xl border border-lime-200/25 bg-emerald-950/55 p-2 shadow-md shadow-emerald-950/15">
-        <input type="hidden" name="match_id" value="<?= $matchId ?>">
-        <input type="hidden" name="option_id" value="<?= (int) $option['id'] ?>">
-        <?= multiple_draw_render_option($option, $selectedOptionId === (int) $option['id']) ?>
-        <button class="btn <?= $selectedOptionId === (int) $option['id'] ? 'btn-muted' : 'btn-primary' ?> w-full mt-2" type="submit">
-          <?= $selectedOptionId === (int) $option['id'] ? 'Votado' : 'Votar esta opcion' ?>
-        </button>
-      </form>
-    <?php endforeach; ?>
-  </section>
-<?php endif; ?>
+<div data-react-root data-react-island="votar_sorteo_page">
+  <script type="application/json">
+    <?= json_encode($voteDrawPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>
+  </script>
+</div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

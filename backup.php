@@ -397,86 +397,37 @@ foreach (backup_tables() as $table) {
     $tableCounts[$table] = (int) $pdo->query('SELECT COUNT(*) FROM `' . str_replace('`', '``', $table) . '`')->fetchColumn();
 }
 
+$backupIslandPayload = [
+    'zipAvailable' => backup_zip_available(),
+    'sections' => array_map(
+        static fn(string $key, array $section): array => [
+            'key' => $key,
+            'label' => (string) $section['label'],
+            'description' => (string) $section['description'],
+        ],
+        array_keys(backup_import_sections()),
+        backup_import_sections()
+    ),
+    'tableCounts' => array_map(
+        static fn(string $table, int $count): array => [
+            'table' => $table,
+            'count' => $count,
+        ],
+        array_keys($tableCounts),
+        $tableCounts
+    ),
+];
+
 $title = 'Backup | ' . APP_NAME;
 $activePage = 'backup.php';
 $bodyClass = 'page-backup';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head rounded-2xl border border-lime-200/60 bg-emerald-950 px-4 py-3 text-lime-50 shadow-lg shadow-emerald-950/15">
-  <div>
-    <h1 class="m-0 text-lime-50">Backup</h1>
-    <p class="small-muted text-emerald-100/80">Exporta una copia completa o importa solo las secciones que necesites recuperar.</p>
-  </div>
-</section>
-
-<section class="grid cols-2 backup-grid">
-  <article class="card border-lime-200/55 bg-emerald-950 text-lime-50 shadow-xl shadow-emerald-950/20">
-    <h3>Exportar backup</h3>
-    <p class="small-muted text-emerald-100/80">
-      Descarga <?= backup_zip_available() ? 'un ZIP con archivos CSV' : 'un JSON compatible porque la extension ZIP no esta habilitada' ?>
-      de jugadores, fechas, equipos, premios y capitanes.
-    </p>
-    <form method="post" class="btn-row" data-no-partial>
-      <input type="hidden" name="action" value="export_backup">
-      <button class="btn btn-primary w-full sm:w-auto" type="submit">Descargar backup CSV</button>
-    </form>
-  </article>
-
-  <article class="card border-lime-200/55 bg-emerald-950 text-lime-50 shadow-xl shadow-emerald-950/20">
-    <h3>Importar backup</h3>
-    <p class="small-muted text-emerald-100/80">Reemplaza solamente las secciones marcadas. Usa archivos ZIP o JSON generados por esta pantalla.</p>
-    <form method="post" enctype="multipart/form-data" class="form-grid" data-no-partial>
-      <input type="hidden" name="action" value="import_backup">
-      <div class="form-row">
-        <label for="backupFile">Archivo backup .zip o .json</label>
-        <input class="block w-full max-w-full min-w-0 text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-lime-100 file:px-3 file:py-2 file:text-xs file:font-extrabold file:text-[#07130f] hover:file:bg-lime-200" id="backupFile" type="file" name="backup_file" accept=".zip,.json,application/zip,application/json" required>
-      </div>
-      <div class="form-row">
-        <label>Que importar</label>
-        <div class="backup-section-list">
-          <?php foreach (backup_import_sections() as $sectionKey => $section): ?>
-            <label class="inline-check min-w-0 rounded-xl border border-lime-200/35 bg-emerald-950/75 p-3 text-lime-50">
-              <input type="checkbox" name="import_sections[]" value="<?= h($sectionKey) ?>" checked>
-              <span>
-                <strong><?= h($section['label']) ?></strong>
-                <span class="small-muted text-emerald-100/80"><?= h($section['description']) ?></span>
-              </span>
-            </label>
-          <?php endforeach; ?>
-        </div>
-      </div>
-      <label class="inline-check min-w-0 rounded-xl border border-amber-200/70 bg-amber-50 p-3 text-amber-950">
-        <input type="checkbox" name="confirm_restore" value="1" required>
-        Reemplazar las secciones seleccionadas con este backup
-      </label>
-      <div class="btn-row">
-        <button class="btn btn-danger w-full sm:w-auto" type="submit" data-confirm="Esta accion reemplaza las secciones seleccionadas. Continuar?">Importar seleccion</button>
-      </div>
-    </form>
-  </article>
-</section>
-
-<section class="card border-lime-200/55 bg-emerald-950 text-lime-50 shadow-xl shadow-emerald-950/20">
-  <h3>Contenido incluido</h3>
-  <div class="table-wrap">
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th>Tabla</th>
-          <th>Registros</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($tableCounts as $table => $count): ?>
-          <tr>
-            <td data-label="Tabla"><strong><?= h($table) ?></strong></td>
-            <td data-label="Registros"><?= h((string) $count) ?></td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-</section>
+<div data-react-root data-react-island="backup_page">
+  <script type="application/json">
+    <?= json_encode($backupIslandPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>
+  </script>
+</div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

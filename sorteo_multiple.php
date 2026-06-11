@@ -71,73 +71,36 @@ if (!$options && $winnerId <= 0 && (string) ($match['status'] ?? '') === 'progra
 $participants = repo_match_participants($matchId);
 $deadline = multiple_draw_deadline($match);
 $winnerId = (int) ($match['multi_draw_winner_option_id'] ?? 0);
+$multiDrawPayload = [
+    'matchId' => $matchId,
+    'matchLabel' => (string) ($match['title'] ?: ('Fecha #' . $match['id'])),
+    'deadline' => date('d/m/Y H:i', $deadline),
+    'participantsCount' => count($participants),
+    'drawCount' => (int) ($match['multi_draw_count'] ?? 3),
+    'lockMinutes' => (int) ($match['multi_draw_lock_minutes'] ?? 60),
+    'winnerId' => $winnerId,
+    'currentPlayerId' => current_player_id(),
+    'options' => array_map(
+        static fn(array $option): array => [
+            'id' => (int) $option['id'],
+            'option_number' => (int) $option['option_number'],
+            'total_diff' => (float) $option['total_diff'],
+            'vote_count' => (int) ($option['vote_count'] ?? 0),
+            'teams' => $option['teams'] ?? [],
+        ],
+        $options
+    ),
+];
+
 $title = 'Sorteo multiple | ' . APP_NAME;
 $activePage = 'editar_partidos.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head multi-draw-page-head">
-  <div>
-    <h1>Sorteo multiple</h1>
-    <p class="small-muted"><?= h((string) ($match['title'] ?: ('Fecha #' . $match['id']))) ?> - cierre <?= h(date('d/m/Y H:i', $deadline)) ?></p>
-  </div>
-  <a class="btn btn-muted multi-draw-back-action" href="editar_partidos.php">Volver</a>
-</section>
-
-<section class="grid cols-3 multi-draw-summary mb-3">
-  <article class="stat-box">
-    <div class="label">Jugadores</div>
-    <div class="value"><?= h((string) count($participants)) ?></div>
-  </article>
-  <article class="stat-box">
-    <div class="label">Variantes</div>
-    <div class="value"><?= h((string) (int) ($match['multi_draw_count'] ?? 3)) ?></div>
-  </article>
-  <article class="stat-box">
-    <div class="label">Cierre</div>
-    <div class="value"><?= h((string) (int) ($match['multi_draw_lock_minutes'] ?? 60)) ?>m</div>
-  </article>
-</section>
-
-<section class="card multi-draw-variants-card mb-3">
-  <div class="section-toolbar multi-draw-section-toolbar">
-    <div>
-      <h3>Variantes</h3>
-      <p class="small-muted">La votacion es opcional. El admin puede cerrar cuando quiera o dejar que cierre por tiempo.</p>
-    </div>
-    <?php if ($options && $winnerId <= 0): ?>
-      <form method="post">
-        <input type="hidden" name="match_id" value="<?= $matchId ?>">
-        <button class="btn btn-warning multi-draw-regenerate-action" type="submit" name="action" value="generate_options" data-confirm="Regenerar las variantes? Se borraran los votos existentes.">Regenerar variantes</button>
-      </form>
-    <?php endif; ?>
-  </div>
-  <?php if (!$options): ?>
-    <p class="small-muted">Las variantes se generan automaticamente al abrir esta pantalla si la fecha esta programada y tiene convocados validos.</p>
-  <?php else: ?>
-    <?php if ($winnerId <= 0): ?>
-      <form method="post" class="mb-3">
-        <input type="hidden" name="match_id" value="<?= $matchId ?>">
-        <button class="btn btn-primary w-full multi-draw-finalize-action" type="submit" name="action" value="apply_current_winner" data-confirm="Finalizar la votacion ahora y aplicar la opcion ganadora actual?">Finalizar votacion y aplicar ganadora</button>
-      </form>
-    <?php endif; ?>
-    <div class="multi-draw-options-grid">
-      <?php foreach ($options as $option): ?>
-        <?= multiple_draw_render_option($option, $winnerId === (int) $option['id']) ?>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
-</section>
-
-<?php if ($options && $winnerId <= 0): ?>
-  <section class="card multi-draw-close-card">
-    <h3>Cierre automatico</h3>
-    <p class="small-muted mb-3">Al llegar el cierre, gana la opcion con mas votos. Si hay empate, gana la mas equilibrada.</p>
-    <form method="post">
-      <input type="hidden" name="match_id" value="<?= $matchId ?>">
-      <button class="btn btn-muted multi-draw-test-close-action" type="submit" name="action" value="finalize_due">Probar cierre automatico ahora</button>
-    </form>
-  </section>
-<?php endif; ?>
+<div data-react-root data-react-island="sorteo_multiple_page">
+  <script type="application/json">
+    <?= json_encode($multiDrawPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>
+  </script>
+</div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

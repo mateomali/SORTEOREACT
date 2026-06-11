@@ -1,8 +1,10 @@
-if (typeof window.goodfellasCaptainCleanup === 'function') {
-  window.goodfellasCaptainCleanup();
-}
-(() => {
+const goodfellasInitCaptains = () => {
+  if (typeof window.goodfellasCaptainCleanup === 'function') {
+    window.goodfellasCaptainCleanup();
+  }
+  (() => {
       const board = document.querySelector('.captain-board');
+      if (!board) return;
       const matchId = parseInt(board.dataset.matchId, 10);
       const teamView = parseInt(board.dataset.teamView, 10);
       const captainToken = board.dataset.token || '';
@@ -1690,3 +1692,8 @@ if (typeof window.goodfellasCaptainCleanup === 'function') {
       document.addEventListener('goodfellas:before-partial-render', window.goodfellasCaptainCleanup, { once: true });
       pollingTimer = window.setInterval(() => loadState(), 2500);
     })();
+};
+
+window.goodfellasInitCaptains = goodfellasInitCaptains;
+document.addEventListener('goodfellas:init-captains', goodfellasInitCaptains);
+goodfellasInitCaptains();

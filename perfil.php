@@ -867,6 +867,7 @@ $title = 'Mi perfil | ' . APP_NAME;
 $activePage = 'perfil.php';
 $bodyClass = 'page-perfil';
 require __DIR__ . '/includes/header.php';
+ob_start();
 ?>
 
 <section class="card home-next-card profile-home-next-card">
@@ -1123,6 +1124,14 @@ require __DIR__ . '/includes/header.php';
   </article>
 </div>
 
-<script src="assets/jugadores.js"></script>
+<?php
+$profilePageHtml = trim(ob_get_clean());
+?>
+<div
+  data-react-root
+  data-react-island="perfil_page"
+>
+  <script type="application/json"><?= json_encode(['html' => $profilePageHtml], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+</div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -3742,6 +3742,7 @@
     render();
   };
 
+  document.addEventListener('goodfellas:init-manual-teams', initManualTeams);
   initManualTeams();
 
   const returnHomeAfterJuntaVote = document.querySelector('[data-junta-return-home="1"]');

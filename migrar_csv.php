@@ -300,44 +300,6 @@ $activePage = 'jugadores2.php';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head">
-  <div>
-    <h1>Migracion desde CSV</h1>
-    <p class="small-muted">Importa jugadores desde el archivo historico al nuevo modelo en base de datos.</p>
-  </div>
-  <a class="btn btn-muted" href="jugadores2.php">Volver a jugadores</a>
-</section>
-
-<section class="grid cols-2">
-  <article class="card">
-    <h3>Exportar jugadores actuales</h3>
-    <p class="small-muted">Descarga un CSV con todos los jugadores cargados, activos e inactivos, y todas sus caracteristicas actuales.</p>
-    <form method="post" data-no-partial>
-      <input type="hidden" name="action" value="export_players">
-      <button class="btn btn-primary" type="submit">Exportar CSV</button>
-    </form>
-  </article>
-
-  <article class="card">
-    <h3>Importar jugadores.csv local</h3>
-    <p class="small-muted">Usa el archivo <code>jugadores.csv</code> de esta carpeta.</p>
-    <form method="post" data-no-partial>
-      <input type="hidden" name="action" value="import_default">
-      <button class="btn btn-primary" type="submit">Importar archivo local</button>
-    </form>
-  </article>
-
-  <article class="card">
-    <h3>Subir otro CSV</h3>
-    <p class="small-muted">Columnas esperadas: Nombre, Posicion, Ritmo, Puntuacion.</p>
-    <form method="post" enctype="multipart/form-data" data-no-partial>
-      <input type="hidden" name="action" value="import_upload">
-      <div class="form-row">
-        <input type="file" name="csv_file" accept=".csv,text/csv" required>
-      </div>
-      <button class="btn btn-primary" type="submit">Subir e importar</button>
-    </form>
-  </article>
-</section>
+<div data-react-root data-react-island="migrar_csv_page"></div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

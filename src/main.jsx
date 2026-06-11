@@ -4,6 +4,10 @@ import { ReactIslandRegistry } from './pages/ReactIslandRegistry.jsx';
 
 const mountReactIsland = (element) => {
   if (!element || element.dataset.reactMounted === '1') return;
+  const inlinePayload = element.querySelector('script[type="application/json"]')?.textContent;
+  if (inlinePayload && !element.dataset.payload) {
+    element.dataset.payload = inlinePayload;
+  }
   element.dataset.reactMounted = '1';
   createRoot(element).render(
     <React.StrictMode>

@@ -975,6 +975,7 @@ $encounterActionsStyle = 'background:#f1f6f4;background-color:#f1f6f4;background
 $encounterLatestStyle = 'background:#ffffff;background-color:#ffffff;background-image:none;border-color:#b9dfcd;color:#10231d;';
 $encounterMutedTextStyle = 'color:#315247;';
 $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;background-image:none;border-color:#022c22;color:#ffffff;-webkit-text-fill-color:#ffffff;';
+ob_start();
 ?>
 
 <section class="<?= $showCreateSection && !$showEditSection ? 'crear-partido-hero mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-200/30 bg-gradient-to-br from-emerald-950 via-emerald-950 to-emerald-900 p-4 text-lime-50 shadow-xl shadow-emerald-950/30 max-[760px]:rounded-xl max-[760px]:p-3' : 'page-head' ?>">
@@ -1649,6 +1650,16 @@ $encounterPrimaryActionStyle = 'background:#063d2b;background-color:#063d2b;back
 </section>
 
 <?php endif; ?>
+
+<?php
+$encuentrosPageHtml = trim(ob_get_clean());
+?>
+<div
+  data-react-root
+  data-react-island="encuentros_page"
+>
+  <script type="application/json"><?= json_encode(['html' => $encuentrosPageHtml], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+</div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
 

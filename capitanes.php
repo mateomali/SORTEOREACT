@@ -409,6 +409,7 @@ $backUrl = $isCaptainView
     : 'editar_partidos.php' . ($selectedMatch ? '#partido-admin-' . (int) $selectedMatch['id'] : '');
 $backLabel = $isCaptainView ? 'Volver al inicio' : 'Volver a fechas';
 require __DIR__ . '/includes/header.php';
+ob_start();
 ?>
 
 <section class="page-head">
@@ -523,7 +524,16 @@ require __DIR__ . '/includes/header.php';
     </section>
   </section>
 
-  <script src="assets/capitanes.js"></script>
 <?php endif; ?>
+
+<?php
+$capitanesPageHtml = trim(ob_get_clean());
+?>
+<div
+  data-react-root
+  data-react-island="capitanes_page"
+>
+  <script type="application/json"><?= json_encode(['html' => $capitanesPageHtml], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+</div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

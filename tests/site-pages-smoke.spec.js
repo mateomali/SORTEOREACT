@@ -8,6 +8,7 @@ const publicPages = [
   ['historial.php', 'Historial'],
   ['estadisticas.php', 'Estadísticas'],
   ['jugadores2.php', 'Jugadores'],
+  ['jugadores-card-preview.php', 'Preview tarjetas'],
   ['login.php', 'Ingreso'],
 ];
 
@@ -17,7 +18,11 @@ const adminPages = [
   ['directivos.php', 'Directivos'],
   ['junta_votaciones.php', 'Junta directiva'],
   ['configuracion.php', 'Pesos por posicion'],
+  ['equipos_manual.php', 'Equipos manuales'],
   ['backup.php', 'Backup'],
+  ['migrar_csv.php', 'Migracion desde CSV'],
+  ['card_design_previews.php', 'Previews de card'],
+  ['capitanes.php', 'Modo capitanes'],
 ];
 
 test('public pages load without browser errors', async ({ page }) => {
@@ -50,6 +55,17 @@ test('admin pages load after login', async ({ page }) => {
     if (path === 'configuracion.php') {
       await expect(page.locator('input[name^="position_weights["]').first()).toBeVisible();
       await expect(page.getByRole('button', { name: /Restaurar pesos por defecto/i })).toBeVisible();
+    }
+    if (path === 'migrar_csv.php') {
+      await expect(page.locator('[data-react-island="migrar_csv_page"]')).toHaveCount(1);
+      await expect(page.locator('input[name="action"][value="export_players"]')).toHaveCount(1);
+      await expect(page.locator('input[name="action"][value="import_default"]')).toHaveCount(1);
+      await expect(page.locator('input[name="action"][value="import_upload"]')).toHaveCount(1);
+      await expect(page.locator('input[type="file"][name="csv_file"]')).toHaveCount(1);
+    }
+    if (path === 'equipos_manual.php') {
+      await expect(page.locator('[data-react-island="equipos_manual_page"]')).toHaveCount(1);
+      await expect(page.locator('main.content')).toContainText(/Fecha no encontrada/i);
     }
   }
 });
