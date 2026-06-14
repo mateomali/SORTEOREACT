@@ -14,6 +14,7 @@ const labelPanelClass = 'grid gap-1.5 rounded-lg border border-lime-200/25 bg-em
 const labelTextClass = 'text-xs font-black uppercase text-lime-100/85';
 const inputClass = 'w-full rounded-lg border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25';
 const compactInputClass = 'min-h-9 rounded-lg border border-lime-200/35 bg-emerald-950/92 px-2.5 py-2 text-xs font-bold text-lime-50 outline-none focus:border-lime-200 focus:ring-2 focus:ring-lime-200/20';
+const weightInputClass = 'min-h-9 rounded-lg border border-lime-200/35 bg-emerald-950/92 px-2 py-1.5 text-xs font-bold text-lime-50 outline-none focus:border-lime-200 focus:ring-2 focus:ring-lime-200/20';
 const primaryButtonClass = 'inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-lime-200/75 bg-lime-100 px-3.5 py-2 text-sm font-extrabold text-[#07130f] transition hover:bg-lime-200';
 const mutedButtonClass = 'inline-flex min-h-9 w-full items-center justify-center rounded-lg border border-lime-200/35 bg-emerald-950/80 px-3 py-2 text-sm font-extrabold text-lime-50 transition hover:bg-emerald-900';
 const helpTextClass = 'text-xs font-semibold leading-snug text-lime-50/72';
@@ -71,14 +72,14 @@ function SettingsForm({ settings, positionWeights, positionWeightLabels }) {
                 <legend className="px-1 text-sm font-black text-lime-50">
                   {position} - {Math.round(total * 100)}%
                 </legend>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-2">
                   {fields.map(([field, weight]) => (
                     <label key={`${position}-${field}`} className="grid gap-1">
-                      <span className="text-[11px] font-black uppercase text-lime-100/80">
+                      <span className="truncate text-[10px] font-black uppercase text-lime-100/80 sm:text-[11px]">
                         {positionWeightLabels[field] || field}
                       </span>
                       <input
-                        className={compactInputClass}
+                        className={weightInputClass}
                         type="number"
                         name={`position_weights[${position}][${field}]`}
                         min="0"

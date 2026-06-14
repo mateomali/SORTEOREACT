@@ -92,12 +92,12 @@ const positionWeights = {
 };
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
-const inputClass = `min-h-10 rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60`;
-const quietButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
+const inputClass = `min-h-10 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60`;
+const quietButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
 const primaryButtonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#063d2b] bg-[#063d2b] px-4 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#082f23] disabled:cursor-wait disabled:opacity-70 ${focusRing}`;
 const secondaryButtonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-4 text-sm font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
 const dangerButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-extrabold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 ${focusRing}`;
-const iconButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f7fbf9] hover:text-[#063d2b] ${focusRing}`;
+const iconButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f5faf7] hover:text-[#063d2b] ${focusRing}`;
 const pitchBackgroundClass = 'bg-[linear-gradient(rgba(5,37,27,.10),rgba(5,37,27,.24)),url(/assets/images/captain-field-bg-vertical.jpg),linear-gradient(160deg,#0e7a43,#07563d)] [background-position:center,center,center] [background-repeat:no-repeat,no-repeat,no-repeat] [background-size:auto,100%_100%,auto]';
 const pitchLineToneClasses = {
   ARQ: 'border-l-4 border-l-amber-300/80 bg-amber-200/7',
@@ -1660,7 +1660,7 @@ function PlayerFormModal({ mode, player, onClose, onSave }) {
   return (
     <>
       <button className="fixed inset-0 z-40 bg-black/55" type="button" aria-label="Cerrar" onClick={onClose} />
-      <section className="fixed inset-x-3 top-8 z-50 mx-auto grid max-w-md gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4 shadow-[0_18px_42px_rgba(7,19,15,.24)]" role="dialog" aria-modal="true" aria-label={title}>
+      <section className="fixed inset-x-3 top-8 z-50 mx-auto grid max-w-md gap-4 rounded-lg border border-[#adc8bb] bg-white p-4 shadow-[0_18px_42px_rgba(7,19,15,.24)]" role="dialog" aria-modal="true" aria-label={title}>
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[#d7e6df] pb-3">
           <h2 className="m-0 text-lg font-black text-[#07130f]">{title}</h2>
           <button className={iconButtonClass} type="button" onClick={onClose} aria-label="Cerrar"><Icon name="x" /></button>
@@ -2101,6 +2101,22 @@ export function SorteoLegacyPageIsland({ root }) {
         if (assigned !== naturalPositions[0] && naturalPositions.includes(assigned)) secondaryPlayers.push(player.nombre);
         if (!naturalPositions.includes(assigned)) adaptedPlayers.push(player.nombre);
       });
+      const topPlayers = team
+        .map((player) => {
+          const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
+          const rating = adjustedPositionRating(player, assigned);
+          return {
+            key: playerKey(player),
+            name: player.nombre,
+            position: assigned,
+            rating,
+            tier: playerCardTier(rating),
+            lowRhythm: isLowRhythmPlayer(player),
+            irregular: isIrregularPlayer(player),
+          };
+        })
+        .sort((left, right) => right.rating - left.rating)
+        .slice(0, 3);
       return {
         name: getTeamDisplayName(teamIndex),
         total: summary.adjusted,
@@ -2113,6 +2129,7 @@ export function SorteoLegacyPageIsland({ root }) {
         repeatedPairs: teamRepeatedPairs(team, payload.pairHistory),
         secondaryPlayers,
         adaptedPlayers,
+        topPlayers,
         strengths: stats.slice(0, 3),
         weaknesses: stats.slice(-2).reverse(),
         statValues: Object.fromEntries(ANALYSIS_FIELDS.map(([field]) => [field, Number(summary[field] || 0)])),
@@ -2194,6 +2211,7 @@ export function SorteoLegacyPageIsland({ root }) {
         total: Number(summary.total.toFixed(2)),
         lines: summary.counts,
         tiers: summary.tierCounts,
+        top_players: summary.topPlayers,
         strengths: summary.strengths.map((stat) => stat.label),
         weaknesses: summary.weaknesses.map((stat) => stat.label),
         repeated_pairs: summary.repeatedPairs,
@@ -3125,7 +3143,7 @@ export function SorteoLegacyPageIsland({ root }) {
               </button>
               <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-3 text-xs font-extrabold text-[#526b62]">
                 Max diff
-                <input className="h-8 w-16 rounded-md border border-[#c9d8d1] bg-white px-2 text-center text-sm font-black text-[#07130f]" type="number" min="0.5" max="6" step="0.1" value={maxDiff} onChange={(event) => setMaxDiff(event.target.value)} />
+                <input className="h-8 w-16 rounded-md border border-[#adc8bb] bg-white px-2 text-center text-sm font-black text-[#07130f]" type="number" min="0.5" max="6" step="0.1" value={maxDiff} onChange={(event) => setMaxDiff(event.target.value)} />
               </label>
             </div>
             <div id="generateTeamsLoading" className={`${generating ? 'grid' : 'hidden'} gap-2 rounded-lg border border-[#9fc8b5] bg-[#f4fbf7] px-4 py-3 text-sm font-bold text-[#063d2b]`} role="status" aria-live="polite" aria-busy={generating}>
@@ -3465,7 +3483,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 </div>
               </>
             ) : (
-              <div className="grid min-h-64 place-items-center rounded-lg border border-dashed border-[#c9d8d1] bg-white p-8 text-center text-sm font-semibold text-slate-500">
+              <div className="grid min-h-64 place-items-center rounded-lg border border-dashed border-[#adc8bb] bg-white p-8 text-center text-sm font-semibold text-slate-500">
                 Genera los equipos para ver la cancha y las cartas compactas.
               </div>
             )}
@@ -3473,23 +3491,21 @@ export function SorteoLegacyPageIsland({ root }) {
 
           <div id="download-controls" className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
             <div className="flex flex-wrap justify-center gap-2">
-              <button className={quietButtonClass} type="button" onClick={downloadTeamsJpg} disabled={exporting}><Icon name="download" />{exporting ? 'Generando JPG...' : 'Exportar JPG'}</button>
-              <button className={quietButtonClass} type="button" onClick={copyTeams}><Icon name="clipboard" />Copiar</button>
-              <button className={quietButtonClass} type="button" onClick={downloadTeamsText}><Icon name="download" />Descargar texto</button>
+              <details className="relative">
+                <summary className={`${quietButtonClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+                  <Icon name="download" />
+                  Exportar
+                </summary>
+                <div className="absolute bottom-[calc(100%+6px)] left-0 z-40 grid min-w-56 gap-1 rounded-lg border border-[#adc8bb] bg-white p-1.5 shadow-sm max-[760px]:left-1/2 max-[760px]:w-[min(92vw,320px)] max-[760px]:-translate-x-1/2">
+                  <button className={`${quietButtonClass} w-full justify-start border-transparent px-3 shadow-none`} type="button" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); downloadTeamsJpg(); }} disabled={exporting}><Icon name="download" />{exporting ? 'Generando JPG...' : 'Exportar JPG'}</button>
+                  <button className={`${quietButtonClass} w-full justify-start border-transparent px-3 shadow-none`} type="button" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); copyTeams(); }}><Icon name="clipboard" />Copiar</button>
+                  <button className={`${quietButtonClass} w-full justify-start border-transparent px-3 shadow-none`} type="button" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); downloadTeamsText(); }}><Icon name="download" />Descargar texto</button>
+                </div>
+              </details>
               <button className={secondaryButtonClass} type="button" onClick={() => setAnalysisVisible((visible) => !visible)} aria-expanded={analysisVisible}>
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}
               </button>
-              {isFormationEditor ? (
-                <button
-                  className={secondaryButtonClass}
-                  type="button"
-                  onClick={() => navigate(payload.links?.score || `finalizar_partido.php?match_id=${encodeURIComponent(String(payload.matchId))}&edit_formations=1&show_score=1#resultado`)}
-                >
-                  <Icon name="calendar" />
-                  Finalizar
-                </button>
-              ) : null}
               {lockedMatch ? (
                 <button className={primaryButtonClass} type="button" onClick={isFormationEditor ? saveFormations : saveDraw}>
                   <Icon name="save" />
@@ -3510,7 +3526,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <div>
                   <h3 className="m-0 text-base font-black text-[#07130f]">Analisis de equipos</h3>
                   <p className="m-0 text-xs font-semibold text-[#526b62]">
-                    {drawAnalysis.decisionText}
+                    Resumen claro del equilibrio, los puntos fuertes, los puntos a cuidar y los jugadores mas determinantes.
                   </p>
                 </div>
                 <span className="inline-flex min-h-9 items-center justify-center rounded-md border border-[#9fc8b5] bg-[#eaf7f0] px-3 text-sm font-black text-[#063d2b]">
@@ -3518,37 +3534,36 @@ export function SorteoLegacyPageIsland({ root }) {
                 </span>
               </div>
 
-              <div className="grid gap-2 md:grid-cols-5">
-                <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
-                  <span className="block text-[11px] font-black uppercase text-[#526b62]">Ritmo lento</span>
-                  <strong className="block text-lg font-black text-[#07130f]">Spread {drawAnalysis.slowSpread}</strong>
+              <div className="grid gap-2 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,.85fr)]">
+                <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
+                  <strong className="text-sm font-black text-[#07130f]">Lectura rapida</strong>
+                  <div className="grid gap-2 text-xs font-bold text-[#526b62] sm:grid-cols-2">
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Puntaje: diferencia de <strong className="text-[#07130f]">{drawAnalysis.diff.toFixed(1)}</strong>. {drawAnalysis.diff <= 1 ? 'Partido muy parejo.' : drawAnalysis.diff <= 2 ? 'Ventaja moderada.' : 'Hay una ventaja clara a revisar.'}
+                    </p>
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Jugadores lentos: {drawAnalysis.slowSpread <= 1 ? 'repartidos parejo' : `desbalance de ${drawAnalysis.slowSpread}`}.
+                    </p>
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Regularidad baja: {drawAnalysis.irregularSpread <= 1 ? 'sin concentracion importante' : `desbalance de ${drawAnalysis.irregularSpread}`}.
+                    </p>
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Jugadores top: {drawAnalysis.platinumSpread <= 1 ? 'bien repartidos' : `hay ${drawAnalysis.platinumSpread} de diferencia en platinum`}.
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
-                  <span className="block text-[11px] font-black uppercase text-[#526b62]">Regularidad baja</span>
-                  <strong className="block text-lg font-black text-[#07130f]">Spread {drawAnalysis.irregularSpread}</strong>
-                </div>
-                <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
-                  <span className="block text-[11px] font-black uppercase text-[#526b62]">Cartas por tier</span>
-                  <strong className="block text-lg font-black text-[#07130f]">Spread {drawAnalysis.tierSpread}</strong>
-                </div>
-                <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
-                  <span className="block text-[11px] font-black uppercase text-[#526b62]">Platinum</span>
-                  <strong className="block text-lg font-black text-[#07130f]">Spread {drawAnalysis.platinumSpread}</strong>
-                </div>
-                <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
-                  <span className="block text-[11px] font-black uppercase text-[#526b62]">Historial repetido</span>
-                  <strong className="block text-lg font-black text-[#07130f]">{drawAnalysis.historicalPenalty ? 'Penalizado' : 'Sin alerta'}</strong>
-                </div>
-              </div>
-
-              <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
-                <strong className="text-sm font-black text-[#07130f]">Reglas verificadas</strong>
-                <div className="flex flex-wrap gap-1.5">
-                  {drawAnalysis.ruleChecks.map((rule) => (
-                    <span key={rule.label} className={`rounded-md border px-2 py-1 text-xs font-black ${rule.ok ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-[#7a4b00]'}`}>
-                      {rule.ok ? 'OK' : 'Revisar'} {rule.label}
+                <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-white p-3">
+                  <strong className="text-sm font-black text-[#07130f]">Alertas</strong>
+                  <div className="grid gap-1.5">
+                    {drawAnalysis.ruleChecks.map((rule) => (
+                      <span key={rule.label} className={`rounded-md border px-2 py-1.5 text-xs font-black ${rule.ok ? 'border-[#9fc8b5] bg-[#f4fbf7] text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-[#7a4b00]'}`}>
+                        {rule.ok ? 'Bien' : 'Revisar'}: {rule.label}
+                      </span>
+                    ))}
+                    <span className={`rounded-md border px-2 py-1.5 text-xs font-black ${drawAnalysis.historicalPenalty ? 'border-amber-200 bg-amber-50 text-[#7a4b00]' : 'border-[#9fc8b5] bg-[#f4fbf7] text-[#063d2b]'}`}>
+                      Historial: {drawAnalysis.historicalPenalty ? 'hay companeros repetidos con peso en el sorteo' : 'sin alerta fuerte de companeros repetidos'}
                     </span>
-                  ))}
+                  </div>
                 </div>
               </div>
 
@@ -3564,23 +3579,46 @@ export function SorteoLegacyPageIsland({ root }) {
                       <p className="m-0 rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2">Cartas: <strong className="text-[#07130f]">{summary.tierText}</strong></p>
                       <p className="m-0 rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2 sm:col-span-2">Lentos {summary.lowRhythm} / Irregulares {summary.irregular}</p>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div>
-                        <span className="block text-[11px] font-black uppercase text-[#063d2b]">Fortalezas</span>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          {summary.strengths.map((stat) => (
-                            <span key={stat.field} className="rounded-md border border-[#d7e6df] bg-[#eaf7f0] px-2 py-1 text-xs font-black text-[#063d2b]">{stat.label} {stat.value.toFixed(1)}</span>
-                          ))}
+                    <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(210px,.8fr)]">
+                      <div className="grid gap-2">
+                        <div>
+                          <span className="block text-[11px] font-black uppercase text-[#063d2b]">Puntos altos</span>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {summary.strengths.map((stat) => (
+                              <span key={stat.field} className="rounded-md border border-[#d7e6df] bg-[#eaf7f0] px-2 py-1 text-xs font-black text-[#063d2b]">{stat.label} {stat.value.toFixed(1)}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="block text-[11px] font-black uppercase text-[#7a4b00]">Puntos bajos</span>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {summary.weaknesses.map((stat) => (
+                              <span key={stat.field} className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-black text-[#7a4b00]">{stat.label} {stat.value.toFixed(1)}</span>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <span className="block text-[11px] font-black uppercase text-[#7a4b00]">A cuidar</span>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          {summary.weaknesses.map((stat) => (
-                            <span key={stat.field} className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-black text-[#7a4b00]">{stat.label} {stat.value.toFixed(1)}</span>
-                          ))}
-                        </div>
+                      <div className="grid gap-1.5 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
+                        <span className="text-[11px] font-black uppercase text-[#07130f]">Mejores jugadores</span>
+                        {summary.topPlayers.map((player, index) => (
+                          <div key={player.key} className="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2 rounded border border-[#d7e6df] bg-white px-2 py-1.5 text-xs font-bold text-[#526b62]">
+                            <strong className="text-center text-[#063d2b]">{index + 1}</strong>
+            <span className="min-w-0">
+                              <strong className="block truncate text-[#07130f]">{player.name}</strong>
+                              <span>{player.position} | {TIER_LABELS[player.tier] || player.tier}{player.lowRhythm ? ' | lento' : ''}{player.irregular ? ' | irregular' : ''}</span>
+                            </span>
+                            <strong className="text-[#063d2b]">{player.rating.toFixed(1)}</strong>
+                          </div>
+                        ))}
                       </div>
+                    </div>
+                    <div className="grid gap-2 text-xs font-bold text-[#526b62] sm:grid-cols-2">
+                      <p className="m-0 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2">
+                        Lectura: fuerte en <strong className="text-[#063d2b]">{summary.strengths.map((stat) => stat.label).join(', ')}</strong>.
+                      </p>
+                      <p className="m-0 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2">
+                        A cuidar: <strong className="text-[#7a4b00]">{summary.weaknesses.map((stat) => stat.label).join(', ')}</strong>.
+                      </p>
                     </div>
                     {(summary.secondaryPlayers.length || summary.adaptedPlayers.length) ? (
                       <p className="m-0 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2 text-xs font-bold text-[#526b62]">
@@ -3603,7 +3641,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   <div className="grid gap-2 md:grid-cols-2">
                     {drawAnalysis.comparisons.map((item) => (
                       <p key={item.field} className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2 text-xs font-bold text-[#526b62]">
-                        {item.label}: <strong className="text-[#07130f]">{item.highTeam}</strong> supera a <strong className="text-[#07130f]">{item.lowTeam}</strong> por {item.diff.toFixed(1)}.
+                        En {item.label}, <strong className="text-[#07130f]">{item.highTeam}</strong> esta por encima de <strong className="text-[#07130f]">{item.lowTeam}</strong> por {item.diff.toFixed(1)} puntos.
                       </p>
                     ))}
                   </div>

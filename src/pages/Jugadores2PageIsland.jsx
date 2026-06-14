@@ -42,23 +42,23 @@ const positionWeights = {
 };
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
-const toolbarLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#c9d8d1] bg-white px-3 text-xs font-extrabold text-[#063d2b] no-underline transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
+const toolbarLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#adc8bb] bg-white px-3 text-xs font-extrabold text-[#063d2b] no-underline transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
 const quietLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-transparent bg-transparent px-2 text-xs font-extrabold text-[#526b62] no-underline transition-colors hover:bg-[#eef7f2] hover:text-[#063d2b] ${focusRing}`;
 const primaryIconButtonClass = `grid min-h-11 w-11 place-items-center rounded-lg border border-[#063d2b] bg-[#063d2b] text-white transition-colors hover:bg-[#082f23] ${focusRing}`;
-const rowCredentialButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f7fbf9] hover:text-[#063d2b] ${focusRing}`;
-const rowEditButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
-const rowEditWideButtonClass = `grid h-10 w-full place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
+const rowCredentialButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f5faf7] hover:text-[#063d2b] sm:h-10 sm:w-10 ${focusRing}`;
+const rowEditButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] sm:h-10 sm:w-10 ${focusRing}`;
+const rowEditWideButtonClass = `grid h-9 w-full place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] sm:h-10 ${focusRing}`;
 const modalCloseButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#d7e6df] bg-white text-xl font-black text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b] ${focusRing}`;
-const modalSecondaryButtonClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#c9d8d1] bg-white px-4 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
+const modalSecondaryButtonClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#adc8bb] bg-white px-4 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
 const fileButtonClass = `grid cursor-pointer gap-1 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-3 py-2 text-center text-xs font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
 const textActionButtonClass = `!border-0 !bg-transparent !p-0 !text-left !shadow-none text-sm font-black text-[#063d2b] underline-offset-4 transition-colors hover:!bg-transparent hover:text-[#07130f] hover:underline ${focusRing}`;
 const playerNameButtonClass = `!grid !w-full min-w-0 !justify-start !justify-self-stretch !justify-items-start !border-0 !bg-transparent !p-0 !text-left !shadow-none ${focusRing}`;
-const fieldControlClass = 'min-h-10 rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
-const numberControlClass = 'h-10 rounded-lg border border-[#c9d8d1] bg-white px-2 text-center text-base font-black text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
-const sortableHeaderButtonClass = `inline-flex min-h-8 items-center gap-1 rounded-md border border-transparent px-1.5 text-xs font-black text-[#526b62] transition-colors hover:border-[#c9d8d1] hover:bg-white hover:text-[#063d2b] ${focusRing}`;
+const fieldControlClass = 'min-h-10 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+const numberControlClass = 'h-10 rounded-lg border border-[#adc8bb] bg-white px-2 text-center text-base font-black text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+const sortableHeaderButtonClass = `inline-flex min-h-8 items-center gap-1 rounded-md border border-transparent px-1.5 text-xs font-black text-[#526b62] transition-colors hover:border-[#adc8bb] hover:bg-white hover:text-[#063d2b] ${focusRing}`;
 
 function filterButtonClass(active) {
-  return `min-h-10 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#063d2b] bg-[#063d2b] text-white' : 'border-[#c9d8d1] bg-white text-[#07130f] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'}`;
+  return `min-h-9 rounded-lg border px-2 text-[11px] font-black transition-colors sm:min-h-10 sm:px-3 sm:text-xs ${focusRing} ${active ? 'border-[#063d2b] bg-[#063d2b] text-white' : 'border-[#adc8bb] bg-white text-[#07130f] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'}`;
 }
 
 function parsePayload(root) {
@@ -261,8 +261,16 @@ function PlayerCard({ player, onOpen, size = 'compact' }) {
       </span>
 
       <span
-        className="absolute left-[36.4%] right-[13.3%] top-[12.9%] z-10 flex h-[36.8%] items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
-        style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
+        className="absolute z-10 flex items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
+        style={{
+          left: '37.7%',
+          right: '14.9%',
+          top: '14.2%',
+          height: '34.9%',
+          borderRadius: '13% 13% 9% 9%',
+          WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)',
+          maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)',
+        }}
       >
         {player.photo ? (
           <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.hasCustomPhoto ? '1' : undefined} />
@@ -348,7 +356,7 @@ function PositionChips({ positions }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {visible.map((position) => (
-        <span key={position} className="inline-flex min-h-6 items-center rounded-md border border-[#c9d8d1] bg-[#eef7f2] px-2 text-[11px] font-extrabold text-[#063d2b]">
+        <span key={position} className="inline-flex min-h-6 items-center rounded-md border border-[#adc8bb] bg-[#eef7f2] px-2 text-[11px] font-extrabold text-[#063d2b]">
           {position}
         </span>
       ))}
@@ -358,8 +366,8 @@ function PositionChips({ positions }) {
 
 function OverallBadge({ value }) {
   return (
-    <span className="inline-grid min-h-10 min-w-11 place-items-center rounded-md border border-[#c9d8d1] bg-white px-2 text-center text-[#07130f]">
-      <b className="text-base font-black leading-none">{value}</b>
+    <span className="inline-grid min-h-9 min-w-10 place-items-center rounded-md border border-[#adc8bb] bg-white px-2 text-center text-[#07130f] sm:min-h-10 sm:min-w-11">
+      <b className="text-sm font-black leading-none sm:text-base">{value}</b>
       <em className="not-italic text-[10px] font-extrabold leading-none text-slate-500">GEN</em>
     </span>
   );
@@ -432,7 +440,7 @@ function ReadonlyProfile({ player, onRadarOpen }) {
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <button type="button" className={`rounded-lg border border-[#c9d8d1] bg-white p-4 text-left transition-colors hover:border-[#9fc8b5] hover:bg-[#f8fbfa] ${focusRing}`} onClick={() => onRadarOpen(player)} aria-label={`Ver radar completo de ${player.name}`}>
+        <button type="button" className={`rounded-lg border border-[#adc8bb] bg-white p-4 text-left transition-colors hover:border-[#9fc8b5] hover:bg-[#f8fbfa] ${focusRing}`} onClick={() => onRadarOpen(player)} aria-label={`Ver radar completo de ${player.name}`}>
           <RadarSvg stats={player.allStats} />
         </button>
         <div className="grid content-start gap-3">
@@ -525,7 +533,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
     || Object.keys(initialOveralls).some((field) => (overallValues[field] || 64) !== initialOveralls[field]);
 
   return (
-    <form className="grid gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4" method="post" encType="multipart/form-data">
+    <form className="grid gap-4 rounded-lg border border-[#adc8bb] bg-white p-4" method="post" encType="multipart/form-data">
       <input type="hidden" name="action" value="save" />
       <input type="hidden" name="id" value={player.id} />
       <input type="hidden" name="photo_position_x" value={photoPosition.x} />
@@ -560,7 +568,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
             ))}
           </select>
         </label>
-        <label className="flex min-h-10 items-center gap-2 self-end rounded-lg border border-[#c9d8d1] bg-[#eef7f2] px-3 text-sm font-extrabold text-[#063d2b]">
+        <label className="flex min-h-10 items-center gap-2 self-end rounded-lg border border-[#adc8bb] bg-[#eef7f2] px-3 text-sm font-extrabold text-[#063d2b]">
           <input type="checkbox" name="active" value="1" checked={active} onChange={(event) => setActive(event.target.checked)} />
           Activo
         </label>
@@ -590,7 +598,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
             />
           </label>
           <button
-            className={`min-h-9 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${hasPreviewPhoto ? 'border-[#c9d8d1] bg-white text-[#063d2b] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]' : 'cursor-not-allowed border-[#d7e6df] bg-white text-slate-400'}`}
+            className={`min-h-9 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${hasPreviewPhoto ? 'border-[#adc8bb] bg-white text-[#063d2b] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]' : 'cursor-not-allowed border-[#d7e6df] bg-white text-slate-400'}`}
             type="button"
             disabled={!hasPreviewPhoto}
             onClick={() => setPhotoEditorOpen((open) => !open)}
@@ -652,7 +660,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
                 />
               </label>
               <button
-                className={`min-h-9 rounded-lg border border-[#c9d8d1] bg-[#f8fbfa] px-3 text-xs font-black text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#eef7f2] ${focusRing}`}
+                className={`min-h-9 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] px-3 text-xs font-black text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#eef7f2] ${focusRing}`}
                 type="button"
                 onClick={() => setPhotoPosition(photoDirty ? { x: 50, y: 50, zoom: 100 } : initialPhotoPosition)}
               >
@@ -716,7 +724,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
       </div>
 
       <div className="flex justify-end">
-        <button className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-5 text-sm font-black transition-colors ${focusRing} ${hasChanges ? 'border-[#063d2b] bg-[#063d2b] text-white hover:bg-[#082f23]' : 'border-[#c9d8d1] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b]'}`} type="submit">
+        <button className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-5 text-sm font-black transition-colors ${focusRing} ${hasChanges ? 'border-[#063d2b] bg-[#063d2b] text-white hover:bg-[#082f23]' : 'border-[#adc8bb] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b]'}`} type="submit">
           {hasChanges ? <SaveIcon /> : null}
           Guardar todo
         </button>
@@ -730,7 +738,7 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overall
   return (
     <>
       <button className="fixed inset-0 z-40 block bg-black/55" type="button" aria-label="Cerrar ficha" onClick={onClose} />
-      <section className="fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[#c9d8d1] bg-white shadow-[0_12px_28px_rgba(7,19,15,.18)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
+      <section className="fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[#adc8bb] bg-white shadow-[0_12px_28px_rgba(7,19,15,.18)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
         <header className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-[#d7e6df] bg-[#f8fbfa] p-4">
           <div className="min-w-0">
             <h2 className="m-0 truncate text-xl font-black text-[#07130f]">{player.name}</h2>
@@ -761,7 +769,7 @@ function RadarOverlay({ player, onClose }) {
   return (
     <>
       <button className="fixed inset-0 z-[60] bg-black/60" type="button" aria-label="Cerrar radar" onClick={onClose} />
-      <section className="fixed inset-x-4 top-10 z-[70] mx-auto max-w-md rounded-lg border border-[#c9d8d1] bg-white p-4 shadow-[0_12px_28px_rgba(7,19,15,.18)]" role="dialog" aria-modal="true" aria-label={`Radar completo de ${player.name}`}>
+      <section className="fixed inset-x-4 top-10 z-[70] mx-auto max-w-md rounded-lg border border-[#adc8bb] bg-white p-4 shadow-[0_12px_28px_rgba(7,19,15,.18)]" role="dialog" aria-modal="true" aria-label={`Radar completo de ${player.name}`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <strong className="text-base font-black text-[#07130f]">{player.name}</strong>
           <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar radar">x</button>
@@ -845,7 +853,7 @@ export function Jugadores2PageIsland({ root }) {
 
   return (
     <div className="grid gap-4">
-      <section className="grid items-end gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+      <section className="grid items-end gap-4 rounded-lg border border-[#adc8bb] bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
         <div>
           <h1 className="m-0 text-2xl font-black text-[#07130f]">Jugadores</h1>
           <p className="m-0 mt-1 text-sm font-semibold text-slate-500">Plantilla, posiciones y rendimiento actual.</p>
@@ -857,9 +865,9 @@ export function Jugadores2PageIsland({ root }) {
         </div>
       </section>
 
-      <section className="grid gap-3 rounded-lg border border-[#c9d8d1] bg-[#f8fbfa] p-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]" aria-label="Controles de jugadores">
+      <section className="grid gap-2 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] p-3 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]" aria-label="Controles de jugadores">
         <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
-          <input className="min-h-11 w-full rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input className="min-h-10 w-full rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60 sm:min-h-11" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
           <button className={primaryIconButtonClass} type="button" onClick={() => setQuery(query.trim())} aria-label="Buscar">
             <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" />
@@ -867,7 +875,7 @@ export function Jugadores2PageIsland({ root }) {
             </svg>
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-1 sm:grid-cols-6" aria-label="Filtrar jugadores">
+        <div className="grid grid-cols-6 gap-1" aria-label="Filtrar jugadores">
           {[
             ['all', 'Todos'],
             ['arq', 'Arq'],
@@ -879,7 +887,7 @@ export function Jugadores2PageIsland({ root }) {
           ))}
           <button className={filterButtonClass(topSort)} type="button" onClick={() => setTopSort((current) => !current)}>Top</button>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1 sm:pt-0">
           {payload.isAdmin && payload.links.toggleInactive ? <a className={toolbarLinkClass} href={payload.links.toggleInactive}>{payload.showInactive ? 'Ver solo activos' : 'Ver inactivos'}</a> : null}
           <a className={quietLinkClass} href={payload.links.backup || 'jugadores.php'}>Backup jugadores</a>
         </div>
@@ -891,18 +899,18 @@ export function Jugadores2PageIsland({ root }) {
 
       <section className="grid gap-2 md:hidden" aria-label="Lista de jugadores">
         {visiblePlayers.map((player) => (
-          <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border border-[#d7e6df] bg-white p-3">
+          <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-[#d7e6df] bg-white p-2.5">
             <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
               <span className="min-w-0 w-full">
                 <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
-                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-500">
+                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold text-slate-500">
                   <span>{player.isActive ? 'Activo' : 'Inactivo'}</span>
                   <span>GEN {player.overall}</span>
                 </span>
-                <span className="mt-2 block"><PositionChips positions={player.positions} /></span>
+                <span className="mt-1.5 block"><PositionChips positions={player.positions} /></span>
               </span>
             </button>
-            <div className="grid shrink-0 grid-cols-[44px_44px] items-start gap-2">
+            <div className="grid shrink-0 grid-cols-[40px_40px] items-start gap-1.5">
               <OverallBadge value={player.overall} />
               <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
                 <CredentialIcon />
@@ -915,25 +923,25 @@ export function Jugadores2PageIsland({ root }) {
         ))}
       </section>
 
-      <section className="hidden overflow-x-auto rounded-lg border border-[#c9d8d1] bg-white md:block" aria-label="Tabla de jugadores">
+      <section className="hidden overflow-x-auto rounded-lg border border-[#adc8bb] bg-white md:block" aria-label="Tabla de jugadores">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-[#f2f6f4]">
             <tr>
-              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+              <th className="border-b border-[#adc8bb] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
                 <SortHeaderButton field="name" label="Jugador" sortConfig={sortConfig} onSort={handleHeaderSort} />
               </th>
-              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+              <th className="border-b border-[#adc8bb] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
                 <SortHeaderButton field="position" label="Posicion" sortConfig={sortConfig} onSort={handleHeaderSort} />
               </th>
-              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+              <th className="border-b border-[#adc8bb] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
                 <SortHeaderButton field="overall" label="Media" sortConfig={sortConfig} onSort={handleHeaderSort} />
               </th>
-              <th className="border-b border-[#c9d8d1] px-3 py-2 text-right text-xs font-black text-[#526b62]">Acciones</th>
+              <th className="border-b border-[#adc8bb] px-3 py-2 text-right text-xs font-black text-[#526b62]">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {visiblePlayers.map((player) => (
-              <tr key={player.id} className="border-b border-[#e0ebe6] transition-colors last:border-b-0 hover:bg-[#f8fbfa]">
+              <tr key={player.id} className="border-b border-[#dfece6] transition-colors last:border-b-0 hover:bg-[#f8fbfa]">
                 <td className="px-3 py-2">
                   <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
                     <span className="min-w-0 w-full">

@@ -66,7 +66,7 @@ function recalculateGeneral(rowStats, primaryPosition, positionWeights) {
 
 const panel = 'rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm';
 const label = 'text-xs font-extrabold text-[#526b62]';
-const selectClass = 'min-h-10 rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+const selectClass = 'min-h-10 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
 
 function HeaderPanel({ payload }) {
   return (
@@ -143,7 +143,7 @@ function ValuationRow({ player, fields, labels, values, setValue, generals, posi
             <div className="valuation-stepper">
               <button className="valuation-step-button" type="button" data-valuation-step="-1" aria-label={`Bajar ${labels[field] || field}`} onClick={() => stepValue(field, -1)}>-</button>
               <input
-                className={`valuation-stat-input h-9 w-16 rounded-md border border-[#c9d8d1] bg-white px-2 text-center text-sm font-black text-[#07130f] outline-none focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60 ${changed ? 'is-stat-changed' : ''}`}
+                className={`valuation-stat-input h-9 w-16 rounded-md border border-[#adc8bb] bg-white px-2 text-center text-sm font-black text-[#07130f] outline-none focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60 ${changed ? 'is-stat-changed' : ''}`}
                 type="number"
                 min="0"
                 max="99"

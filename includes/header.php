@@ -31,7 +31,9 @@ $publicMenu = [
     'estadisticas.php' => 'Estadísticas',
     'historial.php' => 'Historial',
 ];
+$publicMenuGroups = [];
 $roleMenu = [];
+$roleMenuGroups = [];
 $roleLabel = '';
 if (is_admin()) {
     $roleLabel = 'Admin';
@@ -75,13 +77,72 @@ if (is_admin()) {
         'login.php' => 'Ingresar',
     ];
 }
+if (is_admin()) {
+    $roleMenuGroups = [
+        'Fechas' => [
+            'crear_partido.php' => $roleMenu['crear_partido.php'] ?? 'Crear fecha',
+            'editar_partidos.php' => $roleMenu['editar_partidos.php'] ?? 'Editar fechas',
+            'historial.php' => $publicMenu['historial.php'] ?? 'Historial',
+        ],
+        'Jugadores' => [
+            'jugadores2.php' => $publicMenu['jugadores2.php'] ?? 'Jugadores',
+            'estadisticas.php' => $publicMenu['estadisticas.php'] ?? 'Estadisticas',
+        ],
+        'Personas' => [
+            'usuarios.php' => $roleMenu['usuarios.php'] ?? 'Usuarios',
+            'directivos.php' => $roleMenu['directivos.php'] ?? 'Directivos',
+        ],
+        'Gestion' => [
+            'configuracion.php' => $roleMenu['configuracion.php'] ?? 'ConfiguraciÃ³n',
+            'mis_valoraciones.php' => $roleMenu['mis_valoraciones.php'] ?? 'Valoraciones',
+            'backup.php' => $roleMenu['backup.php'] ?? 'Backup',
+        ],
+        'Sesion' => [
+            'logout.php' => $roleMenu['logout.php'] ?? 'Salir',
+        ],
+    ];
+    $roleMenuGroups = [
+        'Jugadores' => $roleMenuGroups['Jugadores'],
+        'Fechas' => $roleMenuGroups['Fechas'],
+        'Gestion' => $roleMenuGroups['Gestion'],
+        'Personas' => $roleMenuGroups['Personas'],
+        'Salir' => $roleMenuGroups['Sesion'],
+    ];
+    $publicMenu = [
+        'index.php' => $publicMenu['index.php'] ?? 'Inicio',
+    ];
+} else {
+    $publicMenuGroups = [
+        'Jugadores' => [
+            'jugadores2.php' => $publicMenu['jugadores2.php'] ?? 'Jugadores',
+            'estadisticas.php' => $publicMenu['estadisticas.php'] ?? 'Estadisticas',
+        ],
+        'Fechas' => [
+            'historial.php' => $publicMenu['historial.php'] ?? 'Historial',
+        ],
+    ];
+    $publicMenu = [
+        'index.php' => $publicMenu['index.php'] ?? 'Inicio',
+    ];
+    if ($roleMenu) {
+        $roleMenuGroups = [
+            $roleLabel !== '' ? $roleLabel : 'Cuenta' => $roleMenu,
+        ];
+    }
+}
 $showRoleShortcut = false;
 $roleShortcutHref = is_player_user() ? 'perfil.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : (current_user_id() > 0 ? 'logout.php' : 'login.php'));
 $roleShortcutLabel = is_player_user() ? 'Mi perfil' : (is_directivo() ? 'Junta' : (!empty($_SESSION['guest_vote_invite_id']) ? 'Votacion' : (current_user_id() > 0 ? 'Salir' : 'Ingresar')));
-$navLinkLayout = 'inline-flex min-h-8 items-center justify-center rounded-xl border px-3 py-2 text-sm font-extrabold leading-tight no-underline transition max-[760px]:min-h-8 max-[760px]:px-2.5 max-[760px]:py-1.5 max-[760px]:text-[11px] max-[760px]:shadow-sm max-[760px]:shadow-emerald-950/15';
-$navLinkBase = $navLinkLayout . ' border-transparent text-white hover:border-white/30 hover:bg-white/10 hover:text-white max-[760px]:border-white/20 max-[760px]:bg-emerald-900/45';
-$navLinkActive = $navLinkLayout . ' border-white/45 bg-[#e7eee9] text-[#07130f] hover:bg-[#f4f8f6] hover:text-[#07130f] max-[760px]:border-white/45 max-[760px]:bg-[#e7eee9]';
-$navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:text-red-50';
+$navLinkLayout = 'inline-flex min-h-8 items-center justify-center rounded-xl border px-3 py-2 text-sm font-extrabold leading-tight no-underline transition max-[760px]:min-h-10 max-[760px]:w-full max-[760px]:justify-start max-[760px]:rounded-md max-[760px]:px-3 max-[760px]:py-2 max-[760px]:text-sm';
+$navLinkBase = $navLinkLayout . ' border-transparent text-white hover:border-white/30 hover:bg-white/10 hover:text-white max-[760px]:border-[#1b5a47] max-[760px]:bg-[#063d2b] max-[760px]:text-lime-50 hover:max-[760px]:border-lime-200/35 hover:max-[760px]:bg-[#0a4a35]';
+$navLinkActive = $navLinkLayout . ' border-white/45 bg-[#e7eee9] text-[#07130f] hover:bg-[#f4f8f6] hover:text-[#07130f] max-[760px]:border-lime-200/70 max-[760px]:bg-[#0f513c] max-[760px]:text-lime-50 max-[760px]:shadow-[inset_4px_0_0_rgba(217,249,157,0.92)] hover:max-[760px]:bg-[#145f47] hover:max-[760px]:text-lime-50';
+$navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:text-red-50 max-[760px]:border-red-200/30 max-[760px]:bg-[#3f1717] max-[760px]:text-red-50 hover:max-[760px]:bg-[#541d1d]';
+$navDropdownClass = 'group relative max-[760px]:w-full max-[760px]:rounded-lg max-[760px]:border max-[760px]:border-[#1b5a47] max-[760px]:bg-[#063726] max-[760px]:p-1';
+$navDropdownSummaryBase = $navLinkLayout . ' cursor-pointer list-none select-none gap-1 border-transparent text-white [&::-webkit-details-marker]:hidden hover:border-white/30 hover:bg-white/10 hover:text-white group-open:border-white/25 group-open:bg-white/10 max-[760px]:justify-between max-[760px]:border-transparent max-[760px]:bg-transparent max-[760px]:text-lime-50';
+$navDropdownSummaryActive = $navLinkLayout . ' cursor-pointer list-none select-none gap-1 border-white/45 bg-[#e7eee9] text-[#07130f] [&::-webkit-details-marker]:hidden hover:bg-[#f4f8f6] hover:text-[#07130f] group-open:border-white/45 group-open:bg-[#e7eee9] max-[760px]:justify-between max-[760px]:border-lime-200/70 max-[760px]:bg-[#0f513c] max-[760px]:text-lime-50 max-[760px]:shadow-[inset_4px_0_0_rgba(217,249,157,0.92)] hover:max-[760px]:bg-[#145f47] hover:max-[760px]:text-lime-50';
+$navDropdownMenuClass = 'absolute right-0 z-30 mt-1 hidden min-w-44 flex-col gap-1 rounded-lg border border-white/15 bg-emerald-950 p-1.5 shadow-lg shadow-emerald-950/25 group-open:flex max-[760px]:static max-[760px]:mt-1 max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-0 max-[760px]:bg-transparent max-[760px]:p-0 max-[760px]:shadow-none';
+$navDropdownItemClass = 'flex min-h-8 items-center rounded-md border border-transparent px-3 py-2 text-sm font-extrabold leading-tight text-white no-underline transition hover:border-white/25 hover:bg-white/10 hover:text-white max-[760px]:min-h-10 max-[760px]:border-[#1b5a47] max-[760px]:bg-[#082f23] max-[760px]:text-lime-50 hover:max-[760px]:border-lime-200/35 hover:max-[760px]:bg-[#0a4a35]';
+$navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-white/45 bg-[#e7eee9] px-3 py-2 text-sm font-extrabold leading-tight text-[#07130f] no-underline transition hover:bg-[#f4f8f6] hover:text-[#07130f] max-[760px]:min-h-10 max-[760px]:border-lime-200/70 max-[760px]:bg-[#0f513c] max-[760px]:text-lime-50 max-[760px]:shadow-[inset_4px_0_0_rgba(217,249,157,0.92)] hover:max-[760px]:bg-[#145f47] hover:max-[760px]:text-lime-50';
 ?>
 <!doctype html>
 <html lang="es">
@@ -114,17 +175,66 @@ $navLogout = 'text-red-100 hover:border-red-200/45 hover:bg-red-500/15 hover:tex
           </a>
         <?php endif; ?>
       </div>
+      <button
+        class="hidden max-[760px]:fixed max-[760px]:inset-0 max-[760px]:z-[55] max-[760px]:bg-[#03100b]/45"
+        id="mainNavBackdrop"
+        type="button"
+        aria-label="Cerrar menu"
+      ></button>
       <nav
-        class="col-span-full row-start-2 hidden w-full min-w-0 flex-wrap items-center justify-end gap-1.5 border-t border-lime-200/15 pt-2 min-[761px]:col-start-2 min-[761px]:row-start-1 min-[761px]:flex min-[761px]:gap-2 min-[761px]:border-t-0 min-[761px]:pt-0"
+        class="col-span-full row-start-2 hidden w-full min-w-0 flex-wrap items-center justify-end gap-1.5 border-t border-lime-200/15 pt-2 max-[760px]:fixed max-[760px]:inset-x-0 max-[760px]:bottom-0 max-[760px]:z-[60] max-[760px]:max-h-[min(78dvh,34rem)] max-[760px]:overflow-y-auto max-[760px]:rounded-t-xl max-[760px]:border-x-0 max-[760px]:border-b-0 max-[760px]:border-t max-[760px]:border-lime-200/20 max-[760px]:bg-[#05291d] max-[760px]:p-3 max-[760px]:shadow-[0_-8px_22px_rgba(3,16,11,0.22)] max-[760px]:flex-col max-[760px]:items-stretch max-[760px]:justify-start max-[760px]:gap-2 min-[761px]:col-start-2 min-[761px]:row-start-1 min-[761px]:flex min-[761px]:gap-2 min-[761px]:border-t-0 min-[761px]:pt-0"
         id="mainNav"
         aria-label="Navegacion principal"
       >
         <?php foreach ($publicMenu as $file => $label): ?>
           <a class="<?= h($activePage === $file ? $navLinkActive : $navLinkBase) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
         <?php endforeach; ?>
-        <?php foreach ($roleMenu as $file => $label): ?>
-          <a class="<?= h(($activePage === $file ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+        <?php foreach ($publicMenuGroups as $groupLabel => $groupLinks): ?>
+          <?php $groupIsActive = array_key_exists($activePage, $groupLinks); ?>
+          <?php if (count($groupLinks) === 1): ?>
+            <?php foreach ($groupLinks as $file => $label): ?>
+              <a class="<?= h($activePage === $file ? $navLinkActive : $navLinkBase) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <details class="<?= h($navDropdownClass) ?>">
+              <summary class="<?= h($groupIsActive ? $navDropdownSummaryActive : $navDropdownSummaryBase) ?>" style="list-style: none;">
+                <span><?= h($groupLabel) ?></span>
+                <span aria-hidden="true">&#9662;</span>
+              </summary>
+              <div class="<?= h($navDropdownMenuClass) ?>" aria-label="<?= h($groupLabel) ?>">
+              <?php foreach ($groupLinks as $file => $label): ?>
+                <a class="<?= h($activePage === $file ? $navDropdownItemActive : $navDropdownItemClass) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+              <?php endforeach; ?>
+              </div>
+            </details>
+          <?php endif; ?>
         <?php endforeach; ?>
+        <?php if ($roleMenuGroups): ?>
+          <?php foreach ($roleMenuGroups as $groupLabel => $groupLinks): ?>
+            <?php $groupIsActive = array_key_exists($activePage, $groupLinks); ?>
+            <?php if (count($groupLinks) === 1): ?>
+              <?php foreach ($groupLinks as $file => $label): ?>
+                <a class="<?= h(($activePage === $file ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+              <?php endforeach; ?>
+            <?php else: ?>
+              <details class="<?= h($navDropdownClass) ?>">
+                <summary class="<?= h($groupIsActive ? $navDropdownSummaryActive : $navDropdownSummaryBase) ?>" style="list-style: none;">
+                  <span><?= h($groupLabel) ?></span>
+                  <span aria-hidden="true">&#9662;</span>
+                </summary>
+                <div class="<?= h($navDropdownMenuClass) ?>" aria-label="<?= h($roleLabel . ': ' . $groupLabel) ?>">
+                <?php foreach ($groupLinks as $file => $label): ?>
+                  <a class="<?= h(($activePage === $file ? $navDropdownItemActive : $navDropdownItemClass) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+                <?php endforeach; ?>
+                </div>
+              </details>
+            <?php endif; ?>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <?php foreach ($roleMenu as $file => $label): ?>
+            <a class="<?= h(($activePage === $file ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </nav>
       <div class="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-2 min-[761px]:col-start-3 min-[761px]:row-start-1">
         <?php if ($showRoleShortcut): ?>

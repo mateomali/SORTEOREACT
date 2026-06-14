@@ -9,7 +9,7 @@ function readPayload(root) {
   }
 }
 
-const darkPanel = 'rounded-xl border border-lime-200/55 bg-emerald-950 p-4 text-lime-50 shadow-sm shadow-emerald-950/15';
+const darkPanel = 'backup-card rounded-xl border border-lime-200/55 bg-emerald-950 p-4 text-lime-50 shadow-sm shadow-emerald-950/15';
 const mutedText = 'text-sm font-semibold leading-snug text-emerald-100/80';
 const primaryButton = 'inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-lime-200/75 bg-lime-100 px-3.5 py-2 text-sm font-extrabold text-[#07130f] transition hover:bg-lime-200 sm:w-auto';
 const dangerButton = 'inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-red-200/80 bg-red-600 px-3.5 py-2 text-sm font-extrabold text-white transition hover:bg-red-700 sm:w-auto';
@@ -92,7 +92,7 @@ export function BackupPageIsland({ root }) {
       <section className={darkPanel}>
         <h3 className="mb-3 text-lg font-black text-lime-50">Contenido incluido</h3>
         <div className="overflow-x-auto rounded-lg border border-lime-200/25">
-          <table className="w-full min-w-[360px] border-collapse text-sm">
+          <table className="w-full min-w-[320px] border-collapse text-sm sm:min-w-[360px]">
             <thead>
               <tr className="bg-emerald-900/70">
                 <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Tabla</th>

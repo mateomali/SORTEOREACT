@@ -17,6 +17,7 @@ const primaryButton = 'inline-flex min-h-10 items-center justify-center rounded-
 const mutedButton = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-lime-200/35 bg-emerald-950/80 px-3.5 py-2 text-sm font-extrabold text-lime-50 no-underline transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-55';
 const warningButton = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-amber-300/75 bg-amber-300 px-3.5 py-2 text-sm font-extrabold text-amber-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-55';
 const dangerButton = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200/80 bg-red-600 px-3.5 py-2 text-sm font-extrabold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-55';
+const userActionButton = 'min-h-9 px-2 py-1.5 text-xs sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm';
 
 function SummaryCard({ label, value }) {
   return (
@@ -155,11 +156,11 @@ function UserCard({ user, roleLabels, players, currentUserId }) {
         <span className="text-xs font-semibold text-emerald-100/75">Creado {user.created_at}</span>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <button className={primaryButton} type="submit" name="action" value="update_user">Guardar</button>
-        <button className={mutedButton} type="submit" name="action" value="reset_user_password" data-confirm={`Reiniciar la clave de ${user.username} a 123456? En el proximo ingreso debera cambiarla.`}>Reset clave</button>
-        <button className={warningButton} type="submit" name="action" value="unlink_user_player" disabled={linkedPlayerId <= 0} data-confirm={`Desvincular a ${user.player_name || ''} de la cuenta ${user.username}?`}>Desvincular jugador</button>
-        <button className={dangerButton} type="submit" name="action" value="delete_user" disabled={Number(user.id) === Number(currentUserId)} data-confirm={`Eliminar definitivamente la cuenta ${user.username}?`}>Eliminar cuenta</button>
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+        <button className={`${primaryButton} ${userActionButton}`} type="submit" name="action" value="update_user">Guardar</button>
+        <button className={`${mutedButton} ${userActionButton}`} type="submit" name="action" value="reset_user_password" data-confirm={`Reiniciar la clave de ${user.username} a 123456? En el proximo ingreso debera cambiarla.`}>Reset clave</button>
+        <button className={`${warningButton} ${userActionButton}`} type="submit" name="action" value="unlink_user_player" disabled={linkedPlayerId <= 0} data-confirm={`Desvincular a ${user.player_name || ''} de la cuenta ${user.username}?`}>Desvincular jugador</button>
+        <button className={`${dangerButton} ${userActionButton}`} type="submit" name="action" value="delete_user" disabled={Number(user.id) === Number(currentUserId)} data-confirm={`Eliminar definitivamente la cuenta ${user.username}?`}>Eliminar cuenta</button>
       </div>
     </form>
   );

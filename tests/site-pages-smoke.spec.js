@@ -46,7 +46,7 @@ test('admin pages load after login', async ({ page }) => {
   await page.locator('#login-admin').evaluate((node) => { node.open = true; });
   await page.locator('#adminPassword').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Entrar como admin|Ingresar/i }).click();
-  await page.waitForURL((url) => url.href.includes('editar_partidos.php'), { timeout: 10000 });
+  await page.waitForURL((url) => url.pathname.endsWith('/editar_partidos.php'), { timeout: 10000 });
 
   for (const [path, heading] of adminPages) {
     const response = await page.goto(`${BASE_URL}/${path}`, { waitUntil: 'domcontentloaded' });

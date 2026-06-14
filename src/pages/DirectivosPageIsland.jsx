@@ -15,6 +15,7 @@ const labelClass = 'text-xs font-black uppercase text-lime-100/85';
 const primaryButtonClass = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-lime-200/75 bg-lime-100 px-3.5 py-2 text-sm font-extrabold text-[#07130f] transition hover:bg-lime-200';
 const mutedButtonClass = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-lime-200/35 bg-emerald-950/80 px-3.5 py-2 text-sm font-extrabold text-lime-50 transition hover:bg-emerald-900';
 const dangerButtonClass = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200/80 bg-red-600 px-3.5 py-2 text-sm font-extrabold text-white transition hover:bg-red-700';
+const memberActionButtonClass = 'min-h-9 px-2 py-1.5 text-xs sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm';
 const smallMutedClass = 'text-sm font-semibold leading-snug text-emerald-100/75';
 
 function SummaryCard({ label, value, warning = false }) {
@@ -175,12 +176,12 @@ function MemberCard({ member }) {
         <span className="text-xs font-semibold text-emerald-100/75">Reset: vuelve a 1234</span>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        <button className={primaryButtonClass} type="submit" name="action" value="update_directivo">Guardar</button>
-        <button className={mutedButtonClass} type="submit" name="action" value="reset_directivo_password" data-confirm={resetConfirm}>
+      <div className="grid grid-cols-3 gap-2">
+        <button className={`${primaryButtonClass} ${memberActionButtonClass}`} type="submit" name="action" value="update_directivo">Guardar</button>
+        <button className={`${mutedButtonClass} ${memberActionButtonClass}`} type="submit" name="action" value="reset_directivo_password" data-confirm={resetConfirm}>
           Reiniciar clave
         </button>
-        <button className={dangerButtonClass} type="submit" name="action" value="delete_directivo" data-confirm={deleteConfirm}>
+        <button className={`${dangerButtonClass} ${memberActionButtonClass}`} type="submit" name="action" value="delete_directivo" data-confirm={deleteConfirm}>
           Eliminar
         </button>
       </div>
