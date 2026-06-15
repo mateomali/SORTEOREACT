@@ -682,6 +682,80 @@ function draw_tier_balance_penalty(array $teams): float
     return $penalty;
 }
 
+function draw_line_strength_balance_penalty(array $teams): float
+{
+    if (!$teams) {
+        return 0.0;
+    }
+
+    $weights = [
+        'ARQ' => 240.0,
+        'DEF' => 280.0,
+        'MED' => 240.0,
+        'DEL' => 260.0,
+    ];
+    $totalsByLine = array_fill_keys(player_pitch_lines(), []);
+
+    foreach ($teams as $team) {
+        $assignmentData = build_team_position_assignment($team);
+        $assigned = $assignmentData['assignment'];
+        $lineTotals = array_fill_keys(player_pitch_lines(), 0.0);
+        foreach ($team as $player) {
+            $playerId = (int) $player['id'];
+            $position = $assigned[$playerId] ?? player_best_natural_position($player);
+            $line = player_pitch_line($position);
+            if (!array_key_exists($line, $lineTotals)) {
+                continue;
+            }
+            $lineTotals[$line] += player_position_rating($player, $position);
+        }
+        foreach ($lineTotals as $line => $total) {
+            $totalsByLine[$line][] = $total;
+        }
+    }
+
+    $penalty = 0.0;
+    foreach ($totalsByLine as $line => $values) {
+        if (!$values) {
+            continue;
+        }
+        $penalty += (max($values) - min($values)) * ($weights[$line] ?? 200.0);
+    }
+    return $penalty;
+}
+
+function draw_profile_distribution_penalty(array $teams): float
+{
+    if (!$teams) {
+        return 0.0;
+    }
+
+    $fields = ['attack', 'defense_physical', 'rhythm', 'technique', 'teamwork', 'mentality'];
+    $penalty = 0.0;
+    foreach ($fields as $field) {
+        $strongCounts = [];
+        $weakCounts = [];
+        foreach ($teams as $team) {
+            $strong = 0;
+            $weak = 0;
+            foreach ($team as $player) {
+                $value = player_effective_stat($player, $field);
+                if ($value >= 4.2) {
+                    $strong++;
+                }
+                if ($value <= 2.8) {
+                    $weak++;
+                }
+            }
+            $strongCounts[] = $strong;
+            $weakCounts[] = $weak;
+        }
+        $penalty += draw_count_spread($strongCounts) * 85.0;
+        $penalty += draw_count_spread($weakCounts) * 45.0;
+    }
+    return $penalty;
+}
+
 function draw_teams_quality_score(array $teams, array $bands): float
 {
     $drawWeights = player_draw_balance_weights();
@@ -732,6 +806,8 @@ function draw_teams_quality_score(array $teams, array $bands): float
     $cost += draw_team_low_liability_spread($teams) * 85.0;
     $cost += draw_position_balance_penalty($teams);
     $cost += draw_tier_balance_penalty($teams);
+    $cost += draw_line_strength_balance_penalty($teams);
+    $cost += draw_profile_distribution_penalty($teams);
 
     return $cost;
 }
@@ -1030,6 +1106,8 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                 $cost += draw_team_low_liability_spread($projectedTeams) * 85.0;
                 $cost += draw_position_balance_penalty($projectedTeams);
                 $cost += draw_tier_balance_penalty($projectedTeams);
+                $cost += draw_line_strength_balance_penalty($projectedTeams);
+                $cost += draw_profile_distribution_penalty($projectedTeams);
                 if (count($available) > 1) {
                     $exploration = match ($try % 6) {
                         0 => 30.0,

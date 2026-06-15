@@ -27,11 +27,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$currentMember) {
             throw new RuntimeException('Directivo invalido.');
         }
+        $statsInput = is_array($_POST['stats'] ?? null) ? $_POST['stats'] : [];
+        $savePlayerId = isset($_POST['save_player_id']) ? (int) $_POST['save_player_id'] : 0;
+        if ($savePlayerId > 0) {
+            $statsInput = array_key_exists($savePlayerId, $statsInput)
+                ? [$savePlayerId => $statsInput[$savePlayerId]]
+                : [];
+        }
         $saved = director_save_player_stat_votes(
             (int) $currentMember['id'],
-            is_array($_POST['stats'] ?? null) ? $_POST['stats'] : []
+            $statsInput
         );
-        flash('success', 'Valoraciones guardadas. Jugadores actualizados: ' . (string) $saved . '.');
+        flash('success', $savePlayerId > 0 ? 'Valoracion guardada.' : 'Valoraciones guardadas. Jugadores actualizados: ' . (string) $saved . '.');
     } catch (Throwable $e) {
         flash('error', $e->getMessage());
     }
@@ -83,7 +90,9 @@ $valuationIslandPayload = [
     'players' => array_map(
         static function (array $player) use ($votes, $fields): array {
             $playerId = (int) $player['id'];
-            $vote = $votes[$playerId] ?? [];
+            $storedVote = $votes[$playerId] ?? [];
+            $hasVote = (int) ($storedVote['manually_modified'] ?? 0) === 1;
+            $vote = $hasVote ? $storedVote : [];
             $stats = [];
             foreach ($fields as $field) {
                 $stats[$field] = valuation_input_value($player, $vote, $field);
@@ -95,6 +104,7 @@ $valuationIslandPayload = [
                 'primaryPosition' => player_primary_position($player),
                 'general' => director_stat_0_99_from_internal(player_overall_rating($player)),
                 'stats' => $stats,
+                'voted' => $hasVote,
             ];
         },
         $players

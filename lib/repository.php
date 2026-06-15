@@ -255,3 +255,92 @@ function repo_team_totals(int $matchId): array
     }
     return $totals;
 }
+
+function repo_player_result_adjustments(array $playerIds, int $excludeMatchId = 0): array
+{
+    $playerIds = array_values(array_unique(array_filter(array_map('intval', $playerIds), static fn(int $id): bool => $id > 0)));
+    if (!$playerIds) {
+        return [];
+    }
+
+    $tracked = array_fill_keys($playerIds, true);
+    $rows = db()->query(
+        "SELECT mt.match_id, mt.team_number, mt.total_skill, mt.players_json, mt.goals
+         FROM match_teams mt
+         INNER JOIN matches m ON m.id = mt.match_id
+         WHERE m.status = 'finalizado'
+           AND mt.players_json IS NOT NULL
+           AND mt.players_json <> ''
+         ORDER BY m.match_date DESC, mt.match_id DESC, mt.team_number ASC"
+    )->fetchAll();
+
+    $byMatch = [];
+    foreach ($rows as $row) {
+        $matchId = (int) ($row['match_id'] ?? 0);
+        if ($matchId <= 0 || ($excludeMatchId > 0 && $matchId === $excludeMatchId)) {
+            continue;
+        }
+        $byMatch[$matchId][] = $row;
+    }
+
+    $samples = [];
+    foreach ($byMatch as $teams) {
+        if (count($teams) !== 2) {
+            continue;
+        }
+        $totalGoals = array_sum(array_map(static fn(array $team): int => (int) ($team['goals'] ?? 0), $teams));
+        if ($totalGoals <= 0) {
+            continue;
+        }
+
+        [$teamA, $teamB] = array_values($teams);
+        $skillA = (float) ($teamA['total_skill'] ?? 0);
+        $skillB = (float) ($teamB['total_skill'] ?? 0);
+        $goalsA = (int) ($teamA['goals'] ?? 0);
+        $goalsB = (int) ($teamB['goals'] ?? 0);
+        $expectedA = max(-3.0, min(3.0, ($skillA - $skillB) * 0.35));
+        $expectedB = -$expectedA;
+        $actualA = max(-6.0, min(6.0, $goalsA - $goalsB));
+        $actualB = -$actualA;
+
+        foreach ([[$teamA, $actualA - $expectedA], [$teamB, $actualB - $expectedB]] as [$team, $surprise]) {
+            $players = json_decode((string) ($team['players_json'] ?? ''), true);
+            if (!is_array($players)) {
+                continue;
+            }
+            $boundedSurprise = max(-4.0, min(4.0, (float) $surprise));
+            foreach ($players as $player) {
+                $playerId = (int) ($player['id'] ?? 0);
+                if ($playerId <= 0 || !isset($tracked[$playerId])) {
+                    continue;
+                }
+                if (!isset($samples[$playerId])) {
+                    $samples[$playerId] = ['sum' => 0.0, 'matches' => 0];
+                }
+                $samples[$playerId]['sum'] += $boundedSurprise;
+                $samples[$playerId]['matches']++;
+            }
+        }
+    }
+
+    $adjustments = [];
+    foreach ($samples as $playerId => $sample) {
+        $matches = (int) ($sample['matches'] ?? 0);
+        if ($matches < 3) {
+            continue;
+        }
+        $averageSurprise = (float) $sample['sum'] / max(1, $matches);
+        $confidence = min(1.0, $matches / 10.0);
+        $adjustment = max(-0.25, min(0.25, $averageSurprise * 0.08 * $confidence));
+        if (abs($adjustment) < 0.03) {
+            continue;
+        }
+        $adjustments[$playerId] = [
+            'adjustment' => round($adjustment, 2),
+            'matches' => $matches,
+            'average_surprise' => round($averageSurprise, 2),
+        ];
+    }
+
+    return $adjustments;
+}

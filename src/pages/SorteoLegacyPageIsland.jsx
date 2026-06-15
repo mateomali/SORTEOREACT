@@ -354,6 +354,11 @@ function applyRegularityAdjustment(rating, player) {
   return Math.max(1, Math.min(6, rating * factor));
 }
 
+function historicalResultAdjustment(player) {
+  const adjustment = Number(player?.rendimiento_historico_ajuste || 0);
+  return Number.isFinite(adjustment) ? Math.max(-0.25, Math.min(0.25, adjustment)) : 0;
+}
+
 function positionBaseRating(player, assignedPosition) {
   const position = String(assignedPosition || '').toUpperCase();
   if (position === 'ARQ' && !canPlayGoalkeeper(player)) {
@@ -365,7 +370,8 @@ function positionBaseRating(player, assignedPosition) {
 
 function adjustedPositionRating(player, assignedPosition) {
   const position = String(assignedPosition || getPrimaryPlayerPosition(player)).toUpperCase();
-  return Math.max(1, Math.min(6, applyRegularityAdjustment(positionBaseRating(player, position), player) * positionFitFactor(player, position)));
+  const positionalRating = applyRegularityAdjustment(positionBaseRating(player, position), player) * positionFitFactor(player, position);
+  return Math.max(1, Math.min(6, positionalRating + historicalResultAdjustment(player)));
 }
 
 function positionPenaltyPercent(player, assignedPosition) {
@@ -908,6 +914,48 @@ function tierBalancePenalty(teams, assignmentOverrides = {}) {
   ), 0);
 }
 
+const LINE_STRENGTH_BALANCE_WEIGHTS = { ARQ: 240, DEF: 280, MED: 240, DEL: 260 };
+const PROFILE_DISTRIBUTION_FIELDS = ['ataque', 'solidez', 'ritmo_stat', 'tecnica', 'compromiso', 'mentalidad'];
+
+function lineStrengthPenalty(teams, assignmentOverrides = {}) {
+  if (!teams.length) return { penalty: 0, spread: 0 };
+  const valuesByLine = Object.fromEntries(PITCH_LINES.map((line) => [line, []]));
+  teams.forEach((team) => {
+    const assignments = buildTeamAssignment(team, assignmentOverrides);
+    const totals = Object.fromEntries(PITCH_LINES.map((line) => [line, 0]));
+    team.forEach((player) => {
+      const assigned = assignments[playerKey(player)] || getPrimaryPlayerPosition(player);
+      const line = pitchLineForPosition(assigned);
+      if (totals[line] !== undefined) totals[line] += adjustedPositionRating(player, assigned);
+    });
+    PITCH_LINES.forEach((line) => valuesByLine[line].push(totals[line]));
+  });
+
+  let penalty = 0;
+  let spread = 0;
+  PITCH_LINES.forEach((line) => {
+    const lineSpread = countSpread(valuesByLine[line] || []);
+    spread = Math.max(spread, lineSpread);
+    penalty += lineSpread * (LINE_STRENGTH_BALANCE_WEIGHTS[line] || 200);
+  });
+  return { penalty, spread };
+}
+
+function profileDistributionPenalty(teams) {
+  if (!teams.length) return { penalty: 0, spread: 0 };
+  let penalty = 0;
+  let maxSpread = 0;
+  PROFILE_DISTRIBUTION_FIELDS.forEach((field) => {
+    const strongCounts = teams.map((team) => team.filter((player) => statValue(player, field) >= 4.2).length);
+    const weakCounts = teams.map((team) => team.filter((player) => statValue(player, field) <= 2.8).length);
+    const strongSpread = countSpread(strongCounts);
+    const weakSpread = countSpread(weakCounts);
+    maxSpread = Math.max(maxSpread, strongSpread, weakSpread);
+    penalty += (strongSpread * 85) + (weakSpread * 45);
+  });
+  return { penalty, spread: maxSpread };
+}
+
 function platinumSpread(teams, assignmentOverrides = {}) {
   if (!teams.length) return 0;
   return countSpread(teams.map((team) => tierCountsForTeam(team, assignmentOverrides).supreme || 0));
@@ -950,13 +998,17 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
     });
     return sum + ((Math.max(...values) - Math.min(...values)) * Number(weight || 0));
   }, 0);
+  const lineStrength = lineStrengthPenalty(teams, assignmentOverrides);
+  const profileDistribution = profileDistributionPenalty(teams);
   const hardTierPenalty = supremeSpread > 1 ? 100000000 : 0;
   return {
-    value: hardTierPenalty + (diff * 1000) + (slowSpread * 60) + (irregularSpread * 95) + linePenalty + positionBalancePenalty(teams, assignmentOverrides) + tierBalancePenalty(teams, assignmentOverrides) + statPenalty + historicalRepeatPenalty(teams, pairHistory),
+    value: hardTierPenalty + (diff * 1000) + (slowSpread * 60) + (irregularSpread * 95) + linePenalty + positionBalancePenalty(teams, assignmentOverrides) + tierBalancePenalty(teams, assignmentOverrides) + lineStrength.penalty + profileDistribution.penalty + statPenalty + historicalRepeatPenalty(teams, pairHistory),
     diff,
     slowSpread,
     irregularSpread,
     platinumSpread: supremeSpread,
+    lineStrengthSpread: lineStrength.spread,
+    profileDistributionSpread: profileDistribution.spread,
     totals,
   };
 }
@@ -1098,7 +1150,16 @@ function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, 
       selected.push(index);
       visit(index + 1);
       selected.pop();
-      if (bestEval && bestEval.diff <= maxDiff && bestEval.slowSpread <= 1 && bestEval.irregularSpread <= 1 && bestEval.platinumSpread <= 1 && !avoidSignatures.has(bestEval.signature)) {
+      if (
+        bestEval
+        && bestEval.diff <= maxDiff
+        && bestEval.slowSpread <= 1
+        && bestEval.irregularSpread <= 1
+        && bestEval.platinumSpread <= 1
+        && bestEval.profileDistributionSpread <= 1
+        && bestEval.lineStrengthSpread <= 2
+        && !avoidSignatures.has(bestEval.signature)
+      ) {
         return;
       }
     }
@@ -1128,7 +1189,15 @@ function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights,
     if (!bestEval || evaluation.value < bestEval.value) {
       best = improved.teams;
       bestEval = evaluation;
-      if (!signaturePenalty && bestEval.diff <= maxDiff && bestEval.slowSpread <= 1 && bestEval.irregularSpread <= 1 && bestEval.platinumSpread <= 1) break;
+      if (
+        !signaturePenalty
+        && bestEval.diff <= maxDiff
+        && bestEval.slowSpread <= 1
+        && bestEval.irregularSpread <= 1
+        && bestEval.platinumSpread <= 1
+        && bestEval.profileDistributionSpread <= 1
+        && bestEval.lineStrengthSpread <= 2
+      ) break;
     }
   }
   return best ? { teams: best, evaluation: bestEval, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
@@ -2154,6 +2223,8 @@ export function SorteoLegacyPageIsland({ root }) {
       { label: 'Platinum repartidos', ok: evaluation.platinumSpread <= 1 },
       { label: 'Ritmo lento equilibrado', ok: evaluation.slowSpread <= 1 },
       { label: 'Irregulares repartidos', ok: evaluation.irregularSpread <= 1 },
+      { label: 'Fuerza por linea pareja', ok: evaluation.lineStrengthSpread <= 2 },
+      { label: 'Perfiles fuertes y flojos repartidos', ok: evaluation.profileDistributionSpread <= 1 },
     ];
     const comparisons = ANALYSIS_FIELDS
       .map(([field, label]) => {
@@ -2172,10 +2243,12 @@ export function SorteoLegacyPageIsland({ root }) {
       slowSpread: evaluation.slowSpread,
       irregularSpread: evaluation.irregularSpread,
       platinumSpread: evaluation.platinumSpread,
+      lineStrengthSpread: evaluation.lineStrengthSpread,
+      profileDistributionSpread: evaluation.profileDistributionSpread,
       tierSpread,
       historicalPenalty: historicalRepeatPenalty(teams, payload.pairHistory),
       ruleChecks,
-      decisionText: `Se evaluaron equipos por puntaje ajustado a posicion, cobertura de lineas, reparto de platinum, ritmo, regularidad, tiers e historial de companeros.`,
+      decisionText: `Se evaluaron equipos por puntaje ajustado a posicion, rendimiento historico real, cobertura de lineas, fuerza por linea, perfiles fuertes/flojos, reparto de platinum, ritmo, regularidad, tiers e historial de companeros.`,
       summaries,
       comparisons,
     };
@@ -2191,13 +2264,15 @@ export function SorteoLegacyPageIsland({ root }) {
         strict_max_diff: STRICT_MAX_DIFF,
         flexible_max_diff: FLEXIBLE_MAX_DIFF,
         rules: drawAnalysis.ruleChecks,
-        optimized: ['puntaje ajustado por posicion', 'cobertura de lineas', 'platinum', 'ritmo', 'regularidad', 'tiers', 'historial de companeros'],
+        optimized: ['puntaje ajustado por posicion', 'rendimiento historico real', 'cobertura de lineas', 'fuerza por linea', 'perfiles fuertes/flojos', 'platinum', 'ritmo', 'regularidad', 'tiers', 'historial de companeros'],
       },
       metrics: {
         diff: Number(drawAnalysis.diff.toFixed(2)),
         slow_spread: drawAnalysis.slowSpread,
         irregular_spread: drawAnalysis.irregularSpread,
         platinum_spread: drawAnalysis.platinumSpread,
+        line_strength_spread: drawAnalysis.lineStrengthSpread,
+        profile_distribution_spread: drawAnalysis.profileDistributionSpread,
         tier_spread: drawAnalysis.tierSpread,
         historical_penalty: drawAnalysis.historicalPenalty,
       },
@@ -3069,6 +3144,11 @@ export function SorteoLegacyPageIsland({ root }) {
                   <span className="flex flex-wrap items-center gap-1 text-[11px] font-extrabold text-slate-500">
                     <span>{player.posicion}</span>
                     <span>{playerCardRating(player.puntuacion)} GEN</span>
+                    {Math.abs(Number(player.rendimiento_historico_ajuste || 0)) >= 0.03 ? (
+                      <span title={`${Number(player.rendimiento_historico_partidos || 0)} partidos historicos`}>
+                        Hist {Number(player.rendimiento_historico_ajuste) > 0 ? '+' : ''}{Number(player.rendimiento_historico_ajuste || 0).toFixed(1)}
+                      </span>
+                    ) : null}
                     {manualGoalkeepers[playerKey(player)] === true ? <span>Arquero</span> : null}
                     {isLowRhythmPlayer(player) ? <span>Lento</span> : null}
                   </span>
@@ -3549,6 +3629,12 @@ export function SorteoLegacyPageIsland({ root }) {
                     </p>
                     <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
                       Jugadores top: {drawAnalysis.platinumSpread <= 1 ? 'bien repartidos' : `hay ${drawAnalysis.platinumSpread} de diferencia en platinum`}.
+                    </p>
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Lineas: {drawAnalysis.lineStrengthSpread <= 2 ? 'fuerza similar por sector' : `diferencia de ${drawAnalysis.lineStrengthSpread.toFixed(1)} en una linea`}.
+                    </p>
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Perfiles: {drawAnalysis.profileDistributionSpread <= 1 ? 'fuertes y flojos bien repartidos' : `desbalance de ${drawAnalysis.profileDistributionSpread}`}.
                     </p>
                   </div>
                 </div>

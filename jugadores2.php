@@ -300,6 +300,18 @@ function jugadores2_card_tier(int $overall): string
     return 'bronze';
 }
 
+function jugadores2_position_ratings(array $player, array $positions): array
+{
+    $ratings = [];
+    foreach ($positions as $position) {
+        $ratings[] = [
+            'position' => (string) $position,
+            'overall' => shared_profile_player_fifa_overall(player_position_rating($player, (string) $position)),
+        ];
+    }
+    return $ratings;
+}
+
 function jugadores2_card_photo(array $player): string
 {
     return player_photo_path($player);
@@ -378,6 +390,7 @@ foreach ($players as $player) {
     $secondaryPosition = $positionList[1] ?? '';
     $rating = player_overall_rating($player);
     $overall = shared_profile_player_fifa_overall($rating);
+    $positionRatings = jugadores2_position_ratings($player, $positionList);
     $allStats = jugadores2_all_stats($player, $statLabels, $statShortLabels);
     $allStatsPayload = array_map(
         static fn(array $stat): array => [
@@ -414,11 +427,12 @@ foreach ($players as $player) {
         'name' => $name,
         'initials' => jugadores2_player_initials($name),
         'positions' => $positionList,
+        'positionRatings' => $positionRatings,
         'positionsText' => $positions,
         'primaryPosition' => $primaryPosition,
         'secondaryPosition' => $secondaryPosition,
         'group' => jugadores2_position_group($positions),
-        'search' => strtolower(trim($name . ' ' . $positions . ' ' . number_format($rating, 1) . ' ' . $overall . ' ' . implode(' ', array_values($statLabels)))),
+        'search' => strtolower(trim($name . ' ' . $positions . ' ' . number_format($rating, 1) . ' ' . $overall . ' ' . implode(' ', array_values($statLabels)) . ' ' . implode(' ', array_map(static fn(array $positionRating): string => $positionRating['position'] . ' ' . $positionRating['overall'], $positionRatings)))),
         'rating' => number_format($rating, 3, '.', ''),
         'overall' => $overall,
         'tier' => jugadores2_card_tier($overall),

@@ -60,6 +60,19 @@ try {
             ];
         }
         if ($participantIds) {
+            $resultAdjustments = repo_player_result_adjustments($participantIds, $legacyMatchId);
+            foreach ($legacyPlayers as &$legacyPlayer) {
+                $playerId = (int) ($legacyPlayer['id'] ?? 0);
+                $baseRating = (float) ($legacyPlayer['puntuacion'] ?? 3.0);
+                $resultAdjustment = (float) ($resultAdjustments[$playerId]['adjustment'] ?? 0.0);
+                $legacyPlayer['puntuacion_base'] = $baseRating;
+                $legacyPlayer['rendimiento_historico_ajuste'] = $resultAdjustment;
+                $legacyPlayer['rendimiento_historico_partidos'] = (int) ($resultAdjustments[$playerId]['matches'] ?? 0);
+                $legacyPlayer['puntuacion'] = normalize_player_stat($baseRating + $resultAdjustment, $baseRating);
+            }
+            unset($legacyPlayer);
+        }
+        if ($participantIds) {
             $in = implode(',', array_fill(0, count($participantIds), '?'));
             if ((string) ($legacyMatch['status'] ?? '') === 'sorteado' && (string) ($legacyMatch['draw_mode'] ?? '') === 'random') {
                 $currentDrawStmt = db()->prepare(

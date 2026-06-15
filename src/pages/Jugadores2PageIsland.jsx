@@ -43,7 +43,6 @@ const positionWeights = {
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
 const toolbarLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#adc8bb] bg-white px-3 text-xs font-extrabold text-[#063d2b] no-underline transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
-const quietLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-transparent bg-transparent px-2 text-xs font-extrabold text-[#526b62] no-underline transition-colors hover:bg-[#eef7f2] hover:text-[#063d2b] ${focusRing}`;
 const primaryIconButtonClass = `grid min-h-11 w-11 place-items-center rounded-lg border border-[#063d2b] bg-[#063d2b] text-white transition-colors hover:bg-[#082f23] ${focusRing}`;
 const rowCredentialButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f5faf7] hover:text-[#063d2b] sm:h-10 sm:w-10 ${focusRing}`;
 const rowEditButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] sm:h-10 sm:w-10 ${focusRing}`;
@@ -56,10 +55,6 @@ const playerNameButtonClass = `!grid !w-full min-w-0 !justify-start !justify-sel
 const fieldControlClass = 'min-h-10 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
 const numberControlClass = 'h-10 rounded-lg border border-[#adc8bb] bg-white px-2 text-center text-base font-black text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
 const sortableHeaderButtonClass = `inline-flex min-h-8 items-center gap-1 rounded-md border border-transparent px-1.5 text-xs font-black text-[#526b62] transition-colors hover:border-[#adc8bb] hover:bg-white hover:text-[#063d2b] ${focusRing}`;
-
-function filterButtonClass(active) {
-  return `min-h-9 rounded-lg border px-2 text-[11px] font-black transition-colors sm:min-h-10 sm:px-3 sm:text-xs ${focusRing} ${active ? 'border-[#063d2b] bg-[#063d2b] text-white' : 'border-[#adc8bb] bg-white text-[#07130f] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'}`;
-}
 
 function parsePayload(root) {
   try {
@@ -211,6 +206,49 @@ function statTone(overall) {
   return { color: '#dc2626', border: 'border-red-300', bg: 'bg-red-50' };
 }
 
+function tierFromOverall(overall) {
+  const value = Number(overall) || 64;
+  if (value >= 88) return 'supreme';
+  if (value >= 84) return 'elite';
+  if (value >= 76) return 'gold';
+  if (value >= 66) return 'silver';
+  return 'bronze';
+}
+
+function cardStatsForPosition(player, position) {
+  const values = Object.fromEntries((player.allStats || []).map((stat) => [stat.field, Number(stat.overall) || 64]));
+  const statValue = (field) => values[field] || 64;
+  return position === 'ARQ'
+    ? [
+        { label: 'ARQ', value: statValue('goalkeeper_skill') },
+        { label: 'RIT', value: statValue('rhythm') },
+        { label: 'DEF', value: statValue('defense_physical') },
+        { label: 'TEC', value: statValue('technique') },
+        { label: 'EQU', value: statValue('teamwork') },
+        { label: 'MEN', value: statValue('mentality') },
+      ]
+    : [
+        { label: 'TEC', value: statValue('technique') },
+        { label: 'RIT', value: statValue('rhythm') },
+        { label: 'DEF', value: statValue('defense_physical') },
+        { label: 'ATA', value: statValue('attack') },
+        { label: 'EQU', value: statValue('teamwork') },
+        { label: 'MEN', value: statValue('mentality') },
+      ];
+}
+
+function playerForCardPosition(player, position) {
+  const rating = (player.positionRatings || []).find((item) => item.position === position);
+  const overall = Number(rating?.overall || player.overall || 64);
+  return {
+    ...player,
+    overall,
+    tier: tierFromOverall(overall),
+    cardStats: cardStatsForPosition(player, position),
+    positionRatings: [{ position, overall }],
+  };
+}
+
 function Arrow({ form }) {
   const color = form === 'up' ? '#1ec7f2' : form === 'down' ? '#ef2b2b' : '#a7ec35';
   const rotate = form === 'down' ? 'rotate(180deg)' : form === 'right' ? 'rotate(90deg)' : 'none';
@@ -250,10 +288,11 @@ function PlayerCard({ player, onOpen, size = 'compact' }) {
       >
         <span className="block text-[1.87rem] font-black leading-[.8] sm:text-[2.03rem]">{player.overall}</span>
         <span className="mt-[5px] grid justify-items-center gap-[1px] text-center leading-none">
-          <span className="block text-[.81rem] font-black uppercase leading-none sm:text-[.86rem]">{player.primaryPosition}</span>
-          {player.secondaryPosition ? (
-            <span className="block text-[.59rem] font-black uppercase leading-none opacity-85 sm:text-[.65rem]">{player.secondaryPosition}</span>
-          ) : null}
+          {(player.positionRatings?.length ? player.positionRatings : [{ position: player.primaryPosition, overall: player.overall }]).map((rating, index) => (
+            <span key={rating.position} className={`block font-black uppercase leading-none ${index === 0 ? 'text-[.75rem] sm:text-[.8rem]' : 'text-[.56rem] opacity-85 sm:text-[.62rem]'}`}>
+              {rating.position}
+            </span>
+          ))}
           <span className="mt-[3px] block aspect-square w-[14px] sm:w-[15px]" data-j2-regularity-arrow>
             <Arrow form={player.regularityForm} />
           </span>
@@ -364,6 +403,46 @@ function PositionChips({ positions }) {
   );
 }
 
+function PositionRatingChips({ ratings, compact = false }) {
+  const visible = Array.isArray(ratings) ? ratings : [];
+  if (!visible.length) return null;
+  return (
+    <span className={`flex flex-wrap ${compact ? 'gap-1' : 'gap-1.5'}`}>
+      {visible.map((rating, index) => (
+        <span
+          key={rating.position}
+          className={`inline-flex items-center gap-1 rounded-md border font-extrabold ${index === 0 ? 'border-[#80b49b] bg-[#e4f5ec] text-[#063d2b]' : 'border-[#d7bd72] bg-[#fff5d6] text-[#684700]'} ${compact ? 'min-h-5 px-1.5 text-[10px]' : 'min-h-6 px-2 text-[11px]'}`}
+          title={index === 0 ? 'Posicion primaria' : 'Posicion secundaria'}
+        >
+          <span className="text-[9px] font-black text-[#526b62]">{index === 0 ? '1°' : '2°'}</span>
+          <span>{rating.position}</span>
+          <b className="font-black text-[#07130f]">{rating.overall}</b>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function PositionRatingSummary({ ratings }) {
+  const visible = Array.isArray(ratings) ? ratings : [];
+  if (!visible.length) return null;
+  return (
+    <span className="grid min-w-[66px] gap-1 rounded-lg border border-[#adc8bb] bg-white p-1.5 text-center text-[#07130f]">
+      {visible.map((rating, index) => (
+        <span
+          key={rating.position}
+          className={`grid grid-cols-[auto_1fr_auto] items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-black leading-none ${index === 0 ? 'bg-[#e4f5ec] text-[#063d2b]' : 'bg-[#fff5d6] text-[#684700]'}`}
+          title={index === 0 ? 'Posicion primaria' : 'Posicion secundaria'}
+        >
+          <span className="text-[9px] text-[#526b62]">{index === 0 ? '1°' : '2°'}</span>
+          <span>{rating.position}</span>
+          <b className="text-xs text-[#07130f]">{rating.overall}</b>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function OverallBadge({ value }) {
   return (
     <span className="inline-grid min-h-9 min-w-10 place-items-center rounded-md border border-[#adc8bb] bg-white px-2 text-center text-[#07130f] sm:min-h-10 sm:min-w-11">
@@ -381,14 +460,21 @@ function radarPoint(center, radius, index, total) {
   };
 }
 
+function statLabelLines(label) {
+  const words = String(label || '').split(/\s+/).filter(Boolean);
+  if (words.length <= 1) return words;
+  if (words.length === 2) return words;
+  return [words.slice(0, -1).join(' '), words[words.length - 1]];
+}
+
 function RadarSvg({ stats }) {
   const visible = (stats || []).filter((stat) => Number(stat.value) > 0);
   if (visible.length < 3) {
     return <div className="grid min-h-48 place-items-center text-sm font-extrabold text-slate-500">Radar no disponible</div>;
   }
-  const size = 260;
-  const center = 130;
-  const maxRadius = 86;
+  const size = 320;
+  const center = 160;
+  const maxRadius = 88;
   const total = visible.length;
   const shape = visible.map((stat, index) => {
     const point = radarPoint(center, maxRadius * (Number(stat.value) / 6), index, total);
@@ -406,11 +492,17 @@ function RadarSvg({ stats }) {
       })}
       {visible.map((stat, index) => {
         const axis = radarPoint(center, maxRadius, index, total);
-        const label = radarPoint(center, maxRadius + 22, index, total);
+        const label = radarPoint(center, maxRadius + 48, index, total);
+        const lines = statLabelLines(stat.label);
+        const textAnchor = label.x < center - 26 ? 'end' : label.x > center + 26 ? 'start' : 'middle';
         return (
           <g key={stat.field}>
             <line x1={center} y1={center} x2={axis.x.toFixed(1)} y2={axis.y.toFixed(1)} stroke="rgba(6,61,43,.18)" strokeWidth="1" />
-            <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor="middle" fill="#07130f" fontSize="11" fontWeight="900">{stat.short}</text>
+            <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor={textAnchor} dominantBaseline="middle" fill="#07130f" fontSize="10" fontWeight="900">
+              {lines.map((line, lineIndex) => (
+                <tspan key={line} x={label.x.toFixed(1)} dy={lineIndex === 0 ? `${(1 - lines.length) * 5}px` : '11px'}>{line}</tspan>
+              ))}
+            </text>
           </g>
         );
       })}
@@ -426,12 +518,14 @@ function RadarSvg({ stats }) {
 function StatLine({ stat }) {
   const overall = Number(stat.overall) || 0;
   return (
-    <div className="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-2 text-sm font-extrabold text-[#07130f]">
-      <span>{stat.short}</span>
+    <div className="grid gap-2 text-sm font-extrabold text-[#07130f]">
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0 leading-tight">{stat.label}</span>
+        <b className="shrink-0 text-right">{overall}</b>
+      </div>
       <span className="h-2 overflow-hidden bg-emerald-50">
         <i className={`block h-full ${toneClass(overall)}`} style={{ width: `${Math.max(10, Math.min(100, (overall / 99) * 100))}%` }} />
       </span>
-      <b className="text-right">{overall}</b>
     </div>
   );
 }
@@ -443,10 +537,9 @@ function ReadonlyProfile({ player, onRadarOpen }) {
         <button type="button" className={`rounded-lg border border-[#adc8bb] bg-white p-4 text-left transition-colors hover:border-[#9fc8b5] hover:bg-[#f8fbfa] ${focusRing}`} onClick={() => onRadarOpen(player)} aria-label={`Ver radar completo de ${player.name}`}>
           <RadarSvg stats={player.allStats} />
         </button>
-        <div className="grid content-start gap-3">
-          <PositionChips positions={player.positions} />
-          <p className="m-0 border border-emerald-100 bg-emerald-50/50 p-3 text-sm font-semibold leading-relaxed text-slate-700">{player.description}</p>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid content-start gap-3">
+            <p className="m-0 border border-emerald-100 bg-emerald-50/50 p-3 text-sm font-semibold leading-relaxed text-slate-700">{player.description}</p>
+            <div className="grid gap-2 sm:grid-cols-3">
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{player.overall}</strong></article>
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Fuerte</span><strong className="block text-sm font-black text-[#07130f]">{player.bestStat?.label || '-'}</strong></article>
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">A cuidar</span><strong className="block text-sm font-black text-[#07130f]">{player.weakStat?.label || '-'}</strong></article>
@@ -742,9 +835,9 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overall
         <header className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-[#d7e6df] bg-[#f8fbfa] p-4">
           <div className="min-w-0">
             <h2 className="m-0 truncate text-xl font-black text-[#07130f]">{player.name}</h2>
-            <p className="m-0 text-sm font-semibold text-slate-500">{player.positionsText || 'Sin posicion'} | {player.isActive ? 'Activo' : 'Inactivo'}</p>
+            <p className="m-0 mt-1 text-sm font-semibold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'}</p>
           </div>
-          <OverallBadge value={overallValue ?? player.overall} />
+          <PositionRatingSummary ratings={player.positionRatings} />
           <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar ficha">x</button>
         </header>
         <div className="grid gap-4 overflow-auto p-4">
@@ -755,7 +848,7 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overall
           )}
           <details className="rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3">
             <summary className="cursor-pointer text-sm font-black text-[#07130f]">Ver ayuda de stats</summary>
-            <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat. Esta pagina usa React y Tailwind para la interfaz.</p>
+            <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat.</p>
           </details>
           <button className={modalSecondaryButtonClass} type="button" onClick={onClose}>Cerrar</button>
         </div>
@@ -781,14 +874,46 @@ function RadarOverlay({ player, onClose }) {
 }
 
 function CardPreviewModal({ player, onClose }) {
+  const options = player?.positionRatings?.length
+    ? player.positionRatings
+    : [{ position: player?.primaryPosition || 'MED', overall: player?.overall || 64 }];
+  const [selectedPosition, setSelectedPosition] = useState('MED');
+  useEffect(() => {
+    setSelectedPosition(options[0]?.position || player?.primaryPosition || 'MED');
+  }, [player?.id]);
+
   if (!player) return null;
+  const activePosition = options.some((option) => option.position === selectedPosition)
+    ? selectedPosition
+    : options[0]?.position || player.primaryPosition || 'MED';
+  const previewPlayer = playerForCardPosition(player, activePosition);
+
   return (
     <>
       <button className="fixed inset-0 z-[80] bg-black/70" type="button" aria-label="Cerrar credencial" onClick={onClose} />
       <section className="fixed inset-0 z-[90] grid place-items-center overflow-auto p-4" role="dialog" aria-modal="true" aria-label={`Credencial de ${player.name}`}>
-        <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible">
-          <div className="origin-center scale-[1.72] sm:scale-[1.9]">
-            <PlayerCard player={player} size="preview" />
+        <div className="grid place-items-center gap-3">
+          {options.length > 1 ? (
+            <div className="grid w-[min(82vw,320px)] grid-cols-2 gap-2" aria-label="Elegir posicion de credencial">
+              {options.map((rating, index) => {
+                const active = activePosition === rating.position;
+                return (
+                  <button
+                    key={rating.position}
+                    className={`min-h-10 rounded-lg border px-2 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#f5d867] bg-[#f5d867] text-[#07130f]' : 'border-white/20 bg-black/65 text-white hover:bg-black/80'}`}
+                    type="button"
+                    onClick={() => setSelectedPosition(rating.position)}
+                  >
+                    {index === 0 ? '1°' : '2°'} {rating.position} {rating.overall}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible">
+            <div className="origin-center scale-[1.72] sm:scale-[1.9]">
+              <PlayerCard player={previewPlayer} size="preview" />
+            </div>
           </div>
         </div>
         <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-lg border border-white/20 bg-black/70 text-xl font-black text-white transition-colors hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" type="button" onClick={onClose} aria-label="Cerrar credencial">x</button>
@@ -800,8 +925,6 @@ function CardPreviewModal({ player, onClose }) {
 export function Jugadores2PageIsland({ root }) {
   const payload = useMemo(() => parsePayload(root), [root]);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [topSort, setTopSort] = useState(false);
   const [sortConfig, setSortConfig] = useState({ field: 'name', direction: 'asc' });
   const [activeId, setActiveId] = useState(null);
   const [cardId, setCardId] = useState(null);
@@ -826,7 +949,6 @@ export function Jugadores2PageIsland({ root }) {
   }, []);
 
   const handleHeaderSort = useCallback((field) => {
-    setTopSort(false);
     setSortConfig((current) => ({
       field,
       direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc',
@@ -835,16 +957,11 @@ export function Jugadores2PageIsland({ root }) {
 
   const visiblePlayers = useMemo(() => {
     const normalizedQuery = normalize(query);
-    const filtered = payload.players.filter((player) => {
-      const matchesFilter = filter === 'all' || player.group === filter;
-      const matchesQuery = normalizedQuery === '' || normalize(`${player.search} ${player.overall} ${player.rating}`).includes(normalizedQuery);
-      return matchesFilter && matchesQuery;
-    });
-    if (topSort) {
-      return filtered.slice().sort((a, b) => Number(b.overall || 0) - Number(a.overall || 0));
-    }
+    const filtered = payload.players.filter((player) => (
+      normalizedQuery === '' || normalize(`${player.search} ${player.overall} ${player.rating}`).includes(normalizedQuery)
+    ));
     return filtered.slice().sort((a, b) => comparePlayersBySort(a, b, sortConfig));
-  }, [filter, payload.players, query, sortConfig, topSort]);
+  }, [payload.players, query, sortConfig]);
 
   const activePlayer = payload.players.find((player) => String(player.id) === String(activeId)) || null;
   const cardPlayer = payload.players.find((player) => String(player.id) === String(cardId)) || null;
@@ -865,7 +982,7 @@ export function Jugadores2PageIsland({ root }) {
         </div>
       </section>
 
-      <section className="grid gap-2 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] p-3 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]" aria-label="Controles de jugadores">
+      <section className="grid gap-2 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] p-3 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_auto]" aria-label="Controles de jugadores">
         <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
           <input className="min-h-10 w-full rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60 sm:min-h-11" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
           <button className={primaryIconButtonClass} type="button" onClick={() => setQuery(query.trim())} aria-label="Buscar">
@@ -875,21 +992,8 @@ export function Jugadores2PageIsland({ root }) {
             </svg>
           </button>
         </div>
-        <div className="grid grid-cols-6 gap-1" aria-label="Filtrar jugadores">
-          {[
-            ['all', 'Todos'],
-            ['arq', 'Arq'],
-            ['def', 'Def'],
-            ['med', 'Med'],
-            ['del', 'Del'],
-          ].map(([key, label]) => (
-            <button key={key} className={filterButtonClass(filter === key)} type="button" onClick={() => setFilter(key)}>{label}</button>
-          ))}
-          <button className={filterButtonClass(topSort)} type="button" onClick={() => setTopSort((current) => !current)}>Top</button>
-        </div>
         <div className="flex flex-wrap gap-2 pt-1 sm:pt-0">
           {payload.isAdmin && payload.links.toggleInactive ? <a className={toolbarLinkClass} href={payload.links.toggleInactive}>{payload.showInactive ? 'Ver solo activos' : 'Ver inactivos'}</a> : null}
-          <a className={quietLinkClass} href={payload.links.backup || 'jugadores.php'}>Backup jugadores</a>
         </div>
       </section>
 
@@ -899,23 +1003,23 @@ export function Jugadores2PageIsland({ root }) {
 
       <section className="grid gap-2 md:hidden" aria-label="Lista de jugadores">
         {visiblePlayers.map((player) => (
-          <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-[#d7e6df] bg-white p-2.5">
+          <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-[#d7e6df] bg-white p-3">
             <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
               <span className="min-w-0 w-full">
-                <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
-                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold text-slate-500">
+                <strong className="block truncate text-[15px] font-black leading-tight text-[#07130f]">{player.name}</strong>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-500">
                   <span>{player.isActive ? 'Activo' : 'Inactivo'}</span>
-                  <span>GEN {player.overall}</span>
                 </span>
-                <span className="mt-1.5 block"><PositionChips positions={player.positions} /></span>
               </span>
             </button>
-            <div className="grid shrink-0 grid-cols-[40px_40px] items-start gap-1.5">
-              <OverallBadge value={player.overall} />
+            <div className="grid shrink-0 grid-cols-[minmax(56px,auto)_36px] grid-rows-2 items-stretch gap-1.5">
+              <span className="row-span-2 grid">
+                <PositionRatingSummary ratings={player.positionRatings} />
+              </span>
               <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
                 <CredentialIcon />
               </button>
-              <button className={`col-span-2 ${rowEditWideButtonClass}`} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
+              <button className={rowEditButtonClass} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
                 {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}
               </button>
             </div>
@@ -946,12 +1050,17 @@ export function Jugadores2PageIsland({ root }) {
                   <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
                     <span className="min-w-0 w-full">
                       <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
-                      <small className="text-xs font-bold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'} | GEN {player.overall}</small>
+                      <small className="text-xs font-bold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'}</small>
+                      <span className="mt-1 block">
+                        <PositionRatingChips ratings={player.positionRatings} compact />
+                      </span>
                     </span>
                   </button>
                 </td>
                 <td className="px-3 py-2"><PositionChips positions={player.positions} /></td>
-                <td className="px-3 py-2"><OverallBadge value={player.overall} /></td>
+                <td className="px-3 py-2">
+                  <PositionRatingChips ratings={player.positionRatings} />
+                </td>
                 <td className="px-3 py-2 text-right">
                   <div className="inline-flex items-center justify-end gap-2">
                     <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>

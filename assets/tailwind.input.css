@@ -8358,6 +8358,10 @@
     body.page-editar-partidos.gf-encounter-action-open .app-toast-stack {
       display: none;
     }
+
+    body.page-mis-valoraciones .app-toast-stack {
+      bottom: 92px;
+    }
   }
 
   .app-toast {
@@ -21829,39 +21833,440 @@ body.page-mis-valoraciones .valuation-step-button {
   display: none;
 }
 
-body.page-mis-valoraciones .valuation-general-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 4px;
-  color: #526b62;
-  font-size: 0.74rem;
-  font-weight: 950;
-  line-height: 1.1;
+body.page-mis-valoraciones .content {
+  background: #edf5f1;
 }
 
-body.page-mis-valoraciones .valuation-general-value {
+body.page-mis-valoraciones [data-react-root] > section {
+  gap: 12px;
+}
+
+body.page-mis-valoraciones .valuation-header-panel,
+body.page-mis-valoraciones .valuation-progress,
+body.page-mis-valoraciones .valuation-search-bar,
+body.page-mis-valoraciones .valuation-table-shell,
+body.page-mis-valoraciones .valuation-actions {
+  border-color: #cfe0d8;
+  box-shadow: 0 2px 8px rgba(7, 19, 15, 0.06);
+}
+
+body.page-mis-valoraciones .valuation-header-panel {
+  align-items: stretch;
+  padding: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
+}
+
+body.page-mis-valoraciones .valuation-header-copy {
+  display: grid;
+  align-content: center;
+}
+
+body.page-mis-valoraciones .valuation-header-copy h1 {
+  font-size: 1.38rem;
+  line-height: 1.15;
+}
+
+body.page-mis-valoraciones .valuation-header-copy p {
+  max-width: 760px;
+}
+
+body.page-mis-valoraciones .valuation-member-form {
+  min-width: 220px;
+  align-self: stretch;
+  justify-content: center;
+  border-left: 1px solid #d7e6df;
+  padding-left: 16px;
+}
+
+body.page-mis-valoraciones .valuation-member-form label,
+body.page-mis-valoraciones .valuation-search-bar > label {
+  margin-bottom: 0;
+  color: #12362a;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+body.page-mis-valoraciones .valuation-member-form select,
+body.page-mis-valoraciones .valuation-search-control input {
+  border-color: #c4dbd0;
+  background: #fbfefd;
+}
+
+body.page-mis-valoraciones .valuation-member-form select:focus,
+body.page-mis-valoraciones .valuation-search-control input:focus,
+body.page-mis-valoraciones .valuation-stat-input:focus {
+  border-color: #0f513c;
+  box-shadow: 0 0 0 3px rgba(216, 249, 153, 0.45);
+}
+
+body.page-mis-valoraciones .valuation-progress {
+  padding: 12px;
+}
+
+body.page-mis-valoraciones .valuation-progress h2 {
+  padding-bottom: 2px;
+}
+
+body.page-mis-valoraciones .valuation-progress-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: #fbfefd;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+
+body.page-mis-valoraciones .valuation-progress-card.is-complete {
+  border-color: #96c7af;
+  background: #edf7f2;
+}
+
+body.page-mis-valoraciones .valuation-progress-card-head {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+body.page-mis-valoraciones .valuation-progress-card-head strong,
+body.page-mis-valoraciones .valuation-progress-card-head span {
+  min-width: 0;
+}
+
+body.page-mis-valoraciones .valuation-progress-meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e1ede8;
+}
+
+body.page-mis-valoraciones .valuation-progress-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #0f513c;
+}
+
+body.page-mis-valoraciones .valuation-search-bar {
+  display: grid;
+  grid-template-columns: minmax(260px, 520px) auto;
+  align-items: end;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+body.page-mis-valoraciones .valuation-search-bar > label {
+  grid-column: 1 / -1;
+}
+
+body.page-mis-valoraciones .valuation-search-control {
+  position: relative;
+  min-width: 0;
+}
+
+body.page-mis-valoraciones .valuation-search-icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 18px;
+  height: 18px;
+  color: #526b62;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+body.page-mis-valoraciones .valuation-search-count {
+  min-height: 40px;
   display: inline-flex;
-  min-width: 38px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 10px;
+  border: 1px solid #d7e6df;
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: #526b62;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+body.page-mis-valoraciones .valuation-status-summary {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+body.page-mis-valoraciones .valuation-summary-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  min-height: 22px;
+  border: 1px solid #d7e6df;
+  border-radius: 7px;
+  padding: 2px 7px;
+  background: #ffffff;
+  color: #526b62;
+  font-size: 0.68rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.page-mis-valoraciones .valuation-summary-chip.is-voted {
+  border-color: #96c7af;
+  background: #e2f5eb;
+  color: #07563d;
+}
+
+body.page-mis-valoraciones .valuation-summary-chip.is-pending {
+  border-color: #ebcf93;
+  background: #fff4dc;
+  color: #6f4a00;
+}
+
+body.page-mis-valoraciones .valuation-table tr.is-valuation-filtered-out {
+  display: none !important;
+}
+
+body.page-mis-valoraciones .valuation-search-empty {
+  border-top: 1px solid #d7e6df;
+  background: #f8fbfa;
+}
+
+body.page-mis-valoraciones .valuation-table-shell {
+  background: #ffffff;
+}
+
+body.page-mis-valoraciones .valuation-table-wrap {
+  max-height: min(72vh, 820px);
+  overscroll-behavior: contain;
+}
+
+body.page-mis-valoraciones .valuation-table {
+  font-variant-numeric: tabular-nums;
+}
+
+body.page-mis-valoraciones .valuation-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+}
+
+body.page-mis-valoraciones .valuation-table th {
+  border-bottom: 0;
+  background: #07130f;
+  color: #f7fbf9;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr {
+  background: #ffffff;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr.is-voted td,
+body.page-mis-valoraciones .valuation-table tbody tr.is-voted .valuation-player-cell {
+  background: #f0fbf5;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr.is-pending-vote td,
+body.page-mis-valoraciones .valuation-table tbody tr.is-pending-vote .valuation-player-cell {
+  background: #ffffff;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr.has-unsaved-values td,
+body.page-mis-valoraciones .valuation-table tbody tr.has-unsaved-values .valuation-player-cell {
+  background: #fff8d7;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr:hover td {
+  background: #f7fbf9;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr:hover .valuation-player-cell {
+  background: #f7fbf9;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr.is-voted:hover td,
+body.page-mis-valoraciones .valuation-table tbody tr.is-voted:hover .valuation-player-cell {
+  background: #e8f7ef;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr.is-pending-vote:hover td,
+body.page-mis-valoraciones .valuation-table tbody tr.is-pending-vote:hover .valuation-player-cell {
+  background: #f7fbf9;
+}
+
+body.page-mis-valoraciones .valuation-table tbody tr.has-unsaved-values:hover td,
+body.page-mis-valoraciones .valuation-table tbody tr.has-unsaved-values:hover .valuation-player-cell {
+  background: #fff0b8;
+}
+
+body.page-mis-valoraciones .valuation-table td {
+  border-color: #e3eee9;
+}
+
+body.page-mis-valoraciones .valuation-player-cell {
+  min-width: 168px;
+  border-right: 1px solid #e3eee9;
+}
+
+body.page-mis-valoraciones .valuation-player-name-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+body.page-mis-valoraciones .valuation-player-name-line strong {
+  min-width: 0;
+}
+
+body.page-mis-valoraciones .valuation-row-status {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  min-height: 22px;
+  border: 1px solid #d7e6df;
+  border-radius: 7px;
+  padding: 2px 7px;
+  background: #ffffff;
+  color: #526b62;
+  font-size: 0.68rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+body.page-mis-valoraciones tr.is-voted .valuation-row-status {
+  border-color: #96c7af;
+  background: #e2f5eb;
+  color: #07563d;
+}
+
+body.page-mis-valoraciones tr.is-pending-vote .valuation-row-status {
+  border-color: #ebcf93;
+  background: #fff4dc;
+  color: #6f4a00;
+}
+
+body.page-mis-valoraciones tr.has-unsaved-values .valuation-row-status {
+  border-color: #e4b72f;
+  background: #fff0b8;
+  color: #5d4200;
+}
+
+body.page-mis-valoraciones .valuation-position-ratings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+body.page-mis-valoraciones .valuation-position-rating {
+  display: inline-flex;
   min-height: 24px;
   align-items: center;
-  justify-content: center;
+  gap: 5px;
   border: 1px solid #adc8bb;
   border-radius: 7px;
   background: #edf7f2;
+  padding: 3px 6px;
   color: #063d2b;
-  font-size: 0.96rem;
+  font-size: 0.74rem;
   font-weight: 950;
   line-height: 1;
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
 
-body.page-mis-valoraciones .valuation-general-value.is-live-changed {
+body.page-mis-valoraciones .valuation-position-rating span {
+  color: #526b62;
+  font-size: 0.68rem;
+}
+
+body.page-mis-valoraciones .valuation-position-rating strong {
+  min-width: 22px;
+  color: #063d2b;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+body.page-mis-valoraciones .valuation-position-cell {
+  min-width: 112px;
+}
+
+body.page-mis-valoraciones .valuation-save-cell {
+  width: 72px;
+}
+
+body.page-mis-valoraciones .valuation-row-save-button {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d7e6df;
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: #8aa099;
+  cursor: not-allowed;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+body.page-mis-valoraciones .valuation-row-save-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.page-mis-valoraciones .valuation-row-save-button span {
+  display: none;
+}
+
+body.page-mis-valoraciones .valuation-row-save-button:not(:disabled) {
+  border-color: #0f513c;
+  background: #0f513c;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+body.page-mis-valoraciones .valuation-row-save-button:not(:disabled):hover {
+  border-color: #063d2b;
+  background: #063d2b;
+}
+
+body.page-mis-valoraciones .valuation-row-save-button:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(216, 249, 153, 0.55);
+}
+
+body.page-mis-valoraciones .valuation-stat-input {
+  border-color: #cfe0d8;
+  background: #fbfefd;
+}
+
+body.page-mis-valoraciones .valuation-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 28;
+}
+
+body.page-mis-valoraciones .valuation-position-rating.is-live-changed {
   border-color: #e4b72f;
   background: #fff3bf;
   color: #5d4200;
   font-weight: 950;
   box-shadow: 0 0 0 3px rgba(228, 183, 47, 0.2);
+}
+
+body.page-mis-valoraciones .valuation-position-rating.is-live-changed span,
+body.page-mis-valoraciones .valuation-position-rating.is-live-changed strong {
+  color: #5d4200;
 }
 
 body.page-mis-valoraciones .valuation-stat-cell,
@@ -21893,8 +22298,35 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
     padding-bottom: 72px;
   }
 
+  body.page-mis-valoraciones [data-react-root] > section {
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+
+  body.page-mis-valoraciones .valuation-header-panel {
+    padding: 10px !important;
+  }
+
+  body.page-mis-valoraciones .valuation-header-copy h1 {
+    font-size: 1.1rem !important;
+  }
+
+  body.page-mis-valoraciones .valuation-header-copy p {
+    font-size: 0.76rem !important;
+    line-height: 1.25 !important;
+  }
+
+  body.page-mis-valoraciones .valuation-member-form {
+    min-width: 0 !important;
+    border-left: 0 !important;
+    border-top: 1px solid #d7e6df !important;
+    padding-top: 8px !important;
+    padding-left: 0 !important;
+  }
+
   body.page-mis-valoraciones .valuation-progress {
     gap: 8px !important;
+    padding: 8px !important;
   }
 
   body.page-mis-valoraciones .valuation-progress-grid {
@@ -21911,7 +22343,42 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
 
   body.page-mis-valoraciones .valuation-progress-card {
     flex: 0 0 128px !important;
+    gap: 6px !important;
+    padding: 8px !important;
     scroll-snap-align: start;
+  }
+
+  body.page-mis-valoraciones .valuation-progress-card-head {
+    display: grid !important;
+    gap: 2px !important;
+  }
+
+  body.page-mis-valoraciones .valuation-search-bar {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+
+  body.page-mis-valoraciones .valuation-search-count {
+    min-height: 0 !important;
+    justify-content: flex-start !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    font-size: 0.7rem !important;
+  }
+
+  body.page-mis-valoraciones .valuation-status-summary {
+    min-height: 0 !important;
+    justify-content: flex-start !important;
+    gap: 5px !important;
+  }
+
+  body.page-mis-valoraciones .valuation-summary-chip,
+  body.page-mis-valoraciones .valuation-row-status {
+    min-height: 20px !important;
+    padding: 2px 6px !important;
+    font-size: 0.62rem !important;
   }
 
   body.page-mis-valoraciones .valuation-table-shell {
@@ -21922,6 +22389,7 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
   }
 
   body.page-mis-valoraciones .valuation-table-wrap {
+    max-height: none !important;
     overflow: visible !important;
   }
 
@@ -21954,6 +22422,21 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
     box-shadow: none !important;
   }
 
+  body.page-mis-valoraciones .valuation-table tr.is-voted {
+    border-color: #b9dfcd !important;
+    background: #f0fbf5 !important;
+  }
+
+  body.page-mis-valoraciones .valuation-table tr.is-pending-vote {
+    border-color: #d7e6df !important;
+    background: #ffffff !important;
+  }
+
+  body.page-mis-valoraciones .valuation-table tr.has-unsaved-values {
+    border-color: #e4b72f !important;
+    background: #fff8d7 !important;
+  }
+
   body.page-mis-valoraciones .valuation-table td {
     position: static !important;
     display: grid !important;
@@ -21978,17 +22461,26 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
     line-height: 1.15 !important;
   }
 
-  body.page-mis-valoraciones .valuation-general-badge {
+  body.page-mis-valoraciones .valuation-player-name-line {
+    align-items: flex-start !important;
+  }
+
+  body.page-mis-valoraciones .valuation-position-ratings {
     justify-self: end !important;
     margin-top: 0 !important;
+    justify-content: flex-end !important;
+  }
+
+  body.page-mis-valoraciones .valuation-position-rating {
+    min-height: 24px !important;
+    padding: 3px 5px !important;
     font-size: 0.72rem !important;
     line-height: 1.15 !important;
   }
 
-  body.page-mis-valoraciones .valuation-general-value {
-    min-width: 40px !important;
-    min-height: 26px !important;
-    font-size: 1rem !important;
+  body.page-mis-valoraciones .valuation-position-rating strong {
+    min-width: 20px !important;
+    font-size: 0.9rem !important;
   }
 
   body.page-mis-valoraciones .valuation-position-cell {
@@ -22005,6 +22497,28 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
     border: 1px solid #e3eee9 !important;
     border-radius: 7px !important;
     background: #f8fbfa !important;
+  }
+
+  body.page-mis-valoraciones .valuation-save-cell {
+    grid-column: 1 / -1 !important;
+    width: auto !important;
+  }
+
+  body.page-mis-valoraciones .valuation-save-cell::before {
+    content: none !important;
+  }
+
+  body.page-mis-valoraciones .valuation-row-save-button {
+    width: 100% !important;
+    height: 36px !important;
+    justify-self: stretch !important;
+    gap: 7px !important;
+    font-size: 0.82rem !important;
+    font-weight: 950 !important;
+  }
+
+  body.page-mis-valoraciones .valuation-row-save-button span {
+    display: inline !important;
   }
 
   body.page-mis-valoraciones .valuation-stepper {
@@ -22107,6 +22621,10 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
   body.page-mis-valoraciones .valuation-actions button {
     width: 100% !important;
     min-height: 38px !important;
+  }
+
+  body.page-mis-valoraciones .app-toast-stack {
+    bottom: 92px !important;
   }
 
   .finish-formation-pitch-preview {

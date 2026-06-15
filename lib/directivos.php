@@ -5,6 +5,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/awards.php';
 require_once __DIR__ . '/repository.php';
+require_once __DIR__ . '/schema.php';
 
 function ensure_directivos_schema(): void
 {
@@ -117,6 +118,7 @@ function ensure_directivos_schema(): void
             regularity TINYINT UNSIGNED NULL,
             goalkeeper_skill TINYINT UNSIGNED NULL,
             comments TEXT NULL,
+            manually_modified TINYINT(1) NOT NULL DEFAULT 0,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uniq_director_player_stat_vote (voter_id, player_id),
@@ -125,6 +127,9 @@ function ensure_directivos_schema(): void
             CONSTRAINT fk_director_player_stat_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+    if (!schema_column_exists($pdo, 'director_player_stat_votes', 'manually_modified')) {
+        $pdo->exec('ALTER TABLE director_player_stat_votes ADD COLUMN manually_modified TINYINT(1) NOT NULL DEFAULT 0 AFTER comments');
+    }
     ensure_default_directive_site_users();
 }
 
@@ -312,7 +317,7 @@ function director_player_stat_vote_progress(int $activePlayerCount): array
     $stmt = db()->query(
         'SELECT dm.id, dm.name, COUNT(p.id) AS voted_players
          FROM directive_members dm
-         LEFT JOIN director_player_stat_votes v ON v.voter_id = dm.id
+         LEFT JOIN director_player_stat_votes v ON v.voter_id = dm.id AND v.manually_modified = 1
          LEFT JOIN players p ON p.id = v.player_id AND p.active = 1
          WHERE dm.active = 1 AND dm.name NOT LIKE \'Invitado voto %\'
          GROUP BY dm.id, dm.name
@@ -346,7 +351,7 @@ function director_recalculate_player_stats(array $playerIds = []): void
         "SELECT v.player_id, $fieldSql
          FROM director_player_stat_votes v
          INNER JOIN players p ON p.id = v.player_id AND p.active = 1
-         WHERE 1=1$where
+         WHERE v.manually_modified = 1$where
          GROUP BY v.player_id"
     );
     $stmt->execute($params);
@@ -381,7 +386,7 @@ function director_recalculate_player_stats(array $playerIds = []): void
         $next = $player;
         foreach ($fields as $field) {
             if ($avg[$field] !== null) {
-                $next[$field] = director_internal_stat_from_0_99($avg[$field]);
+                $next[$field] = director_internal_stat_from_0_99((int) round((float) $avg[$field]));
             }
         }
         $skill = player_overall_rating($next);
@@ -410,43 +415,71 @@ function director_save_player_stat_votes(int $voterId, array $input): int
     }
     $fields = director_player_stat_fields();
     $players = repo_all_players(true);
+    $playersById = [];
+    foreach ($players as $player) {
+        $playersById[(int) $player['id']] = $player;
+    }
     $playerIds = array_map(static fn(array $player): int => (int) $player['id'], $players);
     $allowed = array_flip($playerIds);
+    $existingVotes = director_member_stat_votes($voterId);
     $pdo = db();
     $pdo->beginTransaction();
     $saved = 0;
+    $savedPlayerIds = [];
     try {
         $stmt = $pdo->prepare(
             'INSERT INTO director_player_stat_votes
-               (voter_id, player_id, attack, defense_physical, technique, rhythm, teamwork, mentality, regularity, goalkeeper_skill, comments)
+               (voter_id, player_id, attack, defense_physical, technique, rhythm, teamwork, mentality, regularity, goalkeeper_skill, comments, manually_modified)
              VALUES
-               (:voter_id, :player_id, :attack, :defense_physical, :technique, :rhythm, :teamwork, :mentality, :regularity, :goalkeeper_skill, :comments)
+               (:voter_id, :player_id, :attack, :defense_physical, :technique, :rhythm, :teamwork, :mentality, :regularity, :goalkeeper_skill, :comments, 1)
              ON DUPLICATE KEY UPDATE
                attack = VALUES(attack), defense_physical = VALUES(defense_physical), technique = VALUES(technique),
                rhythm = VALUES(rhythm), teamwork = VALUES(teamwork), mentality = VALUES(mentality),
                regularity = VALUES(regularity), goalkeeper_skill = VALUES(goalkeeper_skill),
-               comments = VALUES(comments), updated_at = CURRENT_TIMESTAMP'
+               comments = VALUES(comments), manually_modified = 1, updated_at = CURRENT_TIMESTAMP'
         );
         foreach ($input as $playerId => $row) {
             $pid = (int) $playerId;
             if (!isset($allowed[$pid]) || !is_array($row)) {
                 continue;
             }
+            $player = $playersById[$pid] ?? null;
+            if (!$player) {
+                continue;
+            }
+            $existingVote = $existingVotes[$pid] ?? null;
+            $existingManualVote = $existingVote && (int) ($existingVote['manually_modified'] ?? 0) === 1;
             $params = ['voter_id' => $voterId, 'player_id' => $pid, 'comments' => trim((string) ($row['comments'] ?? ''))];
             $hasValue = $params['comments'] !== '';
+            $hasChanges = $existingManualVote
+                ? $params['comments'] !== trim((string) ($existingVote['comments'] ?? ''))
+                : $params['comments'] !== '';
             foreach ($fields as $field) {
                 $params[$field] = director_clamp_stat_0_99($row[$field] ?? null);
                 if ($params[$field] !== null) {
                     $hasValue = true;
                 }
+                if ($existingManualVote) {
+                    $baseline = $existingVote[$field] !== null && $existingVote[$field] !== ''
+                        ? (int) $existingVote[$field]
+                        : null;
+                } else {
+                    $baseline = director_stat_0_99_from_internal(player_effective_stat($player, $field));
+                }
+                if ($params[$field] !== $baseline) {
+                    $hasChanges = true;
+                }
             }
-            if (!$hasValue) {
+            if (!$hasValue || !$hasChanges) {
                 continue;
             }
             $stmt->execute($params);
             $saved++;
+            $savedPlayerIds[] = $pid;
         }
-        director_recalculate_player_stats($playerIds);
+        if ($savedPlayerIds) {
+            director_recalculate_player_stats($savedPlayerIds);
+        }
         $pdo->commit();
         return $saved;
     } catch (Throwable $e) {
