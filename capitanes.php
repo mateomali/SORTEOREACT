@@ -495,7 +495,7 @@ ob_start();
     data-token="<?= h($captainToken) ?>"
     data-view-mode="<?= h($viewMode) ?>"
     data-admin-editor="<?= (!$isCaptainView && is_admin()) ? '1' : '0' ?>"
-    data-card-view="carta-compacta"
+    data-card-view="<?= $isCaptainView ? 'carta-compacta' : 'carta-stat' ?>"
   >
     <div class="captain-waiting-panel" id="captainWaitingPanel" hidden>
       <div class="captain-waiting-card" role="status" aria-live="polite">

@@ -948,14 +948,157 @@ function admin_render_match_scoreboard(array $match, array $teams, array $captai
         '</span>';
 }
 
+function admin_match_scoreboard_payload(array $match, array $teams, array $captainNames): array
+{
+    if (!$teams || !repo_match_has_saved_result($match, $teams)) {
+        return [];
+    }
+
+    $items = [];
+    foreach ($teams as $team) {
+        $label = admin_history_team_scoreboard_label($match, $team, $captainNames);
+        $items[] = [
+            'label' => $label,
+            'color' => admin_team_color_from_label($label),
+            'goals' => (int) ($team['goals'] ?? 0),
+        ];
+    }
+
+    return $items;
+}
+
+function admin_match_list_item_payload(
+    array $match,
+    int $matchIndex,
+    ?array $latestMatch,
+    ?int $focusedMatchId,
+    int $matchesPerPage,
+    array $historyTeamsByMatch,
+    array $historyCaptainNames,
+    array $historyRatingCounts,
+    array $historyAwardCounts,
+    array $rentalCourtsById,
+    string $matchFormPage
+): array {
+    $matchId = (int) $match['id'];
+    $historyTeams = $historyTeamsByMatch[$matchId] ?? [];
+    $hasSavedResult = repo_match_has_saved_result($match, $historyTeams);
+    $canFinalize = (string) $match['status'] === 'sorteado'
+        || ((string) $match['status'] === 'finalizado' && !$hasSavedResult);
+    $isFinalized = $hasSavedResult;
+    $isScheduled = (string) $match['status'] === 'programado';
+    $canEditFormation = $canFinalize && count($historyTeams) > 0;
+    $participantsCount = (int) $match['participants_count'];
+    $ratingStatus = $historyRatingCounts[$matchId] ?? ['player_count' => $participantsCount, 'rated_count' => 0];
+    $missingAwards = $isFinalized && (($historyAwardCounts[$matchId] ?? 0) === 0);
+    $missingRating = $isFinalized
+        && (int) $ratingStatus['player_count'] > 0
+        && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
+    $needsValuations = $missingAwards || $missingRating;
+    $playersPerTeam = (int) ($match['players_per_team'] ?? ((int) $match['participants_count'] / max(1, (int) $match['num_teams'])));
+    $expectedPlayers = (int) $match['num_teams'] * max(1, $playersPerTeam);
+    $matchCourt = $rentalCourtsById[(int) ($match['rental_court_id'] ?? 0)] ?? null;
+    $matchCourtLabel = admin_rental_court_label($matchCourt);
+    $captainSearch = [];
+    foreach ($historyTeams as $historyTeam) {
+        if (!empty($historyTeam['captain_player_id'])) {
+            $captainSearch[] = $historyCaptainNames[(int) $historyTeam['captain_player_id']] ?? '';
+        }
+    }
+    $title = (string) ($match['title'] ?: ('Fecha #' . $match['id']));
+    $scoreLine = admin_history_match_score_line($match, $historyTeams, $historyCaptainNames);
+    $searchText = implode(' ', array_filter([
+        $title,
+        (string) $match['id'],
+        date('d/m/Y', strtotime((string) $match['match_date'])),
+        date('Y-m-d', strtotime((string) $match['match_date'])),
+        date('d/m/Y H:i', strtotime((string) $match['match_date'])),
+        $matchCourtLabel,
+        admin_match_status_label((string) $match['status']),
+        implode(' ', $captainSearch),
+        $scoreLine,
+    ]));
+
+    return [
+        'id' => $matchId,
+        'title' => $title,
+        'dateLabel' => date('d/m/Y H:i', strtotime((string) $match['match_date'])),
+        'dateShort' => date('d/m/Y H:00', strtotime((string) $match['match_date'])),
+        'participantsCount' => $participantsCount,
+        'expectedPlayers' => $expectedPlayers,
+        'status' => (string) $match['status'],
+        'statusLabel' => admin_match_status_label((string) $match['status']),
+        'courtLabel' => $matchCourtLabel,
+        'missingAwards' => $missingAwards,
+        'missingRating' => $missingRating,
+        'needsValuations' => $needsValuations,
+        'canFinalize' => $canFinalize,
+        'isFinalized' => $isFinalized,
+        'isScheduled' => $isScheduled,
+        'canEditFormation' => $canEditFormation,
+        'isFocused' => $focusedMatchId === $matchId,
+        'isLatest' => $latestMatch && (int) $latestMatch['id'] === $matchId,
+        'page' => intdiv($matchIndex, $matchesPerPage) + 1,
+        'scoreLine' => $scoreLine,
+        'scoreboard' => admin_match_scoreboard_payload($match, $historyTeams, $historyCaptainNames),
+        'searchText' => mb_strtolower($searchText, 'UTF-8'),
+        'links' => [
+            'edit' => $matchFormPage . '?edit=' . $matchId,
+            'draw' => 'sorteo_legacy_csv.php?match_id=' . $matchId,
+            'captains' => 'capitanes.php?match_id=' . $matchId,
+            'manual' => 'equipos_manual.php?match_id=' . $matchId,
+            'formations' => 'finalizar_partido.php?match_id=' . $matchId . '&edit_formations=1#formaciones',
+            'finish' => 'finalizar_partido.php?match_id=' . $matchId . '&show_score=1#resultado',
+            'valuations' => 'finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones',
+            'view' => 'finalizar_partido.php?match_id=' . $matchId,
+        ],
+        'deleteConfirm' => $isScheduled
+            ? '¿Eliminar fecha y sus datos?'
+            : '¿Eliminar esta fecha? Se borrarán convocados, equipos, capitanes, puntajes, goles y premios asociados.',
+    ];
+}
+
 $scheduledCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'programado'));
 $readyCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'sorteado'));
 $finishedCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'finalizado'));
-
+$encounterMatchItems = [];
+foreach ($matches as $matchIndex => $matchRow) {
+    $encounterMatchItems[] = admin_match_list_item_payload(
+        $matchRow,
+        $matchIndex,
+        $latestMatch,
+        $focusedMatchId,
+        $matchesPerPage,
+        $historyTeamsByMatch,
+        $historyCaptainNames,
+        $historyRatingCounts,
+        $historyAwardCounts,
+        $rentalCourtsById,
+        $matchFormPage
+    );
+}
 $pageHeading = $showCreateSection && !$showEditSection ? 'Crear fecha' : 'Editar fechas';
 $pageDescription = $showCreateSection && !$showEditSection
     ? 'Carga una nueva fecha, define cupos y selecciona los jugadores convocados.'
     : 'Administra fechas cargadas, acciones disponibles, sorteo, capitanes y resultados.';
+$encuentrosReactPayload = [
+    'mode' => $showEditSection && !$showCreateSection ? 'edit' : 'legacy',
+    'heading' => $pageHeading,
+    'description' => $pageDescription,
+    'summary' => [
+        'scheduled' => $scheduledCount,
+        'ready' => $readyCount,
+        'finished' => $finishedCount,
+        'total' => $totalMatches,
+    ],
+    'matches' => $encounterMatchItems,
+    'latestId' => $latestMatch ? (int) $latestMatch['id'] : 0,
+    'pagination' => [
+        'currentPage' => $currentPage,
+        'totalPages' => $totalPages,
+        'perPage' => $matchesPerPage,
+    ],
+];
 $title = $pageHeading . ' | ' . APP_NAME;
 $activePage = $showCreateSection && !$showEditSection ? $matchFormPage : $matchListPage;
 $bodyClass = $showEditSection ? 'page-editar-partidos' : 'page-crear-partido';
@@ -1412,7 +1555,6 @@ ob_start();
             <?php endif; ?>
             <a class="btn btn-muted" href="finalizar_partido.php?match_id=<?= $latestId ?>">Ver resultado</a>
           <?php endif; ?>
-          <a class="btn btn-muted" href="exportar_fecha.php?match_id=<?= $latestId ?>&amp;mode=completo" data-no-partial>Exportar CSV</a>
         </div>
       </article>
   </section>
@@ -1533,7 +1675,6 @@ ob_start();
               <a class="btn btn-warning icon-dice" data-short="" href="sorteo_legacy_csv.php?match_id=<?= $matchId ?>">Sortear</a>
               <a class="btn btn-primary icon-captain" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="capitanes.php?match_id=<?= $matchId ?>">Capitanes</a>
               <a class="btn btn-muted" data-short="" href="equipos_manual.php?match_id=<?= $matchId ?>">Manual</a>
-              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=convocados" data-no-partial>CSV</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-pencil encounter-icon-action" data-short="" aria-label="Editar no disponible" title="Editar"></span>
               <span class="btn btn-disabled icon-dice" data-short=""><?= $canFinalize || $isFinalized ? 'Sorteado' : 'Sortear' ?></span>
@@ -1560,10 +1701,6 @@ ob_start();
               <a class="btn btn-muted" data-short="V" href="finalizar_partido.php?match_id=<?= $matchId ?>" title="Ver resultado">Ver</a>
             <?php else: ?>
               <span class="btn btn-disabled icon-finish" data-short="" title="Primero hay que generar equipos por sorteo o capitanes">Finalizar</span>
-            <?php endif; ?>
-
-            <?php if (!$isScheduled): ?>
-              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=completo" data-no-partial>CSV</a>
             <?php endif; ?>
 
             <?php if ($isScheduled): ?>
@@ -1610,9 +1747,6 @@ ob_start();
                 <a class="btn btn-muted" data-short="" href="finalizar_partido.php?match_id=<?= $matchId ?>">Ver resultado</a>
               <?php endif; ?>
 
-              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=completo" data-no-partial>Exportar completa CSV</a>
-              <a class="btn btn-muted" data-short="" href="exportar_fecha.php?match_id=<?= $matchId ?>&amp;mode=convocados" data-no-partial>Exportar convocados CSV</a>
-
               <form method="post">
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="id" value="<?= $matchId ?>">
@@ -1653,12 +1787,14 @@ ob_start();
 
 <?php
 $encuentrosPageHtml = trim(ob_get_clean());
+$encuentrosPagePayload = $encuentrosReactPayload;
+$encuentrosPagePayload['html'] = ($encuentrosReactPayload['mode'] === 'edit') ? '' : $encuentrosPageHtml;
 ?>
 <div
   data-react-root
   data-react-island="encuentros_page"
 >
-  <script type="application/json"><?= json_encode(['html' => $encuentrosPageHtml], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+  <script type="application/json"><?= json_encode($encuentrosPagePayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 </div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

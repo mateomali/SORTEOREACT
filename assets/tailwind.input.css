@@ -4310,10 +4310,10 @@
 
   .captain-editor-field {
     @apply relative grid w-full overflow-hidden rounded-xl border border-[#7fb89c] p-3 pt-10;
-    height: clamp(430px, 52vw, 560px);
+    height: clamp(560px, 64vw, 760px);
     min-height: 0;
     grid-template-rows: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+    gap: 12px;
     background:
       linear-gradient(180deg, rgba(5, 39, 25, 0.08), rgba(5, 39, 25, 0.22)),
       url("./images/captain-field-bg-vertical.jpg") center / cover no-repeat,
@@ -4372,7 +4372,7 @@
   }
 
   .captain-editor-line-players {
-    @apply col-start-2 flex h-full min-w-0 max-w-full flex-wrap content-center items-center justify-center gap-2 overflow-visible;
+    @apply col-start-2 flex h-full min-w-0 max-w-full flex-wrap content-center items-center justify-center gap-3 overflow-visible;
   }
 
   .captain-editor-player {
@@ -4445,9 +4445,9 @@
   @media (max-width: 760px) {
     .captain-editor-field {
       @apply px-1.5 py-2 pt-9;
-      height: clamp(450px, 118vw, 500px);
+      height: clamp(610px, 176vw, 720px);
       min-height: 0;
-      gap: 6px;
+      gap: 10px;
     }
 
     .captain-editor-line {
@@ -4472,7 +4472,7 @@
     }
 
     .captain-editor-line-players {
-      @apply gap-1;
+      @apply gap-2;
     }
 
     .captain-editor-player {
@@ -20399,12 +20399,50 @@ body.has-formation-card-preview {
   height: 7.5%;
 }
 
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta {
+  flex-basis: clamp(112px, 10.4vw, 132px);
+  width: clamp(112px, 10.4vw, 132px);
+  min-width: 112px;
+  max-width: 132px;
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .player-card-rating strong {
+  font-size: clamp(0.92rem, 1.08vw, 1.08rem);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-card-position {
+  font-size: clamp(0.46rem, 0.55vw, 0.55rem);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+  font-size: clamp(0.52rem, 0.66vw, 0.66rem);
+}
+
+body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta .formation-card-regularity {
+  min-width: 14px;
+}
+
 @media (max-width: 760px) {
+  body.page-capitanes .content .captain-editor-line.has-line-tools,
+  body.page-capitanes .content .captain-formation-line.is-defense-line.has-line-tools {
+    grid-template-columns: 34px minmax(0, 1fr) 30px;
+  }
+
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta {
+    flex-basis: clamp(92px, 28vw, 106px);
+    width: clamp(92px, 28vw, 106px);
+    min-width: 92px;
+    max-width: 106px;
+  }
+
+  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+    font-size: clamp(0.47rem, 1.45vw, 0.56rem);
+  }
+
   .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
-  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta,
-  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta {
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta {
     flex-basis: 86px;
     width: 86px;
     min-width: 86px;
@@ -20414,8 +20452,7 @@ body.has-formation-card-preview {
   .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
   body.page-index .content .home-captain-live-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
   body.page-index .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
-  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name,
-  body.page-capitanes .content .captain-formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
+  body.page-historial .content .match-history .public-teams .formation-player.formation-card-sin-stat.formation-card-compacta > .formation-player-name {
     font-size: 0.39rem;
   }
 }
@@ -21661,13 +21698,13 @@ body.page-index .content #homeMatchDetail .public-teams .line-players,
 
 /* Captain editor must keep the same pitch proportions as historial.php. */
 body.page-capitanes .content .captain-editor-field.captain-formation-field {
-  width: min(100%, 520px) !important;
-  height: clamp(455px, 54vw, 520px) !important;
+  width: min(100%, 720px) !important;
+  height: clamp(760px, 78vw, 920px) !important;
   min-height: 0 !important;
   margin-inline: auto !important;
-  padding: 10px 8px 8px !important;
+  padding: 14px 12px 12px !important;
   grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
-  gap: 5px !important;
+  gap: 10px !important;
   align-content: stretch !important;
 }
 
@@ -21690,7 +21727,7 @@ body.page-capitanes .content .captain-editor-field.captain-formation-field > .ca
 
 body.page-capitanes .content .captain-editor-field .captain-editor-line-players {
   min-height: 0 !important;
-  gap: 6px !important;
+  gap: 10px !important;
   flex-wrap: nowrap !important;
 }
 
@@ -21711,6 +21748,23 @@ body.page-capitanes .content .captain-editor-field .captain-editor-line.is-defen
 }
 
 body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
+  --formation-compact-card-width: 112px;
+}
+
+body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field.captain-formation-field {
+  width: min(100%, 520px) !important;
+  height: clamp(455px, 54vw, 520px) !important;
+  padding: 10px 8px 8px !important;
+  grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field .captain-editor-line-players {
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+}
+
+body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
   --formation-compact-card-width: 72px;
 }
 
@@ -21772,25 +21826,58 @@ body.page-sorteo-legacy .sorteo-react-page .formation-line.is-projected-defense 
   }
 
   body.page-capitanes .content .captain-editor-field.captain-formation-field {
-    width: min(100%, 496px) !important;
-    height: clamp(480px, 122vw, 560px) !important;
+    width: min(100%, 520px) !important;
+    height: clamp(820px, 220vw, 930px) !important;
     padding: 10px 8px 10px !important;
+    grid-template-rows: 0.8fr 1.75fr 1fr 1fr !important;
   }
 
   body.page-capitanes .content .captain-editor-line {
-    grid-template-columns: 34px minmax(0, 1fr) 34px !important;
+    grid-template-columns: 28px minmax(0, 1fr) 28px !important;
   }
 
   body.page-capitanes .content .captain-editor-line.is-defense-line {
-    grid-template-columns: 48px minmax(0, 1fr) 34px !important;
+    grid-template-columns: 38px minmax(0, 1fr) 28px !important;
   }
 
   body.page-capitanes .content .captain-editor-field .captain-editor-line-players {
-    gap: 4px !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
   }
 
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
+    --formation-compact-card-width: 92px;
+  }
+
+  body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field.captain-formation-field {
+    width: min(100%, 496px) !important;
+    height: clamp(480px, 122vw, 560px) !important;
+    padding: 10px 8px 10px !important;
+    grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-line {
+    grid-template-columns: 34px minmax(0, 1fr) 34px !important;
+  }
+
+  body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-line.is-defense-line {
+    grid-template-columns: 48px minmax(0, 1fr) 34px !important;
+  }
+
+  body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field .captain-editor-line-players {
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
     --formation-compact-card-width: 56px;
+  }
+
+  body.page-capitanes .content .captain-editor-field .formation-player.card-pro-relieve.formation-card-sin-stat:not(.formation-card-compacta) {
+    flex: 0 0 90px !important;
+    width: 90px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
   }
 
   .formation-line.is-projected-defense {
@@ -21818,13 +21905,32 @@ body.page-sorteo-legacy .sorteo-react-page .formation-line.is-projected-defense 
 }
 
 @media (max-width: 480px) {
+  body.page-capitanes .content .captain-editor-field .captain-editor-line-players {
+    gap: 4px !important;
+  }
+
+  body.page-capitanes .content .captain-editor-field .formation-player.card-pro-relieve.formation-card-sin-stat:not(.formation-card-compacta) {
+    flex-basis: 84px !important;
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px !important;
+  }
+
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
+    --formation-compact-card-width: 86px;
+  }
+
+  body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
     --formation-compact-card-width: 52px;
   }
 }
 
 @media (max-width: 370px) {
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
+    --formation-compact-card-width: 78px;
+  }
+
+  body.page-capitanes .content .captain-board[data-card-view="carta-compacta"] .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
     --formation-compact-card-width: 48px;
   }
 }

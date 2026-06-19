@@ -307,6 +307,88 @@ function captain_team_skill_totals(int $matchId): array
     return $totals;
 }
 
+function captain_pick_rule_current_teams(int $matchId, array $teamNumbers): array
+{
+    $teams = [];
+    foreach ($teamNumbers as $teamNumber) {
+        $teams[(int) $teamNumber] = [];
+    }
+
+    $stmt = db()->prepare(
+        'SELECT mp.team_number, p.*
+         FROM match_players mp
+         INNER JOIN players p ON p.id = mp.player_id
+         WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
+         ORDER BY mp.team_number ASC, p.name ASC'
+    );
+    $stmt->execute(['mid' => $matchId]);
+    foreach ($stmt->fetchAll() as $row) {
+        $teamNumber = (int) $row['team_number'];
+        if (!isset($teams[$teamNumber])) {
+            $teams[$teamNumber] = [];
+        }
+        $teams[$teamNumber][] = $row;
+    }
+
+    return $teams;
+}
+
+function captain_pick_rule_quality_options(int $matchId, array $pool, array $available, array $draft): array
+{
+    if (!$pool) {
+        return ['allowed_ids' => [], 'best_score' => null, 'score_margin' => 0.0];
+    }
+
+    $currentTeam = (int) ($draft['current_team'] ?? 0);
+    $teamNumbers = captain_numbers($draft);
+    $teamsByNumber = captain_pick_rule_current_teams($matchId, $teamNumbers);
+    $allPlayers = array_merge(
+        array_merge(...array_values($teamsByNumber ?: [[]])),
+        $available
+    );
+    $bands = draw_player_band_ids($allPlayers);
+    $options = [];
+
+    foreach ($pool as $player) {
+        $projected = $teamsByNumber;
+        $projected[$currentTeam] = $projected[$currentTeam] ?? [];
+        $projected[$currentTeam][] = $player;
+        $score = draw_teams_quality_score(array_values($projected), $bands);
+        $options[] = [
+            'id' => (int) $player['id'],
+            'score' => $score,
+            'rating' => player_overall_rating($player),
+        ];
+    }
+
+    usort($options, static function (array $a, array $b): int {
+        if (abs($a['score'] - $b['score']) > 0.0001) {
+            return $a['score'] <=> $b['score'];
+        }
+        if (abs($a['rating'] - $b['rating']) > 0.0001) {
+            return $a['rating'] <=> $b['rating'];
+        }
+        return $a['id'] <=> $b['id'];
+    });
+
+    $bestScore = (float) ($options[0]['score'] ?? 0.0);
+    $scoreMargin = max(18.0, min(75.0, abs($bestScore) * 0.08));
+    $minimumAllowed = min(count($options), max(1, min(3, (int) ceil(count($options) * 0.25))));
+    $allowedIds = [];
+
+    foreach ($options as $index => $option) {
+        if ($index < $minimumAllowed || (float) $option['score'] <= $bestScore + $scoreMargin) {
+            $allowedIds[] = (int) $option['id'];
+        }
+    }
+
+    return [
+        'allowed_ids' => array_values(array_unique($allowedIds)),
+        'best_score' => $bestScore,
+        'score_margin' => $scoreMargin,
+    ];
+}
+
 function captain_goalkeeper_counts(int $matchId): array
 {
     $stmt = db()->prepare(
@@ -404,81 +486,62 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
         $highestTotal = max($highestTotal, (float) ($totals[$teamNumber]['total_skill'] ?? 0.0));
     }
 
-    $margin = 1.0;
-    $allowedIds = [];
-    while ($margin <= 8.0 && !$allowedIds) {
-        foreach ($pool as $player) {
-            $projectedTotal = $currentTotal + player_overall_rating($player);
-            if ($projectedTotal <= $highestTotal + $margin) {
-                $allowedIds[] = (int) $player['id'];
-            }
-        }
-        if (!$allowedIds) {
-            $margin += 0.5;
-        }
-    }
-
-    if (!$allowedIds) {
-        $bestDistance = null;
-        foreach ($pool as $player) {
-            $projectedTotal = $currentTotal + player_overall_rating($player);
-            $distance = abs($projectedTotal - $highestTotal);
-            if ($bestDistance === null || $distance < $bestDistance) {
-                $bestDistance = $distance;
-                $allowedIds = [(int) $player['id']];
-            } elseif (abs($distance - $bestDistance) < 0.0001) {
-                $allowedIds[] = (int) $player['id'];
-            }
-        }
-    }
-
-    $maxProjectedTotal = $highestTotal + $margin;
+    $qualityOptions = captain_pick_rule_quality_options($matchId, $pool, $available, $draft);
+    $allowedIds = $qualityOptions['allowed_ids'];
+    $allowedLookup = array_flip($allowedIds);
+    $allowedRatings = array_map(
+        static fn(array $player): float => player_overall_rating($player),
+        array_values(array_filter($pool, static fn(array $player): bool => isset($allowedLookup[(int) $player['id']])))
+    );
+    $maxAllowedRating = $allowedRatings ? max($allowedRatings) : 0.0;
+    $maxProjectedTotal = $currentTotal + $maxAllowedRating;
+    $scoreMargin = (float) ($qualityOptions['score_margin'] ?? 0.0);
     if ($activePot === 'ARQ') {
         return [
             'active' => true,
             'enforced' => true,
-            'mode' => 'goalkeeper_balance',
+            'mode' => 'quality_balance',
             'active_pot' => $activePot,
             'reference_skill' => null,
             'current_total' => $currentTotal,
             'highest_total' => $highestTotal,
             'min_skill' => null,
             'max_skill' => max(0.0, $maxProjectedTotal - $currentTotal),
-            'range' => $margin,
+            'range' => $scoreMargin,
             'allowed_ids' => $allowedIds,
-            'message' => 'Tu equipo necesita arquero. Elegi un ARQ que mantenga la sumatoria cerca del equipo mas alto.',
+            'message' => 'Tu equipo necesita arquero. Elegi una opcion habilitada que mantenga mejor el balance general.',
         ];
     }
     if ($activePot === 'ARQ secundaria') {
         return [
             'active' => true,
             'enforced' => true,
-            'mode' => 'goalkeeper_balance',
+            'mode' => 'quality_balance',
             'active_pot' => $activePot,
             'reference_skill' => null,
             'current_total' => $currentTotal,
             'highest_total' => $highestTotal,
             'min_skill' => null,
             'max_skill' => max(0.0, $maxProjectedTotal - $currentTotal),
-            'range' => $margin,
+            'range' => $scoreMargin,
             'allowed_ids' => $allowedIds,
-            'message' => 'No quedan arqueros primarios. Elegi un jugador con ARQ secundaria que mantenga la sumatoria cerca del equipo mas alto.',
+            'message' => 'No quedan arqueros primarios. Elegi una opcion con ARQ secundaria que mantenga mejor el balance general.',
         ];
     }
 
     return [
         'active' => true,
         'enforced' => true,
-        'mode' => 'team_total_balance',
+        'mode' => 'quality_balance',
         'active_pot' => null,
         'reference_skill' => null,
         'current_total' => $currentTotal,
         'highest_total' => $highestTotal,
         'min_skill' => null,
         'max_skill' => max(0.0, $maxProjectedTotal - $currentTotal),
-        'range' => $margin,
+        'range' => $scoreMargin,
         'allowed_ids' => $allowedIds,
-        'message' => 'Equilibrio por sumatoria: elegi un jugador que deje a tu equipo hasta ' . number_format($maxProjectedTotal, 1) . ' puntos totales.',
+        'message' => 'Equilibrio integral: elegi una opcion habilitada por balance de equipo, lineas, stats y niveles.',
     ];
 }
 

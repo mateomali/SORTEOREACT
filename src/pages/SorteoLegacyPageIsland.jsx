@@ -4,6 +4,13 @@ import html2canvas from 'html2canvas';
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
 const PITCH_LINES = ['ARQ', 'DEF', 'MED', 'DEL'];
 const FIELD_LINES = ['DEF', 'LAT', 'MED', 'DEL'];
+const FORMATION_PRESETS = [
+  { value: 'custom', label: 'Personalizada' },
+  { value: 'balanced', label: 'Equilibrada' },
+  { value: 'defensive', label: 'Defensiva' },
+  { value: 'offensive', label: 'Ofensiva' },
+];
+const FORMATION_PRESET_VALUES = new Set(FORMATION_PRESETS.map((option) => option.value));
 const REQUIRED_FIELD_LINES = ['DEF', 'MED', 'DEL'];
 const POSITION_ORDER = { ARQ: 0, DEF: 1, LAT: 2, MED: 3, DEL: 4 };
 const POSITION_LABELS = { ARQ: 'Arquero', DEF: 'Defensa', LAT: 'Lateral', MED: 'Medio', DEL: 'Delantero' };
@@ -1327,7 +1334,7 @@ function chooseBestFormationVariant(variants = []) {
   return tied[Math.floor(Math.random() * tied.length)] || variants[0];
 }
 
-function getFormationOptions(teamSize) {
+function getFormationCandidates(teamSize) {
   const fieldPlayers = Math.max(0, teamSize - 1);
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
   const maxDefLat = maxDefLatPlayersPerPosition(teamSize);
@@ -1350,7 +1357,11 @@ function getFormationOptions(teamSize) {
       }
     }
   }
+  return candidates;
+}
 
+function getFormationOptions(teamSize) {
+  const candidates = getFormationCandidates(teamSize);
   const preferred = [];
   const addBest = (sorter) => {
     const option = candidates.slice().sort(sorter).find((item) => !preferred.some((selected) => selected.value === item.value));
@@ -1365,15 +1376,43 @@ function getFormationOptions(teamSize) {
   return preferred.slice(0, 4);
 }
 
+function getFormationPresetOptions(teamSize) {
+  const candidates = getFormationCandidates(teamSize);
+  if (!candidates.length) return [];
+  const pickBest = (sorter, used = new Set()) => candidates
+    .slice()
+    .sort(sorter)
+    .find((item) => !used.has(item.value)) || null;
+  const used = new Set();
+  const balanced = pickBest((a, b) => a.balance - b.balance || b.MED - a.MED || (b.DEF + b.LAT) - (a.DEF + a.LAT) || b.LAT - a.LAT, used);
+  if (balanced) used.add(balanced.value);
+  const defensive = pickBest((a, b) => (b.DEF + b.LAT) - (a.DEF + a.LAT) || a.balance - b.balance || b.MED - a.MED || a.DEL - b.DEL, used);
+  if (defensive) used.add(defensive.value);
+  const offensive = pickBest((a, b) => b.DEL - a.DEL || a.balance - b.balance || b.MED - a.MED || (a.DEF + a.LAT) - (b.DEF + b.LAT), used);
+  return [
+    { preset: 'balanced', formation: balanced },
+    { preset: 'defensive', formation: defensive },
+    { preset: 'offensive', formation: offensive },
+  ].filter((option) => option.formation);
+}
+
+function formationValueForPreset(teamSize, preset) {
+  return getFormationPresetOptions(teamSize).find((option) => option.preset === preset)?.formation?.value || '';
+}
+
 function formationValueFromCounts(counts = {}) {
   return `${Number(counts.DEF || 0)}-${Number(counts.LAT || 0)}-${Number(counts.MED || 0)}-${Number(counts.DEL || 0)}`;
 }
 
 function teamFormationSelectValue(team, currentAssignments, selectedValue, inferCurrent = false) {
-  if (selectedValue) return selectedValue;
+  if (selectedValue && FORMATION_PRESET_VALUES.has(selectedValue)) return selectedValue;
+  if (selectedValue && parseFormationValue(selectedValue)) {
+    const matchedPreset = getFormationPresetOptions(team.length).find((option) => option.formation.value === selectedValue);
+    return matchedPreset?.preset || 'custom';
+  }
   if (!inferCurrent) return 'auto';
   const value = formationValueFromCounts(teamLineCounts(team, currentAssignments));
-  return getFormationOptions(team.length).some((option) => option.value === value) ? value : 'custom';
+  return getFormationPresetOptions(team.length).find((option) => option.formation.value === value)?.preset || 'custom';
 }
 
 function parseFormationValue(value) {
@@ -2349,6 +2388,9 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const applyFormation = (teamIndex, value) => {
     if (!teams?.[teamIndex]) return;
+    const formationValue = FORMATION_PRESET_VALUES.has(value)
+      ? formationValueForPreset(teams[teamIndex].length, value)
+      : value;
     pushUndo(teamIndex);
     clearActiveFormationVariant(teamIndex);
     setTeamFormations((current) => ({ ...current, [teamIndex]: value }));
@@ -2358,7 +2400,8 @@ export function SorteoLegacyPageIsland({ root }) {
       return;
     }
     if (value === 'custom') return;
-    const nextAssignments = applyFormationToTeam(teams[teamIndex], value);
+    if (!formationValue) return;
+    const nextAssignments = applyFormationToTeam(teams[teamIndex], formationValue);
     setAssignments((current) => ({ ...current, ...nextAssignments, ...lockedPlayerPositions }));
   };
 
@@ -3300,9 +3343,15 @@ export function SorteoLegacyPageIsland({ root }) {
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
                             Formación
                             <select className={inputClass} value={formationSelectValue} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
-                              <option value="auto">Automática</option>
-                              {formationOptions.map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
-                              <option value="custom">Personalizada</option>
+                              {isFormationEditor ? (
+                                FORMATION_PRESETS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)
+                              ) : (
+                                <>
+                                  <option value="auto">Automática</option>
+                                  {formationOptions.map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
+                                  <option value="custom">Personalizada</option>
+                                </>
+                              )}
                             </select>
                           </label>
                         </div>
