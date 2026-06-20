@@ -31,14 +31,14 @@ const cardPalettes = {
   },
 };
 
-const statFields = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
+const statFields = ['technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 99]];
 const positionWeights = {
-  ARQ: { goalkeeper_skill: 0.42, defense_physical: 0.14, rhythm: 0.1, technique: 0.1, teamwork: 0.14, mentality: 0.1 },
-  DEF: { defense_physical: 0.28, rhythm: 0.2, technique: 0.18, teamwork: 0.13, mentality: 0.13, attack: 0.08 },
-  LAT: { rhythm: 0.24, defense_physical: 0.22, technique: 0.17, teamwork: 0.15, attack: 0.12, mentality: 0.1 },
-  DEL: { attack: 0.31, rhythm: 0.2, technique: 0.17, teamwork: 0.14, mentality: 0.1, defense_physical: 0.08 },
-  MED: { technique: 0.24, rhythm: 0.23, teamwork: 0.19, mentality: 0.13, defense_physical: 0.12, attack: 0.09 },
+  ARQ: { goalkeeper_skill: 0.36, defense_physical: 0.12, rhythm: 0.08, stamina: 0.08, technique: 0.08, pass_vision: 0.06, teamwork: 0.12, mentality: 0.10 },
+  DEF: { defense_physical: 0.25, stamina: 0.17, rhythm: 0.14, technique: 0.12, pass_vision: 0.10, teamwork: 0.10, mentality: 0.08, attack: 0.04 },
+  LAT: { rhythm: 0.20, defense_physical: 0.18, stamina: 0.16, pass_vision: 0.14, technique: 0.12, teamwork: 0.12, attack: 0.06, mentality: 0.02 },
+  DEL: { attack: 0.28, rhythm: 0.18, technique: 0.14, pass_vision: 0.10, teamwork: 0.10, stamina: 0.08, mentality: 0.08, defense_physical: 0.04 },
+  MED: { pass_vision: 0.22, technique: 0.18, teamwork: 0.16, rhythm: 0.14, stamina: 0.12, mentality: 0.10, defense_physical: 0.05, attack: 0.03 },
 };
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
@@ -221,7 +221,7 @@ function cardStatsForPosition(player, position) {
   return position === 'ARQ'
     ? [
         { label: 'ARQ', value: statValue('goalkeeper_skill') },
-        { label: 'RIT', value: statValue('rhythm') },
+        { label: 'VEL', value: statValue('rhythm') },
         { label: 'DEF', value: statValue('defense_physical') },
         { label: 'TEC', value: statValue('technique') },
         { label: 'EQU', value: statValue('teamwork') },
@@ -229,7 +229,7 @@ function cardStatsForPosition(player, position) {
       ]
     : [
         { label: 'TEC', value: statValue('technique') },
-        { label: 'RIT', value: statValue('rhythm') },
+        { label: 'VEL', value: statValue('rhythm') },
         { label: 'DEF', value: statValue('defense_physical') },
         { label: 'ATA', value: statValue('attack') },
         { label: 'EQU', value: statValue('teamwork') },
@@ -247,6 +247,14 @@ function playerForCardPosition(player, position) {
     cardStats: cardStatsForPosition(player, position),
     positionRatings: [{ position, overall }],
   };
+}
+
+function calculateOverallForPosition(overallValues, position) {
+  const weights = positionWeights[position] || positionWeights.MED;
+  let rating = Object.entries(weights).reduce((total, [field, weight]) => total + (sixFromOverall(overallValues[field] || 64) * weight), 0);
+  const regularity = sixFromOverall(overallValues.regularity || 74);
+  rating = Math.max(1, Math.min(6, rating * (1 + ((regularity - 3.5) / 50))));
+  return overallFromSix(Math.round(rating * 10) / 10);
 }
 
 function Arrow({ form }) {
@@ -580,17 +588,21 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
     || photoPosition.y !== initialPhotoPosition.y
     || photoPosition.zoom !== initialPhotoPosition.zoom;
 
-  const displayedOverall = useMemo(() => {
-    const weights = positionWeights[primary] || positionWeights.MED;
-    let rating = Object.entries(weights).reduce((total, [field, weight]) => total + (sixFromOverall(overallValues[field] || 64) * weight), 0);
-    const regularity = sixFromOverall(overallValues.regularity || 74);
-    rating = Math.max(1, Math.min(6, rating * (1 + ((regularity - 3.5) / 50))));
-    return overallFromSix(Math.round(rating * 10) / 10);
-  }, [overallValues, primary]);
+  const previewPositionRatings = useMemo(() => {
+    const positionsToRate = [primary, secondary].filter(Boolean);
+    return positionsToRate.map((position) => ({
+      position,
+      overall: calculateOverallForPosition(overallValues, position),
+    }));
+  }, [overallValues, primary, secondary]);
+  const displayedOverall = previewPositionRatings[0]?.overall || calculateOverallForPosition(overallValues, primary || 'MED');
 
   useEffect(() => {
-    onOverallPreviewChange?.(player.id, displayedOverall);
-  }, [displayedOverall, onOverallPreviewChange, player.id]);
+    onOverallPreviewChange?.(player.id, {
+      value: displayedOverall,
+      positionRatings: previewPositionRatings,
+    });
+  }, [displayedOverall, onOverallPreviewChange, player.id, previewPositionRatings]);
 
   useEffect(() => {
     if (!hasPreviewPhoto) return;
@@ -826,8 +838,9 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   );
 }
 
-function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overallValue, onOverallPreviewChange }) {
+function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, positionRatingsPreview, onOverallPreviewChange }) {
   if (!player) return null;
+  const headerRatings = positionRatingsPreview?.length ? positionRatingsPreview : player.positionRatings;
   return (
     <>
       <button className="fixed inset-0 z-40 block bg-black/55" type="button" aria-label="Cerrar ficha" onClick={onClose} />
@@ -837,7 +850,7 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overall
             <h2 className="m-0 truncate text-xl font-black text-[#07130f]">{player.name}</h2>
             <p className="m-0 mt-1 text-sm font-semibold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'}</p>
           </div>
-          <PositionRatingSummary ratings={player.positionRatings} />
+          <PositionRatingSummary ratings={headerRatings} />
           <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar ficha">x</button>
         </header>
         <div className="grid gap-4 overflow-auto p-4">
@@ -941,10 +954,18 @@ export function Jugadores2PageIsland({ root }) {
     setModalOverall(null);
   }, []);
 
-  const handleOverallPreviewChange = useCallback((playerId, value) => {
+  const handleOverallPreviewChange = useCallback((playerId, preview) => {
     const id = String(playerId);
+    const value = typeof preview === 'object' && preview !== null ? preview.value : preview;
+    const positionRatings = typeof preview === 'object' && preview !== null && Array.isArray(preview.positionRatings)
+      ? preview.positionRatings
+      : [];
     setModalOverall((current) => (
-      current?.id === id && current.value === value ? current : { id, value }
+      current?.id === id
+        && current.value === value
+        && JSON.stringify(current.positionRatings || []) === JSON.stringify(positionRatings)
+        ? current
+        : { id, value, positionRatings }
     ));
   }, []);
 
@@ -966,7 +987,7 @@ export function Jugadores2PageIsland({ root }) {
   const activePlayer = payload.players.find((player) => String(player.id) === String(activeId)) || null;
   const cardPlayer = payload.players.find((player) => String(player.id) === String(cardId)) || null;
   const radarPlayer = payload.players.find((player) => String(player.id) === String(radarId)) || null;
-  const activeOverall = activePlayer && modalOverall?.id === String(activePlayer.id) ? modalOverall.value : activePlayer?.overall;
+  const activePositionRatings = activePlayer && modalOverall?.id === String(activePlayer.id) ? modalOverall.positionRatings : null;
 
   return (
     <div className="grid gap-4">
@@ -1078,7 +1099,7 @@ export function Jugadores2PageIsland({ root }) {
       </section>
 
       <CardPreviewModal player={cardPlayer} onClose={() => setCardId(null)} />
-      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} overallValue={activeOverall} onOverallPreviewChange={handleOverallPreviewChange} />
+      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} positionRatingsPreview={activePositionRatings} onOverallPreviewChange={handleOverallPreviewChange} />
       <RadarOverlay player={radarPlayer} onClose={() => setRadarId(null)} />
     </div>
   );

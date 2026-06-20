@@ -18,7 +18,7 @@ module.exports = defineConfig({
           return null;
         },
         entryFileNames: 'react-app.js',
-        chunkFileNames: 'react-[name].js',
+        chunkFileNames: 'react-[name]-[hash].js',
         assetFileNames: 'react-[name][extname]',
       },
     },

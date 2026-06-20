@@ -37,12 +37,17 @@ function import_players_from_csv(string $csvPath): array
     $map = array_map(static fn($v) => strtolower(trim((string) $v)), $header);
     $nameIdx = array_search('nombre', $map, true);
     $posIdx = array_search('posicion', $map, true);
-    $paceIdx = array_search('ritmo', $map, true);
+    $paceIdx = array_search('velocidad', $map, true);
+    if ($paceIdx === false) {
+        $paceIdx = array_search('ritmo', $map, true);
+    }
     $scoreIdx = array_search('puntuacion', $map, true);
     $activeIdx = array_search('activo', $map, true);
     $statIndexes = [
         'technique' => array_search('tecnica', $map, true),
-        'rhythm' => array_search('ritmo_numero', $map, true),
+        'pass_vision' => array_search('pase_vision', $map, true),
+        'rhythm' => array_search('velocidad_numero', $map, true),
+        'stamina' => array_search('ida_y_vuelta', $map, true),
         'defense_physical' => array_search('defensa_fisico', $map, true),
         'attack' => array_search('ataque', $map, true),
         'teamwork' => array_search('juego_en_equipo', $map, true),
@@ -50,6 +55,9 @@ function import_players_from_csv(string $csvPath): array
         'regularity' => array_search('regularidad', $map, true),
         'goalkeeper_skill' => array_search('arquero', $map, true),
     ];
+    if ($statIndexes['rhythm'] === false) {
+        $statIndexes['rhythm'] = array_search('ritmo_numero', $map, true);
+    }
 
     if ($nameIdx === false || $posIdx === false || $paceIdx === false || $scoreIdx === false) {
         return [0, 0, count($rows)];
@@ -73,7 +81,9 @@ function import_players_from_csv(string $csvPath): array
 
             $stats = [
                 'technique' => null,
+                'pass_vision' => null,
                 'rhythm' => null,
+                'stamina' => null,
                 'defense_physical' => null,
                 'attack' => null,
                 'teamwork' => 3.0,
@@ -94,7 +104,9 @@ function import_players_from_csv(string $csvPath): array
             $ratingPlayer = [
                 'positions' => $positions,
                 'technique' => $stats['technique'] ?? $skill,
+                'pass_vision' => $stats['pass_vision'] ?? ($stats['technique'] ?? $skill),
                 'rhythm' => $stats['rhythm'] ?? $skill,
+                'stamina' => $stats['stamina'] ?? ($stats['rhythm'] ?? $skill),
                 'defense_physical' => $stats['defense_physical'] ?? $skill,
                 'attack' => $stats['attack'] ?? $skill,
                 'teamwork' => $stats['teamwork'] ?? 3.0,
@@ -115,7 +127,7 @@ function import_players_from_csv(string $csvPath): array
                     $update = $pdo->prepare(
                         'UPDATE players
                          SET positions = :positions, pace = :pace, skill = :skill,
-                             technique = :technique, rhythm = :rhythm, defense_physical = :defense_physical,
+                             technique = :technique, pass_vision = :pass_vision, rhythm = :rhythm, stamina = :stamina, defense_physical = :defense_physical,
                              attack = :attack, teamwork = :teamwork, mentality = :mentality,
                              regularity = :regularity, goalkeeper_skill = :goalkeeper_skill,
                              active = :active
@@ -126,13 +138,15 @@ function import_players_from_csv(string $csvPath): array
                         'positions' => $positions,
                         'pace' => $pace,
                         'skill' => $skill,
-                        'technique' => $stats['technique'],
-                        'rhythm' => $stats['rhythm'],
-                        'defense_physical' => $stats['defense_physical'],
-                        'attack' => $stats['attack'],
-                        'teamwork' => $stats['teamwork'],
-                        'mentality' => $stats['mentality'],
-                        'regularity' => $stats['regularity'],
+                        'technique' => $ratingPlayer['technique'],
+                        'pass_vision' => $ratingPlayer['pass_vision'],
+                        'rhythm' => $ratingPlayer['rhythm'],
+                        'stamina' => $ratingPlayer['stamina'],
+                        'defense_physical' => $ratingPlayer['defense_physical'],
+                        'attack' => $ratingPlayer['attack'],
+                        'teamwork' => $ratingPlayer['teamwork'],
+                        'mentality' => $ratingPlayer['mentality'],
+                        'regularity' => $ratingPlayer['regularity'],
                         'goalkeeper_skill' => $stats['goalkeeper_skill'],
                         'active' => $active,
                     ]);
@@ -154,22 +168,24 @@ function import_players_from_csv(string $csvPath): array
             } else {
                 $insert = $pdo->prepare(
                     'INSERT INTO players
-                       (name, positions, pace, skill, technique, rhythm, defense_physical, attack, teamwork, mentality, regularity, goalkeeper_skill, active)
+                       (name, positions, pace, skill, technique, pass_vision, rhythm, stamina, defense_physical, attack, teamwork, mentality, regularity, goalkeeper_skill, active)
                      VALUES
-                       (:name, :positions, :pace, :skill, :technique, :rhythm, :defense_physical, :attack, :teamwork, :mentality, :regularity, :goalkeeper_skill, :active)'
+                       (:name, :positions, :pace, :skill, :technique, :pass_vision, :rhythm, :stamina, :defense_physical, :attack, :teamwork, :mentality, :regularity, :goalkeeper_skill, :active)'
                 );
                 $insert->execute([
                     'name' => $name,
                     'positions' => $positions,
                     'pace' => $pace,
                     'skill' => $skill,
-                    'technique' => $stats['technique'],
-                    'rhythm' => $stats['rhythm'],
-                    'defense_physical' => $stats['defense_physical'],
-                    'attack' => $stats['attack'],
-                    'teamwork' => $stats['teamwork'],
-                    'mentality' => $stats['mentality'],
-                    'regularity' => $stats['regularity'],
+                    'technique' => $ratingPlayer['technique'],
+                    'pass_vision' => $ratingPlayer['pass_vision'],
+                    'rhythm' => $ratingPlayer['rhythm'],
+                    'stamina' => $ratingPlayer['stamina'],
+                    'defense_physical' => $ratingPlayer['defense_physical'],
+                    'attack' => $ratingPlayer['attack'],
+                    'teamwork' => $ratingPlayer['teamwork'],
+                    'mentality' => $ratingPlayer['mentality'],
+                    'regularity' => $ratingPlayer['regularity'],
                     'goalkeeper_skill' => $stats['goalkeeper_skill'],
                     'active' => $active,
                 ]);
@@ -193,7 +209,7 @@ function csv_rating(float $value): string
 function export_players_csv(): void
 {
     $players = db()->query(
-        'SELECT id, name, positions, pace, skill, technique, rhythm, defense_physical,
+        'SELECT id, name, positions, pace, skill, technique, pass_vision, rhythm, stamina, defense_physical,
                 attack, teamwork, mentality, regularity, goalkeeper_skill, active,
                 created_at, updated_at
          FROM players
@@ -219,11 +235,13 @@ function export_players_csv(): void
         'id',
         'nombre',
         'posicion',
-        'ritmo',
+        'velocidad',
         'promedio_general',
         'puntuacion',
         'tecnica',
-        'ritmo_numero',
+        'pase_vision',
+        'velocidad_numero',
+        'ida_y_vuelta',
         'defensa_fisico',
         'ataque',
         'juego_en_equipo',
@@ -246,7 +264,9 @@ function export_players_csv(): void
             csv_rating(player_overall_rating($player)),
             csv_rating((float) $player['skill']),
             csv_rating(player_effective_stat($player, 'technique')),
+            csv_rating(player_effective_stat($player, 'pass_vision')),
             csv_rating(player_effective_stat($player, 'rhythm')),
+            csv_rating(player_effective_stat($player, 'stamina')),
             csv_rating(player_effective_stat($player, 'defense_physical')),
             csv_rating(player_effective_stat($player, 'attack')),
             csv_rating(player_effective_stat($player, 'teamwork')),

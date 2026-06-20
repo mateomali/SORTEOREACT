@@ -20,7 +20,9 @@ function test_player(int $id, string $name, string $positions, float $skill, arr
         'pace' => 'rapido',
         'skill' => $skill,
         'technique' => $skill,
+        'pass_vision' => $skill,
         'rhythm' => $skill,
+        'stamina' => $skill,
         'defense_physical' => $skill,
         'attack' => $skill,
         'teamwork' => $skill,
@@ -97,6 +99,8 @@ $customWeights = player_normalize_position_stat_weights([
         'rhythm' => 0.25,
         'teamwork' => 0,
         'mentality' => 0,
+        'stamina' => 0,
+        'pass_vision' => 0,
         'defense_physical' => 0,
         'attack' => 0,
         'ignored_field' => 99,
@@ -111,6 +115,17 @@ assert_true(!isset($customWeights['BAD']), 'Las posiciones no soportadas no debe
 foreach (player_position_stat_weight_defaults() as $position => $_weights) {
     assert_true(abs(array_sum($customWeights[$position]) - 1.0) < 0.001, "Los pesos {$position} deben sumar 1.");
 }
+
+$secondaryForward = test_player(80, 'Secundario', 'MED/DEL', 4.0);
+$adaptedForward = test_player(81, 'Adaptado', 'DEF', 4.0);
+assert_true(
+    player_position_rating($secondaryForward, 'DEL', true) > player_position_rating($secondaryForward, 'DEL'),
+    'En cancha chica no se debe bajar puntaje por posicion secundaria.'
+);
+assert_true(
+    player_position_rating($adaptedForward, 'MED', true) > player_position_rating($adaptedForward, 'MED'),
+    'En cancha chica no se debe bajar puntaje por adaptacion de linea.'
+);
 
 $threeTeamPlayers = [
     test_player(101, 'Arquero 1', 'ARQ', 4.4, ['goalkeeper_skill' => 5.2]),

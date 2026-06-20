@@ -17,12 +17,32 @@ const POSITION_LABELS = { ARQ: 'Arquero', DEF: 'Defensa', LAT: 'Lateral', MED: '
 const ANALYSIS_FIELDS = [
   ['ataque', 'Ataque'],
   ['solidez', 'Solidez'],
-  ['ritmo', 'Ritmo'],
+  ['ritmo', 'Velocidad'],
+  ['resistencia', 'Ida y vuelta'],
+  ['pase_vision', 'Pase/Vision'],
   ['tecnica', 'Tecnica'],
   ['compromiso', 'Equipo'],
   ['mentalidad', 'Mentalidad'],
   ['regularidad', 'Regularidad'],
   ['arquero', 'Arquero'],
+];
+const TEAM_RADAR_FIELDS = [
+  ['ataque', 'ATA'],
+  ['solidez', 'SOL'],
+  ['ritmo', 'VEL'],
+  ['resistencia', 'IDV'],
+  ['pase_vision', 'PAS'],
+  ['tecnica', 'TEC'],
+  ['compromiso', 'EQU'],
+  ['mentalidad', 'MEN'],
+];
+const MANUAL_COMPARISON_FIELDS = [
+  ['total', 'Total'],
+  ['ataque', 'Ataque'],
+  ['pase_vision', 'Pase/Vision'],
+  ['ritmo', 'Velocidad'],
+  ['resistencia', 'Ida y vuelta'],
+  ['lineas', 'Lineas'],
 ];
 const TIER_BALANCE_WEIGHTS = { bronze: 35, silver: 45, gold: 70, elite: 110, supreme: 150 };
 const TIER_LABELS = { bronze: 'Bronze', silver: 'Plata', gold: 'Oro', elite: 'Elite', supreme: 'Platinum' };
@@ -91,11 +111,11 @@ const teamColorOptions = [
 ];
 
 const positionWeights = {
-  ARQ: { habilidad_arquero: 0.42, solidez: 0.14, ritmo_stat: 0.1, tecnica: 0.1, compromiso: 0.14, mentalidad: 0.1 },
-  DEF: { solidez: 0.28, ritmo_stat: 0.2, tecnica: 0.18, compromiso: 0.13, mentalidad: 0.13, ataque: 0.08 },
-  LAT: { ritmo_stat: 0.24, solidez: 0.22, tecnica: 0.17, compromiso: 0.15, ataque: 0.12, mentalidad: 0.1 },
-  DEL: { ataque: 0.31, ritmo_stat: 0.2, tecnica: 0.17, compromiso: 0.14, mentalidad: 0.1, solidez: 0.08 },
-  MED: { tecnica: 0.24, ritmo_stat: 0.23, compromiso: 0.19, mentalidad: 0.13, solidez: 0.12, ataque: 0.09 },
+  ARQ: { habilidad_arquero: 0.36, solidez: 0.12, ritmo_stat: 0.08, resistencia: 0.08, tecnica: 0.08, pase_vision: 0.06, compromiso: 0.12, mentalidad: 0.1 },
+  DEF: { solidez: 0.25, resistencia: 0.17, ritmo_stat: 0.14, tecnica: 0.12, pase_vision: 0.1, compromiso: 0.1, mentalidad: 0.08, ataque: 0.04 },
+  LAT: { ritmo_stat: 0.2, solidez: 0.18, resistencia: 0.16, pase_vision: 0.14, tecnica: 0.12, compromiso: 0.12, ataque: 0.06, mentalidad: 0.02 },
+  DEL: { ataque: 0.28, ritmo_stat: 0.18, tecnica: 0.14, pase_vision: 0.1, compromiso: 0.1, resistencia: 0.08, mentalidad: 0.08, solidez: 0.04 },
+  MED: { pase_vision: 0.22, tecnica: 0.18, compromiso: 0.16, ritmo_stat: 0.14, resistencia: 0.12, mentalidad: 0.1, solidez: 0.05, ataque: 0.03 },
 };
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
@@ -221,6 +241,7 @@ function playerPhotoPositionStyle(player) {
 function normalizePlayer(raw, index) {
   const baseRating = normalizeSix(raw.puntuacion ?? raw.rating ?? raw.overall, 3);
   const ritmoStat = normalizeSix(raw.ritmo_stat ?? raw.rhythm, normalizePace(raw.ritmo ?? raw.pace) === 'lento' ? 2 : 4);
+  const resistencia = normalizeSix(raw.resistencia ?? raw.stamina, ritmoStat);
   const photoPath = String(raw.photo_path || '');
   const safePhoto = photoPath.startsWith('uploads/players/') && !photoPath.includes('..')
     ? photoPath
@@ -233,7 +254,9 @@ function normalizePlayer(raw, index) {
     ritmo: normalizePace(raw.ritmo || raw.pace),
     puntuacion: baseRating,
     tecnica: normalizeSix(raw.tecnica ?? raw.technique, baseRating),
+    pase_vision: normalizeSix(raw.pase_vision ?? raw.pass_vision, normalizeSix(raw.tecnica ?? raw.technique, baseRating)),
     ritmo_stat: ritmoStat,
+    resistencia,
     solidez: normalizeSix(raw.solidez ?? raw.defense_physical, baseRating),
     ataque: normalizeSix(raw.ataque ?? raw.attack, baseRating),
     compromiso: normalizeSix(raw.compromiso ?? raw.teamwork, baseRating),
@@ -289,7 +312,8 @@ function pitchLineForPosition(position) {
   return String(position || '').toUpperCase() === 'LAT' ? 'DEF' : String(position || '').toUpperCase();
 }
 
-function positionFitFactor(player, assignedPosition) {
+function positionFitFactor(player, assignedPosition, ignorePositionFit = false) {
+  if (ignorePositionFit) return 1;
   const position = String(assignedPosition || '').toUpperCase();
   if (!position) return 1;
   const naturalPositions = getOrderedPlayerPositions(player);
@@ -348,6 +372,12 @@ function statValue(player, field) {
   return normalizeSix(player?.[field], fallback);
 }
 
+function balanceStatValue(player, field) {
+  if (field === 'ritmo') return statValue(player, 'ritmo_stat');
+  if (field === 'arquero') return statValue(player, 'habilidad_arquero');
+  return statValue(player, field);
+}
+
 function isLowRhythmPlayer(player) {
   return statValue(player, 'ritmo_stat') <= 3;
 }
@@ -375,13 +405,20 @@ function positionBaseRating(player, assignedPosition) {
   return Object.entries(weights).reduce((total, [field, weight]) => total + (statValue(player, field) * weight), 0);
 }
 
-function adjustedPositionRating(player, assignedPosition) {
+function adjustedPositionRating(player, assignedPosition, options = {}) {
   const position = String(assignedPosition || getPrimaryPlayerPosition(player)).toUpperCase();
-  const positionalRating = applyRegularityAdjustment(positionBaseRating(player, position), player) * positionFitFactor(player, position);
+  const positionalRating = applyRegularityAdjustment(positionBaseRating(player, position), player) * positionFitFactor(player, position, options.ignorePositionFit === true);
   return Math.max(1, Math.min(6, positionalRating + historicalResultAdjustment(player)));
 }
 
-function positionPenaltyPercent(player, assignedPosition) {
+function adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize) {
+  const size = Number(teamSize || 0);
+  return adjustedPositionRating(player, assignedPosition, { ignorePositionFit: size > 0 && size < 7 });
+}
+
+function positionPenaltyPercent(player, assignedPosition, teamSize = null) {
+  const size = Number(teamSize || 0);
+  if (size > 0 && size < 7) return 0;
   const position = String(assignedPosition || '').toUpperCase();
   if (!position || getOrderedPlayerPositions(player).includes(position)) return 0;
   const general = bestNaturalPlayerRating(player);
@@ -458,7 +495,7 @@ function playerCardStats(player, assignedPosition) {
   if (String(assignedPosition || '').toUpperCase() === 'ARQ') {
     return [
       { label: 'ARQ', value: playerCardRating(statValue(player, 'habilidad_arquero')) },
-      { label: 'RIT', value: playerCardRating(statValue(player, 'ritmo_stat')) },
+      { label: 'VEL', value: playerCardRating(statValue(player, 'ritmo_stat')) },
       { label: 'DEF', value: playerCardRating(statValue(player, 'solidez')) },
       { label: 'TEC', value: playerCardRating(statValue(player, 'tecnica')) },
       { label: 'EQU', value: playerCardRating(statValue(player, 'compromiso')) },
@@ -467,7 +504,7 @@ function playerCardStats(player, assignedPosition) {
   }
   return [
     { label: 'TEC', value: playerCardRating(statValue(player, 'tecnica')) },
-    { label: 'RIT', value: playerCardRating(statValue(player, 'ritmo_stat')) },
+    { label: 'VEL', value: playerCardRating(statValue(player, 'ritmo_stat')) },
     { label: 'DEF', value: playerCardRating(statValue(player, 'solidez')) },
     { label: 'ATA', value: playerCardRating(statValue(player, 'ataque')) },
     { label: 'EQU', value: playerCardRating(statValue(player, 'compromiso')) },
@@ -475,11 +512,11 @@ function playerCardStats(player, assignedPosition) {
   ];
 }
 
-function playerPositionRatings(player, assignedPosition = '') {
+function playerPositionRatings(player, assignedPosition = '', teamSize = null) {
   const natural = getOrderedPlayerPositions(player);
   const positions = Array.from(new Set([...natural, String(assignedPosition || '').toUpperCase()].filter((position) => FORMATION_LINES.includes(position))));
   return positions
-    .map((position) => ({ position, value: playerCardRating(adjustedPositionRating(player, position)), natural: natural.includes(position) }))
+    .map((position) => ({ position, value: playerCardRating(adjustedPositionRatingForTeamSize(player, position, teamSize)), natural: natural.includes(position) }))
     .sort((left, right) => right.value - left.value || POSITION_ORDER[left.position] - POSITION_ORDER[right.position]);
 }
 
@@ -684,6 +721,7 @@ function normalizeAssignments(assignments) {
 
 function buildTeamAssignment(team, assignmentOverrides = {}) {
   const assignment = {};
+  const teamSize = team.length;
   team.forEach((player) => {
     const key = playerKey(player);
     const override = String(assignmentOverrides[key] || '').toUpperCase();
@@ -699,7 +737,7 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
       if (aCan !== bCan) return aCan ? -1 : 1;
       const priorityDiff = goalkeeperSortValue(a) - goalkeeperSortValue(b);
       if (priorityDiff) return priorityDiff;
-      return adjustedPositionRating(b, 'ARQ') - adjustedPositionRating(a, 'ARQ');
+      return adjustedPositionRatingForTeamSize(b, 'ARQ', teamSize) - adjustedPositionRatingForTeamSize(a, 'ARQ', teamSize);
     })
     .slice(0, 1);
   goalkeeperCandidates.forEach((goalkeeper) => {
@@ -724,7 +762,7 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
             const currentLine = pitchLineForPosition(assignment[playerKey(player)]);
             return currentLine !== line && (counts[currentLine] || 0) > fieldLineMinimum(currentLine, team.length);
           })
-          .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
+          .sort((a, b) => adjustedPositionRatingForTeamSize(b, line, teamSize) - adjustedPositionRatingForTeamSize(a, line, teamSize))[0];
         if (!candidate) break;
         assignment[playerKey(candidate)] = line;
       }
@@ -749,10 +787,10 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
         .sort((a, b) => {
           const currentA = assignment[playerKey(a)] || getPrimaryPlayerPosition(a);
           const currentB = assignment[playerKey(b)] || getPrimaryPlayerPosition(b);
-          const lossA = adjustedPositionRating(a, currentA) - adjustedPositionRating(a, line);
-          const lossB = adjustedPositionRating(b, currentB) - adjustedPositionRating(b, line);
+          const lossA = adjustedPositionRatingForTeamSize(a, currentA, teamSize) - adjustedPositionRatingForTeamSize(a, line, teamSize);
+          const lossB = adjustedPositionRatingForTeamSize(b, currentB, teamSize) - adjustedPositionRatingForTeamSize(b, line, teamSize);
           if (Math.abs(lossA - lossB) > 0.0001) return lossA - lossB;
-          return adjustedPositionRating(b, line) - adjustedPositionRating(a, line);
+          return adjustedPositionRatingForTeamSize(b, line, teamSize) - adjustedPositionRatingForTeamSize(a, line, teamSize);
         })[0];
       if (!candidate) break;
       assignment[playerKey(candidate)] = line;
@@ -783,8 +821,8 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
       .sort((a, b) => {
         const assignedA = assignment[playerKey(a)];
         const assignedB = assignment[playerKey(b)];
-        const lossA = adjustedPositionRating(a, assignedA) - adjustedPositionRating(a, targetLine);
-        const lossB = adjustedPositionRating(b, assignedB) - adjustedPositionRating(b, targetLine);
+        const lossA = adjustedPositionRatingForTeamSize(a, assignedA, teamSize) - adjustedPositionRatingForTeamSize(a, targetLine, teamSize);
+        const lossB = adjustedPositionRatingForTeamSize(b, assignedB, teamSize) - adjustedPositionRatingForTeamSize(b, targetLine, teamSize);
         return lossA - lossB;
       })[0];
     if (!candidate) break;
@@ -825,7 +863,7 @@ function normalizeCompactDefenseAssignments(team, assignments = {}) {
 
 function teamScore(team, assignmentOverrides = {}) {
   const assignments = buildTeamAssignment(team, assignmentOverrides);
-  return team.reduce((sum, player) => sum + adjustedPositionRating(player, assignments[playerKey(player)]), 0);
+  return team.reduce((sum, player) => sum + adjustedPositionRatingForTeamSize(player, assignments[playerKey(player)], team.length), 0);
 }
 
 function teamTotalsSummary(team, assignmentOverrides = {}) {
@@ -835,14 +873,30 @@ function teamTotalsSummary(team, assignmentOverrides = {}) {
     ataque: average(team, 'ataque'),
     solidez: average(team, 'solidez'),
     ritmo: average(team, 'ritmo_stat'),
+    resistencia: average(team, 'resistencia'),
+    pase_vision: average(team, 'pase_vision'),
     tecnica: average(team, 'tecnica'),
     compromiso: average(team, 'compromiso'),
     mentalidad: average(team, 'mentalidad'),
     regularidad: average(team, 'regularidad'),
     arquero: team.reduce((max, player) => {
       const assigned = assignments[playerKey(player)];
-      return assigned === 'ARQ' ? Math.max(max, adjustedPositionRating(player, 'ARQ')) : max;
+      return assigned === 'ARQ' ? Math.max(max, adjustedPositionRatingForTeamSize(player, 'ARQ', team.length)) : max;
     }, 0),
+  };
+}
+
+function manualComparisonMetrics(teams, assignmentOverrides = {}) {
+  if (!Array.isArray(teams) || !teams.length) return null;
+  const summaries = teams.map((team) => teamTotalsSummary(team, assignmentOverrides));
+  const lineStrength = lineStrengthPenalty(teams, assignmentOverrides);
+  return {
+    total: countSpread(summaries.map((summary) => summary.adjusted)),
+    ataque: countSpread(summaries.map((summary) => summary.ataque)),
+    pase_vision: countSpread(summaries.map((summary) => summary.pase_vision)),
+    ritmo: countSpread(summaries.map((summary) => summary.ritmo)),
+    resistencia: countSpread(summaries.map((summary) => summary.resistencia)),
+    lineas: lineStrength.spread,
   };
 }
 
@@ -901,7 +955,7 @@ function tierCountsForTeam(team, assignmentOverrides = {}) {
   const counts = Object.fromEntries(Object.keys(TIER_BALANCE_WEIGHTS).map((tier) => [tier, 0]));
   team.forEach((player) => {
     const assigned = assignments[playerKey(player)] || getPrimaryPlayerPosition(player);
-    const tier = playerCardTier(adjustedPositionRating(player, assigned));
+    const tier = playerCardTier(adjustedPositionRatingForTeamSize(player, assigned, team.length));
     counts[tier] = (counts[tier] || 0) + 1;
   });
   return counts;
@@ -921,8 +975,64 @@ function tierBalancePenalty(teams, assignmentOverrides = {}) {
   ), 0);
 }
 
+function TeamRadar({ stats, title = 'Radar del equipo' }) {
+  const size = 188;
+  const center = 94;
+  const radius = 58;
+  const labelRadius = 78;
+  const pointFor = (index, valueRadius) => {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / TEAM_RADAR_FIELDS.length);
+    return {
+      x: center + (Math.cos(angle) * valueRadius),
+      y: center + (Math.sin(angle) * valueRadius),
+    };
+  };
+  const polygon = TEAM_RADAR_FIELDS.map(([field], index) => {
+    const value = Math.max(1, Math.min(6, Number(stats?.[field] || 1)));
+    const point = pointFor(index, radius * (value / 6));
+    return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+  }).join(' ');
+
+  return (
+    <div className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
+      <svg className="mx-auto block h-auto w-full max-w-[220px]" viewBox={`0 0 ${size} ${size}`} role="img" aria-label={title}>
+        {[2, 4, 6].map((level) => {
+          const points = TEAM_RADAR_FIELDS.map((_, index) => {
+            const point = pointFor(index, radius * (level / 6));
+            return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+          }).join(' ');
+          return <polygon key={level} points={points} fill="none" stroke="#d7e6df" strokeWidth="1" />;
+        })}
+        {TEAM_RADAR_FIELDS.map(([field], index) => {
+          const end = pointFor(index, radius);
+          const label = pointFor(index, labelRadius);
+          const anchor = Math.abs(label.x - center) < 7 ? 'middle' : label.x > center ? 'start' : 'end';
+          return (
+            <g key={field}>
+              <line x1={center} y1={center} x2={end.x.toFixed(1)} y2={end.y.toFixed(1)} stroke="#d7e6df" strokeWidth="1" />
+              <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor={anchor} dominantBaseline="middle" fill="#526b62" fontSize="9" fontWeight="800">
+                {TEAM_RADAR_FIELDS[index][1]}
+              </text>
+            </g>
+          );
+        })}
+        <polygon points={polygon} fill="rgba(6, 61, 43, 0.18)" stroke="#063d2b" strokeWidth="2" />
+        {TEAM_RADAR_FIELDS.map(([field], index) => {
+          const value = Math.max(1, Math.min(6, Number(stats?.[field] || 1)));
+          const point = pointFor(index, radius * (value / 6));
+          return (
+            <circle key={field} cx={point.x.toFixed(1)} cy={point.y.toFixed(1)} r="2.8" fill="#063d2b">
+              <title>{`${field}: ${value.toFixed(1)}`}</title>
+            </circle>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 const LINE_STRENGTH_BALANCE_WEIGHTS = { ARQ: 240, DEF: 280, MED: 240, DEL: 260 };
-const PROFILE_DISTRIBUTION_FIELDS = ['ataque', 'solidez', 'ritmo_stat', 'tecnica', 'compromiso', 'mentalidad'];
+const PROFILE_DISTRIBUTION_FIELDS = ['ataque', 'solidez', 'ritmo_stat', 'resistencia', 'pase_vision', 'tecnica', 'compromiso', 'mentalidad'];
 
 function lineStrengthPenalty(teams, assignmentOverrides = {}) {
   if (!teams.length) return { penalty: 0, spread: 0 };
@@ -933,7 +1043,7 @@ function lineStrengthPenalty(teams, assignmentOverrides = {}) {
     team.forEach((player) => {
       const assigned = assignments[playerKey(player)] || getPrimaryPlayerPosition(player);
       const line = pitchLineForPosition(assigned);
-      if (totals[line] !== undefined) totals[line] += adjustedPositionRating(player, assigned);
+      if (totals[line] !== undefined) totals[line] += adjustedPositionRatingForTeamSize(player, assigned, team.length);
     });
     PITCH_LINES.forEach((line) => valuesByLine[line].push(totals[line]));
   });
@@ -1001,7 +1111,7 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
   const statPenalty = Object.entries(weights || {}).reduce((sum, [field, weight]) => {
     const values = teams.map((team) => {
       if (field === 'general') return teamScore(team, assignmentOverrides);
-      return team.reduce((total, player) => total + statValue(player, field), 0);
+      return team.reduce((total, player) => total + balanceStatValue(player, field), 0);
     });
     return sum + ((Math.max(...values) - Math.min(...values)) * Number(weight || 0));
   }, 0);
@@ -1032,7 +1142,7 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
     .sort((a, b) => {
       const priorityDiff = goalkeeperSortValue(a) - goalkeeperSortValue(b);
       if (priorityDiff) return priorityDiff;
-      return adjustedPositionRating(b, 'ARQ') - adjustedPositionRating(a, 'ARQ');
+      return adjustedPositionRatingForTeamSize(b, 'ARQ', teamSize) - adjustedPositionRatingForTeamSize(a, 'ARQ', teamSize);
     })
     .slice(0, numTeams - fixedGoalkeepers.length);
   if (fixedGoalkeepers.length + goalkeepers.length < numTeams) return null;
@@ -1245,7 +1355,7 @@ function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPla
         if (lockedLine && lockedLine !== line) return;
         const current = String(baseAssignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
         const stability = current === line ? 0.35 : 0;
-        const score = adjustedPositionRating(player, line) + stability;
+        const score = adjustedPositionRatingForTeamSize(player, line, team.length) + stability;
         if (score > bestScore) {
           bestScore = score;
           bestIndex = index;
@@ -1450,7 +1560,7 @@ function applyFormationToTeam(team, value) {
   const parsedCounts = parseFormationValue(value);
   if (!parsedCounts) return {};
   const assignments = {};
-  const goalkeeper = team.find(isFixedGoalkeeper) || team.slice().sort((a, b) => adjustedPositionRating(b, 'ARQ') - adjustedPositionRating(a, 'ARQ'))[0];
+  const goalkeeper = team.find(isFixedGoalkeeper) || team.slice().sort((a, b) => adjustedPositionRatingForTeamSize(b, 'ARQ', team.length) - adjustedPositionRatingForTeamSize(a, 'ARQ', team.length))[0];
   if (goalkeeper) assignments[playerKey(goalkeeper)] = 'ARQ';
   const remaining = team.filter((player) => playerKey(player) !== playerKey(goalkeeper));
   const defenseCounts = parsedCounts.LAT === null
@@ -1461,7 +1571,7 @@ function applyFormationToTeam(team, value) {
     for (let index = 0; index < counts[line]; index += 1) {
       const candidate = remaining
         .filter((player) => !assignments[playerKey(player)])
-        .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
+        .sort((a, b) => adjustedPositionRatingForTeamSize(b, line, team.length) - adjustedPositionRatingForTeamSize(a, line, team.length))[0];
       if (candidate) assignments[playerKey(candidate)] = line;
     }
   });
@@ -1519,8 +1629,9 @@ function Arrow({ form }) {
   );
 }
 
-function FullPlayerCard({ player, assignedPosition }) {
-  const adjusted = adjustedPositionRating(player, assignedPosition);
+function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
+  const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
+  const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
   const positions = getOrderedPlayerPositions(player);
@@ -1574,18 +1685,18 @@ function FullPlayerCard({ player, assignedPosition }) {
           </span>
         ))}
       </span>
-      {positionPenaltyPercent(player, assignedPosition) > 0 ? (
+      {positionPenalty > 0 ? (
         <span className="absolute left-[15.5%] top-[44.8%] z-40 grid h-[5.8%] min-w-[18%] place-items-center text-[.42rem] font-black leading-none text-[#ffb4a8] [text-shadow:0_2px_0_rgba(0,0,0,.74),0_1px_5px_rgba(0,0,0,.38)]">
-          -{positionPenaltyPercent(player, assignedPosition)}%
+          -{positionPenalty}%
         </span>
       ) : null}
     </article>
   );
 }
 
-function CompactPlayerCard({ player, assignedPosition, laneRole = '', draggableProps = {}, onOpen }) {
+function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole = '', draggableProps = {}, onOpen }) {
   const { dragging = false, selected = false, locked = false, swapTarget = false, ...domDraggableProps } = draggableProps;
-  const adjusted = adjustedPositionRating(player, assignedPosition);
+  const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
   const widthClass = 'w-[58px] min-[380px]:w-[64px] sm:w-[70px] xl:w-[82px] 2xl:w-[88px]';
@@ -1702,39 +1813,409 @@ function defenseInsertRole(currentLineCount, insertIndex) {
   return nextCount >= 3 && (boundedIndex === 0 || boundedIndex === nextCount - 1) ? 'LAT' : 'DEF';
 }
 
-function injectFormationExportStyles(clonedDocument) {
-  clonedDocument.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => node.remove());
+function resolvePageAssetUrl(path, ownerDocument = document) {
+  const normalizedPath = String(path || '').replace(/^\/+/, '');
+  return new URL(normalizedPath, ownerDocument?.baseURI || window.location.href).href;
+}
+
+function cssString(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+const exportTailwindColorOverrides = `
+  --color-red-50: #fef2f2; --color-red-100: #fee2e2; --color-red-200: #fecaca; --color-red-300: #fca5a5; --color-red-500: #ef4444; --color-red-600: #dc2626; --color-red-700: #b91c1c; --color-red-800: #991b1b; --color-red-900: #7f1d1d; --color-red-950: #450a0a;
+  --color-orange-500: #f97316;
+  --color-amber-50: #fffbeb; --color-amber-100: #fef3c7; --color-amber-200: #fde68a; --color-amber-300: #fcd34d; --color-amber-400: #fbbf24; --color-amber-500: #f59e0b; --color-amber-600: #d97706; --color-amber-700: #b45309; --color-amber-800: #92400e; --color-amber-900: #78350f; --color-amber-950: #451a03;
+  --color-lime-50: #f7fee7; --color-lime-100: #ecfccb; --color-lime-200: #d9f99d; --color-lime-300: #bef264; --color-lime-600: #65a30d; --color-lime-950: #1a2e05;
+  --color-green-50: #f0fdf4; --color-green-100: #dcfce7; --color-green-200: #bbf7d0; --color-green-500: #22c55e; --color-green-600: #16a34a; --color-green-800: #166534;
+  --color-emerald-50: #ecfdf5; --color-emerald-100: #d1fae5; --color-emerald-200: #a7f3d0; --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399; --color-emerald-500: #10b981; --color-emerald-600: #059669; --color-emerald-700: #047857; --color-emerald-800: #065f46; --color-emerald-900: #064e3b; --color-emerald-950: #022c22;
+  --color-teal-50: #f0fdfa; --color-teal-200: #99f6e4; --color-teal-800: #115e59;
+  --color-cyan-100: #cffafe; --color-cyan-200: #a5f3fc;
+  --color-sky-50: #f0f9ff; --color-sky-200: #bae6fd; --color-sky-300: #7dd3fc; --color-sky-500: #0ea5e9; --color-sky-950: #082f49;
+  --color-blue-50: #eff6ff; --color-blue-200: #bfdbfe;
+  --color-rose-50: #fff1f2; --color-rose-100: #ffe4e6; --color-rose-200: #fecdd3; --color-rose-500: #f43f5e; --color-rose-800: #9f1239;
+  --color-slate-50: #f8fafc; --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1; --color-slate-400: #94a3b8; --color-slate-500: #64748b; --color-slate-600: #475569; --color-slate-700: #334155; --color-slate-800: #1e293b; --color-slate-900: #0f172a; --color-slate-950: #020617;
+  --color-stone-100: #f5f5f4; --color-stone-300: #d6d3d1; --color-stone-900: #1c1917;
+`;
+
+function deleteUnsupportedColorRules(ruleList) {
+  if (!ruleList) return;
+  for (let index = ruleList.length - 1; index >= 0; index -= 1) {
+    const rule = ruleList[index];
+    const text = rule?.cssText || '';
+    if (/(oklch|oklab|color-mix\s*\()/i.test(text)) {
+      try {
+        ruleList.deleteRule(index);
+      } catch {
+        // Some grouped browser rules are read-only; leave them alone if deletion fails.
+      }
+      continue;
+    }
+    if (rule?.cssRules?.length) deleteUnsupportedColorRules(rule.cssRules);
+  }
+}
+
+function sanitizeExportStylesheets(clonedDocument) {
+  Array.from(clonedDocument.styleSheets || []).forEach((sheet) => {
+    try {
+      deleteUnsupportedColorRules(sheet.cssRules);
+    } catch {
+      // Cross-origin stylesheets cannot be inspected; same-origin app CSS is sanitized.
+    }
+  });
+}
+
+const unsupportedColorPattern = /(oklch|oklab|color-mix\s*\()/i;
+const exportColorFallbacks = [
+  [/white/, [255, 255, 255]],
+  [/black/, [0, 0, 0]],
+  [/rose-500/, [244, 63, 94]],
+  [/rose-200/, [254, 205, 211]],
+  [/rose-100/, [255, 228, 230]],
+  [/red-200/, [254, 202, 202]],
+  [/red-100/, [254, 226, 226]],
+  [/red-900/, [127, 29, 29]],
+  [/orange-500/, [249, 115, 22]],
+  [/amber-300/, [252, 211, 77]],
+  [/amber-200/, [253, 230, 138]],
+  [/amber-100/, [254, 243, 199]],
+  [/lime-300/, [190, 242, 100]],
+  [/lime-200/, [217, 249, 157]],
+  [/lime-100/, [236, 252, 203]],
+  [/cyan-200/, [165, 243, 252]],
+  [/cyan-100/, [207, 250, 254]],
+  [/sky-500/, [14, 165, 233]],
+  [/slate-950/, [2, 6, 23]],
+  [/slate-600/, [71, 85, 105]],
+  [/slate-500/, [100, 116, 139]],
+  [/slate-300/, [203, 213, 225]],
+  [/emerald-950/, [2, 44, 34]],
+  [/emerald-900/, [6, 78, 59]],
+  [/emerald-700/, [4, 120, 87]],
+  [/emerald-600/, [5, 150, 105]],
+  [/emerald-500/, [16, 185, 129]],
+  [/emerald-300/, [110, 231, 183]],
+  [/emerald-200/, [167, 243, 208]],
+  [/emerald-100/, [209, 250, 229]],
+];
+const exportColorRgbByName = {
+  white: [255, 255, 255],
+  black: [0, 0, 0],
+  currentcolor: [7, 19, 15],
+  'red-50': [254, 242, 242],
+  'red-100': [254, 226, 226],
+  'red-200': [254, 202, 202],
+  'red-300': [252, 165, 165],
+  'red-500': [239, 68, 68],
+  'red-600': [220, 38, 38],
+  'red-700': [185, 28, 28],
+  'red-800': [153, 27, 27],
+  'red-900': [127, 29, 29],
+  'red-950': [69, 10, 10],
+  'orange-500': [249, 115, 22],
+  'amber-50': [255, 251, 235],
+  'amber-100': [254, 243, 199],
+  'amber-200': [253, 230, 138],
+  'amber-300': [252, 211, 77],
+  'amber-400': [251, 191, 36],
+  'amber-500': [245, 158, 11],
+  'amber-600': [217, 119, 6],
+  'amber-700': [180, 83, 9],
+  'amber-800': [146, 64, 14],
+  'amber-900': [120, 53, 15],
+  'amber-950': [69, 26, 3],
+  'lime-50': [247, 254, 231],
+  'lime-100': [236, 252, 203],
+  'lime-200': [217, 249, 157],
+  'lime-300': [190, 242, 100],
+  'lime-600': [101, 163, 13],
+  'lime-950': [26, 46, 5],
+  'green-50': [240, 253, 244],
+  'green-100': [220, 252, 231],
+  'green-200': [187, 247, 208],
+  'green-500': [34, 197, 94],
+  'green-600': [22, 163, 74],
+  'green-800': [22, 101, 52],
+  'emerald-50': [236, 253, 245],
+  'emerald-100': [209, 250, 229],
+  'emerald-200': [167, 243, 208],
+  'emerald-300': [110, 231, 183],
+  'emerald-400': [52, 211, 153],
+  'emerald-500': [16, 185, 129],
+  'emerald-600': [5, 150, 105],
+  'emerald-700': [4, 120, 87],
+  'emerald-800': [6, 95, 70],
+  'emerald-900': [6, 78, 59],
+  'emerald-950': [2, 44, 34],
+  'teal-50': [240, 253, 250],
+  'teal-200': [153, 246, 228],
+  'teal-800': [17, 94, 89],
+  'cyan-100': [207, 250, 254],
+  'cyan-200': [165, 243, 252],
+  'sky-50': [240, 249, 255],
+  'sky-200': [186, 230, 253],
+  'sky-300': [125, 211, 252],
+  'sky-500': [14, 165, 233],
+  'sky-950': [8, 47, 73],
+  'blue-50': [239, 246, 255],
+  'blue-200': [191, 219, 254],
+  'rose-50': [255, 241, 242],
+  'rose-100': [255, 228, 230],
+  'rose-200': [254, 205, 211],
+  'rose-500': [244, 63, 94],
+  'rose-800': [159, 18, 57],
+  'slate-50': [248, 250, 252],
+  'slate-100': [241, 245, 249],
+  'slate-200': [226, 232, 240],
+  'slate-300': [203, 213, 225],
+  'slate-400': [148, 163, 184],
+  'slate-500': [100, 116, 139],
+  'slate-600': [71, 85, 105],
+  'slate-700': [51, 65, 85],
+  'slate-800': [30, 41, 59],
+  'slate-900': [15, 23, 42],
+  'slate-950': [2, 6, 23],
+  'stone-100': [245, 245, 244],
+  'stone-300': [214, 211, 209],
+  'stone-900': [28, 25, 23],
+};
+const exportStylesheetCache = new Map();
+
+function opacityFromClass(classText, fallback = 1) {
+  const match = String(classText || '').match(/\/(\d{1,3})(?![\w-])/);
+  if (!match) return fallback;
+  return Math.max(0, Math.min(1, Number(match[1]) / 100));
+}
+
+function fallbackColorFromClass(classText, fallback = '#07130f') {
+  const classes = String(classText || '');
+  const matched = exportColorFallbacks.find(([pattern]) => pattern.test(classes));
+  if (!matched) return fallback;
+  const alpha = opacityFromClass(classes, 1);
+  const [red, green, blue] = matched[1];
+  return alpha < 1 ? `rgba(${red}, ${green}, ${blue}, ${alpha})` : `rgb(${red}, ${green}, ${blue})`;
+}
+
+function rgbaFromRgb(rgb, alpha = 1) {
+  const [red, green, blue] = rgb || exportColorRgbByName.currentcolor;
+  const boundedAlpha = Math.max(0, Math.min(1, Number(alpha)));
+  return boundedAlpha < 1 ? `rgba(${red}, ${green}, ${blue}, ${boundedAlpha})` : `rgb(${red}, ${green}, ${blue})`;
+}
+
+function replaceBalancedCssFunctions(cssText, functionName, replacementForInner) {
+  let output = '';
+  let cursor = 0;
+  const needle = `${functionName}(`;
+  while (cursor < cssText.length) {
+    const start = cssText.indexOf(needle, cursor);
+    if (start === -1) {
+      output += cssText.slice(cursor);
+      break;
+    }
+    output += cssText.slice(cursor, start);
+    let depth = 0;
+    let end = start;
+    for (; end < cssText.length; end += 1) {
+      const char = cssText[end];
+      if (char === '(') depth += 1;
+      if (char === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          end += 1;
+          break;
+        }
+      }
+    }
+    const inner = cssText.slice(start + needle.length, Math.max(start + needle.length, end - 1));
+    output += replacementForInner(inner);
+    cursor = end;
+  }
+  return output;
+}
+
+function sanitizeCssColorFunctions(cssText) {
+  let sanitized = String(cssText || '');
+  sanitized = sanitized
+    .replace(/url\((['"]?)\.\/images\//g, 'url($1assets/images/')
+    .replace(/url\((['"]?)\.\/card-backgrounds\//g, 'url($1assets/card-backgrounds/');
+  sanitized = replaceBalancedCssFunctions(sanitized, 'color-mix', (inner) => {
+    const variableMatch = inner.match(/var\(--color-([a-z0-9-]+)\)\s+([0-9.]+)%/i);
+    if (variableMatch) {
+      return rgbaFromRgb(exportColorRgbByName[variableMatch[1]] || exportColorRgbByName.currentcolor, Number(variableMatch[2]) / 100);
+    }
+    const currentColorMatch = inner.match(/currentcolor\s+([0-9.]+)%/i);
+    if (currentColorMatch) return rgbaFromRgb(exportColorRgbByName.currentcolor, Number(currentColorMatch[1]) / 100);
+    return 'rgba(7, 19, 15, 0.12)';
+  });
+  sanitized = replaceBalancedCssFunctions(sanitized, 'oklch', () => '#07130f');
+  sanitized = replaceBalancedCssFunctions(sanitized, 'oklab', () => '#07130f');
+  return sanitized;
+}
+
+async function loadSanitizedExportStylesheets() {
+  const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+    .map((link) => link.href)
+    .filter((href) => href && new URL(href, window.location.href).origin === window.location.origin);
+  const sheets = await Promise.all(links.map(async (href) => {
+    if (exportStylesheetCache.has(href)) return exportStylesheetCache.get(href);
+    try {
+      const response = await fetch(href, { cache: 'force-cache' });
+      const text = response.ok ? await response.text() : '';
+      const sanitized = sanitizeCssColorFunctions(text);
+      exportStylesheetCache.set(href, sanitized);
+      return sanitized;
+    } catch {
+      return '';
+    }
+  }));
+  const serializedSheets = Array.from(document.styleSheets || []).map((sheet) => {
+    try {
+      return Array.from(sheet.cssRules || []).map((rule) => rule.cssText || '').join('\n');
+    } catch {
+      return '';
+    }
+  });
+  return [...sheets, ...serializedSheets.map(sanitizeCssColorFunctions)].filter(Boolean).join('\n');
+}
+
+function removeUnsupportedExportStyles(clonedDocument, hasSanitizedStylesheet = false) {
+  if (hasSanitizedStylesheet) {
+    clonedDocument.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+      const href = link.getAttribute('href') || '';
+      try {
+        if (!href || new URL(href, clonedDocument.baseURI).origin === window.location.origin) link.remove();
+      } catch {
+        link.remove();
+      }
+    });
+  }
+  clonedDocument.querySelectorAll('style').forEach((styleNode) => {
+    if (unsupportedColorPattern.test(styleNode.textContent || '')) styleNode.remove();
+  });
+  clonedDocument.querySelectorAll('[style]').forEach((node) => {
+    const rawStyle = node.getAttribute('style') || '';
+    if (!unsupportedColorPattern.test(rawStyle)) return;
+    node.setAttribute('style', sanitizeCssColorFunctions(rawStyle));
+  });
+}
+
+function scrubUnsupportedComputedColors(clonedDocument) {
+  const win = clonedDocument.defaultView;
+  const nodes = Array.from(clonedDocument.querySelectorAll('#equipos-generados, #equipos-generados *'));
+  const colorProps = ['color', 'textDecorationColor', 'outlineColor', 'caretColor'];
+  const borderProps = ['borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor'];
+  nodes.forEach((node) => {
+    const computed = win.getComputedStyle(node);
+    const classText = typeof node.className === 'string' ? node.className : String(node.getAttribute('class') || '');
+    colorProps.forEach((prop) => {
+      if (unsupportedColorPattern.test(computed[prop] || '')) {
+        node.style[prop] = fallbackColorFromClass(classText, classText.includes('text-white') ? '#ffffff' : '#07130f');
+      }
+    });
+    borderProps.forEach((prop) => {
+      if (unsupportedColorPattern.test(computed[prop] || '')) {
+        node.style[prop] = fallbackColorFromClass(classText, classText.includes('border-white') ? 'rgba(255, 255, 255, 0.25)' : '#d7e6df');
+      }
+    });
+    if (unsupportedColorPattern.test(computed.backgroundColor || '')) {
+      node.style.backgroundColor = fallbackColorFromClass(classText, 'transparent');
+    }
+    if (unsupportedColorPattern.test(computed.boxShadow || '')) node.style.boxShadow = 'none';
+    if (unsupportedColorPattern.test(computed.textShadow || '')) node.style.textShadow = 'none';
+    if (unsupportedColorPattern.test(computed.fill || '')) node.style.fill = 'currentColor';
+    if (unsupportedColorPattern.test(computed.stroke || '')) node.style.stroke = 'currentColor';
+  });
+}
+
+function waitForPaint() {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+function waitForImage(image) {
+  if (!image || (image.complete && image.naturalWidth > 0)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => {
+      image.removeEventListener('load', finish);
+      image.removeEventListener('error', finish);
+      resolve();
+    };
+    image.addEventListener('load', finish, { once: true });
+    image.addEventListener('error', finish, { once: true });
+    setTimeout(finish, 2500);
+  });
+}
+
+function preloadExportImage(url) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve();
+    image.onerror = () => resolve();
+    image.src = url;
+    if (image.decode) image.decode().then(resolve).catch(resolve);
+  });
+}
+
+async function waitForExportReadiness(root) {
+  await document.fonts?.ready?.catch?.(() => {});
+  const imageNodes = Array.from(root.querySelectorAll('img'));
+  const backgroundUrls = [
+    resolvePageAssetUrl('assets/images/captain-field-bg-vertical.jpg'),
+    ...Object.values(cardBackgrounds).map((path) => resolvePageAssetUrl(path)),
+    ...Object.values(compactCardBackgrounds).map((path) => resolvePageAssetUrl(path)),
+  ];
+  await Promise.all([
+    ...imageNodes.map(waitForImage),
+    ...backgroundUrls.map(preloadExportImage),
+  ]);
+  await waitForPaint();
+}
+
+function injectFormationExportStyles(clonedDocument, exportWidth, sanitizedStylesheet = '') {
+  const fieldUrl = resolvePageAssetUrl('assets/images/captain-field-bg-vertical.jpg', clonedDocument);
+  sanitizeExportStylesheets(clonedDocument);
+  removeUnsupportedExportStyles(clonedDocument, Boolean(sanitizedStylesheet));
+  if (sanitizedStylesheet) {
+    const sanitizedStyle = clonedDocument.createElement('style');
+    sanitizedStyle.textContent = sanitizedStylesheet;
+    clonedDocument.head.appendChild(sanitizedStyle);
+  }
   const style = clonedDocument.createElement('style');
   style.textContent = `
-    * { box-sizing: border-box; }
-    html, body { margin: 0; background: #f6faf8; color: #07130f; font-family: Arial, sans-serif; }
-    #equipos-generados { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; width: 1400px; max-width: 1400px; padding: 14px; background: #f6faf8; }
-    #equipos-generados > div:first-child { grid-column: 1 / -1; border: 1px solid #b9d4c8; border-radius: 10px; background: #ffffff; padding: 12px; text-align: center; font-size: 22px; font-weight: 900; }
-    #equipos-generados article { display: grid !important; gap: 10px; border: 1px solid #b9d4c8; border-radius: 10px; background: #eef6f1; padding: 10px; color: #07130f; }
-    .sorteo-team-head, #equipos-generados article > div:first-child { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #d2e3da; border-radius: 9px; background: #ffffff; padding: 9px 11px; color: #07130f; }
-    #equipos-generados h3 { margin: 0; color: #07130f; font-size: 17px; font-weight: 900; }
-    #equipos-generados select, .sorteo-team-stats, .formation-undo-button, .sorteo-line-with-tools > div:first-child button, .sorteo-line-with-tools > div:last-child { display: none !important; }
-    .team-formation { display: grid !important; grid-template-rows: repeat(4, minmax(172px, 1fr)); gap: 10px; height: auto !important; min-height: 760px; overflow: visible !important; border: 1px solid #7fb89c; border-radius: 10px; background: linear-gradient(180deg, rgba(9,74,41,.96), rgba(13,70,42,.98)); padding: 14px; color: #f2fff7; }
-    .formation-line { display: grid !important; grid-template-columns: 58px minmax(0, 1fr) !important; align-items: center; gap: 8px; min-height: 172px; border: 0 !important; background: transparent !important; opacity: 1 !important; color: #f4fff8; }
-    .line-label { display: grid !important; justify-items: center; gap: 2px; color: #f4fff8; text-align: center; font-size: 10px; font-weight: 900; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
-    .line-label span, .line-label small { display: block !important; color: #f4fff8 !important; background: transparent !important; border: 0 !important; padding: 0 !important; }
-    .line-players { display: flex !important; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; min-height: 172px; overflow: visible !important; border: 0 !important; background: transparent !important; padding: 0 !important; }
-    [data-sorteo-line-player-item="1"] { display: inline-block !important; flex: 0 0 auto; margin: 0 !important; transform: none !important; opacity: 1 !important; }
-    [data-sorteo-drag-player] { position: relative !important; display: block !important; flex: 0 0 96px !important; width: 96px !important; min-width: 96px !important; max-width: 96px !important; aspect-ratio: 409 / 620; border: 0 !important; border-radius: 0 !important; background: #f8d99b !important; color: #07130f !important; padding: 8px 6px !important; overflow: hidden !important; box-shadow: 0 3px 8px rgba(2,14,9,.24); font-family: Arial, sans-serif !important; }
-    [data-sorteo-drag-player] span, [data-sorteo-drag-player] strong { color: #07130f !important; text-shadow: none !important; }
-    [data-sorteo-drag-player] img { display: block !important; object-fit: contain !important; max-width: 100% !important; max-height: 48px !important; margin: 4px auto !important; opacity: .9 !important; }
-    [data-sorteo-drag-player] strong { display: block !important; overflow: hidden !important; text-align: center !important; text-overflow: ellipsis !important; text-transform: uppercase !important; white-space: nowrap !important; font-size: 9px !important; font-weight: 900 !important; line-height: 1.1 !important; }
-    [data-sorteo-card-text="1"] { position: static !important; display: block !important; width: auto !important; height: auto !important; transform: none !important; }
-    [data-sorteo-drag-player] [data-sorteo-card-text="1"]:first-child { text-align: center !important; font-size: 18px !important; font-weight: 950 !important; line-height: 1 !important; }
-    [data-sorteo-drag-player] [data-sorteo-card-text="1"] span { display: block !important; text-align: center !important; font-size: 9px !important; font-weight: 900 !important; }
-    .sorteo-lane-indicator, .formation-card-preview-overlay { display: none !important; }
+    :root, :host { ${exportTailwindColorOverrides} }
+    body { ${exportTailwindColorOverrides} }
+    #equipos-generados, #equipos-generados * { ${exportTailwindColorOverrides} }
+    html, body { background: #f6faf8 !important; }
+    #equipos-generados {
+      width: ${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px !important;
+      max-width: ${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px !important;
+      background: #f6faf8 !important;
+    }
+    #equipos-generados, #equipos-generados * {
+      animation: none !important;
+      transition: none !important;
+      caret-color: transparent !important;
+    }
+    #equipos-generados [data-sorteo-drag-player],
+    #equipos-generados [data-sorteo-line-player-item="1"] {
+      transform: none !important;
+      opacity: 1 !important;
+    }
+    #equipos-generados .team-formation {
+      background-image: linear-gradient(rgba(5,37,27,.10), rgba(5,37,27,.24)), url("${cssString(fieldUrl)}"), linear-gradient(160deg, #0e7a43, #07563d) !important;
+      background-position: center, center, center !important;
+      background-repeat: no-repeat, no-repeat, no-repeat !important;
+      background-size: auto, 100% 100%, auto !important;
+    }
+    #equipos-generados .formation-card-preview-overlay { display: none !important; }
   `;
   clonedDocument.head.appendChild(style);
   const clonedContainer = clonedDocument.getElementById('equipos-generados');
   if (clonedContainer) {
-    clonedContainer.style.width = '1400px';
-    clonedContainer.style.maxWidth = '1400px';
+    clonedContainer.style.width = `${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px`;
+    clonedContainer.style.maxWidth = `${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px`;
   }
+  scrubUnsupportedComputedColors(clonedDocument);
 }
 
 function PlayerFormModal({ mode, player, onClose, onSave }) {
@@ -1790,7 +2271,7 @@ function PlayerFormModal({ mode, player, onClose, onSave }) {
         </fieldset>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
-            Ritmo
+            Velocidad
             <select className={inputClass} value={pace} onChange={(event) => setPace(event.target.value)}>
               <option value="rapido">Rapido</option>
               <option value="lento">Lento</option>
@@ -1873,6 +2354,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [hasSavedDraw, setHasSavedDraw] = useState(payload.hasSavedDraw);
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
+  const [manualComparisonBefore, setManualComparisonBefore] = useState(null);
   const [lockedPlayerPositions, setLockedPlayerPositions] = useState({});
   const [drawVariants, setDrawVariants] = useState({});
   const [activeFormationVariants, setActiveFormationVariants] = useState({});
@@ -1892,6 +2374,13 @@ export function SorteoLegacyPageIsland({ root }) {
   }, []);
 
   const selectedPlayers = useMemo(() => (lockedMatch ? players.slice() : players.filter((player) => player.selected)), [lockedMatch, players]);
+  const playersPerTeam = useMemo(() => {
+    if (teams?.length) {
+      const totalPlayers = teams.reduce((sum, team) => sum + team.length, 0);
+      return Math.max(1, Math.ceil(totalPlayers / teams.length));
+    }
+    return Math.max(1, Math.ceil(selectedPlayers.length / Math.max(1, numTeams)));
+  }, [numTeams, selectedPlayers.length, teams]);
   const selectedGoalkeepers = useMemo(
     () => selectedPlayers.filter((player) => manualGoalkeepers[playerKey(player)] === true),
     [manualGoalkeepers, selectedPlayers],
@@ -2091,6 +2580,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setTeamFormations({});
       setUndoStacks({});
       setAnalysisVisible(false);
+      setManualComparisonBefore(null);
       setMaxDiff(Number(result.usedMaxDiff || maxDiff).toFixed(1));
       if (nextGenerationIsRedraw) setRedrawsUsedThisSession((value) => value + 1);
       setGeneratedOnce(true);
@@ -2152,7 +2642,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const exportPlayersCsv = () => {
     if (lockedMatch) return;
     const csv = [
-      ['Nombre', 'Posicion', 'Ritmo', 'Puntuacion'].join(','),
+      ['Nombre', 'Posicion', 'Velocidad', 'Puntuacion'].join(','),
       ...players.map((player) => [
         `"${player.nombre.replace(/"/g, '""')}"`,
         player.posicion,
@@ -2212,7 +2702,7 @@ export function SorteoLegacyPageIsland({ root }) {
       const topPlayers = team
         .map((player) => {
           const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
-          const rating = adjustedPositionRating(player, assigned);
+          const rating = adjustedPositionRatingForTeamSize(player, assigned, team.length);
           return {
             key: playerKey(player),
             name: player.nombre,
@@ -2260,7 +2750,7 @@ export function SorteoLegacyPageIsland({ root }) {
       { label: 'Un arquero por equipo', ok: summaries.every((summary) => Number(summary.counts.ARQ || 0) === 1) },
       { label: 'Laterales y lineas cubiertas', ok: lineIssues.length === 0 },
       { label: 'Platinum repartidos', ok: evaluation.platinumSpread <= 1 },
-      { label: 'Ritmo lento equilibrado', ok: evaluation.slowSpread <= 1 },
+      { label: 'Jugadores lentos equilibrados', ok: evaluation.slowSpread <= 1 },
       { label: 'Irregulares repartidos', ok: evaluation.irregularSpread <= 1 },
       { label: 'Fuerza por linea pareja', ok: evaluation.lineStrengthSpread <= 2 },
       { label: 'Perfiles fuertes y flojos repartidos', ok: evaluation.profileDistributionSpread <= 1 },
@@ -2287,11 +2777,31 @@ export function SorteoLegacyPageIsland({ root }) {
       tierSpread,
       historicalPenalty: historicalRepeatPenalty(teams, payload.pairHistory),
       ruleChecks,
-      decisionText: `Se evaluaron equipos por puntaje ajustado a posicion, rendimiento historico real, cobertura de lineas, fuerza por linea, perfiles fuertes/flojos, reparto de platinum, ritmo, regularidad, tiers e historial de companeros.`,
+      decisionText: `Se evaluaron equipos por puntaje ajustado a posicion, rendimiento historico real, cobertura de lineas, fuerza por linea, perfiles fuertes/flojos, reparto de platinum, velocidad, ida y vuelta, pase/vision, regularidad, tiers e historial de companeros.`,
       summaries,
       comparisons,
     };
   }, [assignments, getTeamDisplayName, payload.drawBalanceWeights, payload.pairHistory, teams]);
+
+  const manualMoveComparison = useMemo(() => {
+    if (!manualComparisonBefore?.teams || !teams) return null;
+    const before = manualComparisonMetrics(manualComparisonBefore.teams, manualComparisonBefore.assignments || {});
+    const after = manualComparisonMetrics(teams, assignments);
+    if (!before || !after) return null;
+    const rows = MANUAL_COMPARISON_FIELDS.map(([field, label]) => {
+      const beforeValue = Number(before[field] || 0);
+      const afterValue = Number(after[field] || 0);
+      const delta = afterValue - beforeValue;
+      const status = delta < -0.05 ? 'mejora' : delta > 0.05 ? 'empeora' : 'igual';
+      return { field, label, before: beforeValue, after: afterValue, delta, status };
+    });
+    return {
+      label: manualComparisonBefore.label || 'Cambio manual',
+      rows,
+      improved: rows.filter((row) => row.status === 'mejora').length,
+      worsened: rows.filter((row) => row.status === 'empeora').length,
+    };
+  }, [assignments, manualComparisonBefore, teams]);
 
   const drawAuditSnapshot = useMemo(() => {
     if (!teams || !drawAnalysis) return null;
@@ -2303,7 +2813,7 @@ export function SorteoLegacyPageIsland({ root }) {
         strict_max_diff: STRICT_MAX_DIFF,
         flexible_max_diff: FLEXIBLE_MAX_DIFF,
         rules: drawAnalysis.ruleChecks,
-        optimized: ['puntaje ajustado por posicion', 'rendimiento historico real', 'cobertura de lineas', 'fuerza por linea', 'perfiles fuertes/flojos', 'platinum', 'ritmo', 'regularidad', 'tiers', 'historial de companeros'],
+        optimized: ['puntaje ajustado por posicion', 'rendimiento historico real', 'cobertura de lineas', 'fuerza por linea', 'perfiles fuertes/flojos', 'platinum', 'velocidad', 'ida y vuelta', 'pase/vision', 'regularidad', 'tiers', 'historial de companeros'],
       },
       metrics: {
         diff: Number(drawAnalysis.diff.toFixed(2)),
@@ -2415,7 +2925,7 @@ export function SorteoLegacyPageIsland({ root }) {
       const candidate = team
         .filter((player) => currentAssignments[playerKey(player)] !== line && currentAssignments[playerKey(player)] !== 'ARQ')
         .filter((player) => !lockedPlayerPositions[playerKey(player)])
-        .sort((a, b) => adjustedPositionRating(b, line) - adjustedPositionRating(a, line))[0];
+        .sort((a, b) => adjustedPositionRatingForTeamSize(b, line, team.length) - adjustedPositionRatingForTeamSize(a, line, team.length))[0];
       if (candidate) {
         pushUndo(teamIndex);
         markFormationAsManual(teamIndex);
@@ -2428,7 +2938,7 @@ export function SorteoLegacyPageIsland({ root }) {
       .filter((player) => currentAssignments[playerKey(player)] === line)
       .filter((player) => !lockedPlayerPositions[playerKey(player)])
       .filter(() => (teamLineCounts(team, currentAssignments)[line] || 0) > fieldLineMinimum(line, team.length))
-      .sort((a, b) => adjustedPositionRating(a, line) - adjustedPositionRating(b, line))[0];
+      .sort((a, b) => adjustedPositionRatingForTeamSize(a, line, team.length) - adjustedPositionRatingForTeamSize(b, line, team.length))[0];
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate) === line ? 'MED' : bestNaturalPlayerPosition(candidate);
       pushUndo(teamIndex);
@@ -2459,7 +2969,7 @@ export function SorteoLegacyPageIsland({ root }) {
         .filter((player) => !lockedPlayerPositions[playerKey(player)])
         .flatMap((player) => ['DEF', 'LAT']
           .filter((targetLine) => (counts[targetLine] || 0) < perPositionLimit)
-          .map((targetLine) => ({ player, targetLine, rating: adjustedPositionRating(player, targetLine) })))
+          .map((targetLine) => ({ player, targetLine, rating: adjustedPositionRatingForTeamSize(player, targetLine, team.length) })))
         .sort((a, b) => b.rating - a.rating)[0];
     if (candidate) {
       pushUndo(teamIndex);
@@ -2477,7 +2987,7 @@ export function SorteoLegacyPageIsland({ root }) {
       .sort((a, b) => {
         const assignedA = currentAssignments[playerKey(a)];
         const assignedB = currentAssignments[playerKey(b)];
-        return adjustedPositionRating(a, assignedA) - adjustedPositionRating(b, assignedB);
+        return adjustedPositionRatingForTeamSize(a, assignedA, team.length) - adjustedPositionRatingForTeamSize(b, assignedB, team.length);
       })[0];
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate);
@@ -2532,7 +3042,7 @@ export function SorteoLegacyPageIsland({ root }) {
           assigned,
           sameExactLine,
           samePitchLine,
-          rating: adjustedPositionRating(player, assigned),
+          rating: adjustedPositionRatingForTeamSize(player, assigned, targetTeam.length),
         };
       })
       .sort((left, right) => (
@@ -2690,11 +3200,19 @@ export function SorteoLegacyPageIsland({ root }) {
       return next;
     };
     const movedTeamsSnapshot = buildMovedTeams(teams);
+    if (teams) {
+      setManualComparisonBefore({
+        teams: teams.map((team) => team.slice()),
+        assignments: { ...assignments },
+        label: sourcePlayer?.nombre || 'Cambio manual',
+      });
+    }
     pushUndo(normalizedTargetTeamIndex);
     if (sourceTeamIndex !== normalizedTargetTeamIndex) pushUndo(sourceTeamIndex);
     markFormationAsManual(normalizedTargetTeamIndex, sourceTeamIndex);
     clearActiveFormationVariant(normalizedTargetTeamIndex, sourceTeamIndex);
     setTeams((current) => buildMovedTeams(current));
+    setAnalysisVisible(true);
     if ((targetLine && FORMATION_LINES.includes(targetLine)) || targetKeyForAssignment) {
       setAssignments((current) => {
         const next = { ...current };
@@ -2780,8 +3298,9 @@ export function SorteoLegacyPageIsland({ root }) {
     if (!source?.player || !FORMATION_LINES.includes(String(targetLine || '').toUpperCase())) return null;
     const sourceLine = String(source.assignedPosition || getPrimaryPlayerPosition(source.player)).toUpperCase();
     const destinationLine = String(targetLine || '').toUpperCase();
-    const from = playerCardRating(adjustedPositionRating(source.player, sourceLine));
-    const to = playerCardRating(adjustedPositionRating(source.player, destinationLine));
+    const teamSize = teams?.[source.teamIndex]?.length || playersPerTeam;
+    const from = playerCardRating(adjustedPositionRatingForTeamSize(source.player, sourceLine, teamSize));
+    const to = playerCardRating(adjustedPositionRatingForTeamSize(source.player, destinationLine, teamSize));
     if (!from || !to) return null;
     const percent = Math.round(((to - from) / from) * 100);
     return { percent, from, to, line: destinationLine };
@@ -2855,7 +3374,7 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
-    setPreview({ player, assignedPosition });
+    setPreview({ player, assignedPosition, teamSize: teams?.[teamIndex]?.length || playersPerTeam });
   };
 
   const applyTeamFormationVariant = (teamIndex, variant) => {
@@ -2889,7 +3408,7 @@ export function SorteoLegacyPageIsland({ root }) {
       text += `${getTeamDisplayName(teamIndex)}\n`;
       team.forEach((player) => {
         const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
-        text += `${player.nombre.toUpperCase()} - ${assigned} - ${adjustedPositionRating(player, assigned).toFixed(1)} pts\n`;
+        text += `${player.nombre.toUpperCase()} - ${assigned} - ${adjustedPositionRatingForTeamSize(player, assigned, team.length).toFixed(1)} pts\n`;
       });
       text += `Total: ${teamScore(team, assignments).toFixed(1)} pts | Lentos: ${team.filter(isLowRhythmPlayer).length}\n\n`;
     });
@@ -2922,13 +3441,25 @@ export function SorteoLegacyPageIsland({ root }) {
     setExporting(true);
     try {
       const capture = typeof window.html2canvas === 'function' ? window.html2canvas : html2canvas;
-      const canvas = await capture(teamsContainerRef.current, {
+      const target = teamsContainerRef.current;
+      await waitForExportReadiness(target);
+      const sanitizedStylesheet = await loadSanitizedExportStylesheets();
+      const targetRect = target.getBoundingClientRect();
+      const exportWidth = Math.ceil(Math.max(target.scrollWidth, targetRect.width));
+      const exportHeight = Math.ceil(Math.max(target.scrollHeight, targetRect.height));
+      const viewportWidth = Math.ceil(window.innerWidth || document.documentElement.clientWidth || exportWidth);
+      const viewportHeight = Math.ceil(window.innerHeight || document.documentElement.clientHeight || exportHeight);
+      const canvas = await capture(target, {
         backgroundColor: '#f6faf8',
-        scale: 2,
+        scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1)),
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         imageTimeout: 15000,
-        onclone: injectFormationExportStyles,
+        width: exportWidth,
+        height: exportHeight,
+        windowWidth: viewportWidth,
+        windowHeight: viewportHeight,
+        onclone: (clonedDocument) => injectFormationExportStyles(clonedDocument, exportWidth, sanitizedStylesheet),
       });
       const link = document.createElement('a');
       link.download = `formaciones_goodfellas_${new Date().toISOString().slice(0, 10)}.jpg`;
@@ -3154,7 +3685,7 @@ export function SorteoLegacyPageIsland({ root }) {
               {[
                 ['nombre', 'Nombre'],
                 ['puntuacion', 'Media'],
-                ['ritmo', 'Ritmo'],
+                ['ritmo', 'Velocidad'],
               ].map(([key, label]) => (
                 <button
                   key={key}
@@ -3248,7 +3779,7 @@ export function SorteoLegacyPageIsland({ root }) {
                         <small className="block truncate text-[11px] font-extrabold text-[#526b62]">{player.posicion}</small>
                       </span>
                       <span className="rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1 text-[11px] font-black text-[#063d2b]">
-                        ARQ {playerCardRating(adjustedPositionRating(player, 'ARQ'))}
+                        ARQ {playerCardRating(adjustedPositionRatingForTeamSize(player, 'ARQ', playersPerTeam))}
                       </span>
                     </label>
                   );
@@ -3341,13 +3872,13 @@ export function SorteoLegacyPageIsland({ root }) {
                             </select>
                           </label>
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
-                            Formación
+                            FormaciÃ³n
                             <select className={inputClass} value={formationSelectValue} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
                               {isFormationEditor ? (
                                 FORMATION_PRESETS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)
                               ) : (
                                 <>
-                                  <option value="auto">Automática</option>
+                                  <option value="auto">AutomÃ¡tica</option>
                                   {formationOptions.map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
                                   <option value="custom">Personalizada</option>
                                 </>
@@ -3523,6 +4054,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                         <CompactPlayerCard
                                           player={player}
                                           assignedPosition={assigned}
+                                          teamSize={team.length}
                                           laneRole={assigned === 'LAT' ? 'lateral' : ''}
                                           onOpen={() => !dragState && handleTouchCard(teamIndex, player, assigned)}
                                           draggableProps={{
@@ -3595,7 +4127,9 @@ export function SorteoLegacyPageIsland({ root }) {
                             {(summary.arquero > 0 ? [['Arquero', summary.arquero]] : [['Ataque', summary.ataque]])
                               .concat([
                                 ['Solidez', summary.solidez],
-                                ['Ritmo', summary.ritmo],
+                                ['Velocidad', summary.ritmo],
+                                ['Ida y vuelta', summary.resistencia],
+                                ['Pase/Vision', summary.pase_vision],
                                 ['Tecnica', summary.tecnica],
                                 ['Equipo', summary.compromiso],
                                 ['Mentalidad', summary.mentalidad],
@@ -3663,6 +4197,30 @@ export function SorteoLegacyPageIsland({ root }) {
                 </span>
               </div>
 
+              {manualMoveComparison ? (
+                <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <strong className="text-sm font-black text-[#07130f]">Antes / despues del cambio</strong>
+                    <span className={`rounded-md border px-2 py-1 text-xs font-black ${manualMoveComparison.worsened > manualMoveComparison.improved ? 'border-amber-200 bg-amber-50 text-[#7a4b00]' : 'border-[#9fc8b5] bg-[#f4fbf7] text-[#063d2b]'}`}>
+                      {manualMoveComparison.label}
+                    </span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    {manualMoveComparison.rows.map((row) => (
+                      <div key={row.field} className="grid gap-1 rounded border border-[#d7e6df] bg-white px-2 py-2 text-xs font-bold text-[#526b62]">
+                        <div className="flex items-center justify-between gap-2">
+                          <strong className="text-[#07130f]">{row.label}</strong>
+                          <span className={row.status === 'mejora' ? 'text-[#063d2b]' : row.status === 'empeora' ? 'text-[#7a4b00]' : 'text-[#526b62]'}>
+                            {row.status === 'mejora' ? 'Mejora' : row.status === 'empeora' ? 'Empeora' : 'Igual'}
+                          </span>
+                        </div>
+                        <span>Antes {row.before.toFixed(1)} / Despues {row.after.toFixed(1)} / {row.delta > 0 ? '+' : ''}{row.delta.toFixed(1)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="grid gap-2 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,.85fr)]">
                 <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
                   <strong className="text-sm font-black text-[#07130f]">Lectura rapida</strong>
@@ -3714,6 +4272,7 @@ export function SorteoLegacyPageIsland({ root }) {
                       <p className="m-0 rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2">Cartas: <strong className="text-[#07130f]">{summary.tierText}</strong></p>
                       <p className="m-0 rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-2 sm:col-span-2">Lentos {summary.lowRhythm} / Irregulares {summary.irregular}</p>
                     </div>
+                    <TeamRadar stats={summary.statValues} title={`Radar ${summary.name}`} />
                     <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(210px,.8fr)]">
                       <div className="grid gap-2">
                         <div>
@@ -3803,7 +4362,7 @@ export function SorteoLegacyPageIsland({ root }) {
             <div className="grid w-full max-w-3xl items-center gap-4 md:grid-cols-[minmax(260px,1fr)_260px]">
               <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible justify-self-center">
                 <div className="origin-center scale-[1.72] sm:scale-[1.9]">
-                  <FullPlayerCard player={preview.player} assignedPosition={preview.assignedPosition} />
+                  <FullPlayerCard player={preview.player} assignedPosition={preview.assignedPosition} teamSize={preview.teamSize || playersPerTeam} />
                 </div>
               </div>
               <aside className="grid gap-3 rounded-lg border border-white/15 bg-black/72 p-3 text-white shadow-sm">
@@ -3812,7 +4371,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   <p className="m-0 text-xs font-semibold text-white/70">Puntaje por posicion</p>
                 </div>
                 <div className="grid gap-1.5">
-                  {playerPositionRatings(preview.player, preview.assignedPosition).map((rating) => (
+                  {playerPositionRatings(preview.player, preview.assignedPosition, preview.teamSize || playersPerTeam).map((rating) => (
                     <div key={rating.position} className={`grid grid-cols-[42px_minmax(0,1fr)_44px] items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-black ${rating.position === preview.assignedPosition ? 'border-lime-200 bg-lime-200/15' : 'border-white/15 bg-white/8'}`}>
                       <span>{rating.position}</span>
                       <span className="h-2 overflow-hidden rounded bg-white/15">
@@ -3856,7 +4415,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <span className="text-[9px] font-extrabold opacity-75">{`${currentDragDelta.from} -> ${currentDragDelta.to} ${currentDragDelta.line}`}</span>
               </div>
             ) : null}
-            <CompactPlayerCard player={dragState.player} assignedPosition={dragState.assignedPosition} />
+            <CompactPlayerCard player={dragState.player} assignedPosition={dragState.assignedPosition} teamSize={teams?.[dragState.teamIndex]?.length || playersPerTeam} />
           </div>
         </div>
       ) : null}
