@@ -762,7 +762,10 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
             const currentLine = pitchLineForPosition(assignment[playerKey(player)]);
             return currentLine !== line && (counts[currentLine] || 0) > fieldLineMinimum(currentLine, team.length);
           })
-          .sort((a, b) => adjustedPositionRatingForTeamSize(b, line, teamSize) - adjustedPositionRatingForTeamSize(a, line, teamSize))[0];
+          .sort((a, b) => (
+            primaryPositionScore(b, line) - primaryPositionScore(a, line)
+            || adjustedPositionRatingForTeamSize(b, line, teamSize) - adjustedPositionRatingForTeamSize(a, line, teamSize)
+          ))[0];
         if (!candidate) break;
         assignment[playerKey(candidate)] = line;
       }
@@ -789,6 +792,8 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
           const currentB = assignment[playerKey(b)] || getPrimaryPlayerPosition(b);
           const lossA = adjustedPositionRatingForTeamSize(a, currentA, teamSize) - adjustedPositionRatingForTeamSize(a, line, teamSize);
           const lossB = adjustedPositionRatingForTeamSize(b, currentB, teamSize) - adjustedPositionRatingForTeamSize(b, line, teamSize);
+          const primaryDiff = primaryPositionScore(b, line) - primaryPositionScore(a, line);
+          if (primaryDiff) return primaryDiff;
           if (Math.abs(lossA - lossB) > 0.0001) return lossA - lossB;
           return adjustedPositionRatingForTeamSize(b, line, teamSize) - adjustedPositionRatingForTeamSize(a, line, teamSize);
         })[0];
@@ -975,6 +980,14 @@ function tierBalancePenalty(teams, assignmentOverrides = {}) {
   ), 0);
 }
 
+function positionUsePenalty(teams, assignmentOverrides = {}) {
+  return teams.reduce((total, team) => {
+    const assignments = buildTeamAssignment(team, assignmentOverrides);
+    const stats = assignmentPositionUseStats(team, assignments);
+    return total + (stats.secondaryCount * 260) + (stats.outOfPositionCount * 700);
+  }, 0);
+}
+
 function TeamRadar({ stats, title = 'Radar del equipo' }) {
   const size = 188;
   const center = 94;
@@ -1119,7 +1132,7 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
   const profileDistribution = profileDistributionPenalty(teams);
   const hardTierPenalty = supremeSpread > 1 ? 100000000 : 0;
   return {
-    value: hardTierPenalty + (diff * 1000) + (slowSpread * 60) + (irregularSpread * 95) + linePenalty + positionBalancePenalty(teams, assignmentOverrides) + tierBalancePenalty(teams, assignmentOverrides) + lineStrength.penalty + profileDistribution.penalty + statPenalty + historicalRepeatPenalty(teams, pairHistory),
+    value: hardTierPenalty + (diff * 1000) + (slowSpread * 60) + (irregularSpread * 95) + linePenalty + positionBalancePenalty(teams, assignmentOverrides) + tierBalancePenalty(teams, assignmentOverrides) + positionUsePenalty(teams, assignmentOverrides) + lineStrength.penalty + profileDistribution.penalty + statPenalty + historicalRepeatPenalty(teams, pairHistory),
     diff,
     slowSpread,
     irregularSpread,
@@ -1334,6 +1347,31 @@ function assignmentDiffCount(team, left = {}, right = {}) {
   }, 0);
 }
 
+function assignmentPositionUseStats(team, assignments = {}) {
+  return team.reduce((stats, player) => {
+    const assigned = String(assignments[playerKey(player)] || getPrimaryPlayerPosition(player)).toUpperCase();
+    const naturalPositions = getOrderedPlayerPositions(player);
+    const primary = naturalPositions[0] || 'MED';
+    if (assigned !== primary) {
+      stats.primaryChangeCount += 1;
+      if (naturalPositions.includes(assigned)) {
+        stats.secondaryCount += 1;
+      } else {
+        stats.outOfPositionCount += 1;
+      }
+    }
+    return stats;
+  }, { primaryChangeCount: 0, secondaryCount: 0, outOfPositionCount: 0 });
+}
+
+function primaryPositionScore(player, line) {
+  const position = String(line || '').toUpperCase();
+  const naturalPositions = getOrderedPlayerPositions(player);
+  if ((naturalPositions[0] || '') === position) return 100;
+  if (naturalPositions.includes(position)) return 10;
+  return 0;
+}
+
 function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPlayerPositions = {}) {
   const desiredCounts = {
     ARQ: Number(counts?.ARQ || 0),
@@ -1355,7 +1393,7 @@ function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPla
         if (lockedLine && lockedLine !== line) return;
         const current = String(baseAssignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
         const stability = current === line ? 0.35 : 0;
-        const score = adjustedPositionRatingForTeamSize(player, line, team.length) + stability;
+        const score = primaryPositionScore(player, line) + adjustedPositionRatingForTeamSize(player, line, team.length) + stability;
         if (score > bestScore) {
           bestScore = score;
           bestIndex = index;
@@ -1392,55 +1430,63 @@ function generateTeamFormationVariants(team, baseAssignments = {}, lockedPlayerP
   const baseSignature = assignmentSignatureForTeam(team, base);
   const seen = new Set([baseSignature]);
   const variants = [];
-  const formationOptions = getFormationOptions(team.length);
-  const countCandidates = formationOptions.flatMap((option) => {
-    const parsed = parseFormationValue(option.value);
-    if (!parsed) return [];
-    if (parsed.LAT !== null) {
-      return [{
-        ARQ: 1,
-        DEF: parsed.DEF,
-        LAT: parsed.LAT,
-        MED: parsed.MED,
-        DEL: parsed.DEL,
-        label: `${parsed.DEF + parsed.LAT}-${parsed.MED}-${parsed.DEL}`,
-      }];
-    }
-    const defenseSplits = parsed.DEF >= 3
-      ? [{ DEF: Math.max(1, parsed.DEF - 2), LAT: 2 }, { DEF: parsed.DEF, LAT: 0 }]
-      : [{ DEF: parsed.DEF, LAT: 0 }];
-    return defenseSplits.map((split) => ({
+  const countCandidates = getFormationCandidates(team.length).map((candidate) => {
+    const counts = {
       ARQ: 1,
-      DEF: split.DEF,
-      LAT: split.LAT,
-      MED: parsed.MED,
-      DEL: parsed.DEL,
-      label: `${split.DEF + split.LAT}-${parsed.MED}-${parsed.DEL}`,
-    }));
+      DEF: candidate.DEF,
+      LAT: candidate.LAT,
+      MED: candidate.MED,
+      DEL: candidate.DEL,
+      label: `${candidate.DEF + candidate.LAT}-${candidate.MED}-${candidate.DEL}`,
+      balance: candidate.balance,
+    };
+    return {
+      ...counts,
+      primaryFit: team.filter((player) => {
+        const primary = getPrimaryPlayerPosition(player);
+        return primary !== 'ARQ' && FIELD_LINES.includes(primary);
+      }).reduce((total, player) => total + (counts[getPrimaryPlayerPosition(player)] > 0 ? 1 : 0), 0),
+    };
   });
-  countCandidates.forEach((counts) => {
-    if (variants.length >= targetCount) return;
+  countCandidates
+    .sort((a, b) => b.primaryFit - a.primaryFit || a.balance - b.balance || b.MED - a.MED || (b.DEF + b.LAT) - (a.DEF + a.LAT))
+    .forEach((counts) => {
     const assignmentMap = applyPositionCountsToTeam(team, counts, base, lockedPlayerPositions);
     if (!assignmentMap) return;
     const signature = assignmentSignatureForTeam(team, assignmentMap);
     if (seen.has(signature)) return;
     seen.add(signature);
     const lineCounts = teamLineCounts(team, assignmentMap);
+    const positionUse = assignmentPositionUseStats(team, assignmentMap);
     variants.push({
       assignments: assignmentMap,
       signature,
       lineText: formatLineCounts(lineCounts),
       diffCount: assignmentDiffCount(team, base, assignmentMap),
+      ...positionUse,
       total: teamTotalsSummary(team, assignmentMap).adjusted,
     });
   });
-  return variants;
+  const sorted = variants.sort((a, b) => (
+    a.primaryChangeCount - b.primaryChangeCount
+    || a.secondaryCount - b.secondaryCount
+    || a.outOfPositionCount - b.outOfPositionCount
+    || Number(b.total || 0) - Number(a.total || 0)
+    || a.diffCount - b.diffCount
+  ));
+  return Number.isFinite(targetCount) ? sorted.slice(0, targetCount) : sorted;
 }
 
 function chooseBestFormationVariant(variants = []) {
   if (!variants.length) return null;
-  const bestTotal = Math.max(...variants.map((variant) => Number(variant.total || 0)));
-  const tied = variants.filter((variant) => Math.abs(Number(variant.total || 0) - bestTotal) < 0.0001);
+  const bestPrimaryChangeCount = Math.min(...variants.map((variant) => Number(variant.primaryChangeCount || 0)));
+  const primaryMatches = variants.filter((variant) => Number(variant.primaryChangeCount || 0) === bestPrimaryChangeCount);
+  const bestSecondaryCount = Math.min(...primaryMatches.map((variant) => Number(variant.secondaryCount || 0)));
+  const secondaryMatches = primaryMatches.filter((variant) => Number(variant.secondaryCount || 0) === bestSecondaryCount);
+  const bestOutOfPositionCount = Math.min(...secondaryMatches.map((variant) => Number(variant.outOfPositionCount || 0)));
+  const positionMatches = secondaryMatches.filter((variant) => Number(variant.outOfPositionCount || 0) === bestOutOfPositionCount);
+  const bestTotal = Math.max(...positionMatches.map((variant) => Number(variant.total || 0)));
+  const tied = positionMatches.filter((variant) => Math.abs(Number(variant.total || 0) - bestTotal) < 0.0001);
   return tied[Math.floor(Math.random() * tied.length)] || variants[0];
 }
 
@@ -2476,14 +2522,22 @@ export function SorteoLegacyPageIsland({ root }) {
     }
     const variantsByTeam = Object.fromEntries(sourceTeams.map((team, teamIndex) => [
       String(teamIndex),
-      generateTeamFormationVariants(team, baseAssignments, lockedOverrides, 3),
+      generateTeamFormationVariants(team, baseAssignments, lockedOverrides, Number.POSITIVE_INFINITY),
     ]));
     const defaultVariantsByTeam = Object.fromEntries(
       Object.entries(variantsByTeam)
         .map(([teamIndex, variants]) => [teamIndex, chooseBestFormationVariant(variants)])
         .filter(([, variant]) => Boolean(variant)),
     );
-    setDrawVariants(variantsByTeam);
+    setDrawVariants(Object.fromEntries(
+      Object.entries(variantsByTeam).map(([teamIndex, variants]) => {
+        const defaultVariant = defaultVariantsByTeam[teamIndex];
+        const visible = defaultVariant
+          ? [defaultVariant, ...variants.filter((variant) => variant.signature !== defaultVariant.signature)]
+          : variants;
+        return [teamIndex, visible.slice(0, 3)];
+      }),
+    ));
     setActiveFormationVariants(Object.fromEntries(
       Object.entries(defaultVariantsByTeam).map(([teamIndex, variant]) => [teamIndex, variant.signature]),
     ));
@@ -3872,13 +3926,13 @@ export function SorteoLegacyPageIsland({ root }) {
                             </select>
                           </label>
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
-                            FormaciÃ³n
+                            Formación
                             <select className={inputClass} value={formationSelectValue} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
                               {isFormationEditor ? (
                                 FORMATION_PRESETS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)
                               ) : (
                                 <>
-                                  <option value="auto">AutomÃ¡tica</option>
+                                  <option value="auto">Automática</option>
                                   {formationOptions.map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
                                   <option value="custom">Personalizada</option>
                                 </>

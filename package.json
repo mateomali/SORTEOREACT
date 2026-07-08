@@ -12,6 +12,7 @@
     "build:react": "vite build",
     "db:import": "powershell -ExecutionPolicy Bypass -File scripts/importar-base-local.ps1",
     "dev:react": "vite --host 0.0.0.0",
+    "levantar-servidor": "powershell -ExecutionPolicy Bypass -File scripts/levantar-servidor-local.ps1",
     "serve:local": "powershell -ExecutionPolicy Bypass -File scripts/levantar-servidor-local.ps1",
     "test:react-smoke": "playwright test tests/react-partial-smoke.spec.js",
     "test:sorteo": "php tests/sorteo-rules.php",
