@@ -575,7 +575,7 @@ function logicalLineMinimum(position, teamSize) {
   if (line === 'ARQ') return 1;
   if (!FIELD_LINES.includes(line)) return 0;
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
-  if (line === 'LAT') return fieldPlayers >= 8 ? 2 : (fieldPlayers >= FIELD_LINES.length ? 1 : 0);
+  if (line === 'LAT') return 0;
   return fieldPlayers >= FIELD_LINES.length ? 1 : 0;
 }
 
@@ -758,6 +758,7 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
         if ((counts[line] || 0) >= fieldLineMinimum(line, team.length)) break;
         const candidate = team
           .filter((player) => assignment[playerKey(player)] !== 'ARQ')
+          .filter((player) => playerCanUseAssignedPosition(player, line))
           .filter((player) => {
             const currentLine = pitchLineForPosition(assignment[playerKey(player)]);
             return currentLine !== line && (counts[currentLine] || 0) > fieldLineMinimum(currentLine, team.length);
@@ -781,6 +782,7 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
       const pitchCounts = pitchLineCountsFromLogical(counts);
       const candidate = team
         .filter((player) => assignment[playerKey(player)] !== 'ARQ')
+        .filter((player) => playerCanUseAssignedPosition(player, line))
         .filter((player) => {
             const currentLine = assignment[playerKey(player)] || getPrimaryPlayerPosition(player);
             return currentLine !== line
@@ -819,6 +821,7 @@ function buildTeamAssignment(team, assignmentOverrides = {}) {
     if (!targetLine) break;
     const candidate = team
       .filter((player) => originLines.includes(assignment[playerKey(player)]))
+      .filter((player) => playerCanUseAssignedPosition(player, targetLine))
       .filter((player) => {
         const assigned = assignment[playerKey(player)];
         return (counts[assigned] || 0) > logicalLineMinimumForCounts(assigned, team.length, counts);
@@ -857,7 +860,9 @@ function normalizeDefenseLaneAssignments(team, assignments = {}) {
   const orderedDefense = defenseLinePlayers(defensePlayers, assignments);
   orderedDefense.forEach((player, index) => {
     const key = playerKey(player);
-    next[key] = orderedDefense.length >= 3 && (index === 0 || index === orderedDefense.length - 1) ? 'LAT' : 'DEF';
+    const assigned = String(assignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
+    const isEdge = orderedDefense.length >= 3 && (index === 0 || index === orderedDefense.length - 1);
+    next[key] = (assigned === 'LAT' || isEdge) && playerCanUseAssignedPosition(player, 'LAT') ? 'LAT' : 'DEF';
   });
   return next;
 }
@@ -984,7 +989,7 @@ function positionUsePenalty(teams, assignmentOverrides = {}) {
   return teams.reduce((total, team) => {
     const assignments = buildTeamAssignment(team, assignmentOverrides);
     const stats = assignmentPositionUseStats(team, assignments);
-    return total + (stats.secondaryCount * 260) + (stats.outOfPositionCount * 700);
+    return total + (stats.secondaryCount * 260) + (stats.outOfPositionCount * 1000000);
   }, 0);
 }
 
@@ -1372,6 +1377,12 @@ function primaryPositionScore(player, line) {
   return 0;
 }
 
+function playerCanUseAssignedPosition(player, line) {
+  const position = String(line || '').toUpperCase();
+  if (position === 'ARQ') return canPlayGoalkeeper(player);
+  return getOrderedPlayerPositions(player).includes(position);
+}
+
 function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPlayerPositions = {}) {
   const desiredCounts = {
     ARQ: Number(counts?.ARQ || 0),
@@ -1391,6 +1402,7 @@ function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPla
         const key = playerKey(player);
         const lockedLine = lockedPlayerPositions[key];
         if (lockedLine && lockedLine !== line) return;
+        if (!lockedLine && !playerCanUseAssignedPosition(player, line)) return;
         const current = String(baseAssignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
         const stability = current === line ? 0.35 : 0;
         const score = primaryPositionScore(player, line) + adjustedPositionRatingForTeamSize(player, line, team.length) + stability;

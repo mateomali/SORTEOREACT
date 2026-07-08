@@ -628,7 +628,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   };
 
   const selected = [primary, secondary].filter(Boolean);
-  const visibleFields = primary === 'ARQ' ? [...statFields, 'goalkeeper_skill'] : statFields;
+  const visibleFields = selected.includes('ARQ') ? [...statFields, 'goalkeeper_skill'] : statFields;
   const hasChanges = name !== player.name
     || primary !== (player.primaryPosition || '')
     || secondary !== (player.secondaryPosition || '')
