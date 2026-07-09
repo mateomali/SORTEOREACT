@@ -860,9 +860,12 @@ function normalizeDefenseLaneAssignments(team, assignments = {}) {
   const orderedDefense = defenseLinePlayers(defensePlayers, assignments);
   orderedDefense.forEach((player, index) => {
     const key = playerKey(player);
-    const assigned = String(assignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
-    const isEdge = orderedDefense.length >= 3 && (index === 0 || index === orderedDefense.length - 1);
-    next[key] = (assigned === 'LAT' || isEdge) && playerCanUseAssignedPosition(player, 'LAT') ? 'LAT' : 'DEF';
+    if (orderedDefense.length <= 2) {
+      next[key] = 'DEF';
+      return;
+    }
+    const isEdge = index === 0 || index === orderedDefense.length - 1;
+    next[key] = isEdge ? 'LAT' : 'DEF';
   });
   return next;
 }
@@ -1402,7 +1405,7 @@ function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPla
         const key = playerKey(player);
         const lockedLine = lockedPlayerPositions[key];
         if (lockedLine && lockedLine !== line) return;
-        if (!lockedLine && !playerCanUseAssignedPosition(player, line)) return;
+        if (!lockedLine && line === 'ARQ' && !playerCanUseAssignedPosition(player, line)) return;
         const current = String(baseAssignments[key] || getPrimaryPlayerPosition(player)).toUpperCase();
         const stability = current === line ? 0.35 : 0;
         const score = primaryPositionScore(player, line) + adjustedPositionRatingForTeamSize(player, line, team.length) + stability;
@@ -1505,24 +1508,21 @@ function chooseBestFormationVariant(variants = []) {
 function getFormationCandidates(teamSize) {
   const fieldPlayers = Math.max(0, teamSize - 1);
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
-  const maxDefLat = maxDefLatPlayersPerPosition(teamSize);
-  const minDef = logicalLineMinimum('DEF', teamSize);
-  const minLat = logicalLineMinimum('LAT', teamSize);
   const minMed = fieldLineMinimum('MED', teamSize);
   const minDel = fieldLineMinimum('DEL', teamSize);
   const candidates = [];
-  for (let def = 0; def <= Math.min(maxDefLat, fieldPlayers); def += 1) {
-    for (let lat = 0; lat <= Math.min(maxDefLat, fieldPlayers - def); lat += 1) {
-      if (def + lat > maxPerLine) continue;
-      for (let med = 0; med <= Math.min(maxPerLine, fieldPlayers - def - lat); med += 1) {
-        const del = fieldPlayers - def - lat - med;
-        if (del < 0 || del > maxPerLine) continue;
-        if (def < minDef || lat < minLat || med < minMed || del < minDel) continue;
-        if (def + lat < fieldLineMinimum('DEF', teamSize)) continue;
-        const values = [def + lat, med, del];
-        const balance = Math.max(...values) - Math.min(...values);
-        candidates.push({ DEF: def, LAT: lat, MED: med, DEL: del, value: `${def}-${lat}-${med}-${del}`, balance });
-      }
+  for (let defenseTotal = fieldLineMinimum('DEF', teamSize); defenseTotal <= Math.min(maxPerLine, fieldPlayers); defenseTotal += 1) {
+    const defenseCounts = defenseTotal <= 2
+      ? { DEF: defenseTotal, LAT: 0 }
+      : { DEF: defenseTotal - 2, LAT: 2 };
+    for (let med = minMed; med <= Math.min(maxPerLine, fieldPlayers - defenseTotal); med += 1) {
+      const del = fieldPlayers - defenseTotal - med;
+      if (del < minDel || del > maxPerLine) continue;
+      const counts = { ARQ: 1, ...defenseCounts, MED: med, DEL: del };
+      if (!fieldLineCountsFitLimits(counts, teamSize)) continue;
+      const values = [defenseTotal, med, del];
+      const balance = Math.max(...values) - Math.min(...values);
+      candidates.push({ ...defenseCounts, MED: med, DEL: del, value: `${defenseCounts.DEF}-${defenseCounts.LAT}-${med}-${del}`, balance });
     }
   }
   return candidates;
@@ -1541,7 +1541,55 @@ function getFormationOptions(teamSize) {
   addBest((a, b) => b.MED - a.MED || a.balance - b.balance);
   addBest((a, b) => b.DEL - a.DEL || a.balance - b.balance);
 
-  return preferred.slice(0, 4);
+  const preferredValues = new Set(preferred.map((option) => option.value));
+  const remaining = candidates
+    .filter((option) => !preferredValues.has(option.value))
+    .sort((a, b) => a.balance - b.balance || (b.DEF + b.LAT) - (a.DEF + a.LAT) || b.MED - a.MED || b.DEL - a.DEL);
+
+  return [...preferred, ...remaining];
+}
+
+function formationCountsFromValue(team, value) {
+  const parsedCounts = parseFormationValue(value);
+  if (!parsedCounts) return null;
+  const defenseCounts = parsedCounts.LAT === null
+    ? splitDefenseFormationCount(team, parsedCounts.DEF)
+    : { DEF: parsedCounts.DEF, LAT: parsedCounts.LAT };
+  return { ARQ: 1, ...parsedCounts, ...defenseCounts };
+}
+
+function getScoredFormationOptions(team, currentAssignments = {}, lockedPlayerPositions = {}) {
+  if (!team?.length) return [];
+  const base = buildTeamAssignment(team, currentAssignments);
+  const options = getFormationOptions(team.length)
+    .map((option) => {
+      const counts = formationCountsFromValue(team, option.value);
+      if (!counts) return null;
+      const assignments = applyPositionCountsToTeam(team, counts, base, lockedPlayerPositions);
+      if (!assignments) return null;
+      return {
+        ...option,
+        total: teamTotalsSummary(team, assignments).adjusted,
+      };
+    })
+    .filter(Boolean);
+  const bestTotal = options.length ? Math.max(...options.map((option) => Number(option.total || 0))) : null;
+  return options.map((option) => ({
+    ...option,
+    recommended: bestTotal !== null && Math.abs(Number(option.total || 0) - bestTotal) < 0.0001,
+  }));
+}
+
+function formationDisplayValue(option) {
+  const defenseTotal = Number(option?.DEF || 0) + Number(option?.LAT || 0);
+  return `${defenseTotal}-${Number(option?.MED || 0)}-${Number(option?.DEL || 0)}`;
+}
+
+function formationOptionLabel(option) {
+  const total = Number(option?.total);
+  const value = formationDisplayValue(option);
+  const suffix = option?.recommended ? ' - Recomendada' : '';
+  return Number.isFinite(total) ? `${value} - ${total.toFixed(1)} pts${suffix}` : value;
 }
 
 function getFormationPresetOptions(teamSize) {
@@ -1572,14 +1620,18 @@ function formationValueFromCounts(counts = {}) {
   return `${Number(counts.DEF || 0)}-${Number(counts.LAT || 0)}-${Number(counts.MED || 0)}-${Number(counts.DEL || 0)}`;
 }
 
-function teamFormationSelectValue(team, currentAssignments, selectedValue, inferCurrent = false) {
-  if (selectedValue && FORMATION_PRESET_VALUES.has(selectedValue)) return selectedValue;
+function teamFormationSelectValue(team, currentAssignments, selectedValue, inferCurrent = false, usePresets = false) {
+  if (selectedValue && FORMATION_PRESET_VALUES.has(selectedValue)) {
+    return usePresets ? selectedValue : (formationValueForPreset(team.length, selectedValue) || 'auto');
+  }
   if (selectedValue && parseFormationValue(selectedValue)) {
+    if (!usePresets) return selectedValue;
     const matchedPreset = getFormationPresetOptions(team.length).find((option) => option.formation.value === selectedValue);
     return matchedPreset?.preset || 'custom';
   }
   if (!inferCurrent) return 'auto';
   const value = formationValueFromCounts(teamLineCounts(team, currentAssignments));
+  if (!usePresets) return value;
   return getFormationPresetOptions(team.length).find((option) => option.formation.value === value)?.preset || 'custom';
 }
 
@@ -1594,24 +1646,7 @@ function parseFormationValue(value) {
 function splitDefenseFormationCount(team, defenseCount) {
   const safeDefenseCount = Math.max(0, Number(defenseCount || 0));
   if (safeDefenseCount <= 2) return { DEF: safeDefenseCount, LAT: 0 };
-  const minDef = logicalLineMinimum('DEF', team.length);
-  const minLat = logicalLineMinimum('LAT', team.length);
-  const maxDefLat = maxDefLatPlayersPerPosition(team.length);
-  let lat = Math.max(minLat, Math.min(maxDefLat, Math.floor(safeDefenseCount / 2)));
-  let def = safeDefenseCount - lat;
-  if (def < minDef) {
-    def = minDef;
-    lat = safeDefenseCount - def;
-  }
-  if (lat < minLat) {
-    lat = minLat;
-    def = safeDefenseCount - lat;
-  }
-  if (def > maxDefLat) {
-    def = maxDefLat;
-    lat = safeDefenseCount - def;
-  }
-  return { DEF: Math.max(0, def), LAT: Math.max(0, lat) };
+  return { DEF: Math.max(0, safeDefenseCount - 2), LAT: 2 };
 }
 
 function applyFormationToTeam(team, value) {
@@ -2977,7 +3012,11 @@ export function SorteoLegacyPageIsland({ root }) {
     }
     if (value === 'custom') return;
     if (!formationValue) return;
-    const nextAssignments = applyFormationToTeam(teams[teamIndex], formationValue);
+    const counts = formationCountsFromValue(teams[teamIndex], formationValue);
+    const nextAssignments = counts
+      ? applyPositionCountsToTeam(teams[teamIndex], counts, buildTeamAssignment(teams[teamIndex], assignments), lockedPlayerPositions)
+      : applyFormationToTeam(teams[teamIndex], formationValue);
+    if (!nextAssignments) return;
     setAssignments((current) => ({ ...current, ...nextAssignments, ...lockedPlayerPositions }));
   };
 
@@ -3908,11 +3947,12 @@ export function SorteoLegacyPageIsland({ root }) {
                         (linePlayers[pitchLine] || linePlayers.MED).push(player);
                       });
                     const summary = teamTotalsSummary(team, assignments);
-                    const formationOptions = getFormationOptions(team.length);
+                    const formationOptions = getScoredFormationOptions(team, currentAssignments, lockedPlayerPositions);
                     const formationSelectValue = teamFormationSelectValue(
                       team,
                       currentAssignments,
                       teamFormations[teamIndex],
+                      isFormationEditor,
                       isFormationEditor,
                     );
                     return (
@@ -3945,7 +3985,7 @@ export function SorteoLegacyPageIsland({ root }) {
                               ) : (
                                 <>
                                   <option value="auto">Automática</option>
-                                  {formationOptions.map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
+                                  {formationOptions.map((option) => <option key={option.value} value={option.value}>{formationOptionLabel(option)}</option>)}
                                   <option value="custom">Personalizada</option>
                                 </>
                               )}

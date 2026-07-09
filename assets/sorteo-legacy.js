@@ -1200,7 +1200,7 @@ function explicarBloqueoSorteo(players, numEquipos, maxDiff) {
   const teamSize = players.length / numEquipos;
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
   if (teamSize < 5) {
-    return `Cada equipo tendria ${teamSize} jugadores. La formacion minima requiere 1 arquero, laterales segun tamano de equipo, y cobertura en DEF, MED y DEL.`;
+    return `Cada equipo tendria ${teamSize} jugadores. La formacion minima requiere 1 arquero y cobertura en defensa, medio y ataque; los defensores pueden ser DEF sin laterales obligatorios.`;
   }
   const maxTeamSizeByFormation = 1 + (maxPerLine * 3);
   if (teamSize > maxTeamSizeByFormation) {
@@ -1270,7 +1270,7 @@ async function generarEquipos() {
   const teamSize = selectedPlayers.length / numEquipos;
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
   if (teamSize < 5) {
-    errorDiv.textContent = `Con ${teamSize} jugadores por equipo no se puede respetar la formacion minima: 1 arquero, laterales segun tamano de equipo, y cobertura en DEF, MED y DEL.`;
+    errorDiv.textContent = `Con ${teamSize} jugadores por equipo no se puede respetar la formacion minima: 1 arquero y cobertura en defensa, medio y ataque; los defensores pueden ser DEF sin laterales obligatorios.`;
     errorDiv.classList.remove('hidden');
     return;
   }

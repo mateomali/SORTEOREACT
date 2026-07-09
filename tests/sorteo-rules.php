@@ -63,8 +63,7 @@ foreach ($teams as $teamIndex => $team) {
     $lineCounts = $team['line_counts'] ?? array_fill_keys(['ARQ', 'DEF', 'LAT', 'MED', 'DEL'], 0);
     assert_true(count($playersInTeam) === 9, "Equipo {$teamIndex} debe tener 9 jugadores.");
     assert_true($lineCounts['ARQ'] === 1, "Equipo {$teamIndex} debe tener 1 arquero.");
-    assert_true($lineCounts['LAT'] >= 2, "Equipo {$teamIndex} debe tener al menos 2 laterales.");
-    assert_true($lineCounts['DEF'] >= 1, "Equipo {$teamIndex} debe cubrir defensa.");
+    assert_true(($lineCounts['DEF'] + $lineCounts['LAT']) >= 2, "Equipo {$teamIndex} debe cubrir defensa con 2 jugadores.");
     assert_true($lineCounts['MED'] >= 1, "Equipo {$teamIndex} debe cubrir medio.");
     assert_true($lineCounts['DEL'] >= 1, "Equipo {$teamIndex} debe cubrir delantero.");
     $platinumCounts[] = count(array_filter($playersInTeam, 'draw_player_is_platinum'));
@@ -148,10 +147,21 @@ assert_true(is_array($threeTeams), 'Debe generar equipos validos para 3 equipos.
 foreach ($threeTeams as $teamIndex => $team) {
     $lineCounts = $team['line_counts'] ?? [];
     assert_true(($lineCounts['ARQ'] ?? 0) === 1, "Equipo triple {$teamIndex} debe tener 1 arquero.");
-    assert_true(($lineCounts['LAT'] ?? 0) >= 2, "Equipo triple {$teamIndex} debe tener 2 laterales.");
-    assert_true(($lineCounts['DEF'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir defensa.");
+    assert_true((($lineCounts['DEF'] ?? 0) + ($lineCounts['LAT'] ?? 0)) >= 2, "Equipo triple {$teamIndex} debe cubrir defensa con 2 jugadores.");
     assert_true(($lineCounts['MED'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir medio.");
     assert_true(($lineCounts['DEL'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir delantero.");
 }
+
+$twoDefenderTeam = [
+    test_player(201, 'Arquero Chico', 'ARQ', 4.0, ['goalkeeper_skill' => 5.0]),
+    test_player(202, 'Def Chico A', 'DEF', 4.0),
+    test_player(203, 'Def Chico B', 'DEF', 3.9),
+    test_player(204, 'Med Chico', 'MED', 4.0),
+    test_player(205, 'Del Chico', 'DEL', 4.0),
+];
+$twoDefenderAssignment = build_team_position_assignment($twoDefenderTeam);
+assert_true($twoDefenderAssignment['line_limit_ok'], 'Un equipo con 2 DEF y 0 LAT debe ser una formacion valida.');
+assert_true(($twoDefenderAssignment['line_counts']['DEF'] ?? 0) === 2, 'Los dos defensores deben quedar como DEF.');
+assert_true(($twoDefenderAssignment['line_counts']['LAT'] ?? 0) === 0, 'No se debe inventar un LAT cuando hay 2 DEF naturales.');
 
 echo "OK sorteo rules\n";

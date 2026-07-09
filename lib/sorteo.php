@@ -95,7 +95,7 @@ function draw_logical_line_minimum(string $position, int $teamSize): int
     }
     $fieldPlayers = max(0, $teamSize - 1);
     if ($position === 'LAT') {
-        return $fieldPlayers >= 8 ? 2 : ($fieldPlayers >= count(player_field_lines()) ? 1 : 0);
+        return 0;
     }
     return $fieldPlayers >= count(player_field_lines()) ? 1 : 0;
 }

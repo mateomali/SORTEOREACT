@@ -979,8 +979,20 @@ function directive_publish_match_results(array $match, array $participants, stri
 function directive_publish_due_results(): int
 {
     ensure_directivos_schema();
+    $stmt = db()->query(
+        "SELECT DISTINCT m.*
+         FROM matches m
+         INNER JOIN match_director_rating_votes rv ON rv.match_id = m.id
+         LEFT JOIN match_director_publications mp ON mp.match_id = m.id
+         WHERE m.status = 'finalizado'
+           AND m.finalized_at IS NOT NULL
+           AND m.finalized_at <> ''
+           AND mp.match_id IS NULL
+         ORDER BY m.match_date DESC, m.id DESC"
+    );
+
     $published = 0;
-    foreach (repo_matches("m.status = 'finalizado'") as $match) {
+    foreach ($stmt->fetchAll() as $match) {
         if (directive_publish_if_ready($match, repo_match_participants((int) $match['id']))) {
             $published++;
         }

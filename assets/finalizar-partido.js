@@ -213,8 +213,7 @@
   const maxItem = (items, valueGetter) => items.reduce((best, item) => (best === null || valueGetter(item) > valueGetter(best) ? item : best), null);
   const lineLimit = (position) => {
     if (position === 'ARQ') return 1;
-    if (position === 'DEF' || position === 'LAT') return Math.max(0, Math.floor(playersPerTeam / 4));
-    return Math.max(0, Math.floor(playersPerTeam / 3));
+    return Math.max(1, Math.floor(Math.max(0, playersPerTeam - 1) / 2));
   };
 
   const cardRating = (value) => {
@@ -560,7 +559,11 @@
       lineCounts,
       pitchCounts,
       missingLines: requiredPitchLines.filter((line) => (pitchCounts[line] || 0) <= 0),
-      overloadedLines: positions.filter((line) => (lineCounts[line] || 0) > lineLimit(line)),
+      overloadedLines: positions.filter((line) => {
+        if (line === 'DEF') return (pitchCounts.DEF || 0) > lineLimit(line);
+        if (line === 'LAT') return false;
+        return (lineCounts[line] || 0) > lineLimit(line);
+      }),
       outOfPosition,
       highBand: snapshot.players.filter((player) => bands.high.has(String(player.id))).length,
       lowBand: snapshot.players.filter((player) => bands.low.has(String(player.id))).length,
