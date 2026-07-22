@@ -4070,14 +4070,27 @@ export function SorteoLegacyPageIsland({ root }) {
                               : (lineCanAcceptDrop
                                 ? 'border-lime-200/70 bg-lime-200/15 ring-2 ring-lime-200/70'
                                 : 'opacity-45');
+                            const formationEditorLineGridClass = canTuneLine
+                              ? 'grid-cols-[34px_minmax(0,1fr)_28px] gap-1.5 max-[760px]:grid-cols-[29px_minmax(0,1fr)_24px] max-[760px]:gap-1'
+                              : 'grid-cols-[34px_minmax(0,1fr)] gap-1.5 max-[760px]:grid-cols-[29px_minmax(0,1fr)] max-[760px]:gap-1';
+                            const defaultLineGridClass = canTuneLine
+                              ? 'grid-cols-[54px_minmax(0,1fr)_34px] max-[760px]:grid-cols-[32px_minmax(0,1fr)_22px] max-[760px]:gap-0.5'
+                              : 'grid-cols-[54px_minmax(0,1fr)] max-[760px]:grid-cols-[38px_minmax(0,1fr)]';
+                            const lineGridClass = isFormationEditor ? formationEditorLineGridClass : defaultLineGridClass;
+                            const lineModeClass = isFormationEditor
+                              ? (canTuneLine ? 'finish-line-with-tools' : 'finish-line-basic')
+                              : (canTuneLine ? 'sorteo-line-with-tools' : 'sorteo-line-basic');
+                            const linePlayersClass = isFormationEditor
+                              ? 'line-players relative flex h-full min-h-0 flex-nowrap items-center justify-evenly gap-1.5 overflow-visible px-1.5 py-0 max-[760px]:gap-0.5 max-[760px]:px-0.5'
+                              : 'line-players relative flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/10 !bg-emerald-950/10 p-1 max-[760px]:gap-1 max-[760px]:p-0.5';
+                            const lineStyle = isFormationEditor
+                              ? { gridTemplateColumns: canTuneLine ? '34px minmax(0, 1fr) 28px' : '34px minmax(0, 1fr)' }
+                              : undefined;
                             return (
                               <div
                                 key={line}
-                                className={`formation-line ${hasProjectedLaterals ? 'is-projected-defense' : ''} ${pitchLineToneClasses[line] || ''} ${canTuneLine ? 'sorteo-line-with-tools' : 'sorteo-line-basic'} grid min-h-0 items-center gap-2 border-b border-white/15 transition-colors duration-150 last:border-b-0 max-[760px]:gap-1 ${lineDropClass} ${
-                                  canTuneLine
-                                    ? 'grid-cols-[54px_minmax(0,1fr)_34px] max-[760px]:grid-cols-[32px_minmax(0,1fr)_22px] max-[760px]:gap-0.5'
-                                    : 'grid-cols-[54px_minmax(0,1fr)] max-[760px]:grid-cols-[38px_minmax(0,1fr)]'
-                                }`}
+                                className={`formation-line ${hasProjectedLaterals ? 'is-projected-defense' : ''} ${isFormationEditor ? '' : (pitchLineToneClasses[line] || '')} ${lineModeClass} grid min-h-0 items-center border-b border-white/15 transition-colors duration-150 last:border-b-0 ${lineDropClass} ${lineGridClass}`}
+                                style={lineStyle}
                                 data-sorteo-drop-line={line}
                                 data-team-index={teamIndex}
                                 onDragOver={(event) => {
@@ -4097,7 +4110,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                   ) : null}
                                 </div>
                                 <div
-                                  className="line-players relative flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/10 !bg-emerald-950/10 p-1 max-[760px]:gap-1 max-[760px]:p-0.5"
+                                  className={linePlayersClass}
                                   data-sorteo-drop-line={line}
                                   data-team-index={teamIndex}
                                   onDragOver={(event) => {
