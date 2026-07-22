@@ -12954,6 +12954,139 @@
   border-color: rgba(183, 241, 61, 0.35);
 }
 
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation {
+  gap: 9px;
+  border-color: #adc8bb;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 38%),
+    #063d2b;
+  padding: 13px 12px 12px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.055),
+    0 2px 8px rgba(7, 19, 15, 0.12);
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation::before,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation::before {
+  border-color: rgba(244, 255, 248, 0.22);
+  opacity: 0.78;
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-line,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-line {
+  grid-template-columns: 45px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-line + .formation-line,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-line + .formation-line {
+  padding-top: 8px;
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-line + .formation-line::before,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-line + .formation-line::before {
+  left: 54px;
+  background: linear-gradient(90deg, transparent, rgba(244, 255, 248, 0.42) 16%, rgba(244, 255, 248, 0.42) 84%, transparent);
+  box-shadow: none;
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .line-label,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .line-label {
+  min-height: 30px;
+  border: 1px solid rgba(198, 234, 217, 0.32);
+  border-radius: 6px;
+  background: rgba(2, 29, 19, 0.72);
+  color: #e9fff2;
+  -webkit-text-fill-color: #e9fff2;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .line-players,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .line-players {
+  align-items: center;
+  gap: 7px;
+  min-height: 84px;
+  padding: 2px 0;
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta {
+  flex-basis: 102px;
+  width: 102px;
+  min-width: 102px;
+  max-width: 102px;
+  filter: drop-shadow(0 5px 8px rgba(2, 14, 9, 0.24));
+  transition:
+    filter 140ms ease,
+    opacity 140ms ease;
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta:hover,
+  body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta:focus-visible,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta:hover,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta:focus-visible {
+  filter: drop-shadow(0 7px 10px rgba(2, 14, 9, 0.3));
+  outline: 2px solid rgba(217, 249, 157, 0.78);
+  outline-offset: 2px;
+}
+
+body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-player.empty-slot,
+  body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-player.empty-slot {
+  width: 102px;
+  min-height: 52px;
+  border: 1px dashed rgba(198, 234, 217, 0.28);
+  border-radius: 8px;
+  background: rgba(2, 29, 19, 0.38);
+  color: rgba(244, 255, 248, 0.58);
+  -webkit-text-fill-color: rgba(244, 255, 248, 0.58);
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  body.page-index .content .match-history .public-teams .team-formation.is-base-formation,
+    body.page-historial .content .match-history .public-teams .team-formation.is-base-formation {
+    gap: 7px;
+    padding: 10px 8px 9px;
+  }
+
+  body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-line,
+    body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-line {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-line + .formation-line::before,
+    body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-line + .formation-line::before {
+    left: 44px;
+  }
+
+  body.page-index .content .match-history .public-teams .team-formation.is-base-formation .line-label,
+    body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .line-label {
+    min-height: 24px;
+    font-size: 0.56rem;
+  }
+
+  body.page-index .content .match-history .public-teams .team-formation.is-base-formation .line-players,
+    body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .line-players {
+    gap: 4px;
+    min-height: 64px;
+  }
+
+  body.page-index .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta,
+    body.page-historial .content .match-history .public-teams .team-formation.is-base-formation .formation-player.formation-card-sin-stat.formation-card-compacta {
+    flex-basis: min(22vw, 74px);
+    width: min(22vw, 74px);
+    min-width: 60px;
+    max-width: 74px;
+  }
+}
+
 .page-backup .backup-section-list .inline-check .small-muted {
   color: #d8f5e2;
 }

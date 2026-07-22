@@ -640,6 +640,68 @@
     document.documentElement.dataset.compactFormationPreviewBound = '1';
     let activePreview = null;
 
+    const previewCardRating = (value) => {
+      const rating = Math.max(1, Math.min(6, Number(value || 0)));
+      const anchors = [
+        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
+        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
+        [5.2, 93], [5.3, 94], [6.0, 99],
+      ];
+      for (let index = 0; index < anchors.length - 1; index += 1) {
+        const [fromRating, fromOverall] = anchors[index];
+        const [toRating, toOverall] = anchors[index + 1];
+        if (rating <= toRating) {
+          const ratio = (rating - fromRating) / (toRating - fromRating);
+          return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
+        }
+      }
+      return 99;
+    };
+
+    const previewCardStatValue = (card, field, fallbackField = '') => {
+      const raw = card.dataset?.[field] || (fallbackField ? card.dataset?.[fallbackField] : '');
+      const value = Number(raw);
+      if (Number.isFinite(value) && value > 0) return previewCardRating(value);
+      return previewCardRating(card.dataset?.playerSkill || 0);
+    };
+
+    const ensurePreviewCardStats = (card) => {
+      if (!card || card.querySelector('.formation-card-stats')) return;
+      const assignedPosition = String(card.dataset?.assignedPosition || '').toUpperCase();
+      const stats = assignedPosition === 'ARQ'
+        ? [
+            ['ARQ', previewCardStatValue(card, 'playerGoalkeeperSkill')],
+            ['VEL', previewCardStatValue(card, 'playerRhythm')],
+            ['DEF', previewCardStatValue(card, 'playerDefensePhysical')],
+            ['TEC', previewCardStatValue(card, 'playerTechnique')],
+            ['EQU', previewCardStatValue(card, 'playerTeamwork')],
+            ['MEN', previewCardStatValue(card, 'playerMentality')],
+          ]
+        : [
+            ['TEC', previewCardStatValue(card, 'playerTechnique')],
+            ['VEL', previewCardStatValue(card, 'playerRhythm')],
+            ['DEF', previewCardStatValue(card, 'playerDefensePhysical')],
+            ['ATA', previewCardStatValue(card, 'playerAttack')],
+            ['EQU', previewCardStatValue(card, 'playerTeamwork')],
+            ['MEN', previewCardStatValue(card, 'playerMentality')],
+          ];
+
+      const statsNode = document.createElement('span');
+      statsNode.className = 'formation-card-stats';
+      statsNode.setAttribute('aria-label', 'Stats del jugador');
+      stats.forEach(([label, value]) => {
+        const item = document.createElement('span');
+        item.className = 'formation-card-stat';
+        const labelNode = document.createElement('span');
+        labelNode.textContent = label;
+        const valueNode = document.createElement('strong');
+        valueNode.textContent = String(value);
+        item.append(labelNode, valueNode);
+        statsNode.appendChild(item);
+      });
+      card.appendChild(statsNode);
+    };
+
     const closePreview = () => {
       activePreview?.remove();
       activePreview = null;
@@ -667,6 +729,7 @@
       card.removeAttribute('data-static-formation-player');
       card.removeAttribute('data-sorteo-drag-player');
       card.removeAttribute('data-drag-player-id');
+      ensurePreviewCardStats(card);
       preview.querySelector('.formation-card-preview-stage')?.appendChild(card);
       document.body.appendChild(preview);
       document.body.classList.add('has-formation-card-preview');
