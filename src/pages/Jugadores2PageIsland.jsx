@@ -64,11 +64,14 @@ function parsePayload(root) {
       positions: Array.isArray(parsed.positions) ? parsed.positions : [],
       summary: parsed.summary || { active: 0, average: 0, top: 0 },
       links: parsed.links || {},
+      statLabels: parsed.statLabels || {},
+      statHelp: parsed.statHelp || {},
+      createOpen: parsed.createOpen === true,
       isAdmin: parsed.isAdmin === true,
       showInactive: parsed.showInactive === true,
     };
   } catch {
-    return { players: [], positions: [], summary: { active: 0, average: 0, top: 0 }, links: {}, isAdmin: false, showInactive: false };
+    return { players: [], positions: [], summary: { active: 0, average: 0, top: 0 }, links: {}, statLabels: {}, statHelp: {}, createOpen: false, isAdmin: false, showInactive: false };
   }
 }
 
@@ -567,6 +570,7 @@ function ReadonlyProfile({ player, onRadarOpen }) {
 }
 
 function AdminEditForm({ player, positions, onOverallPreviewChange }) {
+  const isCreate = String(player.id) === '0';
   const initialOveralls = useMemo(() => Object.fromEntries(player.allStats.map((stat) => [stat.field, Number(stat.overall) || 64])), [player]);
   const initialPhotoPosition = useMemo(() => playerPhotoPosition(player), [player]);
   const mainPhotoPreviewRef = useRef(null);
@@ -598,11 +602,12 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   const displayedOverall = previewPositionRatings[0]?.overall || calculateOverallForPosition(overallValues, primary || 'MED');
 
   useEffect(() => {
+    if (isCreate) return;
     onOverallPreviewChange?.(player.id, {
       value: displayedOverall,
       positionRatings: previewPositionRatings,
     });
-  }, [displayedOverall, onOverallPreviewChange, player.id, previewPositionRatings]);
+  }, [displayedOverall, isCreate, onOverallPreviewChange, player.id, previewPositionRatings]);
 
   useEffect(() => {
     if (!hasPreviewPhoto) return;
@@ -629,7 +634,8 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
 
   const selected = [primary, secondary].filter(Boolean);
   const visibleFields = selected.includes('ARQ') ? [...statFields, 'goalkeeper_skill'] : statFields;
-  const hasChanges = name !== player.name
+  const hasChanges = isCreate
+    || name !== player.name
     || primary !== (player.primaryPosition || '')
     || secondary !== (player.secondaryPosition || '')
     || active !== player.isActive
@@ -646,7 +652,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
       <input type="hidden" name="photo_zoom" value={photoPosition.zoom} />
 
       <div className="flex items-center justify-between gap-3 border-b border-emerald-100 pb-3">
-        <strong className="text-base font-black text-[#07130f]">Editar jugador</strong>
+        <strong className="text-base font-black text-[#07130f]">{isCreate ? 'Crear jugador' : 'Editar jugador'}</strong>
         <OverallBadge value={displayedOverall} />
       </div>
 
@@ -831,10 +837,58 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
       <div className="flex justify-end">
         <button className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-5 text-sm font-black transition-colors ${focusRing} ${hasChanges ? 'border-[#063d2b] bg-[#063d2b] text-white hover:bg-[#082f23]' : 'border-[#adc8bb] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b]'}`} type="submit">
           {hasChanges ? <SaveIcon /> : null}
-          Guardar todo
+          {isCreate ? 'Crear jugador' : 'Guardar todo'}
         </button>
       </div>
     </form>
+  );
+}
+
+function createBlankPlayer(statLabels, statHelp) {
+  const defaultOveralls = {
+    technique: 64,
+    pass_vision: 64,
+    rhythm: 64,
+    stamina: 74,
+    defense_physical: 64,
+    attack: 64,
+    teamwork: 64,
+    mentality: 64,
+    regularity: 74,
+    goalkeeper_skill: 64,
+  };
+  return {
+    id: '0',
+    name: '',
+    primaryPosition: '',
+    secondaryPosition: '',
+    isActive: true,
+    photo: 'assets/players/default-player-silhouette.png',
+    photoEdit: 'assets/players/default-player-silhouette.png',
+    hasCustomPhoto: false,
+    photoPositionX: 50,
+    photoPositionY: 50,
+    photoZoom: 100,
+    allStats: [...statFields, 'goalkeeper_skill'].map((field) => ({
+      field,
+      label: statLabels[field] || field,
+      help: statHelp[field] || 'Sin descripcion disponible.',
+      overall: defaultOveralls[field] || 64,
+    })),
+  };
+}
+
+function CreatePlayerPanel({ positions, statLabels, statHelp, defaultOpen }) {
+  const player = useMemo(() => createBlankPlayer(statLabels, statHelp), [statHelp, statLabels]);
+  return (
+    <details id="crear-jugador" className="rounded-lg border border-[#adc8bb] bg-white" open={defaultOpen}>
+      <summary className="cursor-pointer list-none border-b border-[#d7e6df] bg-[#f8fbfa] px-4 py-3 text-base font-black text-[#07130f]">
+        Crear jugador
+      </summary>
+      <div className="p-3">
+        <AdminEditForm player={player} positions={positions} />
+      </div>
+    </details>
   );
 }
 
@@ -1014,9 +1068,19 @@ export function Jugadores2PageIsland({ root }) {
           </button>
         </div>
         <div className="flex flex-wrap gap-2 pt-1 sm:pt-0">
+          {payload.isAdmin ? <a className={toolbarLinkClass} href="jugadores2.php?create=1#crear-jugador">Crear jugador</a> : null}
           {payload.isAdmin && payload.links.toggleInactive ? <a className={toolbarLinkClass} href={payload.links.toggleInactive}>{payload.showInactive ? 'Ver solo activos' : 'Ver inactivos'}</a> : null}
         </div>
       </section>
+
+      {payload.isAdmin ? (
+        <CreatePlayerPanel
+          positions={payload.positions}
+          statLabels={payload.statLabels}
+          statHelp={payload.statHelp}
+          defaultOpen={payload.createOpen}
+        />
+      ) : null}
 
       {visiblePlayers.length === 0 ? (
         <p className="m-0 border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">No hay jugadores que coincidan con la busqueda.</p>

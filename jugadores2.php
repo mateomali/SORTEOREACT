@@ -150,23 +150,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $photoPositionY = jugadores2_photo_position_from_post('photo_position_y', player_photo_position_y($existingPlayer ?? []));
         $photoZoom = jugadores2_photo_zoom_from_post('photo_zoom', player_photo_zoom($existingPlayer ?? []));
 
-        if ($id <= 0 || !$existingPlayer || $name === '' || $positionsCsv === '') {
+        if (($id > 0 && !$existingPlayer) || $name === '' || $positionsCsv === '') {
             flash('error', 'Nombre y posicion son obligatorios.');
             redirect($returnUrl);
         }
 
         $photoPath = jugadores2_photo_public_path((string) ($existingPlayer['photo_path'] ?? ''));
-        try {
-            if (isset($_FILES['player_photo']) && is_array($_FILES['player_photo'])) {
-                $uploadedPath = jugadores2_uploaded_photo_path($_FILES['player_photo'], $id, $photoPath);
-                if ($uploadedPath !== null) {
-                    $photoPath = $uploadedPath;
-                }
-            }
-        } catch (Throwable $e) {
-            flash('error', $e->getMessage());
-            redirect($returnUrl);
-        }
 
         $statFromPost = static function (string $field, float $fallback = 3.0): float {
             $overallKey = $field . '_overall';
@@ -203,18 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $skill = player_overall_rating($ratingPlayer);
         $pace = player_pace_from_rhythm($rhythm);
 
-        $stmt = db()->prepare(
-            'UPDATE players
-             SET name = :name, positions = :positions, pace = :pace, skill = :skill,
-                 technique = :technique, pass_vision = :pass_vision, rhythm = :rhythm, stamina = :stamina, defense_physical = :defense_physical,
-                 attack = :attack, teamwork = :teamwork, mentality = :mentality, regularity = :regularity,
-                 goalkeeper_skill = :goalkeeper_skill, photo_path = :photo_path,
-                 photo_position_x = :photo_position_x, photo_position_y = :photo_position_y, photo_zoom = :photo_zoom,
-                 active = :active
-             WHERE id = :id'
-        );
-        $stmt->execute([
-            'id' => $id,
+        $playerData = [
             'name' => $name,
             'positions' => $positionsCsv,
             'pace' => $pace,
@@ -234,8 +212,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'photo_position_y' => $photoPositionY,
             'photo_zoom' => $photoZoom,
             'active' => $active,
-        ]);
-        flash('success', 'Jugador actualizado desde jugadores2.');
+        ];
+
+        $pdo = db();
+        if ($id > 0) {
+            try {
+                if (isset($_FILES['player_photo']) && is_array($_FILES['player_photo'])) {
+                    $uploadedPath = jugadores2_uploaded_photo_path($_FILES['player_photo'], $id, $photoPath);
+                    if ($uploadedPath !== null) {
+                        $photoPath = $uploadedPath;
+                        $playerData['photo_path'] = $photoPath;
+                    }
+                }
+            } catch (Throwable $e) {
+                flash('error', $e->getMessage());
+                redirect($returnUrl);
+            }
+
+            $stmt = $pdo->prepare(
+                'UPDATE players
+                 SET name = :name, positions = :positions, pace = :pace, skill = :skill,
+                     technique = :technique, pass_vision = :pass_vision, rhythm = :rhythm, stamina = :stamina, defense_physical = :defense_physical,
+                     attack = :attack, teamwork = :teamwork, mentality = :mentality, regularity = :regularity,
+                     goalkeeper_skill = :goalkeeper_skill, photo_path = :photo_path,
+                     photo_position_x = :photo_position_x, photo_position_y = :photo_position_y, photo_zoom = :photo_zoom,
+                     active = :active
+                 WHERE id = :id'
+            );
+            $stmt->execute(['id' => $id] + $playerData);
+            flash('success', 'Jugador actualizado desde jugadores2.');
+        } else {
+            $stmt = $pdo->prepare(
+                'INSERT INTO players
+                   (name, positions, pace, skill, technique, pass_vision, rhythm, stamina, defense_physical, attack, teamwork, mentality, regularity, goalkeeper_skill, photo_path, photo_position_x, photo_position_y, photo_zoom, active)
+                 VALUES
+                   (:name, :positions, :pace, :skill, :technique, :pass_vision, :rhythm, :stamina, :defense_physical, :attack, :teamwork, :mentality, :regularity, :goalkeeper_skill, :photo_path, :photo_position_x, :photo_position_y, :photo_zoom, :active)'
+            );
+            $stmt->execute($playerData);
+            $id = (int) $pdo->lastInsertId();
+
+            try {
+                if ($id > 0 && isset($_FILES['player_photo']) && is_array($_FILES['player_photo'])) {
+                    $uploadedPath = jugadores2_uploaded_photo_path($_FILES['player_photo'], $id, '');
+                    if ($uploadedPath !== null) {
+                        $photoPath = $uploadedPath;
+                        $updatePhoto = $pdo->prepare('UPDATE players SET photo_path = :photo_path WHERE id = :id');
+                        $updatePhoto->execute(['photo_path' => $photoPath, 'id' => $id]);
+                    }
+                }
+            } catch (Throwable $e) {
+                flash('error', $e->getMessage());
+                redirect($returnUrl);
+            }
+
+            flash('success', 'Jugador creado correctamente.');
+        }
         redirect($returnUrl);
     }
 }
@@ -472,6 +503,9 @@ $jugadores2Payload = [
         'toggleInactive' => $isAdmin ? ($showInactive ? 'jugadores2.php' : 'jugadores2.php?show_inactive=1') : '',
         'backup' => 'jugadores.php' . ($showInactive ? '?show_inactive=1' : ''),
     ],
+    'statLabels' => $statLabels,
+    'statHelp' => $statHelp,
+    'createOpen' => $isAdmin && (($_GET['create'] ?? '') === '1'),
     'positions' => $positionsPayload,
     'players' => $playersPayload,
 ];

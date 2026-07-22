@@ -86,6 +86,7 @@ if (is_admin()) {
         ],
         'Jugadores' => [
             'jugadores2.php' => $publicMenu['jugadores2.php'] ?? 'Jugadores',
+            'jugadores2.php?create=1#crear-jugador' => 'Crear jugador',
             'estadisticas.php' => $publicMenu['estadisticas.php'] ?? 'Estadisticas',
         ],
         'Personas' => [
