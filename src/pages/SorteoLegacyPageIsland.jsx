@@ -2488,8 +2488,18 @@ export function SorteoLegacyPageIsland({ root }) {
   const [activeFormationVariants, setActiveFormationVariants] = useState({});
   const seenDrawSignatures = useRef(new Set(payload.savedDrawSignature ? [payload.savedDrawSignature] : []));
   const teamsContainerRef = useRef(null);
+  const pointerDragRef = useRef({
+    active: false,
+    hoverTarget: null,
+    source: null,
+    startX: 0,
+    startY: 0,
+    suppressClick: false,
+    timer: null,
+  });
 
   const updateDragHoverTarget = useCallback((nextTarget) => {
+    pointerDragRef.current.hoverTarget = nextTarget;
     setDragHoverTarget((current) => {
       const currentKey = current
         ? `${current.teamIndex}|${current.line || ''}|${current.targetLine || ''}|${current.playerKey || ''}|${current.insertIndex ?? ''}|${Math.round(Number(current.insertX ?? -1))}`
@@ -3403,12 +3413,14 @@ export function SorteoLegacyPageIsland({ root }) {
     return validateDropTarget(source, targetTeamIndex, String(targetLine || '').toUpperCase(), null).ok;
   };
 
-  const lineInsertPlacementFromEvent = (event) => {
-    const sourceKey = dragState?.playerKey ? String(dragState.playerKey) : '';
-    const items = Array.from(event.currentTarget.querySelectorAll('[data-sorteo-line-player-item="1"]'))
+  const lineInsertPlacementFromElement = (element, clientX) => {
+    const sourceKey = (dragState?.playerKey || pointerDragRef.current.source?.playerKey)
+      ? String(dragState?.playerKey || pointerDragRef.current.source?.playerKey)
+      : '';
+    const items = Array.from(element.querySelectorAll('[data-sorteo-line-player-item="1"]'))
       .filter((item) => item.dataset.playerKey !== sourceKey);
-    const pointerX = event.clientX;
-    const containerRect = event.currentTarget.getBoundingClientRect();
+    const pointerX = clientX;
+    const containerRect = element.getBoundingClientRect();
     const index = items.findIndex((item) => {
       const rect = item.getBoundingClientRect();
       return pointerX < rect.left + (rect.width / 2);
@@ -3432,9 +3444,13 @@ export function SorteoLegacyPageIsland({ root }) {
     return { insertIndex, insertX };
   };
 
-  const nearbySwapTargetFromLineEvent = (event) => {
-    const sourceKey = dragState?.playerKey ? String(dragState.playerKey) : '';
-    const items = Array.from(event.currentTarget.querySelectorAll('[data-sorteo-line-player-item="1"]'))
+  const lineInsertPlacementFromEvent = (event) => lineInsertPlacementFromElement(event.currentTarget, event.clientX);
+
+  const nearbySwapTargetFromLineElement = (element, clientX, clientY) => {
+    const sourceKey = (dragState?.playerKey || pointerDragRef.current.source?.playerKey)
+      ? String(dragState?.playerKey || pointerDragRef.current.source?.playerKey)
+      : '';
+    const items = Array.from(element.querySelectorAll('[data-sorteo-line-player-item="1"]'))
       .filter((item) => item.dataset.playerKey !== sourceKey);
     let best = null;
     items.forEach((item) => {
@@ -3446,14 +3462,14 @@ export function SorteoLegacyPageIsland({ root }) {
       const expandedTop = rect.top - 10;
       const expandedBottom = rect.bottom + 10;
       if (
-        event.clientX < expandedLeft
-        || event.clientX > expandedRight
-        || event.clientY < expandedTop
-        || event.clientY > expandedBottom
+        clientX < expandedLeft
+        || clientX > expandedRight
+        || clientY < expandedTop
+        || clientY > expandedBottom
       ) return;
       const centerX = rect.left + (rect.width / 2);
       const centerY = rect.top + (rect.height / 2);
-      const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+      const distance = Math.hypot(clientX - centerX, clientY - centerY);
       if (!best || distance < best.distance) {
         best = {
           distance,
@@ -3464,6 +3480,8 @@ export function SorteoLegacyPageIsland({ root }) {
     });
     return best;
   };
+
+  const nearbySwapTargetFromLineEvent = (event) => nearbySwapTargetFromLineElement(event.currentTarget, event.clientX, event.clientY);
 
   const dragScoreDelta = (source, targetLine) => {
     if (!source?.player || !FORMATION_LINES.includes(String(targetLine || '').toUpperCase())) return null;
@@ -3543,6 +3561,260 @@ export function SorteoLegacyPageIsland({ root }) {
     setDragPoint(null);
     setDragHoverTarget(null);
   };
+
+  const clearPointerDrag = (suppressClick = false) => {
+    if (pointerDragRef.current.timer) {
+      window.clearTimeout(pointerDragRef.current.timer);
+    }
+    pointerDragRef.current = {
+      active: false,
+      hoverTarget: null,
+      source: null,
+      startX: 0,
+      startY: 0,
+      suppressClick,
+      timer: null,
+    };
+    if (suppressClick) {
+      window.setTimeout(() => {
+        pointerDragRef.current.suppressClick = false;
+      }, 250);
+    }
+    setDragState(null);
+    setDragPoint(null);
+    setDragHoverTarget(null);
+  };
+
+  const updatePointerDragHover = (clientX, clientY) => {
+    const source = pointerDragRef.current.source || dragState;
+    if (!source) return null;
+    const element = document.elementFromPoint(clientX, clientY);
+    const targetCard = element?.closest?.('[data-sorteo-drag-player]');
+    const targetLine = element?.closest?.('.line-players[data-sorteo-drop-line]') || element?.closest?.('[data-sorteo-drop-line]');
+    if (targetCard?.dataset?.playerKey && targetCard.dataset.playerKey !== String(source.playerKey)) {
+      const teamIndex = Number(targetCard.dataset.teamIndex);
+      const line = pitchLineForPosition(targetCard.dataset.assignedPosition || '');
+      const assigned = targetCard.dataset.assignedPosition || line;
+      const rect = targetCard.getBoundingClientRect();
+      const edgeWidth = Math.min(10, rect.width * 0.12);
+      const onLeftEdge = clientX <= rect.left + edgeWidth;
+      const onRightEdge = clientX >= rect.right - edgeWidth;
+      if (onLeftEdge || onRightEdge) {
+        const lineElement = targetCard.closest('.line-players[data-sorteo-drop-line]');
+        const containerRect = lineElement?.getBoundingClientRect();
+        const siblingCards = Array.from(lineElement?.querySelectorAll('[data-sorteo-line-player-item="1"]') || [])
+          .filter((item) => item.dataset.playerKey !== String(source.playerKey));
+        const cardIndex = siblingCards.indexOf(targetCard.parentElement);
+        const insertIndex = Math.max(0, cardIndex + (onRightEdge ? 1 : 0));
+        const insertX = containerRect
+          ? ((onRightEdge ? rect.right : rect.left) - containerRect.left)
+          : undefined;
+        const targetLineForPlacement = line === 'DEF'
+          ? defenseInsertRole(siblingCards.length, insertIndex)
+          : assigned;
+        const nextTarget = { teamIndex, line, targetLine: targetLineForPlacement, insertIndex, insertX };
+        updateDragHoverTarget(nextTarget);
+        return nextTarget;
+      }
+      const nextTarget = { teamIndex, line, targetLine: assigned, playerKey: targetCard.dataset.playerKey };
+      updateDragHoverTarget(nextTarget);
+      return nextTarget;
+    }
+    if (targetLine) {
+      const teamIndex = Number(targetLine.dataset.teamIndex);
+      const line = targetLine.dataset.sorteoDropLine;
+      const lineElement = targetLine.classList?.contains('line-players')
+        ? targetLine
+        : targetLine.querySelector?.('.line-players[data-sorteo-drop-line]');
+      if (!lineElement || !Number.isFinite(teamIndex) || !line) return null;
+      const nearbySwapTarget = nearbySwapTargetFromLineElement(lineElement, clientX, clientY);
+      if (nearbySwapTarget?.playerKey) {
+        const nextTarget = {
+          teamIndex,
+          line,
+          targetLine: nearbySwapTarget.assignedPosition || line,
+          playerKey: nearbySwapTarget.playerKey,
+        };
+        updateDragHoverTarget(nextTarget);
+        return nextTarget;
+      }
+      const placement = lineInsertPlacementFromElement(lineElement, clientX);
+      const sourceKey = String(source.playerKey || '');
+      const visibleCount = Array.from(lineElement.querySelectorAll('[data-sorteo-line-player-item="1"]'))
+        .filter((item) => item.dataset.playerKey !== sourceKey)
+        .length;
+      const targetLineForPlacement = line === 'DEF'
+        ? defenseInsertRole(visibleCount, placement.insertIndex)
+        : line;
+      const nextTarget = { teamIndex, line, targetLine: targetLineForPlacement, ...placement };
+      updateDragHoverTarget(nextTarget);
+      return nextTarget;
+    }
+    return null;
+  };
+
+  const finishPointerDrag = (clientX, clientY) => {
+    const source = pointerDragRef.current.source;
+    const target = updatePointerDragHover(clientX, clientY) || pointerDragRef.current.hoverTarget;
+    if (!source || !target) {
+      clearPointerDrag(true);
+      return;
+    }
+    const resolvedTeamIndex = Number(target.teamIndex);
+    const hoverIsInsert = Number.isFinite(Number(target.insertIndex)) && !target.playerKey;
+    const resolvedTargetPlayerKey = hoverIsInsert ? null : (target.playerKey || null);
+    const resolvedLine = resolvedTargetPlayerKey ? (target.targetLine || target.line || null) : (target.targetLine || target.line || null);
+    const resolvedInsertIndex = !resolvedTargetPlayerKey && Number.isFinite(Number(target.insertIndex))
+      ? Number(target.insertIndex)
+      : null;
+    if (Number.isFinite(resolvedTeamIndex) && resolvedLine) {
+      movePlayer(source, resolvedTeamIndex, resolvedLine, resolvedTargetPlayerKey, resolvedInsertIndex);
+    }
+    clearPointerDrag(true);
+  };
+
+  const beginDragAtPoint = (source, clientX, clientY) => {
+    pointerDragRef.current.active = true;
+    pointerDragRef.current.source = source;
+    setDragState(source);
+    setDragPoint({ x: clientX, y: clientY });
+    updateDragHoverTarget({
+      teamIndex: source.teamIndex,
+      line: pitchLineForPosition(source.assignedPosition),
+      targetLine: source.assignedPosition,
+      playerKey: source.playerKey,
+    });
+  };
+
+  const beginPointerDrag = (event, source) => {
+    beginDragAtPoint(source, event.clientX, event.clientY);
+  };
+
+  const handlePlayerPointerDown = (event, teamIndex, player, assignedPosition) => {
+    if (event.pointerType === 'mouse' || isFixedGoalkeeper(player) || lockedPlayerPositions[playerKey(player)]) return;
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    const source = { teamIndex, playerKey: playerKey(player), assignedPosition, player };
+    pointerDragRef.current = {
+      active: false,
+      hoverTarget: null,
+      source,
+      startX: event.clientX,
+      startY: event.clientY,
+      suppressClick: false,
+      timer: window.setTimeout(() => beginPointerDrag(event, source), 140),
+    };
+  };
+
+  const handlePlayerPointerMove = (event) => {
+    const pointerDrag = pointerDragRef.current;
+    if (!pointerDrag.source || event.pointerType === 'mouse') return;
+    const moved = Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY);
+    if (!pointerDrag.active && moved > 8) {
+      if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
+      beginPointerDrag(event, pointerDrag.source);
+    }
+    if (pointerDragRef.current.active) {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragPoint({ x: event.clientX, y: event.clientY });
+      updatePointerDragHover(event.clientX, event.clientY);
+    }
+  };
+
+  const handlePlayerPointerUp = (event) => {
+    const pointerDrag = pointerDragRef.current;
+    if (!pointerDrag.source || event.pointerType === 'mouse') return;
+    if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
+    if (pointerDrag.active) {
+      event.preventDefault();
+      event.stopPropagation();
+      finishPointerDrag(event.clientX, event.clientY);
+      return;
+    }
+    clearPointerDrag(false);
+  };
+
+  const handlePlayerPointerCancel = () => {
+    clearPointerDrag(true);
+  };
+
+  const touchPointFromEvent = (event) => event.touches?.[0] || event.changedTouches?.[0] || null;
+
+  const handlePlayerTouchStart = (event, teamIndex, player, assignedPosition) => {
+    if (isFixedGoalkeeper(player) || lockedPlayerPositions[playerKey(player)]) return;
+    const touch = touchPointFromEvent(event);
+    if (!touch) return;
+    event.stopPropagation();
+    const source = { teamIndex, playerKey: playerKey(player), assignedPosition, player };
+    pointerDragRef.current = {
+      active: false,
+      hoverTarget: null,
+      source,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      suppressClick: false,
+      timer: window.setTimeout(() => beginDragAtPoint(source, touch.clientX, touch.clientY), 140),
+    };
+  };
+
+  const handlePlayerTouchMove = (event) => {
+    const touch = touchPointFromEvent(event);
+    const pointerDrag = pointerDragRef.current;
+    if (!touch || !pointerDrag.source) return;
+    const moved = Math.hypot(touch.clientX - pointerDrag.startX, touch.clientY - pointerDrag.startY);
+    if (!pointerDrag.active && moved > 8) {
+      if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
+      beginDragAtPoint(pointerDrag.source, touch.clientX, touch.clientY);
+    }
+    if (pointerDragRef.current.active) {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragPoint({ x: touch.clientX, y: touch.clientY });
+      updatePointerDragHover(touch.clientX, touch.clientY);
+    }
+  };
+
+  const handlePlayerTouchEnd = (event) => {
+    const touch = touchPointFromEvent(event);
+    const pointerDrag = pointerDragRef.current;
+    if (!pointerDrag.source) return;
+    if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
+    if (pointerDrag.active && touch) {
+      event.preventDefault();
+      event.stopPropagation();
+      finishPointerDrag(touch.clientX, touch.clientY);
+      return;
+    }
+    clearPointerDrag(false);
+  };
+
+  const handlePlayerTouchCancel = () => {
+    clearPointerDrag(true);
+  };
+
+  useEffect(() => {
+    const handleWindowPointerMove = (event) => {
+      if (!pointerDragRef.current.source || event.pointerType === 'mouse') return;
+      handlePlayerPointerMove(event);
+    };
+    const handleWindowPointerUp = (event) => {
+      if (!pointerDragRef.current.source || event.pointerType === 'mouse') return;
+      handlePlayerPointerUp(event);
+    };
+    const handleWindowPointerCancel = (event) => {
+      if (!pointerDragRef.current.source || event.pointerType === 'mouse') return;
+      handlePlayerPointerCancel();
+    };
+    window.addEventListener('pointermove', handleWindowPointerMove, { passive: false, capture: true });
+    window.addEventListener('pointerup', handleWindowPointerUp, { passive: false, capture: true });
+    window.addEventListener('pointercancel', handleWindowPointerCancel, { passive: false, capture: true });
+    return () => {
+      window.removeEventListener('pointermove', handleWindowPointerMove, { capture: true });
+      window.removeEventListener('pointerup', handleWindowPointerUp, { capture: true });
+      window.removeEventListener('pointercancel', handleWindowPointerCancel, { capture: true });
+    };
+  });
 
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
     setPreview({ player, assignedPosition, teamSize: teams?.[teamIndex]?.length || playersPerTeam });
@@ -4273,12 +4545,20 @@ export function SorteoLegacyPageIsland({ root }) {
                                           assignedPosition={assigned}
                                           teamSize={team.length}
                                           laneRole={assigned === 'LAT' ? 'lateral' : ''}
-                                          onOpen={() => !dragState && handleTouchCard(teamIndex, player, assigned)}
+                                          onOpen={() => !dragState && !pointerDragRef.current.suppressClick && handleTouchCard(teamIndex, player, assigned)}
                                           draggableProps={{
                                             draggable: !isFixedGoalkeeper(player) && !lockedPlayerPositions[key],
                                             dragging: dragState?.playerKey === key,
                                             locked: Boolean(lockedPlayerPositions[key]),
                                             swapTarget: isSwapTarget,
+                                            onPointerDown: (event) => handlePlayerPointerDown(event, teamIndex, player, assigned),
+                                            onPointerMove: handlePlayerPointerMove,
+                                            onPointerUp: handlePlayerPointerUp,
+                                            onPointerCancel: handlePlayerPointerCancel,
+                                            onTouchStart: (event) => handlePlayerTouchStart(event, teamIndex, player, assigned),
+                                            onTouchMove: handlePlayerTouchMove,
+                                            onTouchEnd: handlePlayerTouchEnd,
+                                            onTouchCancel: handlePlayerTouchCancel,
                                             onDragStart: (event) => handleDragStart(event, teamIndex, player, assigned),
                                             onDragOver: (event) => {
                                               event.preventDefault();

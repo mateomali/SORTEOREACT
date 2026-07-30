@@ -23377,6 +23377,13 @@ body.page-sorteo-legacy .player-availability-range::-moz-range-thumb {
   box-shadow: 0 1px 3px rgba(7, 19, 15, 0.24);
 }
 
+body.page-sorteo-legacy .team-formation [data-sorteo-drag-player] {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
 .team-formation .formation-player.formation-card-sin-stat.formation-card-compacta,
   body.page-capitanes .content .captain-editor-field .formation-player.formation-card-sin-stat.formation-card-compacta {
   filter: drop-shadow(0 4px 6px rgba(2, 14, 9, 0.24));
