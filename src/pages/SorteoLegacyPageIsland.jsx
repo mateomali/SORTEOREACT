@@ -2299,8 +2299,7 @@ async function waitForExportReadiness(root) {
   await waitForPaint();
 }
 
-function injectFormationExportStyles(clonedDocument, exportWidth, sanitizedStylesheet = '') {
-  const fieldUrl = resolvePageAssetUrl('assets/images/captain-field-bg-vertical.jpg', clonedDocument);
+function injectFormationExportStyles(clonedDocument, sanitizedStylesheet = '') {
   sanitizeExportStylesheets(clonedDocument);
   removeUnsupportedExportStyles(clonedDocument, Boolean(sanitizedStylesheet));
   if (sanitizedStylesheet) {
@@ -2313,12 +2312,6 @@ function injectFormationExportStyles(clonedDocument, exportWidth, sanitizedStyle
     :root, :host { ${exportTailwindColorOverrides} }
     body { ${exportTailwindColorOverrides} }
     #equipos-generados, #equipos-generados * { ${exportTailwindColorOverrides} }
-    html, body { background: #f6faf8 !important; }
-    #equipos-generados {
-      width: ${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px !important;
-      max-width: ${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px !important;
-      background: #f6faf8 !important;
-    }
     #equipos-generados, #equipos-generados * {
       animation: none !important;
       transition: none !important;
@@ -2329,20 +2322,9 @@ function injectFormationExportStyles(clonedDocument, exportWidth, sanitizedStyle
       transform: none !important;
       opacity: 1 !important;
     }
-    #equipos-generados .team-formation {
-      background-image: linear-gradient(rgba(5,37,27,.10), rgba(5,37,27,.24)), url("${cssString(fieldUrl)}"), linear-gradient(160deg, #0e7a43, #07563d) !important;
-      background-position: center, center, center !important;
-      background-repeat: no-repeat, no-repeat, no-repeat !important;
-      background-size: auto, 100% 100%, auto !important;
-    }
     #equipos-generados .formation-card-preview-overlay { display: none !important; }
   `;
   clonedDocument.head.appendChild(style);
-  const clonedContainer = clonedDocument.getElementById('equipos-generados');
-  if (clonedContainer) {
-    clonedContainer.style.width = `${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px`;
-    clonedContainer.style.maxWidth = `${Math.max(1, Math.ceil(Number(exportWidth) || 0))}px`;
-  }
   scrubUnsupportedComputedColors(clonedDocument);
 }
 
@@ -2482,12 +2464,18 @@ export function SorteoLegacyPageIsland({ root }) {
   const [hasSavedDraw, setHasSavedDraw] = useState(payload.hasSavedDraw);
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
+  const [playersPanelOpen, setPlayersPanelOpen] = useState(() => !initialTeams.length);
+  const [goalkeeperPanelOpen, setGoalkeeperPanelOpen] = useState(() => !initialTeams.length);
+  const [saveState, setSaveState] = useState(() => (initialTeams.length ? 'saved' : 'idle'));
+  const [manualActionCount, setManualActionCount] = useState(0);
+  const [mobileMoveSource, setMobileMoveSource] = useState(null);
   const [manualComparisonBefore, setManualComparisonBefore] = useState(null);
   const [lockedPlayerPositions, setLockedPlayerPositions] = useState({});
   const [drawVariants, setDrawVariants] = useState({});
   const [activeFormationVariants, setActiveFormationVariants] = useState({});
   const seenDrawSignatures = useRef(new Set(payload.savedDrawSignature ? [payload.savedDrawSignature] : []));
   const teamsContainerRef = useRef(null);
+  const teamsFocusRef = useRef(null);
   const pointerDragRef = useRef({
     active: false,
     hoverTarget: null,
@@ -2524,6 +2512,58 @@ export function SorteoLegacyPageIsland({ root }) {
     [manualGoalkeepers, selectedPlayers],
   );
   const goalkeeperLimitReached = selectedGoalkeepers.length >= numTeams;
+  const availabilityAdjustedCount = useMemo(
+    () => selectedPlayers.filter((player) => Number(player.availability_percent || 100) < 100).length,
+    [selectedPlayers],
+  );
+  const goalkeeperSummary = selectedGoalkeepers.length
+    ? selectedGoalkeepers.map((player) => player.nombre).join(' / ')
+    : 'Sin definir';
+  const selectedAverageRating = useMemo(() => {
+    if (!selectedPlayers.length) return 0;
+    const total = selectedPlayers.reduce((sum, player) => sum + Number(player.puntuacion || 0), 0);
+    return total / selectedPlayers.length;
+  }, [selectedPlayers]);
+  const nextGenerationIsRedraw = lockedMatch && (hasSavedDraw || generatedOnce || Boolean(teams));
+  const redrawsRemaining = Math.max(0, payload.redrawLimit - persistedRedrawCount - redrawsUsedThisSession);
+  const drawReadiness = useMemo(() => {
+    const issues = [];
+    const warnings = [];
+    const selectedCount = selectedPlayers.length;
+    const teamSize = selectedCount > 0 && selectedCount % Math.max(1, numTeams) === 0
+      ? selectedCount / Math.max(1, numTeams)
+      : null;
+    if (!selectedCount) {
+      issues.push('Selecciona al menos un jugador.');
+    } else if (selectedCount % Math.max(1, numTeams) !== 0) {
+      issues.push(`${selectedCount} jugadores no se dividen parejo en ${numTeams} equipos.`);
+    } else if (teamSize < 5) {
+      issues.push(`${teamSize} por equipo no alcanza para una formacion valida.`);
+    }
+    if (selectedGoalkeepers.length > numTeams) {
+      issues.push(`Hay ${selectedGoalkeepers.length} arqueros para ${numTeams} equipos.`);
+    } else if (selectedGoalkeepers.length < numTeams) {
+      warnings.push(`Faltan ${numTeams - selectedGoalkeepers.length} arquero${numTeams - selectedGoalkeepers.length === 1 ? '' : 's'} manual${numTeams - selectedGoalkeepers.length === 1 ? '' : 'es'}.`);
+    }
+    const pureGoalkeepers = selectedPlayers.filter((player) => getOrderedPlayerPositions(player).length === 1 && getPrimaryPlayerPosition(player) === 'ARQ');
+    if (pureGoalkeepers.length > numTeams) {
+      issues.push(`Hay ${pureGoalkeepers.length} arqueros puros para ${numTeams} equipos.`);
+    }
+    if (nextGenerationIsRedraw && !payload.allowRedraw) {
+      issues.push('Esta fecha no permite rehacer el sorteo.');
+    } else if (nextGenerationIsRedraw && redrawsRemaining <= 0) {
+      issues.push(`Ya se usaron los ${payload.redrawLimit} re-sorteos permitidos.`);
+    }
+    if (availabilityAdjustedCount > 0) {
+      warnings.push(`${availabilityAdjustedCount} jugador${availabilityAdjustedCount === 1 ? '' : 'es'} con estado menor a 100%.`);
+    }
+    return {
+      issues,
+      warnings,
+      ready: issues.length === 0,
+      teamSizeLabel: teamSize ? `${teamSize} por equipo` : 'Sin dividir',
+    };
+  }, [availabilityAdjustedCount, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.redrawLimit, redrawsRemaining, selectedGoalkeepers.length, selectedPlayers]);
 
   const sortedPlayers = useMemo(() => {
     const sorted = players.slice();
@@ -2543,10 +2583,8 @@ export function SorteoLegacyPageIsland({ root }) {
     return sortedPlayers.filter((player) => selectedKeys.has(playerKey(player)));
   }, [selectedPlayers, sortedPlayers]);
 
-  const nextGenerationIsRedraw = lockedMatch && (hasSavedDraw || generatedOnce || Boolean(teams));
-  const redrawsRemaining = Math.max(0, payload.redrawLimit - persistedRedrawCount - redrawsUsedThisSession);
   const generateButtonLabel = nextGenerationIsRedraw ? `Rehacer sorteo (${redrawsRemaining} restantes)` : 'Generar equipos';
-  const generateDisabled = generating || (nextGenerationIsRedraw && (!payload.allowRedraw || redrawsRemaining <= 0));
+  const generateDisabled = generating || !drawReadiness.ready || (nextGenerationIsRedraw && (!payload.allowRedraw || redrawsRemaining <= 0));
   const manualChangeCount = useMemo(() => {
     const assignmentCount = isFormationEditor
       ? Object.entries(assignments || {}).filter(([key, value]) => initialAssignments[key] !== value).length
@@ -2588,6 +2626,12 @@ export function SorteoLegacyPageIsland({ root }) {
     }
   }, [payload.matchId]);
 
+  const markDrawDirty = useCallback((countManualAction = true) => {
+    if (!teams) return;
+    setSaveState('dirty');
+    if (countManualAction) setManualActionCount((value) => value + 1);
+  }, [teams]);
+
   const updatePlayerAvailability = useCallback((player, percent, persist = false) => {
     const key = playerKey(player);
     const nextPercent = normalizeAvailabilityPercent(percent);
@@ -2595,9 +2639,10 @@ export function SorteoLegacyPageIsland({ root }) {
     setPlayers((current) => current.map(updateOne));
     setTeams((current) => (current ? current.map((team) => team.map(updateOne)) : current));
     if (persist && Number(player.id) > 0) {
+      if (teams) markDrawDirty(true);
       persistPlayerAvailability(player.id, nextPercent);
     }
-  }, [persistPlayerAvailability]);
+  }, [markDrawDirty, persistPlayerAvailability, teams]);
 
   const toggleManualGoalkeeper = useCallback((player) => {
     const key = playerKey(player);
@@ -2633,6 +2678,8 @@ export function SorteoLegacyPageIsland({ root }) {
     setTeams(snapshot.teams);
     setAssignments(snapshot.assignments || {});
     setTeamFormations(snapshot.teamFormations || {});
+    setSaveState('dirty');
+    setManualActionCount((value) => Math.max(0, value - 1));
     setUndoStacks((current) => ({ ...current, [key]: stack.slice(0, -1) }));
   };
 
@@ -2681,6 +2728,13 @@ export function SorteoLegacyPageIsland({ root }) {
     return Object.values(variantsByTeam).reduce((sum, list) => sum + list.length, 0);
   }, [lockedPlayerPositions]);
 
+  const scrollTeamsIntoView = useCallback(() => {
+    window.setTimeout(() => {
+      const target = teamsFocusRef.current || teamsContainerRef.current;
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }, []);
+
   const generateTeams = useCallback(async () => {
     setError('');
     setSuccess('');
@@ -2725,6 +2779,9 @@ export function SorteoLegacyPageIsland({ root }) {
       setError(`Ya se usaron los ${payload.redrawLimit} re-sorteos permitidos para esta fecha.`);
       return null;
     }
+    if (nextGenerationIsRedraw && !window.confirm('Vas a rehacer el sorteo actual. Se reemplazan los equipos generados en pantalla.')) {
+      return null;
+    }
 
     const advanceGenerationStage = async (stage) => {
       setGenerationStage(stage);
@@ -2761,6 +2818,12 @@ export function SorteoLegacyPageIsland({ root }) {
       setMaxDiff(Number(result.usedMaxDiff || maxDiff).toFixed(1));
       if (nextGenerationIsRedraw) setRedrawsUsedThisSession((value) => value + 1);
       setGeneratedOnce(true);
+      setSaveState('dirty');
+      setManualActionCount(0);
+      setMobileMoveSource(null);
+      setPlayersPanelOpen(false);
+      setGoalkeeperPanelOpen(false);
+      scrollTeamsIntoView();
       const emergencyMessage = prepared.emergencyGoalkeepers.length
         ? ` Arqueros de emergencia: ${prepared.emergencyGoalkeepers.map((player) => player.nombre).join(', ')}.`
         : '';
@@ -2773,7 +2836,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setGenerating(false);
       setGenerationStage('');
     }
-  }, [applyDefaultFormationVariants, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, teams]);
+  }, [applyDefaultFormationVariants, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
 
   useEffect(() => {
     const previous = window.generarEquipos;
@@ -2980,6 +3043,33 @@ export function SorteoLegacyPageIsland({ root }) {
     };
   }, [assignments, manualComparisonBefore, teams]);
 
+  const actionAnalysis = useMemo(() => {
+    if (!drawAnalysis) return null;
+    const riskCandidates = [
+      drawAnalysis.slowSpread > 1 ? `velocidad despareja (${drawAnalysis.slowSpread})` : '',
+      drawAnalysis.irregularSpread > 1 ? `regularidad despareja (${drawAnalysis.irregularSpread})` : '',
+      drawAnalysis.platinumSpread > 1 ? `platinum desparejos (${drawAnalysis.platinumSpread})` : '',
+      drawAnalysis.lineStrengthSpread > 2 ? `diferencia por linea (${drawAnalysis.lineStrengthSpread.toFixed(1)})` : '',
+      drawAnalysis.profileDistributionSpread > 1 ? `perfiles fuertes/flojos desparejos (${drawAnalysis.profileDistributionSpread})` : '',
+    ].filter(Boolean);
+    const suggestion = drawAnalysis.diff > 2
+      ? 'Probar una variante o mover un jugador fuerte al equipo menor.'
+      : riskCandidates.length
+        ? 'Revisar la alerta principal antes de guardar.'
+        : 'Guardar el sorteo si la distribucion visual te cierra.';
+    return {
+      balance: drawAnalysis.diff <= 1 ? 'Muy parejo' : drawAnalysis.diff <= 2 ? 'Parejo con leve ventaja' : 'Ventaja clara',
+      risk: riskCandidates[0] || 'Sin alerta fuerte',
+      suggestion,
+      teams: drawAnalysis.summaries.map((summary) => ({
+        name: summary.name,
+        keyPlayer: summary.topPlayers[0]?.name || '-',
+        strength: summary.strengths[0]?.label || '-',
+        weakness: summary.weaknesses[0]?.label || '-',
+      })),
+    };
+  }, [drawAnalysis]);
+
   const drawAuditSnapshot = useMemo(() => {
     if (!teams || !drawAnalysis) return null;
     return {
@@ -3028,6 +3118,7 @@ export function SorteoLegacyPageIsland({ root }) {
       return;
     }
     setError('');
+    markDrawDirty(true);
     setTeamColors((current) => current.map((item, index) => (index === teamIndex ? colorName : item)));
   };
 
@@ -3079,6 +3170,7 @@ export function SorteoLegacyPageIsland({ root }) {
       ? formationValueForPreset(teams[teamIndex].length, value)
       : value;
     pushUndo(teamIndex);
+    markDrawDirty(true);
     clearActiveFormationVariant(teamIndex);
     setTeamFormations((current) => ({ ...current, [teamIndex]: value }));
     if (value === 'auto') {
@@ -3109,6 +3201,7 @@ export function SorteoLegacyPageIsland({ root }) {
         .sort((a, b) => adjustedPositionRatingForTeamSize(b, line, team.length) - adjustedPositionRatingForTeamSize(a, line, team.length))[0];
       if (candidate) {
         pushUndo(teamIndex);
+        markDrawDirty(true);
         markFormationAsManual(teamIndex);
         clearActiveFormationVariant(teamIndex);
         setAssignments((current) => ({ ...current, [playerKey(candidate)]: line }));
@@ -3123,6 +3216,7 @@ export function SorteoLegacyPageIsland({ root }) {
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate) === line ? 'MED' : bestNaturalPlayerPosition(candidate);
       pushUndo(teamIndex);
+      markDrawDirty(true);
       markFormationAsManual(teamIndex);
       clearActiveFormationVariant(teamIndex);
       setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' ? 'MED' : fallback }));
@@ -3154,6 +3248,7 @@ export function SorteoLegacyPageIsland({ root }) {
         .sort((a, b) => b.rating - a.rating)[0];
     if (candidate) {
       pushUndo(teamIndex);
+      markDrawDirty(true);
       markFormationAsManual(teamIndex);
       clearActiveFormationVariant(teamIndex);
       setAssignments((current) => ({ ...current, [playerKey(candidate.player)]: candidate.targetLine }));
@@ -3173,6 +3268,7 @@ export function SorteoLegacyPageIsland({ root }) {
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate);
       pushUndo(teamIndex);
+      markDrawDirty(true);
       markFormationAsManual(teamIndex);
       clearActiveFormationVariant(teamIndex);
       setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' || fallback === 'DEF' || fallback === 'LAT' ? 'MED' : fallback }));
@@ -3182,6 +3278,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const toggleLockedPosition = (player, assignedPosition) => {
     const key = playerKey(player);
     const position = String(assignedPosition || getPrimaryPlayerPosition(player)).toUpperCase();
+    markDrawDirty(true);
     setLockedPlayerPositions((current) => {
       const next = { ...current };
       if (next[key]) {
@@ -3390,6 +3487,8 @@ export function SorteoLegacyPageIsland({ root }) {
     }
     pushUndo(normalizedTargetTeamIndex);
     if (sourceTeamIndex !== normalizedTargetTeamIndex) pushUndo(sourceTeamIndex);
+    markDrawDirty(true);
+    setMobileMoveSource(null);
     markFormationAsManual(normalizedTargetTeamIndex, sourceTeamIndex);
     clearActiveFormationVariant(normalizedTargetTeamIndex, sourceTeamIndex);
     setTeams((current) => buildMovedTeams(current));
@@ -3817,12 +3916,23 @@ export function SorteoLegacyPageIsland({ root }) {
   });
 
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
+    if (window.matchMedia?.('(max-width: 760px)').matches && !isFixedGoalkeeper(player) && !lockedPlayerPositions[playerKey(player)]) {
+      setMobileMoveSource({
+        teamIndex,
+        playerKey: playerKey(player),
+        playerName: player.nombre,
+        assignedPosition,
+      });
+      setPreview(null);
+      return;
+    }
     setPreview({ player, assignedPosition, teamSize: teams?.[teamIndex]?.length || playersPerTeam });
   };
 
   const applyTeamFormationVariant = (teamIndex, variant) => {
     if (!teams?.[teamIndex] || !variant?.assignments) return;
     pushUndo(teamIndex);
+    markDrawDirty(true);
     markFormationAsManual(teamIndex);
     const teamKeys = new Set(teams[teamIndex].map(playerKey));
     setAssignments((current) => {
@@ -3888,8 +3998,8 @@ export function SorteoLegacyPageIsland({ root }) {
       await waitForExportReadiness(target);
       const sanitizedStylesheet = await loadSanitizedExportStylesheets();
       const targetRect = target.getBoundingClientRect();
-      const exportWidth = Math.ceil(Math.max(target.scrollWidth, targetRect.width));
-      const exportHeight = Math.ceil(Math.max(target.scrollHeight, targetRect.height));
+      const exportWidth = Math.ceil(targetRect.width);
+      const exportHeight = Math.ceil(targetRect.height);
       const viewportWidth = Math.ceil(window.innerWidth || document.documentElement.clientWidth || exportWidth);
       const viewportHeight = Math.ceil(window.innerHeight || document.documentElement.clientHeight || exportHeight);
       const canvas = await capture(target, {
@@ -3902,7 +4012,9 @@ export function SorteoLegacyPageIsland({ root }) {
         height: exportHeight,
         windowWidth: viewportWidth,
         windowHeight: viewportHeight,
-        onclone: (clonedDocument) => injectFormationExportStyles(clonedDocument, exportWidth, sanitizedStylesheet),
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+        onclone: (clonedDocument) => injectFormationExportStyles(clonedDocument, sanitizedStylesheet),
       });
       const link = document.createElement('a');
       link.download = `formaciones_goodfellas_${new Date().toISOString().slice(0, 10)}.jpg`;
@@ -3964,10 +4076,12 @@ export function SorteoLegacyPageIsland({ root }) {
       setRedrawsUsedThisSession(0);
       setHasSavedDraw(true);
       setGeneratedOnce(false);
+      setSaveState('saved');
+      setManualActionCount(0);
       setError('');
-      const manualMessage = manualChangeCount > 0 ? ` Se conservaron ${manualChangeCount} ajuste${manualChangeCount === 1 ? '' : 's'} manual${manualChangeCount === 1 ? '' : 'es'} de cancha.` : '';
+      const manualMessage = manualActionCount > 0 ? ` Se conservaron ${manualActionCount} cambio${manualActionCount === 1 ? '' : 's'} manual${manualActionCount === 1 ? '' : 'es'} de cancha.` : '';
       setSuccess(`${data.message || 'Sorteo guardado correctamente en la fecha.'}${manualMessage}`);
-      window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 700);
+      window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 1200);
     } catch (saveError) {
       setSuccess('');
       setError(saveError.message || 'No se pudo guardar el sorteo.');
@@ -4010,8 +4124,10 @@ export function SorteoLegacyPageIsland({ root }) {
         throw new Error('No se pudieron guardar las formaciones.');
       }
       setError('');
+      setSaveState('saved');
+      setManualActionCount(0);
       setSuccess('Formaciones y camisetas guardadas.');
-      window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 500);
+      window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 1200);
     } catch (saveError) {
       setSuccess('');
       setError(saveError.message || 'No se pudieron guardar las formaciones.');
@@ -4038,10 +4154,22 @@ export function SorteoLegacyPageIsland({ root }) {
   const currentDragDeltaText = currentDragDelta
     ? `${currentDragDelta.to - currentDragDelta.from > 0 ? '+' : ''}${currentDragDelta.to - currentDragDelta.from} pts`
     : '';
+  const mobileMovePlayer = mobileMoveSource && teams?.[Number(mobileMoveSource.teamIndex)]
+    ? teams[Number(mobileMoveSource.teamIndex)].find((player) => playerKey(player) === String(mobileMoveSource.playerKey))
+    : null;
+  const playersPanelCollapsed = !playersPanelOpen && Boolean(teams) && !isFormationEditor;
+  const goalkeeperPanelCollapsed = !goalkeeperPanelOpen && Boolean(teams) && !isFormationEditor;
+  const mobileActionGridClass = lockedMatch ? 'grid-cols-3' : 'grid-cols-2';
+  const saveStateLabel = saveState === 'dirty' ? 'Cambios sin guardar' : saveState === 'saved' ? 'Guardado' : 'Sin guardar';
+  const saveStateClass = saveState === 'dirty'
+    ? 'border-amber-200 bg-amber-50 text-[#7a4b00]'
+    : saveState === 'saved'
+      ? 'border-[#9fc8b5] bg-[#f4fbf7] text-[#063d2b]'
+      : 'border-[#d7e6df] bg-[#f8fbfa] text-[#526b62]';
 
   return (
     <section
-      className="sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5"
+      className={`sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5 ${mobileMoveSource ? 'max-[760px]:pb-56' : teams ? 'max-[760px]:pb-32' : ''}`}
       onDragOver={(event) => {
         if (!dragState) return;
         event.preventDefault();
@@ -4082,7 +4210,11 @@ export function SorteoLegacyPageIsland({ root }) {
               </p>
             ) : null}
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 xl:grid-cols-6">
+            <span className={`rounded-md border px-3 py-2 ${drawReadiness.ready ? 'border-[#9fc8b5] bg-[#f4fbf7]' : 'border-amber-200 bg-amber-50'}`}>
+              <b className={`block text-base font-black ${drawReadiness.ready ? 'text-[#063d2b]' : 'text-[#7a4b00]'}`}>{drawReadiness.ready ? 'Listo' : 'Revisar'}</b>
+              <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Estado</small>
+            </span>
             <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
               <b className="block text-base font-black text-[#07130f]">{selectedPlayers.length}</b>
               <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Jugadores</small>
@@ -4090,6 +4222,14 @@ export function SorteoLegacyPageIsland({ root }) {
             <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
               <b className="block text-base font-black text-[#07130f]">{numTeams}</b>
               <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Equipos</small>
+            </span>
+            <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
+              <b className="block text-base font-black text-[#07130f]">{drawReadiness.teamSizeLabel}</b>
+              <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Reparto</small>
+            </span>
+            <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
+              <b className="block text-base font-black text-[#07130f]">{selectedPlayers.length ? playerCardRating(selectedAverageRating) : '-'}</b>
+              <small className="text-[10px] font-extrabold uppercase text-[#526b62]">Media GEN</small>
             </span>
             <span className="rounded-md border border-[#d7e6df] bg-white px-3 py-2">
               <b className="block text-base font-black text-[#07130f]">{teams && drawAnalysis ? drawAnalysis.diff.toFixed(1) : maxDiff}</b>
@@ -4107,48 +4247,67 @@ export function SorteoLegacyPageIsland({ root }) {
               <h2 className="m-0 text-base font-black text-[#07130f]">Jugadores disponibles</h2>
               <p className="m-0 text-xs font-semibold text-slate-500">{lockedMatch ? 'Plantel de la fecha' : 'Lista editable local'}</p>
             </div>
-            {!lockedMatch ? (
-              <label className={quietButtonClass}>
-                CSV
-                <input className="sr-only" type="file" accept=".csv" onChange={importPlayersCsv} />
-              </label>
-            ) : null}
+            <div className="flex shrink-0 items-center gap-2">
+              {teams ? (
+                <button className={quietButtonClass} type="button" onClick={() => setPlayersPanelOpen((open) => !open)} aria-expanded={playersPanelOpen}>
+                  {playersPanelOpen ? 'Cerrar' : 'Editar'}
+                </button>
+              ) : null}
+              {!lockedMatch ? (
+                <label className={quietButtonClass}>
+                  CSV
+                  <input className="sr-only" type="file" accept=".csv" onChange={importPlayersCsv} />
+                </label>
+              ) : null}
+            </div>
           </div>
 
-          {!lockedMatch ? (
-            <div className="flex flex-wrap gap-2">
-              <button className={quietButtonClass} type="button" onClick={exportPlayersCsv}><Icon name="download" />Guardar CSV</button>
-              <button className={secondaryButtonClass} type="button" onClick={() => setAllSelected(!players.every((player) => player.selected))}>
-                {players.every((player) => player.selected) ? 'Deseleccionar' : 'Seleccionar'} todos
+          {playersPanelCollapsed ? (
+            <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3 text-sm font-bold text-[#526b62]">
+              <div className="flex items-center justify-between gap-3">
+                <span>{selectedPlayers.length} jugadores</span>
+                <span>{availabilityAdjustedCount} con estado ajustado</span>
+              </div>
+              <button className={secondaryButtonClass} type="button" onClick={() => setPlayersPanelOpen(true)}>
+                Editar jugadores
               </button>
             </div>
-          ) : null}
+          ) : (
+            <>
+              {!lockedMatch ? (
+                <div className="flex flex-wrap gap-2">
+                  <button className={quietButtonClass} type="button" onClick={exportPlayersCsv}><Icon name="download" />Guardar CSV</button>
+                  <button className={secondaryButtonClass} type="button" onClick={() => setAllSelected(!players.every((player) => player.selected))}>
+                    {players.every((player) => player.selected) ? 'Deseleccionar' : 'Seleccionar'} todos
+                  </button>
+                </div>
+              ) : null}
 
-          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-1">
-              {[
-                ['nombre', 'Nombre'],
-                ['puntuacion', 'Media'],
-                ['ritmo', 'Velocidad'],
-              ].map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`min-h-8 rounded-md px-2 text-xs font-black transition-colors ${sortKey === key ? 'bg-[#063d2b] text-white' : 'text-[#526b62] hover:bg-white hover:text-[#063d2b]'} ${focusRing}`}
-                  onClick={() => toggleSort(key)}
-                >
-                  {label}{sortKey === key ? (sortDirection > 0 ? ' +' : ' -') : ''}
-                </button>
-              ))}
-            </div>
-            <label className="sr-only" htmlFor="teamDisplay">Equipos</label>
-            <span id="teamDisplay" className="hidden">{numTeams}</span>
-            <span id="diffDisplay" className="hidden">{maxDiff}</span>
-          </div>
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-1">
+                  {[
+                    ['nombre', 'Nombre'],
+                    ['puntuacion', 'Media'],
+                    ['ritmo', 'Velocidad'],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`min-h-8 rounded-md px-2 text-xs font-black transition-colors ${sortKey === key ? 'bg-[#063d2b] text-white' : 'text-[#526b62] hover:bg-white hover:text-[#063d2b]'} ${focusRing}`}
+                      onClick={() => toggleSort(key)}
+                    >
+                      {label}{sortKey === key ? (sortDirection > 0 ? ' +' : ' -') : ''}
+                    </button>
+                  ))}
+                </div>
+                <label className="sr-only" htmlFor="teamDisplay">Equipos</label>
+                <span id="teamDisplay" className="hidden">{numTeams}</span>
+                <span id="diffDisplay" className="hidden">{maxDiff}</span>
+              </div>
 
-          <div className="grid max-h-[62vh] gap-2 overflow-auto rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2" id="jugadores-container">
-            {sortedPlayers.map((player) => (
-              <article key={playerKey(player)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-[#d7e6df] bg-white p-2">
+              <div className="grid max-h-[62vh] gap-2 overflow-auto rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2" id="jugadores-container">
+                {sortedPlayers.map((player) => (
+                  <article key={playerKey(player)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-[#d7e6df] bg-white p-2">
                 <input
                   className="h-4 w-4 accent-[#063d2b]"
                   id={`jugador-${playerKey(player)}`}
@@ -4202,9 +4361,11 @@ export function SorteoLegacyPageIsland({ root }) {
                     aria-label={`Porcentaje de estado de ${player.nombre}`}
                   />
                 </div>
-              </article>
-            ))}
-          </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
         </aside>
         ) : null}
 
@@ -4217,49 +4378,79 @@ export function SorteoLegacyPageIsland({ root }) {
                   <h3 className="m-0 text-sm font-black text-[#07130f]">Definir arqueros</h3>
                   <p className="m-0 text-[11px] font-semibold text-[#526b62]">Se eligen antes de realizar el sorteo.</p>
                 </div>
-                <span className={`rounded-md border px-2 py-1 text-xs font-black ${selectedGoalkeepers.length === numTeams ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
-                  {selectedGoalkeepers.length}/{numTeams}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  {teams ? (
+                    <button className={quietButtonClass} type="button" onClick={() => setGoalkeeperPanelOpen((open) => !open)} aria-expanded={goalkeeperPanelOpen}>
+                      {goalkeeperPanelOpen ? 'Cerrar' : 'Editar'}
+                    </button>
+                  ) : null}
+                  <span className={`rounded-md border px-2 py-1 text-xs font-black ${selectedGoalkeepers.length === numTeams ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                    {selectedGoalkeepers.length}/{numTeams}
+                  </span>
+                </div>
               </div>
-              {selectedGoalkeepers.length > numTeams ? (
-                <p className="m-0 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-extrabold text-red-700">
-                  Hay mas arqueros elegidos que equipos.
-                </p>
-              ) : null}
-              <div className="grid max-h-44 gap-1.5 overflow-auto sm:grid-cols-2 xl:grid-cols-3">
-                {goalkeeperOptions.length ? goalkeeperOptions.map((player) => {
-                  const key = playerKey(player);
-                  const checked = manualGoalkeepers[key] === true;
-                  const disabled = !checked && goalkeeperLimitReached;
-                  return (
-                    <label
-                      key={`arquero-${key}`}
-                      className={`grid min-h-10 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border bg-white px-2 py-1.5 ${checked ? 'border-[#063d2b]' : 'border-[#d7e6df]'} ${disabled ? 'cursor-not-allowed opacity-55' : ''}`}
-                    >
-                      <input
-                        className="h-4 w-4 accent-[#063d2b]"
-                        type="checkbox"
-                        checked={checked}
-                        disabled={disabled}
-                        onChange={() => toggleManualGoalkeeper(player)}
-                      />
-                      <span className="min-w-0">
-                        <strong className="block truncate text-sm font-black text-[#07130f]">{player.nombre}</strong>
-                        <small className="block truncate text-[11px] font-extrabold text-[#526b62]">{player.posicion}</small>
-                      </span>
-                      <span className="rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1 text-[11px] font-black text-[#063d2b]">
-                        ARQ {playerCardRating(adjustedPositionRatingForTeamSize(player, 'ARQ', playersPerTeam))}
-                      </span>
-                    </label>
-                  );
-                }) : (
-                  <p className="m-0 rounded-md border border-[#d7e6df] bg-white px-2 py-2 text-xs font-bold text-[#526b62]">
-                    Selecciona jugadores para definir arqueros.
-                  </p>
-                )}
-              </div>
+              {goalkeeperPanelCollapsed ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#d7e6df] bg-white px-3 py-2 text-xs font-bold text-[#526b62]">
+                  <span>Arqueros</span>
+                  <strong className="text-[#07130f]">{goalkeeperSummary}</strong>
+                </div>
+              ) : (
+                <>
+                  {selectedGoalkeepers.length > numTeams ? (
+                    <p className="m-0 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-extrabold text-red-700">
+                      Hay mas arqueros elegidos que equipos.
+                    </p>
+                  ) : null}
+                  <div className="grid max-h-44 gap-1.5 overflow-auto sm:grid-cols-2 xl:grid-cols-3">
+                    {goalkeeperOptions.length ? goalkeeperOptions.map((player) => {
+                      const key = playerKey(player);
+                      const checked = manualGoalkeepers[key] === true;
+                      const disabled = !checked && goalkeeperLimitReached;
+                      return (
+                        <label
+                          key={`arquero-${key}`}
+                          className={`grid min-h-10 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border bg-white px-2 py-1.5 ${checked ? 'border-[#063d2b]' : 'border-[#d7e6df]'} ${disabled ? 'cursor-not-allowed opacity-55' : ''}`}
+                        >
+                          <input
+                            className="h-4 w-4 accent-[#063d2b]"
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={() => toggleManualGoalkeeper(player)}
+                          />
+                          <span className="min-w-0">
+                            <strong className="block truncate text-sm font-black text-[#07130f]">{player.nombre}</strong>
+                            <small className="block truncate text-[11px] font-extrabold text-[#526b62]">{player.posicion}</small>
+                          </span>
+                          <span className="rounded border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1 text-[11px] font-black text-[#063d2b]">
+                            ARQ {playerCardRating(adjustedPositionRatingForTeamSize(player, 'ARQ', playersPerTeam))}
+                          </span>
+                        </label>
+                      );
+                    }) : (
+                      <p className="m-0 rounded-md border border-[#d7e6df] bg-white px-2 py-2 text-xs font-bold text-[#526b62]">
+                        Selecciona jugadores para definir arqueros.
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
+              {drawReadiness.issues.length || drawReadiness.warnings.length ? (
+                <div className="grid w-full gap-1.5">
+                  {drawReadiness.issues.map((item) => (
+                    <p key={`issue-${item}`} className="m-0 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-extrabold text-[#7a4b00]">
+                      {item}
+                    </p>
+                  ))}
+                  {!drawReadiness.issues.length ? drawReadiness.warnings.map((item) => (
+                    <p key={`warning-${item}`} className="m-0 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-3 py-2 text-xs font-bold text-[#526b62]">
+                      {item}
+                    </p>
+                  )) : null}
+                </div>
+              ) : null}
               <button className={primaryButtonClass} id="generateTeamsButton" type="button" onClick={generateTeams} disabled={generateDisabled}>
                 <Icon name="dice" />
                 {generating ? 'Generando...' : generateButtonLabel}
@@ -4297,7 +4488,7 @@ export function SorteoLegacyPageIsland({ root }) {
           <div id="equipos-generados" ref={teamsContainerRef} className="grid gap-4 lg:col-span-2 lg:row-start-2">
             {teams ? (
               <>
-                <div className="w-full rounded-lg border border-[#d7e6df] bg-white px-4 py-2 text-center text-lg font-black text-[#07130f] shadow-sm" data-sorteo-matchup-title="1">
+                <div ref={teamsFocusRef} className="w-full scroll-mt-4 rounded-lg border border-[#d7e6df] bg-white px-4 py-2 text-center text-lg font-black text-[#07130f] shadow-sm sm:scroll-mt-6" data-sorteo-matchup-title="1">
                   {currentMatchupName}
                 </div>
                 <div className="grid gap-4 xl:grid-cols-2">
@@ -4650,6 +4841,14 @@ export function SorteoLegacyPageIsland({ root }) {
           </div>
 
           <div id="download-controls" className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black">
+              <span className={`rounded-md border px-2.5 py-1.5 ${saveStateClass}`}>{saveStateLabel}</span>
+              {manualActionCount > 0 ? (
+                <span className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2.5 py-1.5 text-[#526b62]">
+                  {manualActionCount} cambio{manualActionCount === 1 ? '' : 's'} manual{manualActionCount === 1 ? '' : 'es'}
+                </span>
+              ) : null}
+            </div>
             <div className="flex flex-wrap justify-center gap-2">
               <details className="relative">
                 <summary className={`${quietButtonClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
@@ -4673,12 +4872,36 @@ export function SorteoLegacyPageIsland({ root }) {
                 </button>
               ) : null}
             </div>
-            {manualChangeCount > 0 ? (
+            {manualActionCount > 0 || lockedPositionCount > 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
-                Hay {manualChangeCount} ajuste{manualChangeCount === 1 ? '' : 's'} manual{manualChangeCount === 1 ? '' : 'es'} en cancha{lockedPositionCount > 0 ? `, con ${lockedPositionCount} posicion${lockedPositionCount === 1 ? '' : 'es'} bloqueada${lockedPositionCount === 1 ? '' : 's'}` : ''}. Al guardar se conservaran las posiciones actuales.
+                {manualActionCount > 0
+                  ? `Hay ${manualActionCount} cambio${manualActionCount === 1 ? '' : 's'} manual${manualActionCount === 1 ? '' : 'es'} en cancha${lockedPositionCount > 0 ? `, con ${lockedPositionCount} posicion${lockedPositionCount === 1 ? '' : 'es'} bloqueada${lockedPositionCount === 1 ? '' : 's'}` : ''}.`
+                  : `Hay ${lockedPositionCount} posicion${lockedPositionCount === 1 ? '' : 'es'} bloqueada${lockedPositionCount === 1 ? '' : 's'}.`} Al guardar se conservaran las posiciones actuales.
               </div>
             ) : null}
           </div>
+
+          {teams ? (
+            <div className={`fixed inset-x-0 bottom-0 z-50 grid ${mobileActionGridClass} gap-1 border-t border-[#d7e6df] bg-white px-2 py-2 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden`}>
+              <span className={`col-span-full justify-self-end rounded-md border px-2 py-1 text-[11px] font-black ${saveStateClass}`}>
+                {saveStateLabel}{manualActionCount > 0 ? ` | ${manualActionCount}` : ''}
+              </span>
+              <button className={`${quietButtonClass} min-h-11 justify-center px-2 text-xs`} type="button" onClick={downloadTeamsJpg} disabled={exporting}>
+                <Icon name="download" />
+                {exporting ? 'JPG...' : 'JPG'}
+              </button>
+              <button className={`${secondaryButtonClass} min-h-11 justify-center px-2 text-xs`} type="button" onClick={() => setAnalysisVisible((visible) => !visible)} aria-expanded={analysisVisible}>
+                <Icon name="clipboard" />
+                {analysisVisible ? 'Ocultar' : 'Analizar'}
+              </button>
+              {lockedMatch ? (
+                <button className={`${primaryButtonClass} min-h-11 justify-center px-2 text-xs`} type="button" onClick={isFormationEditor ? saveFormations : saveDraw}>
+                  <Icon name="save" />
+                  Guardar
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           {teams && analysisVisible && drawAnalysis ? (
             <section className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-4" data-sorteo-analysis="1" aria-label="Analisis de equipos">
@@ -4693,6 +4916,32 @@ export function SorteoLegacyPageIsland({ root }) {
                   Dif. {drawAnalysis.diff.toFixed(1)}
                 </span>
               </div>
+
+              {actionAnalysis ? (
+                <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
+                  <div className="grid gap-2 text-xs font-bold text-[#526b62] sm:grid-cols-3">
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Equilibrio: <strong className="text-[#07130f]">{actionAnalysis.balance}</strong>
+                    </p>
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Riesgo: <strong className="text-[#07130f]">{actionAnalysis.risk}</strong>
+                    </p>
+                    <p className="m-0 rounded border border-[#d7e6df] bg-white px-2 py-2">
+                      Sugerencia: <strong className="text-[#07130f]">{actionAnalysis.suggestion}</strong>
+                    </p>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {actionAnalysis.teams.map((item) => (
+                      <div key={item.name} className="grid gap-1 rounded border border-[#d7e6df] bg-white px-2 py-2 text-xs font-bold text-[#526b62]">
+                        <strong className="text-sm text-[#07130f]">{item.name}</strong>
+                        <span>Jugador clave: <strong className="text-[#063d2b]">{item.keyPlayer}</strong></span>
+                        <span>Ventaja: {item.strength}</span>
+                        <span>A cuidar: {item.weakness}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {manualMoveComparison ? (
                 <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
@@ -4850,6 +5099,43 @@ export function SorteoLegacyPageIsland({ root }) {
           onClose={() => setFormModal(null)}
           onSave={formModal.mode === 'add' ? addPlayer : updatePlayer}
         />
+      ) : null}
+
+      {mobileMoveSource && mobileMovePlayer ? (
+        <div className="fixed inset-x-0 bottom-[88px] z-[60] grid gap-2 border-t border-[#d7e6df] bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <strong className="block truncate text-sm font-black text-[#07130f]">{mobileMoveSource.playerName}</strong>
+              <span className="text-xs font-bold text-[#526b62]">Mover desde {mobileMoveSource.assignedPosition}</span>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <button className={quietButtonClass} type="button" onClick={() => { setPreview({ player: mobileMovePlayer, assignedPosition: mobileMoveSource.assignedPosition, teamSize: teams?.[Number(mobileMoveSource.teamIndex)]?.length || playersPerTeam }); setMobileMoveSource(null); }}>
+                Ficha
+              </button>
+              <button className={quietButtonClass} type="button" onClick={() => setMobileMoveSource(null)} aria-label="Cerrar destinos">
+                <Icon name="x" />
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-5 gap-1">
+            {FORMATION_LINES.map((line) => {
+              const validation = validateDropTarget(mobileMoveSource, Number(mobileMoveSource.teamIndex), line, null);
+              const isCurrent = line === mobileMoveSource.assignedPosition;
+              return (
+                <button
+                  key={`mobile-target-${line}`}
+                  className={`min-h-10 rounded-md border px-1 text-xs font-black ${validation.ok && !isCurrent ? 'border-[#063d2b] bg-[#063d2b] text-white' : 'border-[#d7e6df] bg-[#f8fbfa] text-[#526b62] disabled:opacity-55'}`}
+                  type="button"
+                  disabled={!validation.ok || isCurrent}
+                  onClick={() => movePlayer(mobileMoveSource, Number(mobileMoveSource.teamIndex), line, null)}
+                  title={validation.message || `Mover a ${line}`}
+                >
+                  {line}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       ) : null}
 
       {preview ? (
