@@ -12,6 +12,7 @@ if (!function_exists('repo_match_participants_basic')) {
     {
         $stmt = db()->prepare(
             'SELECT p.id, p.name, p.positions, p.pace, p.skill, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom,
+                    mp.availability_percent,
                     p.technique, p.pass_vision, p.rhythm, p.stamina, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
              FROM match_players mp
              INNER JOIN players p ON p.id = mp.player_id
@@ -47,6 +48,7 @@ try {
                 'photo_position_x' => player_photo_position_x($p),
                 'photo_position_y' => player_photo_position_y($p),
                 'photo_zoom' => player_photo_zoom($p),
+                'availability_percent' => max(1, min(100, (int) ($p['availability_percent'] ?? 100))),
                 'puntuacion' => player_overall_rating($p),
                 'tecnica' => player_effective_stat($p, 'technique'),
                 'pase_vision' => player_effective_stat($p, 'pass_vision'),

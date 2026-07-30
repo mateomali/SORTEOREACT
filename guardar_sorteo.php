@@ -13,6 +13,7 @@ if (!function_exists('repo_match_participants_basic')) {
     {
         $stmt = db()->prepare(
             'SELECT p.id, p.name, p.positions, p.pace, p.skill, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom,
+                    mp.availability_percent,
                     p.technique, p.pass_vision, p.rhythm, p.stamina, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
              FROM match_players mp
              INNER JOIN players p ON p.id = mp.player_id
@@ -70,9 +71,42 @@ function position_base_rating_legacy(array $player, string $assigned): float
 function adjusted_position_rating_legacy(array $player, string $assigned): float
 {
     if ($assigned === '') {
-        return player_overall_rating($player);
+        return player_overall_rating(availability_adjusted_player_legacy($player));
     }
-    return position_base_rating_legacy($player, $assigned);
+    return position_base_rating_legacy(availability_adjusted_player_legacy($player), $assigned);
+}
+
+function availability_percent_legacy(array $player): int
+{
+    return max(1, min(100, (int) round((float) ($player['availability_percent'] ?? 100))));
+}
+
+function availability_adjusted_player_legacy(array $player): array
+{
+    $percent = availability_percent_legacy($player);
+    if ($percent >= 100) {
+        return $player;
+    }
+
+    foreach ([
+        'skill',
+        'technique',
+        'pass_vision',
+        'rhythm',
+        'stamina',
+        'defense_physical',
+        'attack',
+        'teamwork',
+        'mentality',
+        'regularity',
+        'goalkeeper_skill',
+    ] as $field) {
+        if (array_key_exists($field, $player) && $player[$field] !== null && $player[$field] !== '') {
+            $player[$field] = normalize_player_stat(((float) $player[$field]) * ($percent / 100), 1.0);
+        }
+    }
+
+    return $player;
 }
 
 function normalize_team_color_name_legacy(string $color): string
@@ -218,6 +252,9 @@ foreach ($postedTeams as $teamIdx => $teamPayload) {
             $allIds[] = $pid;
             $player = $participantsById[$pid];
             $player['assigned_position'] = isset($row['assigned_position']) ? (string) $row['assigned_position'] : '';
+            if (isset($row['availability_percent'])) {
+                $player['availability_percent'] = max(1, min(100, (int) round((float) $row['availability_percent'])));
+            }
             $team[] = $player;
         }
         $teams[] = $team;
@@ -295,7 +332,7 @@ foreach ($teams as $team) {
 
 $teamScores = array_map(
     static fn(array $team): float => array_sum(array_map(static function (array $p): float {
-        return player_overall_rating($p);
+        return player_overall_rating(availability_adjusted_player_legacy($p));
     }, $team)),
     $teams
 );
@@ -338,7 +375,8 @@ try {
     $savePlayer = $pdo->prepare(
         'UPDATE match_players
          SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
-             lineup_order = :lineup_order, formation_line_order = :formation_line_order
+             lineup_order = :lineup_order, formation_line_order = :formation_line_order,
+             availability_percent = :availability_percent
          WHERE match_id = :mid AND player_id = :player_id'
     );
 
@@ -377,6 +415,7 @@ try {
                 'is_goalkeeper' => $assigned === 'ARQ' ? 1 : 0,
                 'lineup_order' => $lineupIndex + 1,
                 'formation_line_order' => $lineOrder[$assigned],
+                'availability_percent' => availability_percent_legacy($player),
             ]);
         }
     }

@@ -43,7 +43,7 @@ function repo_match_by_id(int $id): ?array
 function repo_match_participants(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.lineup_order, mp.formation_line_order, mp.goals, mp.rating
+        'SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.lineup_order, mp.formation_line_order, mp.availability_percent, mp.goals, mp.rating
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid
@@ -57,6 +57,7 @@ function repo_match_participants_basic(int $matchId): array
 {
     $stmt = db()->prepare(
         'SELECT p.id, p.name, p.positions, p.pace, p.skill, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom,
+                mp.availability_percent,
                 p.technique, p.pass_vision, p.rhythm, p.stamina, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id

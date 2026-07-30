@@ -1311,6 +1311,7 @@ require __DIR__ . '/includes/header.php';
               'photo_position_x' => player_photo_position_x($p),
               'photo_position_y' => player_photo_position_y($p),
               'photo_zoom' => player_photo_zoom($p),
+              'availability_percent' => max(1, min(100, (int) ($p['availability_percent'] ?? 100))),
               'puntuacion' => player_overall_rating($p),
               'tecnica' => player_effective_stat($p, 'technique'),
               'pase_vision' => player_effective_stat($p, 'pass_vision'),

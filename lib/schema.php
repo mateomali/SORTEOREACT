@@ -274,6 +274,7 @@ function ensure_control_schema(): array
         ['match_players', 'lineup_order', 'lineup_order SMALLINT UNSIGNED NULL AFTER is_goalkeeper'],
         ['match_players', 'formation_line_order', 'formation_line_order TINYINT UNSIGNED NULL AFTER lineup_order'],
         ['match_players', 'availability_status', "availability_status ENUM('convocado', 'confirmado', 'baja') NOT NULL DEFAULT 'convocado' AFTER formation_line_order"],
+        ['match_players', 'availability_percent', 'availability_percent TINYINT UNSIGNED NOT NULL DEFAULT 100 AFTER availability_status'],
         ['captain_drafts', 'started_at', 'started_at DATETIME NULL AFTER status'],
         ['captain_drafts', 'completed_at', 'completed_at DATETIME NULL AFTER started_at'],
         ['captain_drafts', 'turn_version', 'turn_version INT UNSIGNED NOT NULL DEFAULT 0 AFTER completed_at'],

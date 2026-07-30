@@ -190,6 +190,15 @@ function normalizeSix(value, fallback = 3) {
   return Math.max(1, Math.min(6, Math.round(base * 10) / 10));
 }
 
+function normalizeAvailabilityPercent(value) {
+  const number = Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(number) ? Math.max(1, Math.min(100, number)) : 100;
+}
+
+function applyAvailabilityPercent(value, percent) {
+  return normalizeSix(Number(value || 0) * (normalizeAvailabilityPercent(percent) / 100), 1);
+}
+
 function normalizePositionText(raw) {
   const clean = String(raw || '')
     .split('/')
@@ -239,9 +248,18 @@ function playerPhotoPositionStyle(player) {
 }
 
 function normalizePlayer(raw, index) {
-  const baseRating = normalizeSix(raw.puntuacion ?? raw.rating ?? raw.overall, 3);
-  const ritmoStat = normalizeSix(raw.ritmo_stat ?? raw.rhythm, normalizePace(raw.ritmo ?? raw.pace) === 'lento' ? 2 : 4);
-  const resistencia = normalizeSix(raw.resistencia ?? raw.stamina, ritmoStat);
+  const availabilityPercent = normalizeAvailabilityPercent(raw.availability_percent ?? raw.availabilityPercent ?? 100);
+  const baseRating = normalizeSix(raw.base_puntuacion ?? raw.puntuacion_base_match ?? raw.puntuacion ?? raw.rating ?? raw.overall, 3);
+  const baseRitmoStat = normalizeSix(raw.base_ritmo_stat ?? raw.ritmo_stat ?? raw.rhythm, normalizePace(raw.ritmo ?? raw.pace) === 'lento' ? 2 : 4);
+  const baseResistencia = normalizeSix(raw.base_resistencia ?? raw.resistencia ?? raw.stamina, baseRitmoStat);
+  const baseTecnica = normalizeSix(raw.base_tecnica ?? raw.tecnica ?? raw.technique, baseRating);
+  const basePaseVision = normalizeSix(raw.base_pase_vision ?? raw.pase_vision ?? raw.pass_vision, baseTecnica);
+  const baseSolidez = normalizeSix(raw.base_solidez ?? raw.solidez ?? raw.defense_physical, baseRating);
+  const baseAtaque = normalizeSix(raw.base_ataque ?? raw.ataque ?? raw.attack, baseRating);
+  const baseCompromiso = normalizeSix(raw.base_compromiso ?? raw.compromiso ?? raw.teamwork, baseRating);
+  const baseMentalidad = normalizeSix(raw.base_mentalidad ?? raw.mentalidad ?? raw.mentality, 3);
+  const baseRegularidad = normalizeSix(raw.base_regularidad ?? raw.regularidad ?? raw.regularity, 3.5);
+  const baseHabilidadArquero = normalizeSix(raw.base_habilidad_arquero ?? raw.habilidad_arquero ?? raw.goalkeeper_skill, baseRating);
   const photoPath = String(raw.photo_path || '');
   const safePhoto = photoPath.startsWith('uploads/players/') && !photoPath.includes('..')
     ? photoPath
@@ -252,17 +270,29 @@ function normalizePlayer(raw, index) {
     nombre: String(raw.nombre || raw.name || `Jugador ${index + 1}`).trim() || `Jugador ${index + 1}`,
     posicion: normalizePositionText(raw.posicion || raw.positions),
     ritmo: normalizePace(raw.ritmo || raw.pace),
-    puntuacion: baseRating,
-    tecnica: normalizeSix(raw.tecnica ?? raw.technique, baseRating),
-    pase_vision: normalizeSix(raw.pase_vision ?? raw.pass_vision, normalizeSix(raw.tecnica ?? raw.technique, baseRating)),
-    ritmo_stat: ritmoStat,
-    resistencia,
-    solidez: normalizeSix(raw.solidez ?? raw.defense_physical, baseRating),
-    ataque: normalizeSix(raw.ataque ?? raw.attack, baseRating),
-    compromiso: normalizeSix(raw.compromiso ?? raw.teamwork, baseRating),
-    mentalidad: normalizeSix(raw.mentalidad ?? raw.mentality, 3),
-    regularidad: normalizeSix(raw.regularidad ?? raw.regularity, 3.5),
-    habilidad_arquero: normalizeSix(raw.habilidad_arquero ?? raw.goalkeeper_skill, baseRating),
+    availability_percent: availabilityPercent,
+    base_puntuacion: baseRating,
+    base_tecnica: baseTecnica,
+    base_pase_vision: basePaseVision,
+    base_ritmo_stat: baseRitmoStat,
+    base_resistencia: baseResistencia,
+    base_solidez: baseSolidez,
+    base_ataque: baseAtaque,
+    base_compromiso: baseCompromiso,
+    base_mentalidad: baseMentalidad,
+    base_regularidad: baseRegularidad,
+    base_habilidad_arquero: baseHabilidadArquero,
+    puntuacion: applyAvailabilityPercent(baseRating, availabilityPercent),
+    tecnica: applyAvailabilityPercent(baseTecnica, availabilityPercent),
+    pase_vision: applyAvailabilityPercent(basePaseVision, availabilityPercent),
+    ritmo_stat: applyAvailabilityPercent(baseRitmoStat, availabilityPercent),
+    resistencia: applyAvailabilityPercent(baseResistencia, availabilityPercent),
+    solidez: applyAvailabilityPercent(baseSolidez, availabilityPercent),
+    ataque: applyAvailabilityPercent(baseAtaque, availabilityPercent),
+    compromiso: applyAvailabilityPercent(baseCompromiso, availabilityPercent),
+    mentalidad: applyAvailabilityPercent(baseMentalidad, availabilityPercent),
+    regularidad: applyAvailabilityPercent(baseRegularidad, availabilityPercent),
+    habilidad_arquero: applyAvailabilityPercent(baseHabilidadArquero, availabilityPercent),
     photo_path: safePhoto,
     has_custom_photo: raw.has_custom_photo === true || safePhoto.startsWith('uploads/players/'),
     photo_position_x: clampPhotoPosition(raw.photo_position_x ?? raw.photoPositionX, 50),
@@ -1711,6 +1741,11 @@ function Icon({ name, className = 'h-4 w-4' }) {
   );
 }
 
+function formationVariantLabel(index) {
+  if (index === 0) return 'Recomendada';
+  return `Alternativa ${index + 1}`;
+}
+
 function Arrow({ form }) {
   const color = form === 'up' ? '#1ec7f2' : form === 'down' ? '#ef2b2b' : '#a7ec35';
   const rotate = form === 'down' ? 'rotate(180deg)' : form === 'right' ? 'rotate(90deg)' : 'none';
@@ -2522,6 +2557,37 @@ export function SorteoLegacyPageIsland({ root }) {
     const color = getTeamColor(teamIndex);
     return `Equipo ${color.label}`;
   }, [getTeamColor]);
+
+  const persistPlayerAvailability = useCallback(async (playerId, percent) => {
+    if (!payload.matchId) return;
+    try {
+      const response = await fetch('guardar_estado_jugadores.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          match_id: payload.matchId,
+          players: [{ id: playerId, availability_percent: normalizeAvailabilityPercent(percent) }],
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || 'No se pudo guardar el estado del jugador.');
+      setError('');
+    } catch (availabilityError) {
+      setSuccess('');
+      setError(availabilityError.message || 'No se pudo guardar el estado del jugador.');
+    }
+  }, [payload.matchId]);
+
+  const updatePlayerAvailability = useCallback((player, percent, persist = false) => {
+    const key = playerKey(player);
+    const nextPercent = normalizeAvailabilityPercent(percent);
+    const updateOne = (item) => (playerKey(item) === key ? normalizePlayer({ ...item, availability_percent: nextPercent }, 0) : item);
+    setPlayers((current) => current.map(updateOne));
+    setTeams((current) => (current ? current.map((team) => team.map(updateOne)) : current));
+    if (persist && Number(player.id) > 0) {
+      persistPlayerAvailability(player.id, nextPercent);
+    }
+  }, [persistPlayerAvailability]);
 
   const toggleManualGoalkeeper = useCallback((player) => {
     const key = playerKey(player);
@@ -3604,6 +3670,7 @@ export function SorteoLegacyPageIsland({ root }) {
         players: team.map((player) => ({
           id: player.id,
           assigned_position: currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player),
+          availability_percent: player.availability_percent,
         })),
       };
     });
@@ -3823,6 +3890,9 @@ export function SorteoLegacyPageIsland({ root }) {
                   <span className="flex flex-wrap items-center gap-1 text-[11px] font-extrabold text-slate-500">
                     <span>{player.posicion}</span>
                     <span>{playerCardRating(player.puntuacion)} GEN</span>
+                    {player.availability_percent < 100 ? (
+                      <span>{player.availability_percent}% estado</span>
+                    ) : null}
                     {Math.abs(Number(player.rendimiento_historico_ajuste || 0)) >= 0.03 ? (
                       <span title={`${Number(player.rendimiento_historico_partidos || 0)} partidos historicos`}>
                         Hist {Number(player.rendimiento_historico_ajuste) > 0 ? '+' : ''}{Number(player.rendimiento_historico_ajuste || 0).toFixed(1)}
@@ -3837,6 +3907,28 @@ export function SorteoLegacyPageIsland({ root }) {
                   {!lockedMatch ? (
                     <button className={dangerButtonClass} type="button" onClick={() => removePlayer(player)} aria-label={`Eliminar ${player.nombre}`}><Icon name="trash" /></button>
                   ) : null}
+                </div>
+                <div className="col-start-2 col-end-4 grid gap-1.5 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black text-[#07130f]">Estado del jugador</span>
+                    <span className="shrink-0 text-[11px] font-black text-[#063d2b]">
+                      {player.availability_percent}% · {playerCardRating(player.base_puntuacion)} a {playerCardRating(player.puntuacion)} GEN
+                    </span>
+                  </div>
+                  <input
+                    className="player-availability-range"
+                    type="range"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={player.availability_percent}
+                    onChange={(event) => updatePlayerAvailability(player, event.target.value, false)}
+                    onPointerUp={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
+                    onKeyUp={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
+                    onBlur={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
+                    style={{ '--availability-fill': `${player.availability_percent}%` }}
+                    aria-label={`Porcentaje de estado de ${player.nombre}`}
+                  />
                 </div>
               </article>
             ))}
@@ -3993,44 +4085,50 @@ export function SorteoLegacyPageIsland({ root }) {
                           </label>
                         </div>
 
+                        <div className="sorteo-formation-toolbar grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
+                          <div className="sorteo-formation-variants flex flex-wrap gap-1.5">
+                            {drawVariants[String(teamIndex)]?.length ? (
+                              drawVariants[String(teamIndex)].map((variant, index) => {
+                                const isActiveVariant = activeFormationVariants[String(teamIndex)] === variant.signature;
+                                const label = formationVariantLabel(index);
+                                return (
+                                  <button
+                                    key={variant.signature || index}
+                                    className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 text-xs font-black transition-colors max-[760px]:min-h-8 max-[760px]:px-2 max-[760px]:text-[11px] ${
+                                      isActiveVariant
+                                        ? 'border-[#063d2b] bg-[#063d2b] text-white'
+                                        : 'border-[#adc8bb] bg-white text-[#063d2b] hover:border-[#063d2b] hover:bg-[#eef8f2]'
+                                    }`}
+                                    type="button"
+                                    onClick={() => applyTeamFormationVariant(teamIndex, variant)}
+                                    aria-label={`${label}: ${variant.lineText}, ${variant.total.toFixed(1)} puntos`}
+                                    aria-pressed={isActiveVariant}
+                                    title={`${variant.lineText} | ${variant.total.toFixed(1)} pts | ${variant.diffCount} cambios`}
+                                  >
+                                    <Icon name={index === 0 ? 'dice' : 'swap'} className="h-3.5 w-3.5" />
+                                    <span>{label}</span>
+                                    <span className={isActiveVariant ? 'text-white/80' : 'text-[#526b62]'}>{variant.lineText}</span>
+                                    <strong>{variant.total.toFixed(1)}</strong>
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <span className="inline-flex min-h-9 items-center rounded-md border border-[#d7e6df] bg-white px-2.5 text-xs font-black text-[#526b62]">
+                                Sin variantes disponibles
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
                         <div
                           className={`team-formation relative grid h-[680px] grid-rows-[minmax(0,.8fr)_repeat(3,minmax(0,1fr))] gap-2 overflow-hidden rounded-lg border border-emerald-200 p-3 text-white max-[760px]:h-[430px] max-[760px]:gap-1 max-[760px]:p-1.5 ${pitchBackgroundClass}`}
                           data-sorteo-drop-team={teamIndex}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
                         >
-                          <button className="absolute right-2 top-2 z-20 grid h-8 w-8 place-items-center rounded-lg border border-white/25 bg-emerald-950/65 text-white transition hover:bg-emerald-950 disabled:cursor-not-allowed disabled:opacity-40 max-[760px]:h-7 max-[760px]:w-7" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio">
+                          <button className="formation-undo-button absolute right-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-md border border-white/35 bg-[#063d2b]/90 text-white shadow-sm transition-colors hover:bg-[#05291d] disabled:cursor-not-allowed disabled:opacity-40 max-[760px]:right-1.5 max-[760px]:top-1.5 max-[760px]:h-8 max-[760px]:w-8" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio" title="Deshacer ultimo cambio">
                             <Icon name="undo" />
                           </button>
-                          {drawVariants[String(teamIndex)]?.length ? (
-                            <div className="absolute left-2 right-12 top-2 z-30 flex flex-wrap gap-1 max-[760px]:left-1.5 max-[760px]:right-10 max-[760px]:top-1.5 max-[760px]:gap-0.5">
-                              {drawVariants[String(teamIndex)].map((variant, index) => {
-                                const isActiveVariant = activeFormationVariants[String(teamIndex)] === variant.signature;
-                                return (
-                                  <button
-                                    key={variant.signature || index}
-                                    className={`inline-flex min-h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-black shadow-sm transition-colors max-[760px]:min-h-6 max-[760px]:px-1.5 max-[760px]:text-[9px] ${
-                                      isActiveVariant
-                                        ? 'border-[#063d2b] bg-[#dff1e8] text-[#063d2b] ring-2 ring-lime-200/70'
-                                        : [
-                                          'border-[#d7e6df] bg-white/92 text-[#07130f] hover:border-[#9fc8b5] hover:bg-white',
-                                          'border-amber-200 bg-amber-50/95 text-[#7a4b00] hover:bg-amber-100',
-                                          'border-rose-200 bg-rose-50/95 text-rose-800 hover:bg-rose-100',
-                                        ][index % 3]
-                                    }`}
-                                    type="button"
-                                    onClick={() => applyTeamFormationVariant(teamIndex, variant)}
-                                    aria-label={`Opcion ${index + 1}: ${variant.lineText}, ${variant.total.toFixed(1)} puntos`}
-                                    aria-pressed={isActiveVariant}
-                                    title={`${variant.lineText} | ${variant.total.toFixed(1)} pts | ${variant.diffCount} cambios`}
-                                  >
-                                    <span>O{index + 1}</span>
-                                    <span className="font-extrabold opacity-80">{variant.total.toFixed(1)}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : null}
                           {PITCH_LINES.map((line) => {
                             const lineList = line === 'DEF'
                               ? defenseLinePlayers(linePlayers.DEF || [], currentAssignments)
