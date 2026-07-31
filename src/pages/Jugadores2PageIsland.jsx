@@ -31,35 +31,30 @@ const cardPalettes = {
   },
 };
 
-const statFields = ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
+const statFields = ['technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 99]];
 const positionWeights = {
-  ARQ: { goalkeeper_skill: 0.42, defense_physical: 0.14, rhythm: 0.1, technique: 0.1, teamwork: 0.14, mentality: 0.1 },
-  DEF: { defense_physical: 0.28, rhythm: 0.2, technique: 0.18, teamwork: 0.13, mentality: 0.13, attack: 0.08 },
-  LAT: { rhythm: 0.24, defense_physical: 0.22, technique: 0.17, teamwork: 0.15, attack: 0.12, mentality: 0.1 },
-  DEL: { attack: 0.31, rhythm: 0.2, technique: 0.17, teamwork: 0.14, mentality: 0.1, defense_physical: 0.08 },
-  MED: { technique: 0.24, rhythm: 0.23, teamwork: 0.19, mentality: 0.13, defense_physical: 0.12, attack: 0.09 },
+  ARQ: { goalkeeper_skill: 0.36, defense_physical: 0.12, rhythm: 0.08, stamina: 0.08, technique: 0.08, pass_vision: 0.06, teamwork: 0.12, mentality: 0.10 },
+  DEF: { defense_physical: 0.25, stamina: 0.17, rhythm: 0.14, technique: 0.12, pass_vision: 0.10, teamwork: 0.10, mentality: 0.08, attack: 0.04 },
+  LAT: { rhythm: 0.20, defense_physical: 0.18, stamina: 0.16, pass_vision: 0.14, technique: 0.12, teamwork: 0.12, attack: 0.06, mentality: 0.02 },
+  DEL: { attack: 0.28, rhythm: 0.18, technique: 0.14, pass_vision: 0.10, teamwork: 0.10, stamina: 0.08, mentality: 0.08, defense_physical: 0.04 },
+  MED: { pass_vision: 0.22, technique: 0.18, teamwork: 0.16, rhythm: 0.14, stamina: 0.12, mentality: 0.10, defense_physical: 0.05, attack: 0.03 },
 };
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
-const toolbarLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#c9d8d1] bg-white px-3 text-xs font-extrabold text-[#063d2b] no-underline transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
-const quietLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-transparent bg-transparent px-2 text-xs font-extrabold text-[#526b62] no-underline transition-colors hover:bg-[#eef7f2] hover:text-[#063d2b] ${focusRing}`;
+const toolbarLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#adc8bb] bg-white px-3 text-xs font-extrabold text-[#063d2b] no-underline transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
 const primaryIconButtonClass = `grid min-h-11 w-11 place-items-center rounded-lg border border-[#063d2b] bg-[#063d2b] text-white transition-colors hover:bg-[#082f23] ${focusRing}`;
-const rowCredentialButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f7fbf9] hover:text-[#063d2b] ${focusRing}`;
-const rowEditButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
-const rowEditWideButtonClass = `grid h-10 w-full place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
+const rowCredentialButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f5faf7] hover:text-[#063d2b] sm:h-10 sm:w-10 ${focusRing}`;
+const rowEditButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] sm:h-10 sm:w-10 ${focusRing}`;
+const rowEditWideButtonClass = `grid h-9 w-full place-items-center rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] sm:h-10 ${focusRing}`;
 const modalCloseButtonClass = `grid h-10 w-10 place-items-center rounded-lg border border-[#d7e6df] bg-white text-xl font-black text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b] ${focusRing}`;
-const modalSecondaryButtonClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#c9d8d1] bg-white px-4 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
+const modalSecondaryButtonClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#adc8bb] bg-white px-4 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
 const fileButtonClass = `grid cursor-pointer gap-1 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-3 py-2 text-center text-xs font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
 const textActionButtonClass = `!border-0 !bg-transparent !p-0 !text-left !shadow-none text-sm font-black text-[#063d2b] underline-offset-4 transition-colors hover:!bg-transparent hover:text-[#07130f] hover:underline ${focusRing}`;
 const playerNameButtonClass = `!grid !w-full min-w-0 !justify-start !justify-self-stretch !justify-items-start !border-0 !bg-transparent !p-0 !text-left !shadow-none ${focusRing}`;
-const fieldControlClass = 'min-h-10 rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
-const numberControlClass = 'h-10 rounded-lg border border-[#c9d8d1] bg-white px-2 text-center text-base font-black text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
-const sortableHeaderButtonClass = `inline-flex min-h-8 items-center gap-1 rounded-md border border-transparent px-1.5 text-xs font-black text-[#526b62] transition-colors hover:border-[#c9d8d1] hover:bg-white hover:text-[#063d2b] ${focusRing}`;
-
-function filterButtonClass(active) {
-  return `min-h-10 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#063d2b] bg-[#063d2b] text-white' : 'border-[#c9d8d1] bg-white text-[#07130f] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]'}`;
-}
+const fieldControlClass = 'min-h-10 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+const numberControlClass = 'h-10 rounded-lg border border-[#adc8bb] bg-white px-2 text-center text-base font-black text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60';
+const sortableHeaderButtonClass = `inline-flex min-h-8 items-center gap-1 rounded-md border border-transparent px-1.5 text-xs font-black text-[#526b62] transition-colors hover:border-[#adc8bb] hover:bg-white hover:text-[#063d2b] ${focusRing}`;
 
 function parsePayload(root) {
   try {
@@ -69,11 +64,14 @@ function parsePayload(root) {
       positions: Array.isArray(parsed.positions) ? parsed.positions : [],
       summary: parsed.summary || { active: 0, average: 0, top: 0 },
       links: parsed.links || {},
+      statLabels: parsed.statLabels || {},
+      statHelp: parsed.statHelp || {},
+      createOpen: parsed.createOpen === true,
       isAdmin: parsed.isAdmin === true,
       showInactive: parsed.showInactive === true,
     };
   } catch {
-    return { players: [], positions: [], summary: { active: 0, average: 0, top: 0 }, links: {}, isAdmin: false, showInactive: false };
+    return { players: [], positions: [], summary: { active: 0, average: 0, top: 0 }, links: {}, statLabels: {}, statHelp: {}, createOpen: false, isAdmin: false, showInactive: false };
   }
 }
 
@@ -211,6 +209,57 @@ function statTone(overall) {
   return { color: '#dc2626', border: 'border-red-300', bg: 'bg-red-50' };
 }
 
+function tierFromOverall(overall) {
+  const value = Number(overall) || 64;
+  if (value >= 88) return 'supreme';
+  if (value >= 84) return 'elite';
+  if (value >= 76) return 'gold';
+  if (value >= 66) return 'silver';
+  return 'bronze';
+}
+
+function cardStatsForPosition(player, position) {
+  const values = Object.fromEntries((player.allStats || []).map((stat) => [stat.field, Number(stat.overall) || 64]));
+  const statValue = (field) => values[field] || 64;
+  return position === 'ARQ'
+    ? [
+        { label: 'ARQ', value: statValue('goalkeeper_skill') },
+        { label: 'VEL', value: statValue('rhythm') },
+        { label: 'DEF', value: statValue('defense_physical') },
+        { label: 'TEC', value: statValue('technique') },
+        { label: 'EQU', value: statValue('teamwork') },
+        { label: 'MEN', value: statValue('mentality') },
+      ]
+    : [
+        { label: 'TEC', value: statValue('technique') },
+        { label: 'VEL', value: statValue('rhythm') },
+        { label: 'DEF', value: statValue('defense_physical') },
+        { label: 'ATA', value: statValue('attack') },
+        { label: 'EQU', value: statValue('teamwork') },
+        { label: 'MEN', value: statValue('mentality') },
+      ];
+}
+
+function playerForCardPosition(player, position) {
+  const rating = (player.positionRatings || []).find((item) => item.position === position);
+  const overall = Number(rating?.overall || player.overall || 64);
+  return {
+    ...player,
+    overall,
+    tier: tierFromOverall(overall),
+    cardStats: cardStatsForPosition(player, position),
+    positionRatings: [{ position, overall }],
+  };
+}
+
+function calculateOverallForPosition(overallValues, position) {
+  const weights = positionWeights[position] || positionWeights.MED;
+  let rating = Object.entries(weights).reduce((total, [field, weight]) => total + (sixFromOverall(overallValues[field] || 64) * weight), 0);
+  const regularity = sixFromOverall(overallValues.regularity || 74);
+  rating = Math.max(1, Math.min(6, rating * (1 + ((regularity - 3.5) / 50))));
+  return overallFromSix(Math.round(rating * 10) / 10);
+}
+
 function Arrow({ form }) {
   const color = form === 'up' ? '#1ec7f2' : form === 'down' ? '#ef2b2b' : '#a7ec35';
   const rotate = form === 'down' ? 'rotate(180deg)' : form === 'right' ? 'rotate(90deg)' : 'none';
@@ -250,10 +299,11 @@ function PlayerCard({ player, onOpen, size = 'compact' }) {
       >
         <span className="block text-[1.87rem] font-black leading-[.8] sm:text-[2.03rem]">{player.overall}</span>
         <span className="mt-[5px] grid justify-items-center gap-[1px] text-center leading-none">
-          <span className="block text-[.81rem] font-black uppercase leading-none sm:text-[.86rem]">{player.primaryPosition}</span>
-          {player.secondaryPosition ? (
-            <span className="block text-[.59rem] font-black uppercase leading-none opacity-85 sm:text-[.65rem]">{player.secondaryPosition}</span>
-          ) : null}
+          {(player.positionRatings?.length ? player.positionRatings : [{ position: player.primaryPosition, overall: player.overall }]).map((rating, index) => (
+            <span key={rating.position} className={`block font-black uppercase leading-none ${index === 0 ? 'text-[.75rem] sm:text-[.8rem]' : 'text-[.56rem] opacity-85 sm:text-[.62rem]'}`}>
+              {rating.position}
+            </span>
+          ))}
           <span className="mt-[3px] block aspect-square w-[14px] sm:w-[15px]" data-j2-regularity-arrow>
             <Arrow form={player.regularityForm} />
           </span>
@@ -261,8 +311,16 @@ function PlayerCard({ player, onOpen, size = 'compact' }) {
       </span>
 
       <span
-        className="absolute left-[36.4%] right-[13.3%] top-[12.9%] z-10 flex h-[36.8%] items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
-        style={{ WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)' }}
+        className="absolute z-10 flex items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
+        style={{
+          left: '37.7%',
+          right: '14.9%',
+          top: '14.2%',
+          height: '34.9%',
+          borderRadius: '13% 13% 9% 9%',
+          WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)',
+          maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)',
+        }}
       >
         {player.photo ? (
           <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.hasCustomPhoto ? '1' : undefined} />
@@ -348,7 +406,7 @@ function PositionChips({ positions }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {visible.map((position) => (
-        <span key={position} className="inline-flex min-h-6 items-center rounded-md border border-[#c9d8d1] bg-[#eef7f2] px-2 text-[11px] font-extrabold text-[#063d2b]">
+        <span key={position} className="inline-flex min-h-6 items-center rounded-md border border-[#adc8bb] bg-[#eef7f2] px-2 text-[11px] font-extrabold text-[#063d2b]">
           {position}
         </span>
       ))}
@@ -356,10 +414,50 @@ function PositionChips({ positions }) {
   );
 }
 
+function PositionRatingChips({ ratings, compact = false }) {
+  const visible = Array.isArray(ratings) ? ratings : [];
+  if (!visible.length) return null;
+  return (
+    <span className={`flex flex-wrap ${compact ? 'gap-1' : 'gap-1.5'}`}>
+      {visible.map((rating, index) => (
+        <span
+          key={rating.position}
+          className={`inline-flex items-center gap-1 rounded-md border font-extrabold ${index === 0 ? 'border-[#80b49b] bg-[#e4f5ec] text-[#063d2b]' : 'border-[#d7bd72] bg-[#fff5d6] text-[#684700]'} ${compact ? 'min-h-5 px-1.5 text-[10px]' : 'min-h-6 px-2 text-[11px]'}`}
+          title={index === 0 ? 'Posicion primaria' : 'Posicion secundaria'}
+        >
+          <span className="text-[9px] font-black text-[#526b62]">{index === 0 ? '1°' : '2°'}</span>
+          <span>{rating.position}</span>
+          <b className="font-black text-[#07130f]">{rating.overall}</b>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function PositionRatingSummary({ ratings }) {
+  const visible = Array.isArray(ratings) ? ratings : [];
+  if (!visible.length) return null;
+  return (
+    <span className="grid min-w-[66px] gap-1 rounded-lg border border-[#adc8bb] bg-white p-1.5 text-center text-[#07130f]">
+      {visible.map((rating, index) => (
+        <span
+          key={rating.position}
+          className={`grid grid-cols-[auto_1fr_auto] items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-black leading-none ${index === 0 ? 'bg-[#e4f5ec] text-[#063d2b]' : 'bg-[#fff5d6] text-[#684700]'}`}
+          title={index === 0 ? 'Posicion primaria' : 'Posicion secundaria'}
+        >
+          <span className="text-[9px] text-[#526b62]">{index === 0 ? '1°' : '2°'}</span>
+          <span>{rating.position}</span>
+          <b className="text-xs text-[#07130f]">{rating.overall}</b>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function OverallBadge({ value }) {
   return (
-    <span className="inline-grid min-h-10 min-w-11 place-items-center rounded-md border border-[#c9d8d1] bg-white px-2 text-center text-[#07130f]">
-      <b className="text-base font-black leading-none">{value}</b>
+    <span className="inline-grid min-h-9 min-w-10 place-items-center rounded-md border border-[#adc8bb] bg-white px-2 text-center text-[#07130f] sm:min-h-10 sm:min-w-11">
+      <b className="text-sm font-black leading-none sm:text-base">{value}</b>
       <em className="not-italic text-[10px] font-extrabold leading-none text-slate-500">GEN</em>
     </span>
   );
@@ -373,14 +471,21 @@ function radarPoint(center, radius, index, total) {
   };
 }
 
+function statLabelLines(label) {
+  const words = String(label || '').split(/\s+/).filter(Boolean);
+  if (words.length <= 1) return words;
+  if (words.length === 2) return words;
+  return [words.slice(0, -1).join(' '), words[words.length - 1]];
+}
+
 function RadarSvg({ stats }) {
   const visible = (stats || []).filter((stat) => Number(stat.value) > 0);
   if (visible.length < 3) {
     return <div className="grid min-h-48 place-items-center text-sm font-extrabold text-slate-500">Radar no disponible</div>;
   }
-  const size = 260;
-  const center = 130;
-  const maxRadius = 86;
+  const size = 320;
+  const center = 160;
+  const maxRadius = 88;
   const total = visible.length;
   const shape = visible.map((stat, index) => {
     const point = radarPoint(center, maxRadius * (Number(stat.value) / 6), index, total);
@@ -398,11 +503,17 @@ function RadarSvg({ stats }) {
       })}
       {visible.map((stat, index) => {
         const axis = radarPoint(center, maxRadius, index, total);
-        const label = radarPoint(center, maxRadius + 22, index, total);
+        const label = radarPoint(center, maxRadius + 48, index, total);
+        const lines = statLabelLines(stat.label);
+        const textAnchor = label.x < center - 26 ? 'end' : label.x > center + 26 ? 'start' : 'middle';
         return (
           <g key={stat.field}>
             <line x1={center} y1={center} x2={axis.x.toFixed(1)} y2={axis.y.toFixed(1)} stroke="rgba(6,61,43,.18)" strokeWidth="1" />
-            <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor="middle" fill="#07130f" fontSize="11" fontWeight="900">{stat.short}</text>
+            <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor={textAnchor} dominantBaseline="middle" fill="#07130f" fontSize="10" fontWeight="900">
+              {lines.map((line, lineIndex) => (
+                <tspan key={line} x={label.x.toFixed(1)} dy={lineIndex === 0 ? `${(1 - lines.length) * 5}px` : '11px'}>{line}</tspan>
+              ))}
+            </text>
           </g>
         );
       })}
@@ -418,12 +529,14 @@ function RadarSvg({ stats }) {
 function StatLine({ stat }) {
   const overall = Number(stat.overall) || 0;
   return (
-    <div className="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-2 text-sm font-extrabold text-[#07130f]">
-      <span>{stat.short}</span>
+    <div className="grid gap-2 text-sm font-extrabold text-[#07130f]">
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0 leading-tight">{stat.label}</span>
+        <b className="shrink-0 text-right">{overall}</b>
+      </div>
       <span className="h-2 overflow-hidden bg-emerald-50">
         <i className={`block h-full ${toneClass(overall)}`} style={{ width: `${Math.max(10, Math.min(100, (overall / 99) * 100))}%` }} />
       </span>
-      <b className="text-right">{overall}</b>
     </div>
   );
 }
@@ -432,13 +545,12 @@ function ReadonlyProfile({ player, onRadarOpen }) {
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <button type="button" className={`rounded-lg border border-[#c9d8d1] bg-white p-4 text-left transition-colors hover:border-[#9fc8b5] hover:bg-[#f8fbfa] ${focusRing}`} onClick={() => onRadarOpen(player)} aria-label={`Ver radar completo de ${player.name}`}>
+        <button type="button" className={`rounded-lg border border-[#adc8bb] bg-white p-4 text-left transition-colors hover:border-[#9fc8b5] hover:bg-[#f8fbfa] ${focusRing}`} onClick={() => onRadarOpen(player)} aria-label={`Ver radar completo de ${player.name}`}>
           <RadarSvg stats={player.allStats} />
         </button>
-        <div className="grid content-start gap-3">
-          <PositionChips positions={player.positions} />
-          <p className="m-0 border border-emerald-100 bg-emerald-50/50 p-3 text-sm font-semibold leading-relaxed text-slate-700">{player.description}</p>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid content-start gap-3">
+            <p className="m-0 border border-emerald-100 bg-emerald-50/50 p-3 text-sm font-semibold leading-relaxed text-slate-700">{player.description}</p>
+            <div className="grid gap-2 sm:grid-cols-3">
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{player.overall}</strong></article>
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Fuerte</span><strong className="block text-sm font-black text-[#07130f]">{player.bestStat?.label || '-'}</strong></article>
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">A cuidar</span><strong className="block text-sm font-black text-[#07130f]">{player.weakStat?.label || '-'}</strong></article>
@@ -458,6 +570,7 @@ function ReadonlyProfile({ player, onRadarOpen }) {
 }
 
 function AdminEditForm({ player, positions, onOverallPreviewChange }) {
+  const isCreate = String(player.id) === '0';
   const initialOveralls = useMemo(() => Object.fromEntries(player.allStats.map((stat) => [stat.field, Number(stat.overall) || 64])), [player]);
   const initialPhotoPosition = useMemo(() => playerPhotoPosition(player), [player]);
   const mainPhotoPreviewRef = useRef(null);
@@ -479,17 +592,22 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
     || photoPosition.y !== initialPhotoPosition.y
     || photoPosition.zoom !== initialPhotoPosition.zoom;
 
-  const displayedOverall = useMemo(() => {
-    const weights = positionWeights[primary] || positionWeights.MED;
-    let rating = Object.entries(weights).reduce((total, [field, weight]) => total + (sixFromOverall(overallValues[field] || 64) * weight), 0);
-    const regularity = sixFromOverall(overallValues.regularity || 74);
-    rating = Math.max(1, Math.min(6, rating * (1 + ((regularity - 3.5) / 50))));
-    return overallFromSix(Math.round(rating * 10) / 10);
-  }, [overallValues, primary]);
+  const previewPositionRatings = useMemo(() => {
+    const positionsToRate = [primary, secondary].filter(Boolean);
+    return positionsToRate.map((position) => ({
+      position,
+      overall: calculateOverallForPosition(overallValues, position),
+    }));
+  }, [overallValues, primary, secondary]);
+  const displayedOverall = previewPositionRatings[0]?.overall || calculateOverallForPosition(overallValues, primary || 'MED');
 
   useEffect(() => {
-    onOverallPreviewChange?.(player.id, displayedOverall);
-  }, [displayedOverall, onOverallPreviewChange, player.id]);
+    if (isCreate) return;
+    onOverallPreviewChange?.(player.id, {
+      value: displayedOverall,
+      positionRatings: previewPositionRatings,
+    });
+  }, [displayedOverall, isCreate, onOverallPreviewChange, player.id, previewPositionRatings]);
 
   useEffect(() => {
     if (!hasPreviewPhoto) return;
@@ -515,8 +633,9 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   };
 
   const selected = [primary, secondary].filter(Boolean);
-  const visibleFields = primary === 'ARQ' ? [...statFields, 'goalkeeper_skill'] : statFields;
-  const hasChanges = name !== player.name
+  const visibleFields = selected.includes('ARQ') ? [...statFields, 'goalkeeper_skill'] : statFields;
+  const hasChanges = isCreate
+    || name !== player.name
     || primary !== (player.primaryPosition || '')
     || secondary !== (player.secondaryPosition || '')
     || active !== player.isActive
@@ -525,7 +644,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
     || Object.keys(initialOveralls).some((field) => (overallValues[field] || 64) !== initialOveralls[field]);
 
   return (
-    <form className="grid gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4" method="post" encType="multipart/form-data">
+    <form className="grid gap-4 rounded-lg border border-[#adc8bb] bg-white p-4" method="post" encType="multipart/form-data">
       <input type="hidden" name="action" value="save" />
       <input type="hidden" name="id" value={player.id} />
       <input type="hidden" name="photo_position_x" value={photoPosition.x} />
@@ -533,7 +652,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
       <input type="hidden" name="photo_zoom" value={photoPosition.zoom} />
 
       <div className="flex items-center justify-between gap-3 border-b border-emerald-100 pb-3">
-        <strong className="text-base font-black text-[#07130f]">Editar jugador</strong>
+        <strong className="text-base font-black text-[#07130f]">{isCreate ? 'Crear jugador' : 'Editar jugador'}</strong>
         <OverallBadge value={displayedOverall} />
       </div>
 
@@ -560,7 +679,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
             ))}
           </select>
         </label>
-        <label className="flex min-h-10 items-center gap-2 self-end rounded-lg border border-[#c9d8d1] bg-[#eef7f2] px-3 text-sm font-extrabold text-[#063d2b]">
+        <label className="flex min-h-10 items-center gap-2 self-end rounded-lg border border-[#adc8bb] bg-[#eef7f2] px-3 text-sm font-extrabold text-[#063d2b]">
           <input type="checkbox" name="active" value="1" checked={active} onChange={(event) => setActive(event.target.checked)} />
           Activo
         </label>
@@ -590,7 +709,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
             />
           </label>
           <button
-            className={`min-h-9 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${hasPreviewPhoto ? 'border-[#c9d8d1] bg-white text-[#063d2b] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]' : 'cursor-not-allowed border-[#d7e6df] bg-white text-slate-400'}`}
+            className={`min-h-9 rounded-lg border px-3 text-xs font-black transition-colors ${focusRing} ${hasPreviewPhoto ? 'border-[#adc8bb] bg-white text-[#063d2b] hover:border-[#9fc8b5] hover:bg-[#f4fbf7]' : 'cursor-not-allowed border-[#d7e6df] bg-white text-slate-400'}`}
             type="button"
             disabled={!hasPreviewPhoto}
             onClick={() => setPhotoEditorOpen((open) => !open)}
@@ -652,7 +771,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
                 />
               </label>
               <button
-                className={`min-h-9 rounded-lg border border-[#c9d8d1] bg-[#f8fbfa] px-3 text-xs font-black text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#eef7f2] ${focusRing}`}
+                className={`min-h-9 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] px-3 text-xs font-black text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#eef7f2] ${focusRing}`}
                 type="button"
                 onClick={() => setPhotoPosition(photoDirty ? { x: 50, y: 50, zoom: 100 } : initialPhotoPosition)}
               >
@@ -716,27 +835,76 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
       </div>
 
       <div className="flex justify-end">
-        <button className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-5 text-sm font-black transition-colors ${focusRing} ${hasChanges ? 'border-[#063d2b] bg-[#063d2b] text-white hover:bg-[#082f23]' : 'border-[#c9d8d1] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b]'}`} type="submit">
+        <button className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-5 text-sm font-black transition-colors ${focusRing} ${hasChanges ? 'border-[#063d2b] bg-[#063d2b] text-white hover:bg-[#082f23]' : 'border-[#adc8bb] bg-white text-[#526b62] hover:border-[#9fc8b5] hover:bg-[#f4fbf7] hover:text-[#063d2b]'}`} type="submit">
           {hasChanges ? <SaveIcon /> : null}
-          Guardar todo
+          {isCreate ? 'Crear jugador' : 'Guardar todo'}
         </button>
       </div>
     </form>
   );
 }
 
-function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overallValue, onOverallPreviewChange }) {
+function createBlankPlayer(statLabels, statHelp) {
+  const defaultOveralls = {
+    technique: 64,
+    pass_vision: 64,
+    rhythm: 64,
+    stamina: 74,
+    defense_physical: 64,
+    attack: 64,
+    teamwork: 64,
+    mentality: 64,
+    regularity: 74,
+    goalkeeper_skill: 64,
+  };
+  return {
+    id: '0',
+    name: '',
+    primaryPosition: '',
+    secondaryPosition: '',
+    isActive: true,
+    photo: 'assets/players/default-player-silhouette.png',
+    photoEdit: 'assets/players/default-player-silhouette.png',
+    hasCustomPhoto: false,
+    photoPositionX: 50,
+    photoPositionY: 50,
+    photoZoom: 100,
+    allStats: [...statFields, 'goalkeeper_skill'].map((field) => ({
+      field,
+      label: statLabels[field] || field,
+      help: statHelp[field] || 'Sin descripcion disponible.',
+      overall: defaultOveralls[field] || 64,
+    })),
+  };
+}
+
+function CreatePlayerPanel({ positions, statLabels, statHelp, defaultOpen }) {
+  const player = useMemo(() => createBlankPlayer(statLabels, statHelp), [statHelp, statLabels]);
+  return (
+    <details id="crear-jugador" className="rounded-lg border border-[#adc8bb] bg-white" open={defaultOpen}>
+      <summary className="cursor-pointer list-none border-b border-[#d7e6df] bg-[#f8fbfa] px-4 py-3 text-base font-black text-[#07130f]">
+        Crear jugador
+      </summary>
+      <div className="p-3">
+        <AdminEditForm player={player} positions={positions} />
+      </div>
+    </details>
+  );
+}
+
+function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, positionRatingsPreview, onOverallPreviewChange }) {
   if (!player) return null;
+  const headerRatings = positionRatingsPreview?.length ? positionRatingsPreview : player.positionRatings;
   return (
     <>
       <button className="fixed inset-0 z-40 block bg-black/55" type="button" aria-label="Cerrar ficha" onClick={onClose} />
-      <section className="fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[#c9d8d1] bg-white shadow-[0_12px_28px_rgba(7,19,15,.18)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
+      <section className="fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[#adc8bb] bg-white shadow-[0_12px_28px_rgba(7,19,15,.18)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
         <header className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-[#d7e6df] bg-[#f8fbfa] p-4">
           <div className="min-w-0">
             <h2 className="m-0 truncate text-xl font-black text-[#07130f]">{player.name}</h2>
-            <p className="m-0 text-sm font-semibold text-slate-500">{player.positionsText || 'Sin posicion'} | {player.isActive ? 'Activo' : 'Inactivo'}</p>
+            <p className="m-0 mt-1 text-sm font-semibold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'}</p>
           </div>
-          <OverallBadge value={overallValue ?? player.overall} />
+          <PositionRatingSummary ratings={headerRatings} />
           <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar ficha">x</button>
         </header>
         <div className="grid gap-4 overflow-auto p-4">
@@ -747,7 +915,7 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, overall
           )}
           <details className="rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3">
             <summary className="cursor-pointer text-sm font-black text-[#07130f]">Ver ayuda de stats</summary>
-            <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat. Esta pagina usa React y Tailwind para la interfaz.</p>
+            <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat.</p>
           </details>
           <button className={modalSecondaryButtonClass} type="button" onClick={onClose}>Cerrar</button>
         </div>
@@ -761,7 +929,7 @@ function RadarOverlay({ player, onClose }) {
   return (
     <>
       <button className="fixed inset-0 z-[60] bg-black/60" type="button" aria-label="Cerrar radar" onClick={onClose} />
-      <section className="fixed inset-x-4 top-10 z-[70] mx-auto max-w-md rounded-lg border border-[#c9d8d1] bg-white p-4 shadow-[0_12px_28px_rgba(7,19,15,.18)]" role="dialog" aria-modal="true" aria-label={`Radar completo de ${player.name}`}>
+      <section className="fixed inset-x-4 top-10 z-[70] mx-auto max-w-md rounded-lg border border-[#adc8bb] bg-white p-4 shadow-[0_12px_28px_rgba(7,19,15,.18)]" role="dialog" aria-modal="true" aria-label={`Radar completo de ${player.name}`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <strong className="text-base font-black text-[#07130f]">{player.name}</strong>
           <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar radar">x</button>
@@ -773,14 +941,46 @@ function RadarOverlay({ player, onClose }) {
 }
 
 function CardPreviewModal({ player, onClose }) {
+  const options = player?.positionRatings?.length
+    ? player.positionRatings
+    : [{ position: player?.primaryPosition || 'MED', overall: player?.overall || 64 }];
+  const [selectedPosition, setSelectedPosition] = useState('MED');
+  useEffect(() => {
+    setSelectedPosition(options[0]?.position || player?.primaryPosition || 'MED');
+  }, [player?.id]);
+
   if (!player) return null;
+  const activePosition = options.some((option) => option.position === selectedPosition)
+    ? selectedPosition
+    : options[0]?.position || player.primaryPosition || 'MED';
+  const previewPlayer = playerForCardPosition(player, activePosition);
+
   return (
     <>
       <button className="fixed inset-0 z-[80] bg-black/70" type="button" aria-label="Cerrar credencial" onClick={onClose} />
       <section className="fixed inset-0 z-[90] grid place-items-center overflow-auto p-4" role="dialog" aria-modal="true" aria-label={`Credencial de ${player.name}`}>
-        <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible">
-          <div className="origin-center scale-[1.72] sm:scale-[1.9]">
-            <PlayerCard player={player} size="preview" />
+        <div className="grid place-items-center gap-3">
+          {options.length > 1 ? (
+            <div className="grid w-[min(82vw,320px)] grid-cols-2 gap-2" aria-label="Elegir posicion de credencial">
+              {options.map((rating, index) => {
+                const active = activePosition === rating.position;
+                return (
+                  <button
+                    key={rating.position}
+                    className={`min-h-10 rounded-lg border px-2 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#f5d867] bg-[#f5d867] text-[#07130f]' : 'border-white/20 bg-black/65 text-white hover:bg-black/80'}`}
+                    type="button"
+                    onClick={() => setSelectedPosition(rating.position)}
+                  >
+                    {index === 0 ? '1°' : '2°'} {rating.position} {rating.overall}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible">
+            <div className="origin-center scale-[1.72] sm:scale-[1.9]">
+              <PlayerCard player={previewPlayer} size="preview" />
+            </div>
           </div>
         </div>
         <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-lg border border-white/20 bg-black/70 text-xl font-black text-white transition-colors hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" type="button" onClick={onClose} aria-label="Cerrar credencial">x</button>
@@ -792,8 +992,6 @@ function CardPreviewModal({ player, onClose }) {
 export function Jugadores2PageIsland({ root }) {
   const payload = useMemo(() => parsePayload(root), [root]);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [topSort, setTopSort] = useState(false);
   const [sortConfig, setSortConfig] = useState({ field: 'name', direction: 'asc' });
   const [activeId, setActiveId] = useState(null);
   const [cardId, setCardId] = useState(null);
@@ -810,15 +1008,22 @@ export function Jugadores2PageIsland({ root }) {
     setModalOverall(null);
   }, []);
 
-  const handleOverallPreviewChange = useCallback((playerId, value) => {
+  const handleOverallPreviewChange = useCallback((playerId, preview) => {
     const id = String(playerId);
+    const value = typeof preview === 'object' && preview !== null ? preview.value : preview;
+    const positionRatings = typeof preview === 'object' && preview !== null && Array.isArray(preview.positionRatings)
+      ? preview.positionRatings
+      : [];
     setModalOverall((current) => (
-      current?.id === id && current.value === value ? current : { id, value }
+      current?.id === id
+        && current.value === value
+        && JSON.stringify(current.positionRatings || []) === JSON.stringify(positionRatings)
+        ? current
+        : { id, value, positionRatings }
     ));
   }, []);
 
   const handleHeaderSort = useCallback((field) => {
-    setTopSort(false);
     setSortConfig((current) => ({
       field,
       direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc',
@@ -827,25 +1032,20 @@ export function Jugadores2PageIsland({ root }) {
 
   const visiblePlayers = useMemo(() => {
     const normalizedQuery = normalize(query);
-    const filtered = payload.players.filter((player) => {
-      const matchesFilter = filter === 'all' || player.group === filter;
-      const matchesQuery = normalizedQuery === '' || normalize(`${player.search} ${player.overall} ${player.rating}`).includes(normalizedQuery);
-      return matchesFilter && matchesQuery;
-    });
-    if (topSort) {
-      return filtered.slice().sort((a, b) => Number(b.overall || 0) - Number(a.overall || 0));
-    }
+    const filtered = payload.players.filter((player) => (
+      normalizedQuery === '' || normalize(`${player.search} ${player.overall} ${player.rating}`).includes(normalizedQuery)
+    ));
     return filtered.slice().sort((a, b) => comparePlayersBySort(a, b, sortConfig));
-  }, [filter, payload.players, query, sortConfig, topSort]);
+  }, [payload.players, query, sortConfig]);
 
   const activePlayer = payload.players.find((player) => String(player.id) === String(activeId)) || null;
   const cardPlayer = payload.players.find((player) => String(player.id) === String(cardId)) || null;
   const radarPlayer = payload.players.find((player) => String(player.id) === String(radarId)) || null;
-  const activeOverall = activePlayer && modalOverall?.id === String(activePlayer.id) ? modalOverall.value : activePlayer?.overall;
+  const activePositionRatings = activePlayer && modalOverall?.id === String(activePlayer.id) ? modalOverall.positionRatings : null;
 
   return (
     <div className="grid gap-4">
-      <section className="grid items-end gap-4 rounded-lg border border-[#c9d8d1] bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+      <section className="grid items-end gap-4 rounded-lg border border-[#adc8bb] bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
         <div>
           <h1 className="m-0 text-2xl font-black text-[#07130f]">Jugadores</h1>
           <p className="m-0 mt-1 text-sm font-semibold text-slate-500">Plantilla, posiciones y rendimiento actual.</p>
@@ -857,9 +1057,9 @@ export function Jugadores2PageIsland({ root }) {
         </div>
       </section>
 
-      <section className="grid gap-3 rounded-lg border border-[#c9d8d1] bg-[#f8fbfa] p-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]" aria-label="Controles de jugadores">
+      <section className="grid gap-2 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] p-3 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_auto]" aria-label="Controles de jugadores">
         <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
-          <input className="min-h-11 w-full rounded-lg border border-[#c9d8d1] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input className="min-h-10 w-full rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60 sm:min-h-11" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
           <button className={primaryIconButtonClass} type="button" onClick={() => setQuery(query.trim())} aria-label="Buscar">
             <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" />
@@ -867,23 +1067,20 @@ export function Jugadores2PageIsland({ root }) {
             </svg>
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-1 sm:grid-cols-6" aria-label="Filtrar jugadores">
-          {[
-            ['all', 'Todos'],
-            ['arq', 'Arq'],
-            ['def', 'Def'],
-            ['med', 'Med'],
-            ['del', 'Del'],
-          ].map(([key, label]) => (
-            <button key={key} className={filterButtonClass(filter === key)} type="button" onClick={() => setFilter(key)}>{label}</button>
-          ))}
-          <button className={filterButtonClass(topSort)} type="button" onClick={() => setTopSort((current) => !current)}>Top</button>
-        </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1 sm:pt-0">
+          {payload.isAdmin ? <a className={toolbarLinkClass} href="jugadores2.php?create=1#crear-jugador">Crear jugador</a> : null}
           {payload.isAdmin && payload.links.toggleInactive ? <a className={toolbarLinkClass} href={payload.links.toggleInactive}>{payload.showInactive ? 'Ver solo activos' : 'Ver inactivos'}</a> : null}
-          <a className={quietLinkClass} href={payload.links.backup || 'jugadores.php'}>Backup jugadores</a>
         </div>
       </section>
+
+      {payload.isAdmin ? (
+        <CreatePlayerPanel
+          positions={payload.positions}
+          statLabels={payload.statLabels}
+          statHelp={payload.statHelp}
+          defaultOpen={payload.createOpen}
+        />
+      ) : null}
 
       {visiblePlayers.length === 0 ? (
         <p className="m-0 border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">No hay jugadores que coincidan con la busqueda.</p>
@@ -891,23 +1088,23 @@ export function Jugadores2PageIsland({ root }) {
 
       <section className="grid gap-2 md:hidden" aria-label="Lista de jugadores">
         {visiblePlayers.map((player) => (
-          <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border border-[#d7e6df] bg-white p-3">
+          <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-[#d7e6df] bg-white p-3">
             <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
               <span className="min-w-0 w-full">
-                <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
+                <strong className="block truncate text-[15px] font-black leading-tight text-[#07130f]">{player.name}</strong>
                 <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-500">
                   <span>{player.isActive ? 'Activo' : 'Inactivo'}</span>
-                  <span>GEN {player.overall}</span>
                 </span>
-                <span className="mt-2 block"><PositionChips positions={player.positions} /></span>
               </span>
             </button>
-            <div className="grid shrink-0 grid-cols-[44px_44px] items-start gap-2">
-              <OverallBadge value={player.overall} />
+            <div className="grid shrink-0 grid-cols-[minmax(56px,auto)_36px] grid-rows-2 items-stretch gap-1.5">
+              <span className="row-span-2 grid">
+                <PositionRatingSummary ratings={player.positionRatings} />
+              </span>
               <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
                 <CredentialIcon />
               </button>
-              <button className={`col-span-2 ${rowEditWideButtonClass}`} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
+              <button className={rowEditButtonClass} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
                 {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}
               </button>
             </div>
@@ -915,35 +1112,40 @@ export function Jugadores2PageIsland({ root }) {
         ))}
       </section>
 
-      <section className="hidden overflow-x-auto rounded-lg border border-[#c9d8d1] bg-white md:block" aria-label="Tabla de jugadores">
+      <section className="hidden overflow-x-auto rounded-lg border border-[#adc8bb] bg-white md:block" aria-label="Tabla de jugadores">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-[#f2f6f4]">
             <tr>
-              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+              <th className="border-b border-[#adc8bb] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
                 <SortHeaderButton field="name" label="Jugador" sortConfig={sortConfig} onSort={handleHeaderSort} />
               </th>
-              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+              <th className="border-b border-[#adc8bb] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
                 <SortHeaderButton field="position" label="Posicion" sortConfig={sortConfig} onSort={handleHeaderSort} />
               </th>
-              <th className="border-b border-[#c9d8d1] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
+              <th className="border-b border-[#adc8bb] px-2 py-1.5 text-left text-xs font-black text-[#526b62]">
                 <SortHeaderButton field="overall" label="Media" sortConfig={sortConfig} onSort={handleHeaderSort} />
               </th>
-              <th className="border-b border-[#c9d8d1] px-3 py-2 text-right text-xs font-black text-[#526b62]">Acciones</th>
+              <th className="border-b border-[#adc8bb] px-3 py-2 text-right text-xs font-black text-[#526b62]">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {visiblePlayers.map((player) => (
-              <tr key={player.id} className="border-b border-[#e0ebe6] transition-colors last:border-b-0 hover:bg-[#f8fbfa]">
+              <tr key={player.id} className="border-b border-[#dfece6] transition-colors last:border-b-0 hover:bg-[#f8fbfa]">
                 <td className="px-3 py-2">
                   <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
                     <span className="min-w-0 w-full">
                       <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
-                      <small className="text-xs font-bold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'} | GEN {player.overall}</small>
+                      <small className="text-xs font-bold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'}</small>
+                      <span className="mt-1 block">
+                        <PositionRatingChips ratings={player.positionRatings} compact />
+                      </span>
                     </span>
                   </button>
                 </td>
                 <td className="px-3 py-2"><PositionChips positions={player.positions} /></td>
-                <td className="px-3 py-2"><OverallBadge value={player.overall} /></td>
+                <td className="px-3 py-2">
+                  <PositionRatingChips ratings={player.positionRatings} />
+                </td>
                 <td className="px-3 py-2 text-right">
                   <div className="inline-flex items-center justify-end gap-2">
                     <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
@@ -961,7 +1163,7 @@ export function Jugadores2PageIsland({ root }) {
       </section>
 
       <CardPreviewModal player={cardPlayer} onClose={() => setCardId(null)} />
-      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} overallValue={activeOverall} onOverallPreviewChange={handleOverallPreviewChange} />
+      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} positionRatingsPreview={activePositionRatings} onOverallPreviewChange={handleOverallPreviewChange} />
       <RadarOverlay player={radarPlayer} onClose={() => setRadarId(null)} />
     </div>
   );

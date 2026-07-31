@@ -176,6 +176,7 @@ CREATE TABLE `director_player_stat_votes` (
   `regularity` tinyint(3) unsigned DEFAULT NULL,
   `goalkeeper_skill` tinyint(3) unsigned DEFAULT NULL,
   `comments` text DEFAULT NULL,
+  `manually_modified` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
