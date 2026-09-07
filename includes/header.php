@@ -23,6 +23,8 @@ if ($bodyClass === '') {
 $flashMessages = consume_flash();
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/../assets/tailwind.css') ?: time());
 $contrastVersion = (string) (@filemtime(__DIR__ . '/../assets/contrast-overrides.css') ?: time());
+$tailwindCacheHash = (string) (@md5_file(__DIR__ . '/../assets/tailwind.css') ?: time());
+$contrastCacheHash = (string) (@md5_file(__DIR__ . '/../assets/contrast-overrides.css') ?: time());
 $disableContrastOverrides = (bool) ($disableContrastOverrides ?? true);
 $brandLogoPath = __DIR__ . '/../assets/goodfellas-logo.png';
 $publicMenu = [
@@ -155,9 +157,9 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <?= $headExtraHtml ?>
-  <link rel="stylesheet" href="assets/tailwind.css?v=<?= h($tailwindVersion) ?>">
+  <link rel="stylesheet" href="assets/tailwind.css?v=<?= h($tailwindCacheHash) ?>">
   <?php if (!$disableContrastOverrides): ?>
-    <link rel="stylesheet" href="assets/contrast-overrides.css?v=<?= h($contrastVersion) ?>">
+    <link rel="stylesheet" href="assets/contrast-overrides.css?v=<?= h($contrastCacheHash) ?>">
   <?php endif; ?>
 </head>
 <body<?= $bodyClass !== '' ? ' class="' . h($bodyClass) . '"' : '' ?>>

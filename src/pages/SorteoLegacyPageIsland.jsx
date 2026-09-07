@@ -101,13 +101,13 @@ const cardPalettes = {
 };
 
 const teamColorOptions = [
-  { name: 'ROSA', label: 'Rosa', accent: 'bg-rose-500', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
-  { name: 'AZUL', label: 'Azul', accent: 'bg-sky-500', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
-  { name: 'NARANJA', label: 'Naranja', accent: 'bg-orange-500', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
-  { name: 'NEGRO', label: 'Negro', accent: 'bg-slate-950', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
-  { name: 'VERDE', label: 'Verde', accent: 'bg-emerald-600', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
-  { name: 'CAMISADO', label: 'Camisado', accent: 'bg-white ring-1 ring-slate-300', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
-  { name: 'DESCAMISADO', label: 'Descamisado', accent: 'bg-stone-300', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'ROSA', label: 'Rosa', accent: 'bg-rose-500', accentHex: '#f43f5e', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'AZUL', label: 'Azul', accent: 'bg-sky-500', accentHex: '#0ea5e9', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'NARANJA', label: 'Naranja', accent: 'bg-orange-500', accentHex: '#f97316', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'NEGRO', label: 'Negro', accent: 'bg-slate-950', accentHex: '#0f172a', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'VERDE', label: 'Verde', accent: 'bg-emerald-600', accentHex: '#16a34a', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'CAMISADO', label: 'Camisado', accent: 'bg-white ring-1 ring-slate-300', accentHex: '#ffffff', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'DESCAMISADO', label: 'Descamisado', accent: 'bg-stone-300', accentHex: '#cbd5e1', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
 ];
 
 const positionWeights = {
@@ -496,25 +496,6 @@ function playerCardTier(value) {
   if (overall >= 76) return 'gold';
   if (overall >= 66) return 'silver';
   return 'bronze';
-}
-
-function compactCardNameLines(name) {
-  const text = String(name || '').trim() || 'Jugador';
-  const parts = text.split(/\s+/).filter(Boolean);
-  if (parts.length < 2 || text.length <= 8) return [text];
-  const total = parts.join('').length;
-  let bestIndex = 1;
-  let bestScore = Infinity;
-  for (let index = 1; index < parts.length; index += 1) {
-    const left = parts.slice(0, index).join('');
-    const right = parts.slice(index).join('');
-    const score = Math.abs((total / 2) - left.length) + (Math.max(left.length, right.length) * 0.08);
-    if (score < bestScore) {
-      bestScore = score;
-      bestIndex = index;
-    }
-  }
-  return [parts.slice(0, bestIndex).join(' '), parts.slice(bestIndex).join(' ')];
 }
 
 function isPlatinumPlayer(player) {
@@ -1318,18 +1299,6 @@ function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, 
       selected.push(index);
       visit(index + 1);
       selected.pop();
-      if (
-        bestEval
-        && bestEval.diff <= maxDiff
-        && bestEval.slowSpread <= 1
-        && bestEval.irregularSpread <= 1
-        && bestEval.platinumSpread <= 1
-        && bestEval.profileDistributionSpread <= 1
-        && bestEval.lineStrengthSpread <= 2
-        && !avoidSignatures.has(bestEval.signature)
-      ) {
-        return;
-      }
     }
   };
 
@@ -1825,35 +1794,28 @@ function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
 function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole = '', draggableProps = {}, onOpen }) {
   const { dragging = false, selected = false, locked = false, swapTarget = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
+  const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
-  const widthClass = 'w-[58px] min-[380px]:w-[64px] sm:w-[70px] xl:w-[82px] 2xl:w-[88px]';
+  const widthClass = 'w-[52px] min-[380px]:w-[58px] sm:w-[64px] xl:w-[72px] 2xl:w-[80px]';
   const outOfPosition = !getOrderedPlayerPositions(player).includes(assignedPosition);
   const secondary = !outOfPosition && assignedPosition !== getPrimaryPlayerPosition(player);
-  const nameLines = compactCardNameLines(player.nombre);
-  const multiLineName = nameLines.length > 1;
-  const longName = String(player.nombre || '').trim().length > 9 || String(player.nombre || '').includes(' ');
-  const veryLongName = String(player.nombre || '').trim().length > 12 || String(player.nombre || '').trim().split(/\s+/).some((part) => part.length > 8);
-  const nameFontSize = multiLineName
-    ? (veryLongName ? 'clamp(6.1px, 0.62vw, 8.1px)' : 'clamp(6.5px, 0.66vw, 8.7px)')
-    : longName ? 'clamp(7.4px, 0.8vw, 10.4px)' : 'clamp(8.8px, 0.98vw, 12.8px)';
-  const cardTextStyle = {
-    '--sorteo-card-text': palette.color,
-  };
-  const positionTextStyle = {
-    '--sorteo-card-position': outOfPosition ? '#ffb4a8' : secondary ? '#ffe9a6' : palette.color,
-  };
   const isLateral = String(assignedPosition || '').toUpperCase() === 'LAT' || laneRole === 'lateral';
+  const lineGlow = {
+    ARQ: { border: '#fbbf24', glow: 'rgba(251,191,36,.55)', glowStrong: 'rgba(251,191,36,.60)', glowMid: 'rgba(251,191,36,.35)' },
+    DEF: { border: '#22d3ee', glow: 'rgba(34,211,238,.55)', glowStrong: 'rgba(34,211,238,.60)', glowMid: 'rgba(34,211,238,.35)' },
+    MED: { border: '#a3e635', glow: 'rgba(163,230,53,.55)', glowStrong: 'rgba(163,230,53,.60)', glowMid: 'rgba(163,230,53,.35)' },
+    LAT: { border: '#22d3ee', glow: 'rgba(34,211,238,.55)', glowStrong: 'rgba(34,211,238,.60)', glowMid: 'rgba(34,211,238,.35)' },
+    DEL: { border: '#fb7185', glow: 'rgba(251,113,133,.55)', glowStrong: 'rgba(251,113,133,.60)', glowMid: 'rgba(251,113,133,.35)' },
+  }[String(assignedPosition || '').toUpperCase()] || { border: '#a3e635', glow: 'rgba(163,230,53,.55)', glowStrong: 'rgba(163,230,53,.60)', glowMid: 'rgba(163,230,53,.35)' };
+  const textShadow = `[text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.46)]`;
   return (
     <button
       type="button"
-      className={`relative block aspect-[1000/940] ${widthClass} shrink-0 overflow-hidden border-0 bg-transparent p-0 text-left drop-shadow-[0_4px_7px_rgba(2,14,9,0.24)] transition ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 scale-[1.06] ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
+      className={`relative block aspect-[1000/820] ${widthClass} shrink-0 bg-transparent !min-h-0 !rounded-none p-0 text-left transition cursor-grab active:cursor-grabbing ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 scale-[1.06] ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
       style={{
-        ...cardTextStyle,
-        backgroundImage: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}")`,
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: '100% 100%',
+        '--sorteo-card-text': palette.color,
+        '--sorteo-card-position': outOfPosition ? '#ffb4a8' : secondary ? '#ffe9a6' : palette.color,
         fontFamily: '"Barlow Condensed", sans-serif',
       }}
       onClick={(event) => {
@@ -1861,56 +1823,66 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
         onOpen?.();
       }}
       aria-label={`Ver ficha de ${player.nombre}`}
+      title={`${player.nombre} · ${assignedPosition} · Arrastrá para mover o intercambiar`}
       data-card-tier={tier}
       data-sorteo-player-tier={tier}
       data-lane-role={isLateral ? 'lateral' : undefined}
       {...domDraggableProps}
     >
-      <span className="absolute left-[7.5%] right-[7%] top-[11.5%] z-20 h-[64%] bg-gradient-to-b from-transparent via-[#07130f]/8 to-[#07130f]/30" aria-hidden="true" />
-      {isLateral ? (
-        <span className="sorteo-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
-      ) : null}
+      <span
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url("${compactCardBackgrounds[tier] || compactCardBackgrounds.bronze}")`,
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '100% 100%',
+          filter: `drop-shadow(0 0 4px ${lineGlow.glow}) drop-shadow(0 0 10px ${lineGlow.glow}) drop-shadow(0 2px 5px rgba(2,14,9,.45))`,
+        }}
+        aria-hidden="true"
+      />
       {locked ? (
-        <span className="absolute right-[8%] top-[8%] z-40 grid h-4 w-4 place-items-center rounded-full border border-[#07130f]/45 bg-amber-200 text-[9px] font-black text-[#07130f]" aria-hidden="true">L</span>
+        <span className="absolute right-[5%] top-[4%] z-40 grid h-4 w-4 place-items-center rounded-full border border-[#07130f]/45 bg-amber-200 text-[9px] font-black text-[#07130f]" aria-hidden="true">L</span>
       ) : null}
       {swapTarget ? (
-        <span className="absolute inset-0 z-50 grid place-items-center bg-[#07130f]/58 text-lime-100" aria-hidden="true">
-          <span className="grid h-8 w-8 place-items-center rounded-full border border-lime-100/80 bg-emerald-950/88 shadow-lg shadow-emerald-950/40 max-[760px]:h-6 max-[760px]:w-6">
-            <Icon name="swap" className="h-4 w-4 max-[760px]:h-3.5 max-[760px]:w-3.5" />
+        <span className="absolute inset-0 z-50 grid place-items-center bg-[#063d2b]/80 text-lime-100 ring-4 ring-inset ring-lime-200" aria-hidden="true">
+          <span className="grid place-items-center gap-1">
+            <span className="grid h-10 w-10 place-items-center rounded-full border-2 border-lime-100 bg-emerald-950 shadow-lg shadow-emerald-950/60 max-[760px]:h-8 max-[760px]:w-8">
+              <Icon name="swap" className="h-5 w-5 max-[760px]:h-4 max-[760px]:w-4" />
+            </span>
+            <span className="rounded-md bg-emerald-950/95 px-2 py-1 text-[11px] font-black uppercase leading-tight text-lime-50 max-[760px]:text-[10px]">Intercambiar</span>
           </span>
         </span>
       ) : null}
-      <span className={`absolute left-[13.2%] top-[16.5%] z-30 grid h-[41%] w-[24%] content-start justify-items-center ${palette.text}`} style={cardTextStyle} data-sorteo-card-text="1">
-        <strong className="text-[.7rem] font-black leading-[.78] min-[380px]:text-[.8rem] sm:text-[.95rem] xl:text-[1.12rem]" style={cardTextStyle} data-sorteo-card-text="1">{playerCardRating(adjusted)}</strong>
-        <span className="mt-[2px] grid justify-items-center gap-px leading-none">
-          <span className="text-[.34rem] font-black uppercase leading-none min-[380px]:text-[.39rem] sm:text-[.48rem] xl:text-[.56rem]" style={positionTextStyle} data-sorteo-card-position="1">{assignedPosition}</span>
-          <span className="block aspect-square w-[8px] min-[380px]:w-[9px] sm:w-[10px] xl:w-[11px]"><Arrow form={playerRegularityForm(player)} /></span>
+      <span className="absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-[3px] rounded-md bg-black/45 px-1.5 py-1">
+        <strong
+          className={`block font-black leading-none ${palette.text} ${textShadow}`}
+          style={{ fontSize: '1.12rem' }}
+          data-sorteo-card-text="1"
+        >
+          {playerCardRating(adjusted)}
+        </strong>
+        <span className={`flex items-center gap-[2px] font-black uppercase leading-none ${textShadow}`}>
+          <span style={{ fontSize: '0.56rem', color: 'var(--sorteo-card-position)' }} data-sorteo-card-position="1">{assignedPosition}</span>
+          <span className="block aspect-square" style={{ width: '0.42rem', height: '0.42rem' }}><Arrow form={playerRegularityForm(player)} /></span>
         </span>
       </span>
       <span
-        className="absolute left-[38.5%] right-[8.8%] top-[13.3%] z-[25] flex h-[56.1%] items-center justify-center overflow-hidden rounded-[50%] border border-white/18 bg-[#07130f]/8 shadow-[inset_0_-5px_8px_rgba(7,19,15,0.16)]"
+        className="absolute left-[40%] right-[6%] top-[12%] z-[25] flex h-[58%] items-center justify-center overflow-hidden rounded-[40%_40%_34%_34%]"
         data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
-        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-center' : 'object-contain object-center opacity-50'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
+        <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-center' : 'object-contain object-center opacity-55'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
+      {positionPenalty > 0 ? (
+        <span className="absolute right-[4%] top-[4%] z-40 grid place-items-center rounded-sm bg-white px-1 py-1 shadow-sm" title={`Penalización por posición (-${positionPenalty}%)`}>
+          <span className="block text-[9px] font-black uppercase leading-none text-red-700">-{positionPenalty}%</span>
+        </span>
+      ) : null}
       <strong
-        className={`absolute left-[12.5%] right-[11.5%] top-[64.8%] z-30 flex h-[23%] items-center justify-center overflow-hidden px-0.5 text-center font-black uppercase ${palette.text}`}
-        style={{ ...cardTextStyle, fontSize: nameFontSize }}
+        className={`absolute left-[9%] right-[9%] top-[74%] z-30 block overflow-hidden text-ellipsis whitespace-nowrap text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
+        style={{ fontSize: '0.66rem' }}
         data-sorteo-card-text="1"
       >
-        <span
-          className="flex max-h-full max-w-full flex-col items-center justify-center overflow-hidden break-words text-center"
-          style={{
-            lineHeight: multiLineName ? 0.88 : 0.92,
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {nameLines.map((line, index) => (
-            <span key={`${line}-${index}`} className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
-              {line}{index < nameLines.length - 1 ? ' ' : ''}
-            </span>
-          ))}
-        </span>
+        {player.nombre}
       </strong>
     </button>
   );
@@ -1920,16 +1892,20 @@ function PitchDropMarker({ line, style = null }) {
   const isLateral = String(line || '').toUpperCase() === 'LAT';
   return (
     <span
-      className="pointer-events-none absolute top-1/2 z-40 grid aspect-[1000/940] w-[58px] -translate-y-1/2 place-items-center overflow-hidden rounded-md border-2 border-dashed border-lime-100/80 bg-[#07130f]/50 text-lime-100 min-[380px]:w-[64px] sm:w-[70px] xl:w-[82px] 2xl:w-[88px]"
+      className="pointer-events-none absolute top-1/2 z-40 grid aspect-[1000/940] w-[58px] -translate-y-1/2 place-items-center overflow-hidden rounded-lg border-2 border-dashed border-lime-200 bg-[#063d2b]/78 text-lime-100 shadow-[0_0_0_3px_rgba(217,249,157,.28),0_0_22px_rgba(217,249,157,.45)] min-[380px]:w-[64px] sm:w-[70px] xl:w-[82px] 2xl:w-[88px]"
       style={style || undefined}
       data-lane-role={isLateral ? 'lateral' : undefined}
       aria-hidden="true"
     >
+      <span className="sorteo-drop-pulse absolute inset-0 rounded-lg" aria-hidden="true" />
       {isLateral ? (
         <span className="sorteo-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>
       ) : null}
-      <span className="grid h-8 w-8 place-items-center rounded-full border border-lime-100/75 bg-emerald-950/85 max-[760px]:h-6 max-[760px]:w-6">
-        <Icon name="place" className="h-4 w-4 max-[760px]:h-3.5 max-[760px]:w-3.5" />
+      <span className="relative grid place-items-center gap-1">
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-lime-100/90 bg-emerald-950/95 shadow-lg shadow-emerald-950/50 max-[760px]:h-6 max-[760px]:w-6">
+          <Icon name="place" className="h-4 w-4 max-[760px]:h-3.5 max-[760px]:w-3.5" />
+        </span>
+        <span className="rounded-md bg-emerald-950/85 px-1.5 py-0.5 text-[9px] font-black uppercase leading-tight max-[760px]:text-[8px]">Soltar</span>
       </span>
     </span>
   );
@@ -2600,6 +2576,10 @@ export function SorteoLegacyPageIsland({ root }) {
     const colorName = teamColors[teamIndex] || teamColorOptions[teamIndex % teamColorOptions.length].name;
     return teamColorOptions.find((item) => item.name === colorName) || teamColorOptions[teamIndex % teamColorOptions.length];
   }, [teamColors]);
+
+  const teamColorAccentHex = useCallback((teamIndex) => {
+    return getTeamColor(teamIndex)?.accentHex || '#16a34a';
+  }, [getTeamColor]);
 
   const getTeamDisplayName = useCallback((teamIndex) => {
     const color = getTeamColor(teamIndex);
@@ -3790,7 +3770,6 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const handlePlayerPointerDown = (event, teamIndex, player, assignedPosition) => {
-    if (event.pointerType === 'mouse' || isFixedGoalkeeper(player) || lockedPlayerPositions[playerKey(player)]) return;
     event.stopPropagation();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     const source = { teamIndex, playerKey: playerKey(player), assignedPosition, player };
@@ -3807,7 +3786,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const handlePlayerPointerMove = (event) => {
     const pointerDrag = pointerDragRef.current;
-    if (!pointerDrag.source || event.pointerType === 'mouse') return;
+    if (!pointerDrag.source) return;
     const moved = Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY);
     if (!pointerDrag.active && moved > 8) {
       if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
@@ -3823,7 +3802,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const handlePlayerPointerUp = (event) => {
     const pointerDrag = pointerDragRef.current;
-    if (!pointerDrag.source || event.pointerType === 'mouse') return;
+    if (!pointerDrag.source) return;
     if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
     if (pointerDrag.active) {
       event.preventDefault();
@@ -3841,7 +3820,6 @@ export function SorteoLegacyPageIsland({ root }) {
   const touchPointFromEvent = (event) => event.touches?.[0] || event.changedTouches?.[0] || null;
 
   const handlePlayerTouchStart = (event, teamIndex, player, assignedPosition) => {
-    if (isFixedGoalkeeper(player) || lockedPlayerPositions[playerKey(player)]) return;
     const touch = touchPointFromEvent(event);
     if (!touch) return;
     event.stopPropagation();
@@ -4307,60 +4285,65 @@ export function SorteoLegacyPageIsland({ root }) {
 
               <div className="grid max-h-[62vh] gap-2 overflow-auto rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2" id="jugadores-container">
                 {sortedPlayers.map((player) => (
-                  <article key={playerKey(player)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-[#d7e6df] bg-white p-2">
-                <input
-                  className="h-4 w-4 accent-[#063d2b]"
-                  id={`jugador-${playerKey(player)}`}
-                  type="checkbox"
-                  checked={lockedMatch || player.selected}
-                  disabled={lockedMatch}
-                  onChange={(event) => setPlayers((current) => current.map((item) => (playerKey(item) === playerKey(player) ? { ...item, selected: event.target.checked } : item)))}
-                />
-                <div className="min-w-0">
-                  <strong className="block truncate text-sm font-black text-[#07130f]">{player.nombre}</strong>
-                  <span className="flex flex-wrap items-center gap-1 text-[11px] font-extrabold text-slate-500">
-                    <span>{player.posicion}</span>
-                    <span>{playerCardRating(player.puntuacion)} GEN</span>
-                    {player.availability_percent < 100 ? (
-                      <span>{player.availability_percent}% estado</span>
-                    ) : null}
-                    {Math.abs(Number(player.rendimiento_historico_ajuste || 0)) >= 0.03 ? (
-                      <span title={`${Number(player.rendimiento_historico_partidos || 0)} partidos historicos`}>
-                        Hist {Number(player.rendimiento_historico_ajuste) > 0 ? '+' : ''}{Number(player.rendimiento_historico_ajuste || 0).toFixed(1)}
-                      </span>
-                    ) : null}
-                    {manualGoalkeepers[playerKey(player)] === true ? <span>Arquero</span> : null}
-                    {isLowRhythmPlayer(player) ? <span>Lento</span> : null}
-                  </span>
-                </div>
-                <div className="flex gap-1">
-                  <button className={iconButtonClass} type="button" onClick={() => setFormModal({ mode: 'edit', player })} aria-label={`Editar ${player.nombre}`}><Icon name="pencil" /></button>
-                  {!lockedMatch ? (
-                    <button className={dangerButtonClass} type="button" onClick={() => removePlayer(player)} aria-label={`Eliminar ${player.nombre}`}><Icon name="trash" /></button>
-                  ) : null}
-                </div>
-                <div className="col-start-2 col-end-4 grid gap-1.5 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-black text-[#07130f]">Estado del jugador</span>
-                    <span className="shrink-0 text-[11px] font-black text-[#063d2b]">
-                      {player.availability_percent}% · {playerCardRating(player.base_puntuacion)} a {playerCardRating(player.puntuacion)} GEN
-                    </span>
-                  </div>
-                  <input
-                    className="player-availability-range"
-                    type="range"
-                    min="1"
-                    max="100"
-                    step="1"
-                    value={player.availability_percent}
-                    onChange={(event) => updatePlayerAvailability(player, event.target.value, false)}
-                    onPointerUp={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
-                    onKeyUp={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
-                    onBlur={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
-                    style={{ '--availability-fill': `${player.availability_percent}%` }}
-                    aria-label={`Porcentaje de estado de ${player.nombre}`}
-                  />
-                </div>
+                  <article key={playerKey(player)} className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border p-2 ${player.selected ? 'border-[#9fc8b5] bg-white' : 'border-[#d7e6df] bg-white'}`}>
+                    <input
+                      className="h-4 w-4 accent-[#063d2b]"
+                      id={`jugador-${playerKey(player)}`}
+                      type="checkbox"
+                      checked={lockedMatch || player.selected}
+                      disabled={lockedMatch}
+                      onChange={(event) => setPlayers((current) => current.map((item) => (playerKey(item) === playerKey(player) ? { ...item, selected: event.target.checked } : item)))}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full border-2 text-[10px] font-black uppercase"
+                          style={{ borderColor: (cardPalettes[playerCardTier(player.puntuacion)] || cardPalettes.bronze).color }}
+                        >
+                          {player.has_custom_photo ? (
+                            <img className="h-full w-full object-cover" src={player.photo_path} alt="" />
+                          ) : (
+                            <span className="block h-full w-full bg-[#eef5f1]" style={{ color: (cardPalettes[playerCardTier(player.puntuacion)] || cardPalettes.bronze).color }}>{player.nombre.slice(0,1)}</span>
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <strong className="block truncate text-sm font-black text-[#07130f]">{player.nombre}</strong>
+                          <span className="flex flex-wrap items-center gap-1 text-[11px] font-extrabold text-slate-500">
+                            <span>{player.posicion}</span>
+                            <span>{playerCardRating(player.puntuacion)} GEN</span>
+                            {player.availability_percent < 100 ? (
+                              <span className={player.availability_percent >= 70 ? 'text-emerald-700' : player.availability_percent >= 40 ? 'text-amber-700' : 'text-red-700'}>{player.availability_percent}%</span>
+                            ) : null}
+                            {manualGoalkeepers[playerKey(player)] === true ? <span>Arquero</span> : null}
+                            {isLowRhythmPlayer(player) ? <span>Lento</span> : null}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="mt-1.5 grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1">
+                        <span className="text-[10px] font-black uppercase text-[#526b62]">Estado</span>
+                        <span className="shrink-0 text-[10px] font-black text-[#063d2b]">{player.availability_percent}%</span>
+                        <input
+                          className="player-availability-range col-span-2"
+                          type="range"
+                          min="1"
+                          max="100"
+                          step="1"
+                          value={player.availability_percent}
+                          onChange={(event) => updatePlayerAvailability(player, event.target.value, false)}
+                          onPointerUp={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
+                          onKeyUp={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
+                          onBlur={(event) => updatePlayerAvailability(player, event.currentTarget.value, true)}
+                          style={{ '--availability-fill': `${player.availability_percent}%` }}
+                          aria-label={`Porcentaje de estado de ${player.nombre}`}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button className={iconButtonClass} type="button" onClick={() => setFormModal({ mode: 'edit', player })} aria-label={`Editar ${player.nombre}`}><Icon name="pencil" /></button>
+                      {!lockedMatch ? (
+                        <button className={dangerButtonClass} type="button" onClick={() => removePlayer(player)} aria-label={`Eliminar ${player.nombre}`}><Icon name="trash" /></button>
+                      ) : null}
+                    </div>
                   </article>
                 ))}
               </div>
@@ -4436,7 +4419,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 </>
               )}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {drawReadiness.issues.length || drawReadiness.warnings.length ? (
                 <div className="grid w-full gap-1.5">
                   {drawReadiness.issues.map((item) => (
@@ -4451,8 +4434,8 @@ export function SorteoLegacyPageIsland({ root }) {
                   )) : null}
                 </div>
               ) : null}
-              <button className={primaryButtonClass} id="generateTeamsButton" type="button" onClick={generateTeams} disabled={generateDisabled}>
-                <Icon name="dice" />
+              <button className={`${primaryButtonClass} w-full justify-center text-base sm:w-auto ${generateDisabled ? 'opacity-80' : ''}`} id="generateTeamsButton" type="button" onClick={generateTeams} disabled={generateDisabled}>
+                <Icon name="dice" className="h-5 w-5" />
                 {generating ? 'Generando...' : generateButtonLabel}
               </button>
               <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-3 text-xs font-extrabold text-[#526b62]">
@@ -4584,7 +4567,8 @@ export function SorteoLegacyPageIsland({ root }) {
                         </div>
 
                         <div
-                          className={`team-formation relative grid h-[680px] grid-rows-[minmax(0,.8fr)_repeat(3,minmax(0,1fr))] gap-2 overflow-hidden rounded-lg border border-emerald-200 p-3 text-white max-[760px]:h-[430px] max-[760px]:gap-1 max-[760px]:p-1.5 ${pitchBackgroundClass}`}
+                          className={`team-formation relative grid h-[600px] grid-rows-[minmax(0,.8fr)_repeat(3,minmax(0,1fr))] gap-2 overflow-hidden rounded-lg border-2 border-t-4 border-emerald-200 p-3 text-white max-[760px]:h-[430px] max-[760px]:gap-1 max-[760px]:p-1.5 ${pitchBackgroundClass}`}
+                          style={{ borderTopColor: teamColorAccentHex(teamIndex) }}
                           data-sorteo-drop-team={teamIndex}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
@@ -4643,7 +4627,7 @@ export function SorteoLegacyPageIsland({ root }) {
                               : (canTuneLine ? 'sorteo-line-with-tools' : 'sorteo-line-basic');
                             const linePlayersClass = isFormationEditor
                               ? 'line-players relative flex h-full min-h-0 flex-nowrap items-center justify-evenly gap-1.5 overflow-visible px-1.5 py-0 max-[760px]:gap-0.5 max-[760px]:px-0.5'
-                              : 'line-players relative flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/10 !bg-emerald-950/10 p-1 max-[760px]:gap-1 max-[760px]:p-0.5';
+                              : 'line-players relative flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/15 !bg-emerald-950/24 p-1 shadow-[inset_0_2px_8px_rgba(2,14,9,.28)] max-[760px]:gap-1 max-[760px]:p-0.5';
                             const lineStyle = isFormationEditor
                               ? { gridTemplateColumns: canTuneLine ? '34px minmax(0, 1fr) 28px' : '34px minmax(0, 1fr)' }
                               : undefined;
@@ -4666,7 +4650,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                   <small className="rounded bg-emerald-950/45 px-1 text-[9px] font-extrabold leading-tight text-white/75 max-[760px]:text-[8px]">{count}/{max}</small>
                                   {canTuneLine ? (
                                     <span className="grid gap-1 max-[760px]:gap-0.5">
-                                      <button className="grid !h-7 !min-h-0 w-7 place-items-center rounded border border-white/30 bg-emerald-950/55 !p-0 text-xs font-black text-white hover:bg-emerald-950/80 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-[10px]" type="button" onClick={() => pitchLineDelta(teamIndex, line, -1)} aria-label={`Quitar jugador de ${label}`}>-</button>
+                                      <button className="inline-flex !h-7 !min-h-0 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-950 !p-0 text-sm font-black leading-none text-white shadow-sm transition hover:bg-emerald-900 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-xs" type="button" onClick={() => pitchLineDelta(teamIndex, line, -1)} aria-label={`Quitar jugador de ${label}`} title={`Quitar jugador de ${label}`}>−</button>
                                     </span>
                                   ) : null}
                                 </div>
@@ -4738,7 +4722,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                           laneRole={assigned === 'LAT' ? 'lateral' : ''}
                                           onOpen={() => !dragState && !pointerDragRef.current.suppressClick && handleTouchCard(teamIndex, player, assigned)}
                                           draggableProps={{
-                                            draggable: !isFixedGoalkeeper(player) && !lockedPlayerPositions[key],
+                                            draggable: false,
                                             dragging: dragState?.playerKey === key,
                                             locked: Boolean(lockedPlayerPositions[key]),
                                             swapTarget: isSwapTarget,
@@ -4791,7 +4775,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                 </div>
                                 {canTuneLine ? (
                                   <div className="grid justify-items-center gap-1 max-[760px]:gap-0.5">
-                                    <button className="grid !h-7 !min-h-0 w-7 place-items-center rounded border border-lime-200/45 bg-lime-100 !p-0 text-xs font-black text-[#07130f] hover:bg-lime-200 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-[10px]" type="button" onClick={() => pitchLineDelta(teamIndex, line, 1)} aria-label={`Agregar jugador a ${label}`}>+</button>
+                                    <button className="inline-flex !h-7 !min-h-0 w-7 items-center justify-center rounded-md border border-lime-200 bg-lime-200 !p-0 text-sm font-black leading-none text-[#07130f] shadow-sm transition hover:bg-lime-300 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-xs" type="button" onClick={() => pitchLineDelta(teamIndex, line, 1)} aria-label={`Agregar jugador a ${label}`} title={`Agregar jugador a ${label}`}>+</button>
                                   </div>
                                 ) : null}
                               </div>
@@ -4842,7 +4826,10 @@ export function SorteoLegacyPageIsland({ root }) {
 
           <div id="download-controls" className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black">
-              <span className={`rounded-md border px-2.5 py-1.5 ${saveStateClass}`}>{saveStateLabel}</span>
+              <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${saveStateClass}`}>
+                <span className={`h-2 w-2 rounded-full ${saveState === 'saved' ? 'bg-emerald-500' : saveState === 'dirty' ? 'bg-amber-500' : 'bg-slate-400'}`} aria-hidden="true" />
+                {saveStateLabel}
+              </span>
               {manualActionCount > 0 ? (
                 <span className="rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2.5 py-1.5 text-[#526b62]">
                   {manualActionCount} cambio{manualActionCount === 1 ? '' : 's'} manual{manualActionCount === 1 ? '' : 'es'}
@@ -5184,10 +5171,10 @@ export function SorteoLegacyPageIsland({ root }) {
       ) : null}
 
       {dragState && dragPoint ? (
-        <div className="pointer-events-none fixed z-[100]" style={{ left: dragPoint.x + 14, top: dragPoint.y + 14 }}>
-          <div className="absolute -left-3 -top-3 h-8 w-8 rounded-full bg-lime-200/20 blur-sm" />
-          <div className="absolute -left-6 -top-6 h-12 w-12 rounded-full border border-lime-200/35" />
-          <div className="relative">
+        <div className="pointer-events-none fixed z-[100]" style={{ left: dragPoint.x + 16, top: dragPoint.y - 8 }}>
+          <div className="absolute -left-7 -top-3 h-9 w-9 rounded-full bg-lime-200/30 blur-md" />
+          <div className="absolute -left-10 -top-6 h-16 w-16 rounded-full border border-lime-200/50" />
+          <div className="relative transition-transform duration-100" style={{ transform: 'scale(1.1) rotate(2deg)' }}>
             {currentDragBlockMessage ? (
               <div className="absolute -right-2 -top-2 z-20 w-44 border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-black leading-tight text-red-900 shadow-sm">
                 {currentDragBlockMessage}
@@ -5198,7 +5185,10 @@ export function SorteoLegacyPageIsland({ root }) {
                 <span className="text-[9px] font-extrabold opacity-75">{`${currentDragDelta.from} -> ${currentDragDelta.to} ${currentDragDelta.line}`}</span>
               </div>
             ) : null}
-            <CompactPlayerCard player={dragState.player} assignedPosition={dragState.assignedPosition} teamSize={teams?.[dragState.teamIndex]?.length || playersPerTeam} />
+            <div className="overflow-hidden rounded-lg ring-2 ring-lime-200 shadow-[0_18px_34px_rgba(2,14,9,.6),0_0_0_2px_rgba(217,249,157,.5)]">
+              <CompactPlayerCard player={dragState.player} assignedPosition={dragState.assignedPosition} teamSize={teams?.[dragState.teamIndex]?.length || playersPerTeam} />
+            </div>
+            <span className="block w-full text-center text-[11px] font-black uppercase leading-tight text-lime-100 [text-shadow:0_1px_2px_rgba(0,0,0,.8)]">Soltar para mover</span>
           </div>
         </div>
       ) : null}
