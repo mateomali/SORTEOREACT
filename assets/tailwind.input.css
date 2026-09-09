@@ -2810,6 +2810,31 @@
     --sorteo-card-text: #f0b170;
   }
 
+  body.page-sorteo-legacy .sorteo-react-page .sorteo-position-penalty {
+    position: absolute;
+    top: -4px;
+    right: 0;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: 13px;
+    padding: 0 3px;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    background: #b91c1c;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow: none !important;
+    pointer-events: none;
+  }
+
   body.page-sorteo-legacy .sorteo-react-page [data-sorteo-player-tier="silver"] {
     --sorteo-card-text: #e8eeea;
   }
@@ -2966,6 +2991,66 @@
   }
 
   @media (max-width: 760px) {
+    /* Let wrapped player rows determine the pitch height on small screens. */
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation {
+      height: auto !important;
+      min-height: 430px;
+      grid-template-rows: minmax(70px, auto) repeat(3, minmax(90px, auto)) !important;
+      row-gap: 8px !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .formation-line {
+      min-width: 0;
+      min-height: min-content;
+      column-gap: 4px !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .formation-line.sorteo-line-with-tools {
+      grid-template-columns: 44px minmax(0, 1fr) 24px !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .formation-line.sorteo-line-basic {
+      grid-template-columns: 44px minmax(0, 1fr) !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .line-players {
+      height: auto !important;
+      min-height: 0 !important;
+      align-self: stretch;
+      align-content: center;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 12px 8px !important;
+      padding: 10px 4px !important;
+    }
+
+    /* Keep the lateral projection, with enough room below every wrapped row. */
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .is-projected-defense > .line-players {
+      row-gap: 24px !important;
+      padding-bottom: 22px !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .is-projected-defense [data-assigned-position="LAT"] {
+      transform: translateY(12px) !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation button[data-card-tier] {
+      width: 60px !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .sorteo-compact-rating {
+      padding: 2px !important;
+      gap: 2px !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .sorteo-compact-rating > strong {
+      font-size: 16px !important;
+    }
+
+    body.page-sorteo-legacy:not(.page-finalizar-partido) .sorteo-react-page .team-formation .sorteo-compact-photo {
+      left: 46% !important;
+    }
+
     body.page-sorteo-legacy .sorteo-react-page .team-formation {
       padding: 34px 6px 14px !important;
     }
@@ -2976,6 +3061,14 @@
 
     body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line.sorteo-line-basic {
       grid-template-columns: 38px minmax(0, 1fr) !important;
+    }
+
+    /* Movil: permitir que las cartas compactas de una linea se acomoden en varias filas
+       en vez de desbordar y cortarse/encimarse en los extremos de la cancha. */
+    body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line .line-players,
+    body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line.sorteo-line-with-tools .line-players,
+    body.page-sorteo-legacy .sorteo-react-page .team-formation .formation-line.sorteo-line-basic .line-players {
+      flex-wrap: wrap !important;
     }
   }
 
@@ -23082,6 +23175,7 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
   .finish-formation-pitch-preview .line-players {
     gap: 4px !important;
     padding: 2px !important;
+    flex-wrap: wrap !important;
   }
 
   .finish-formation-pitch-preview .sorteo-static-player-card {

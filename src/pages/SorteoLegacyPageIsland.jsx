@@ -450,7 +450,7 @@ function positionPenaltyPercent(player, assignedPosition, teamSize = null) {
   const size = Number(teamSize || 0);
   if (size > 0 && size < 7) return 0;
   const position = String(assignedPosition || '').toUpperCase();
-  if (!position || getOrderedPlayerPositions(player).includes(position)) return 0;
+  if (!position || position === getPrimaryPlayerPosition(player)) return 0;
   const general = bestNaturalPlayerRating(player);
   const adjusted = adjustedPositionRating(player, position);
   if (!general || adjusted >= general) return 0;
@@ -1726,6 +1726,21 @@ function Arrow({ form }) {
   );
 }
 
+function PositionPenaltyBubble({ percent }) {
+  if (!percent || percent <= 0) return null;
+  const label = `-${percent}%`;
+  return (
+    <span
+      className="sorteo-position-penalty"
+      role="status"
+      aria-label={`Descuento por posicion: ${label}`}
+      title={`Descuento por posicion: baja ${percent}% del valor en su mejor posicion`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
   const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
   const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);
@@ -1742,7 +1757,7 @@ function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
   };
   return (
     <article
-      className="relative mx-auto block aspect-[409/710] w-[168px] overflow-hidden border-0 bg-transparent p-0 drop-shadow-[0_7px_12px_rgba(2,14,9,0.22)]"
+      className="relative mx-auto block aspect-[409/710] w-[168px] overflow-visible border-0 bg-transparent p-0 drop-shadow-[0_7px_12px_rgba(2,14,9,0.22)]"
       style={fullCardStyle}
       aria-label={`Ficha de ${player.nombre}`}
       data-sorteo-full-card="1"
@@ -1782,11 +1797,7 @@ function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
           </span>
         ))}
       </span>
-      {positionPenalty > 0 ? (
-        <span className="absolute left-[15.5%] top-[44.8%] z-40 grid h-[5.8%] min-w-[18%] place-items-center text-[.42rem] font-black leading-none text-[#ffb4a8] [text-shadow:0_2px_0_rgba(0,0,0,.74),0_1px_5px_rgba(0,0,0,.38)]">
-          -{positionPenalty}%
-        </span>
-      ) : null}
+      <PositionPenaltyBubble percent={positionPenalty} />
     </article>
   );
 }
@@ -1853,7 +1864,7 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
           </span>
         </span>
       ) : null}
-      <span className="absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-[3px] rounded-md bg-black/45 px-1.5 py-1">
+      <span className="sorteo-compact-rating absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-[3px] rounded-md bg-black/45 px-1.5 py-1">
         <strong
           className={`block font-black leading-none ${palette.text} ${textShadow}`}
           style={{ fontSize: '1.12rem' }}
@@ -1867,16 +1878,12 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
         </span>
       </span>
       <span
-        className="absolute left-[40%] right-[6%] top-[12%] z-[25] flex h-[58%] items-center justify-center overflow-hidden rounded-[40%_40%_34%_34%]"
+        className="sorteo-compact-photo absolute left-[40%] right-[6%] top-[12%] z-[25] flex h-[58%] items-center justify-center overflow-hidden rounded-[40%_40%_34%_34%]"
         data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
         <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-center' : 'object-contain object-center opacity-55'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
-      {positionPenalty > 0 ? (
-        <span className="absolute right-[4%] top-[4%] z-40 grid place-items-center rounded-sm bg-white px-1 py-1 shadow-sm" title={`Penalización por posición (-${positionPenalty}%)`}>
-          <span className="block text-[9px] font-black uppercase leading-none text-red-700">-{positionPenalty}%</span>
-        </span>
-      ) : null}
+      <PositionPenaltyBubble percent={positionPenalty} />
       <strong
         className={`absolute left-[9%] right-[9%] top-[74%] z-30 block overflow-hidden text-ellipsis whitespace-nowrap text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
         style={{ fontSize: '0.66rem' }}
