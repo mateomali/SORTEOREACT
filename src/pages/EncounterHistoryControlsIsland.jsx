@@ -14,12 +14,18 @@ export function EncounterHistoryControlsIsland({ root }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [visible, setVisible] = useState(total);
+  const hasActiveFilter = query.trim() !== '' || status !== '';
 
   const countLabel = useMemo(() => (
-    query.trim() === '' && status === ''
+    !hasActiveFilter
       ? `${total} fechas`
       : `${visible} de ${total} fechas`
-  ), [query, status, total, visible]);
+  ), [hasActiveFilter, total, visible]);
+
+  const clearFilters = () => {
+    setQuery('');
+    setStatus('');
+  };
 
   useEffect(() => {
     const cards = Array.from(document.querySelectorAll('[data-encounter-card]'));
@@ -56,24 +62,33 @@ export function EncounterHistoryControlsIsland({ root }) {
   }, [query, status, currentPage]);
 
   useEffect(() => {
-    const panels = Array.from(document.querySelectorAll('[data-encounter-status-filter]'));
-    const cleanups = panels.map((panel) => {
+    const togglePanel = (panel) => {
       const nextStatus = panel.dataset.encounterStatusFilter || '';
-      const toggle = () => setStatus((current) => (current === nextStatus ? '' : nextStatus));
-      const onKeyDown = (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
+      setStatus((current) => (current === nextStatus ? '' : nextStatus));
+    };
+    const onClick = (event) => {
+      const panel = event.target instanceof Element
+        ? event.target.closest('[data-encounter-status-filter]')
+        : null;
+      if (!panel) return;
+      togglePanel(panel);
+    };
+    const onKeyDown = (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const panel = event.target instanceof Element
+        ? event.target.closest('[data-encounter-status-filter]')
+        : null;
+      if (!panel) return;
         event.preventDefault();
-        toggle();
-      };
-      panel.addEventListener('click', toggle);
-      panel.addEventListener('keydown', onKeyDown);
-      return () => {
-        panel.removeEventListener('click', toggle);
-        panel.removeEventListener('keydown', onKeyDown);
-      };
-    });
+      togglePanel(panel);
+    };
 
-    return () => cleanups.forEach((cleanup) => cleanup());
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   return (
@@ -88,8 +103,8 @@ export function EncounterHistoryControlsIsland({ root }) {
         onChange={(event) => setQuery(event.target.value)}
       />
       <span data-encounter-history-count aria-live="polite">{countLabel}</span>
-      {status ? (
-        <button className="btn btn-muted encounter-history-clear" type="button" onClick={() => setStatus('')}>
+      {hasActiveFilter ? (
+        <button className="btn btn-muted encounter-history-clear" type="button" onClick={clearFilters}>
           Limpiar filtro
         </button>
       ) : null}

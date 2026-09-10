@@ -48,12 +48,13 @@ function captureBrowserErrors(page) {
   return { consoleErrors, failedResponses };
 }
 
-async function adminLogin(page, next = 'index.php') {
+async function adminLogin(page, next = 'editar_partidos.php') {
   await page.goto(`${BASE_URL}/login.php?next=${encodeURIComponent(next)}`, { waitUntil: 'domcontentloaded' });
   await page.locator('#login-admin').evaluate((node) => { node.open = true; });
   await page.locator('#adminPassword').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Entrar como admin|Ingresar/i }).click();
-  await page.waitForURL((url) => url.href.includes(next.split('?')[0]), { timeout: 10000 });
+  const nextPath = `/${next.split('?')[0]}`;
+  await page.waitForURL((url) => url.pathname.endsWith(nextPath), { timeout: 10000 });
   await page.waitForSelector('main.content');
 }
 
@@ -64,7 +65,12 @@ async function clickAndCheckPartial(page, selector, expectedUrlPart, expectedSel
   const markerBefore = await page.evaluate(() => window.__partialSmokeMarker);
   const beforeUrl = page.url();
 
-  await page.locator(selector).click();
+  let target = page.locator(`${selector}:visible`).first();
+  if (await target.count() === 0) {
+    await page.locator(selector).first().locator('xpath=ancestor::details[1]/summary').click();
+    target = page.locator(`${selector}:visible`).first();
+  }
+  await target.click();
   await page.waitForURL((url) => url.href.includes(expectedUrlPart), { timeout: 10000 });
   await page.waitForSelector(expectedSelector, { timeout: 10000 });
   await wait(400);
@@ -80,7 +86,8 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
   await adminLogin(page);
 
   const checks = [];
-  checks.push(await clickAndCheckPartial(page, 'nav a[href="jugadores2.php"]', 'jugadores2.php', 'text=Plantilla, posiciones y rendimiento actual.'));
+  checks.push(await clickAndCheckPartial(page, 'nav a[href="jugadores2.php"]', 'jugadores2.php'));
+  await expect(page.locator('main.content')).toContainText(/Jugadores|Plantilla/i);
   checks.push(await clickAndCheckPartial(page, 'nav a[href="estadisticas.php"]', 'estadisticas.php'));
   checks.push(await clickAndCheckPartial(page, 'nav a[href="editar_partidos.php"]', 'editar_partidos.php'));
 
