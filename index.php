@@ -306,9 +306,10 @@ usort($resultParticipants, static function (array $a, array $b): int {
         ?: ((int) ($b['goals'] ?? 0) <=> (int) ($a['goals'] ?? 0))
         ?: strcasecmp((string) $a['name'], (string) $b['name']);
 });
-$groupedTeams = $selectedMatchId > 0 ? repo_grouped_team_players($selectedMatchId) : [];
-$teamTotals = $selectedMatchId > 0 ? repo_team_totals($selectedMatchId) : [];
-$matchTeams = $selectedMatchId > 0 ? repo_match_teams($selectedMatchId) : [];
+$selectedTeamsVisible = $selectedMatch && repo_match_teams_visible_to_current_user($selectedMatch);
+$groupedTeams = $selectedMatchId > 0 && $selectedTeamsVisible ? repo_grouped_team_players($selectedMatchId) : [];
+$teamTotals = $selectedMatchId > 0 && $selectedTeamsVisible ? repo_team_totals($selectedMatchId) : [];
+$matchTeams = $selectedMatchId > 0 && $selectedTeamsVisible ? repo_match_teams($selectedMatchId) : [];
 $teamLabels = $selectedMatch && $matchTeams ? repo_match_team_labels($selectedMatch, $matchTeams) : [];
 $roundRobinResults = $selectedMatchId > 0 && count($matchTeams) > 2 ? public_round_robin_results($selectedMatchId) : [];
 $teamGoals = [];
@@ -856,9 +857,10 @@ function render_public_match_detail_content(array $match, array $awardDefinition
             ?: strcasecmp((string) $a['name'], (string) $b['name']);
     });
 
-    $groupedTeams = repo_grouped_team_players($matchId);
-    $teamTotals = repo_team_totals($matchId);
-    $matchTeams = repo_match_teams($matchId);
+    $teamsVisible = repo_match_teams_visible_to_current_user($match);
+    $groupedTeams = $teamsVisible ? repo_grouped_team_players($matchId) : [];
+    $teamTotals = $teamsVisible ? repo_team_totals($matchId) : [];
+    $matchTeams = $teamsVisible ? repo_match_teams($matchId) : [];
     $teamLabels = $matchTeams ? repo_match_team_labels($match, $matchTeams) : [];
     $roundRobinResults = count($matchTeams) > 2 ? public_round_robin_results($matchId) : [];
     $teamGoals = [];
@@ -906,7 +908,9 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     ob_start();
     ?>
     <?php if (!$groupedTeams): ?>
-      <p>Los equipos todavía no fueron formados. Cuando estén sorteados o elegidos por capitanes, se mostrará la formación acá.</p>
+      <p><?= !$teamsVisible && (string) ($match['status'] ?? '') === 'sorteado'
+          ? 'Los equipos están en edición. Se mostrarán cuando el administrador publique la fecha.'
+          : 'Los equipos todavía no fueron formados. Cuando estén sorteados o elegidos por capitanes, se mostrará la formación acá.' ?></p>
       <?php if ($participants): ?>
         <div class="selected-player-list public-player-list">
           <?php foreach ($participants as $player): ?>
@@ -1174,7 +1178,9 @@ require __DIR__ . '/includes/header.php';
     $headerMatch = $showHistoryPage
         ? ($selectedMatch ?: $topMatch)
         : (($requestedMatchId > 0 && $selectedMatch) ? $selectedMatch : ($futureMatches[0] ?? $topMatch));
-    $headerTeams = repo_match_teams((int) $headerMatch['id']);
+    $headerTeams = repo_match_teams_visible_to_current_user($headerMatch)
+        ? repo_match_teams((int) $headerMatch['id'])
+        : [];
     $headerTeamLabels = $headerTeams ? repo_match_team_labels($headerMatch, $headerTeams) : [];
     $headerGoals = [];
     foreach ($headerTeams as $team) {

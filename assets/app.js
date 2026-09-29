@@ -2845,7 +2845,16 @@
       const ratingCount = juntaVoteForm.querySelectorAll('input[name^="rating["]').length;
       const awardCount = Array.from(juntaVoteForm.querySelectorAll('input[name^="awards["]'))
         .filter((input) => String(input.value || '').trim() !== '').length;
-      const confirmMessage = `Esta seguro que esta es su votacion?\n\nPuntajes cargados: ${ratingCount}\nPremios elegidos: ${awardCount}`;
+      const votesRatings = juntaVoteForm.dataset.voteRatings !== '0';
+      const votesAwards = juntaVoteForm.dataset.voteAwards !== '0';
+      const confirmLines = [];
+      if (votesRatings) {
+        confirmLines.push(`Puntajes cargados: ${ratingCount}`);
+      }
+      if (votesAwards) {
+        confirmLines.push(`Premios elegidos: ${awardCount}`);
+      }
+      const confirmMessage = `Esta seguro que esta es su votacion?${confirmLines.length ? '\n\n' + confirmLines.join('\n') : ''}`;
       if (!window.confirm(confirmMessage)) {
         event.preventDefault();
         return;

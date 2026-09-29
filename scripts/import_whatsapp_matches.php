@@ -526,8 +526,8 @@ if (!$commit) {
 $pdo->beginTransaction();
 try {
     $insertMatch = $pdo->prepare(
-        "INSERT INTO matches (title, rental_court_id, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, status, draw_mode, draw_started_at, draw_completed_at, finalized_at, notes, result_notes)
-         VALUES (:title, :rental_court_id, :match_date, 2, :players_per_team, 0.0, 0, 0, 'finalizado', 'manual', :draw_started_at, :draw_completed_at, NOW(), :notes, :result_notes)"
+        "INSERT INTO matches (title, rental_court_id, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, status, draw_mode, draw_started_at, draw_completed_at, finalized_at, notes, result_notes, valuation_mode)
+         VALUES (:title, :rental_court_id, :match_date, 2, :players_per_team, 0.0, 0, 0, 'finalizado', 'manual', :draw_started_at, :draw_completed_at, NOW(), :notes, :result_notes, 'both')"
     );
     $insertTeam = $pdo->prepare(
         "INSERT INTO match_teams (match_id, team_number, team_name, total_skill, formation_name, formation_data, color_name, goals)

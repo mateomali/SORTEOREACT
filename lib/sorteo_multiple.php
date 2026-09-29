@@ -354,6 +354,7 @@ function multiple_draw_apply_option(int $matchId, int $optionId): void
                  draw_mode = "random",
                  draw_started_at = COALESCE(draw_started_at, NOW()),
                  draw_completed_at = NOW(),
+                 teams_published_at = NULL,
                  multi_draw_winner_option_id = :oid,
                  players_per_team = :players_per_team,
                  formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)

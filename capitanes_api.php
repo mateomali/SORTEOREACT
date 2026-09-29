@@ -545,7 +545,7 @@ function captain_pick_rule(int $matchId, array $available, array $draft): array
     ];
 }
 
-function captain_state(int $matchId): array
+function captain_state(int $matchId, string $accessToken = ''): array
 {
     $match = repo_match_by_id($matchId);
     if (!$match) {
@@ -556,6 +556,26 @@ function captain_state(int $matchId): array
     if (!$draft) {
         if (!is_admin() || !in_array((string) ($match['status'] ?? ''), ['sorteado', 'finalizado'], true)) {
             return ['ok' => false, 'message' => 'No hay modo capitanes iniciado para esta fecha'];
+        }
+    }
+
+    if (
+        $draft
+        && (string) ($draft['status'] ?? '') === 'completed'
+        && !repo_match_teams_visible_to_current_user($match)
+    ) {
+        $tokenIsValid = false;
+        if ($accessToken !== '') {
+            foreach (captain_numbers($draft) as $teamNumber) {
+                $expectedToken = trim((string) ($draft['captain' . $teamNumber . '_token'] ?? ''));
+                if ($expectedToken !== '' && hash_equals($expectedToken, $accessToken)) {
+                    $tokenIsValid = true;
+                    break;
+                }
+            }
+        }
+        if (!$tokenIsValid) {
+            return ['ok' => false, 'message' => 'Los equipos todavía no fueron publicados.'];
         }
     }
 
@@ -764,7 +784,7 @@ function finish_captain_draft(int $matchId): void
 
     $pdo->prepare(
         'UPDATE matches
-         SET status = "sorteado", draw_mode = "captains", draw_completed_at = NOW(), formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
+         SET status = "sorteado", draw_mode = "captains", draw_completed_at = NOW(), teams_published_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
          WHERE id = :mid'
     )->execute(['mid' => $matchId]);
     $pdo->prepare('UPDATE captain_drafts SET status = "completed", current_team = NULL, completed_at = NOW() WHERE match_id = :mid')->execute(['mid' => $matchId]);
@@ -774,7 +794,8 @@ $action = (string) ($_GET['action'] ?? $_POST['action'] ?? '');
 
 if ($action === 'state') {
     $matchId = (int) ($_GET['match_id'] ?? 0);
-    json_response(captain_state($matchId));
+    $accessToken = trim((string) ($_GET['token'] ?? ''));
+    json_response(captain_state($matchId, $accessToken));
 }
 
 if (!in_array($action, ['pick', 'save_formation', 'save_all_formations'], true) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -955,7 +976,7 @@ try {
         }
 
         $pdo->commit();
-        json_response(captain_state($matchId));
+        json_response(captain_state($matchId, $token));
     }
 
     if ($action === 'save_formation') {
@@ -1047,7 +1068,7 @@ try {
             'formation_data' => json_encode($formationData, JSON_UNESCAPED_UNICODE),
         ]);
         $pdo->commit();
-        json_response(captain_state($matchId));
+        json_response(captain_state($matchId, $token));
     }
 
     $playerStmt = $pdo->prepare(
@@ -1127,7 +1148,7 @@ try {
     }
 
     $pdo->commit();
-    json_response(captain_state($matchId));
+    json_response(captain_state($matchId, $token));
 } catch (Throwable $e) {
     $pdo->rollBack();
     json_response(['ok' => false, 'message' => $e->getMessage()], 409);

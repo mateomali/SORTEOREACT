@@ -1552,7 +1552,11 @@ const goodfellasInitCaptains = () => {
       };
 
       const loadState = async ({ forceRender = false } = {}) => {
-        const response = await fetch(`capitanes_api.php?action=state&match_id=${matchId}`, { cache: 'no-store' });
+        const stateUrl = new URL('capitanes_api.php', window.location.href);
+        stateUrl.searchParams.set('action', 'state');
+        stateUrl.searchParams.set('match_id', String(matchId));
+        if (captainToken) stateUrl.searchParams.set('token', captainToken);
+        const response = await fetch(stateUrl.toString(), { cache: 'no-store' });
         state = await response.json();
         if (shouldRedirectToFormation()) {
           redirectToFormation();

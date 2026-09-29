@@ -29,6 +29,7 @@ function VoteCard({ match }) {
       <div className="flex flex-wrap gap-2">
         <span className={chipClass}>{match.submitted}/{match.eligible} votos</span>
         <span className={chipClass}>Abierta</span>
+        {match.valuationModeLabel ? <span className={chipClass}>{match.valuationModeLabel}</span> : null}
       </div>
       <small className="text-xs font-semibold text-emerald-100/75">Cierre: {match.deadline}</small>
     </a>
@@ -95,6 +96,9 @@ function StatusPanel({ match }) {
           <p className={mutedText}>
             {match.submitted}/{match.eligible} directivos votaron. Cierre automatico: {match.deadline}.
           </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className={chipClass}>{match.valuationModeLabel}</span>
+          </div>
           <div className="mt-3 h-3 overflow-hidden rounded-full border border-lime-200/25 bg-emerald-900" aria-label={`Progreso de votacion ${match.progress}%`}>
             <span className="block h-full rounded-full bg-lime-200" style={{ width: `${match.progress}%` }} />
           </div>
@@ -124,7 +128,9 @@ function StatusPanel({ match }) {
         </p>
       ) : !match.isDirectivo ? (
         <p className="mt-3 rounded-lg border border-sky-200/65 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-950">
-          {match.isAdmin ? 'Como admin podes ver el estado, invitar jugadores y cerrar la votacion.' : 'Ingresa los puntajes y premios con tu token de invitacion.'}
+          {match.isAdmin
+            ? 'Como admin podes ver el estado, invitar jugadores y cerrar la votacion.'
+            : `Ingresa los ${match.valuationsScopeText || 'puntajes y premios'} con tu token de invitacion.`}
         </p>
       ) : null}
     </section>
@@ -192,46 +198,52 @@ function InvitePanel({ match }) {
 
 function PublishedResults({ match }) {
   if (!match.publication) return null;
+  const showRatings = match.ratingsEnabled !== false;
+  const showAwards = match.awardsEnabled !== false;
   return (
     <>
-      <section className={panelClass}>
-        <h3 className="mb-3 text-lg font-black text-lime-50">Resultados publicados</h3>
-        <div className="overflow-x-auto rounded-lg border border-lime-200/25">
-          <table className="w-full min-w-[520px] border-collapse text-sm">
-            <thead className="bg-emerald-900/70">
-              <tr>
-                <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Jugador</th>
-                <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Equipo</th>
-                <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Puntaje final</th>
-              </tr>
-            </thead>
-            <tbody>
-              {match.participants.map((player) => (
-                <tr key={player.id}>
-                  <td className="border-b border-lime-200/10 px-3 py-2"><strong>{player.name}</strong></td>
-                  <td className="border-b border-lime-200/10 px-3 py-2 text-emerald-100">{player.teamLabel}</td>
-                  <td className="border-b border-lime-200/10 px-3 py-2"><strong>{player.finalRating}</strong></td>
+      {showRatings ? (
+        <section className={panelClass}>
+          <h3 className="mb-3 text-lg font-black text-lime-50">Resultados publicados</h3>
+          <div className="overflow-x-auto rounded-lg border border-lime-200/25">
+            <table className="w-full min-w-[520px] border-collapse text-sm">
+              <thead className="bg-emerald-900/70">
+                <tr>
+                  <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Jugador</th>
+                  <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Equipo</th>
+                  <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Puntaje final</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {match.participants.map((player) => (
+                  <tr key={player.id}>
+                    <td className="border-b border-lime-200/10 px-3 py-2"><strong>{player.name}</strong></td>
+                    <td className="border-b border-lime-200/10 px-3 py-2 text-emerald-100">{player.teamLabel}</td>
+                    <td className="border-b border-lime-200/10 px-3 py-2"><strong>{player.finalRating}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
-      <section className={panelClass}>
-        <h3 className="mb-3 text-lg font-black text-lime-50">Premios</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {match.awards.map((award) => (
-            <div key={award.code} className="rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
-              <label className="mb-2 flex items-center gap-2 text-sm font-black text-lime-50">
-                <span title={award.label}>{award.icon}</span>
-                <span>{award.label}</span>
-              </label>
-              <strong className="text-emerald-100">{award.winner}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
+      {showAwards ? (
+        <section className={panelClass}>
+          <h3 className="mb-3 text-lg font-black text-lime-50">Premios</h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {match.awards.map((award) => (
+              <div key={award.code} className="rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
+                <label className="mb-2 flex items-center gap-2 text-sm font-black text-lime-50">
+                  <span title={award.label}>{award.icon}</span>
+                  <span>{award.label}</span>
+                </label>
+                <strong className="text-emerald-100">{award.winner}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }
@@ -240,9 +252,20 @@ function VoteForm({ match }) {
   if (match.publication || match.currentVoteMemberId <= 0 || !match.isOpen) return null;
   const playerOptions = match.participants || [];
   const goalkeeperOptions = playerOptions.filter((player) => player.isGoalkeeper);
+  const showRatings = match.ratingsEnabled !== false;
+  const showAwards = match.awardsEnabled !== false;
+  const awardsTieBreak = showRatings
+    ? 'En caso de empate define: mas promedio de junta, mas goles y luego nombre alfabetico.'
+    : 'En caso de empate define: mas goles en la fecha y luego nombre alfabetico.';
 
   return (
-    <form method="post" className="grid gap-4" data-junta-vote-submit="1">
+    <form
+      method="post"
+      className="grid gap-4"
+      data-junta-vote-submit="1"
+      data-vote-ratings={showRatings ? '1' : '0'}
+      data-vote-awards={showAwards ? '1' : '0'}
+    >
       <input type="hidden" name="action" value="save_directive_vote" />
       <input type="hidden" name="match_id" value={match.id} />
       <datalist id="matchAwardPlayers">
@@ -252,61 +275,67 @@ function VoteForm({ match }) {
         {goalkeeperOptions.map((player) => <option key={player.id} value={player.awardValue} />)}
       </datalist>
 
-      <details className={panelClass} open>
-        <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-lime-50 [&::-webkit-details-marker]:hidden">
-          <span>Puntajes</span>
-          <small className="text-xs font-black text-lime-100">Promedio final por junta</small>
-        </summary>
-        <div className="mt-3 overflow-x-auto rounded-lg border border-lime-200/25">
-          <table className="w-full min-w-[520px] border-collapse text-sm">
-            <thead className="bg-emerald-900/70">
-              <tr>
-                <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Jugador</th>
-                <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Equipo</th>
-                <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Puntaje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {playerOptions.map((player) => (
-                <tr key={player.id}>
-                  <td className="border-b border-lime-200/10 px-3 py-2"><strong>{player.name}</strong></td>
-                  <td className="border-b border-lime-200/10 px-3 py-2"><small className="font-semibold text-emerald-100/75">{player.teamLabel}</small></td>
-                  <td className="border-b border-lime-200/10 px-3 py-2">
-                    <input className={`${compactInputClass} max-w-28`} type="number" min="1" max="10" step="0.5" name={`rating[${player.id}]`} defaultValue={player.ratingValue} required />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      <p className={`${mutedText} m-0`}>{match.valuationModeDescription}</p>
 
-      <details className={panelClass} open>
-        <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-lime-50 [&::-webkit-details-marker]:hidden">
-          <span>Premios</span>
-          <small className="text-xs font-black text-lime-100">Gana quien tenga mas votos</small>
-        </summary>
-        <p className={`${mutedText} mt-3`}>En caso de empate define: mas promedio de junta, mas goles y luego nombre alfabetico.</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {match.awards.map((award) => (
-            <div key={award.code} className="grid gap-1.5 rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
-              <label className="flex items-center gap-2 text-sm font-black text-lime-50" htmlFor={`award-${award.code}`}>
-                <span title={award.label}>{award.icon}</span>
-                <span>{award.label}</span>
-              </label>
-              <input
-                id={`award-${award.code}`}
-                className={inputClass}
-                type="text"
-                list={award.listId}
-                name={`awards[${award.code}]`}
-                defaultValue={award.value}
-                placeholder="Buscar jugador"
-              />
-            </div>
-          ))}
-        </div>
-      </details>
+      {showRatings ? (
+        <details className={panelClass} open>
+          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-lime-50 [&::-webkit-details-marker]:hidden">
+            <span>Puntajes</span>
+            <small className="text-xs font-black text-lime-100">Promedio final por junta</small>
+          </summary>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-lime-200/25">
+            <table className="w-full min-w-[520px] border-collapse text-sm">
+              <thead className="bg-emerald-900/70">
+                <tr>
+                  <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Jugador</th>
+                  <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Equipo</th>
+                  <th className="border-b border-lime-200/20 px-3 py-2 text-left text-xs font-black uppercase text-lime-100">Puntaje</th>
+                </tr>
+              </thead>
+              <tbody>
+                {playerOptions.map((player) => (
+                  <tr key={player.id}>
+                    <td className="border-b border-lime-200/10 px-3 py-2"><strong>{player.name}</strong></td>
+                    <td className="border-b border-lime-200/10 px-3 py-2"><small className="font-semibold text-emerald-100/75">{player.teamLabel}</small></td>
+                    <td className="border-b border-lime-200/10 px-3 py-2">
+                      <input className={`${compactInputClass} max-w-28`} type="number" min="1" max="10" step="0.5" name={`rating[${player.id}]`} defaultValue={player.ratingValue} required />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
+
+      {showAwards ? (
+        <details className={panelClass} open>
+          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-lime-50 [&::-webkit-details-marker]:hidden">
+            <span>Premios</span>
+            <small className="text-xs font-black text-lime-100">Gana quien tenga mas votos</small>
+          </summary>
+          <p className={`${mutedText} mt-3`}>{awardsTieBreak}</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {match.awards.map((award) => (
+              <div key={award.code} className="grid gap-1.5 rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
+                <label className="flex items-center gap-2 text-sm font-black text-lime-50" htmlFor={`award-${award.code}`}>
+                  <span title={award.label}>{award.icon}</span>
+                  <span>{award.label}</span>
+                </label>
+                <input
+                  id={`award-${award.code}`}
+                  className={inputClass}
+                  type="text"
+                  list={award.listId}
+                  name={`awards[${award.code}]`}
+                  defaultValue={award.value}
+                  placeholder="Buscar jugador"
+                />
+              </div>
+            ))}
+          </div>
+        </details>
+      ) : null}
 
       <div className="flex justify-end">
         <button className={primaryButton} type="submit">Enviar voto</button>
@@ -335,7 +364,7 @@ export function JuntaVotacionesPageIsland({ root }) {
       <section className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-lime-200/60 bg-emerald-950 px-4 py-3 text-lime-50 shadow-sm shadow-emerald-950/15">
         <div>
           <h1 className="m-0 text-lime-50">Junta directiva</h1>
-          <p className="m-0 mt-1 text-sm font-semibold text-emerald-100/80">Votacion de puntajes y premios de fechas finalizadas.</p>
+          <p className="m-0 mt-1 text-sm font-semibold text-emerald-100/80">Votacion de valoraciones de fechas finalizadas: puntajes, premios o ambos segun cada fecha.</p>
         </div>
         {payload.isAdmin ? <a className={mutedButton} href="directivos.php">Administrar directivos</a> : null}
       </section>

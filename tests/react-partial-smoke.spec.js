@@ -123,6 +123,10 @@ test('admin encounters history filters with React controls', async ({ page }) =>
 
   await adminLogin(page, 'editar_partidos.php');
   await expect(page.locator('main.content')).toContainText(/Historial de fechas|Editar fechas/i);
+  await expect(page.locator('main.content')).toContainText(/Próxima|PrÃ³xima/i);
+  await expect(page.locator('main.content')).toContainText(/Vencidas/i);
+  await expect(page.getByLabel('Momento')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Publicar fecha' }).first()).toBeVisible();
 
   const search = page.locator('#encounterHistorySearch');
   if (await search.count()) {
@@ -138,6 +142,10 @@ test('admin encounters history filters with React controls', async ({ page }) =>
     await page.getByRole('button', { name: /Limpiar filtro/i }).click();
     await expect(firstStatus).not.toHaveClass(/is-active/);
   }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  expect(horizontalOverflow).toBeFalsy();
 
   expect(errors).toEqual([]);
 });

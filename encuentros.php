@@ -44,7 +44,7 @@ function clear_match_draw_data(PDO $pdo, int $matchId): void
     )->execute(['mid' => $matchId]);
     $pdo->prepare(
         'UPDATE matches
-         SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, result_saved_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
+         SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, result_saved_at = NULL, teams_published_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
          WHERE id = :mid'
     )->execute(['mid' => $matchId]);
 }
@@ -499,6 +499,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($matchListPage . '?focus_match=' . $id);
     }
 
+    if ($action === 'publish_teams') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $match = $id > 0 ? repo_match_by_id($id) : null;
+        if (!$match) {
+            flash('error', 'La fecha seleccionada no existe.');
+            redirect($matchListPage);
+        }
+        if ((string) ($match['status'] ?? '') !== 'sorteado') {
+            flash('error', 'Primero deben quedar conformados los equipos para publicar la fecha.');
+            redirect($matchListPage . '?focus_match=' . $id);
+        }
+        $teams = repo_match_teams($id);
+        $assignedPlayers = array_filter(
+            repo_match_participants($id),
+            static fn(array $player): bool => (int) ($player['team_number'] ?? 0) > 0
+        );
+        if (!$teams || count($assignedPlayers) !== count(repo_match_participants($id))) {
+            flash('error', 'No se puede publicar: faltan jugadores por asignar a los equipos.');
+            redirect($matchListPage . '?focus_match=' . $id);
+        }
+        $pdo->prepare('UPDATE matches SET teams_published_at = COALESCE(teams_published_at, NOW()) WHERE id = :id')
+            ->execute(['id' => $id]);
+        flash('success', 'Fecha publicada. Los usuarios ya pueden ver los equipos conformados.');
+        redirect($matchListPage . '?focus_match=' . $id);
+    }
+
     if ($action === 'update_match_court') {
         $id = (int) ($_POST['id'] ?? 0);
         $selectedCourtId = max(0, (int) ($_POST['rental_court_id'] ?? 0));
@@ -537,6 +563,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $redrawLimit = max(0, min(20, (int) ($_POST['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 3))));
         $multiDrawCount = max(1, min(10, (int) ($_POST['multi_draw_count'] ?? ($adminSettings['multi_draw_count_default'] ?? 3))));
         $multiDrawLockMinutes = max(0, min(1440, (int) ($_POST['multi_draw_lock_minutes'] ?? ($adminSettings['multi_draw_lock_minutes_default'] ?? 60))));
+        $valuationMode = normalize_match_valuation_mode($_POST['valuation_mode'] ?? match_valuation_default_mode());
         $notes = '';
         $participants = array_map('intval', $_POST['participants'] ?? []);
         $participants = array_values(array_unique(array_filter($participants, static fn(int $id): bool => $id > 0)));
@@ -577,10 +604,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', 'No se puede editar una fecha finalizada.');
                 redirect($matchListPage);
             }
+            if (!array_key_exists('valuation_mode', $_POST)) {
+                $valuationMode = match_valuation_mode($existing);
+            }
             $stmt = $pdo->prepare(
                 'UPDATE matches
-                 SET title = :title, rental_court_id = :rental_court_id, match_date = :match_date, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, multi_draw_count = :multi_draw_count, multi_draw_lock_minutes = :multi_draw_lock_minutes, notes = :notes, status = :status,
-                     draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, formation_edit_deadline = :formation_edit_deadline
+                 SET title = :title, rental_court_id = :rental_court_id, match_date = :match_date, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, multi_draw_count = :multi_draw_count, multi_draw_lock_minutes = :multi_draw_lock_minutes, valuation_mode = :valuation_mode, notes = :notes, status = :status,
+                     draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, teams_published_at = NULL, formation_edit_deadline = :formation_edit_deadline
                  WHERE id = :id'
             );
             $savedMatchDate = date('Y-m-d H:00:00', strtotime($matchDate));
@@ -596,6 +626,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'redraw_limit' => $redrawLimit,
                 'multi_draw_count' => $multiDrawCount,
                 'multi_draw_lock_minutes' => $multiDrawLockMinutes,
+                'valuation_mode' => $valuationMode,
                 'notes' => $notes === '' ? null : $notes,
                 'status' => 'programado',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -607,8 +638,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Fecha actualizada.');
         } else {
             $stmt = $pdo->prepare(
-                'INSERT INTO matches (title, rental_court_id, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, multi_draw_count, multi_draw_lock_minutes, status, draw_mode, formation_edit_deadline, notes)
-                 VALUES (:title, :rental_court_id, :match_date, :num_teams, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :multi_draw_count, :multi_draw_lock_minutes, :status, :draw_mode, :formation_edit_deadline, :notes)'
+                'INSERT INTO matches (title, rental_court_id, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, multi_draw_count, multi_draw_lock_minutes, valuation_mode, status, draw_mode, formation_edit_deadline, notes)
+                 VALUES (:title, :rental_court_id, :match_date, :num_teams, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :multi_draw_count, :multi_draw_lock_minutes, :valuation_mode, :status, :draw_mode, :formation_edit_deadline, :notes)'
             );
             $savedMatchDate = date('Y-m-d H:00:00', strtotime($matchDate));
             $stmt->execute([
@@ -622,6 +653,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'redraw_limit' => $redrawLimit,
                 'multi_draw_count' => $multiDrawCount,
                 'multi_draw_lock_minutes' => $multiDrawLockMinutes,
+                'valuation_mode' => $valuationMode,
                 'status' => 'programado',
                 'draw_mode' => 'none',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -645,18 +677,32 @@ if (!is_array($importList)) {
 }
 $matches = repo_matches();
 $latestMatch = null;
+$nowTimestamp = time();
 foreach ($matches as $candidateMatch) {
-    if (
+    $candidateTimestamp = strtotime((string) $candidateMatch['match_date']);
+    if ($candidateTimestamp >= $nowTimestamp && (string) $candidateMatch['status'] !== 'finalizado' && (
         !$latestMatch
-        || strtotime((string) $candidateMatch['match_date']) > strtotime((string) $latestMatch['match_date'])
-        || (
-            strtotime((string) $candidateMatch['match_date']) === strtotime((string) $latestMatch['match_date'])
-            && (int) $candidateMatch['id'] > (int) $latestMatch['id']
-        )
-    ) {
+        || $candidateTimestamp < strtotime((string) $latestMatch['match_date'])
+        || ($candidateTimestamp === strtotime((string) $latestMatch['match_date']) && (int) $candidateMatch['id'] < (int) $latestMatch['id'])
+    )) {
         $latestMatch = $candidateMatch;
     }
 }
+if (!$latestMatch && $matches) {
+    $latestMatch = $matches[0];
+}
+usort($matches, static function (array $a, array $b) use ($nowTimestamp): int {
+    $aTime = strtotime((string) $a['match_date']);
+    $bTime = strtotime((string) $b['match_date']);
+    $aUpcoming = $aTime >= $nowTimestamp && (string) $a['status'] !== 'finalizado';
+    $bUpcoming = $bTime >= $nowTimestamp && (string) $b['status'] !== 'finalizado';
+    if ($aUpcoming !== $bUpcoming) {
+        return $aUpcoming ? -1 : 1;
+    }
+    return $aUpcoming
+        ? (($aTime <=> $bTime) ?: ((int) $a['id'] <=> (int) $b['id']))
+        : (($bTime <=> $aTime) ?: ((int) $b['id'] <=> (int) $a['id']));
+});
 $matchesPerPage = 10;
 $totalMatches = count($matches);
 $totalPages = max(1, (int) ceil($totalMatches / $matchesPerPage));
@@ -759,6 +805,9 @@ $form['redraw_limit'] = max(0, min(20, (int) ($form['redraw_limit'] ?? ($adminSe
 $form['redraw_count'] = max(0, (int) ($form['redraw_count'] ?? 0));
 $form['multi_draw_count'] = max(1, min(10, (int) ($form['multi_draw_count'] ?? ($adminSettings['multi_draw_count_default'] ?? 3))));
 $form['multi_draw_lock_minutes'] = max(0, min(1440, (int) ($form['multi_draw_lock_minutes'] ?? ($adminSettings['multi_draw_lock_minutes_default'] ?? 60))));
+$form['valuation_mode'] = $editing
+    ? match_valuation_mode($form)
+    : normalize_match_valuation_mode($form['valuation_mode'] ?? match_valuation_default_mode());
 $courtFormOptions = [];
 foreach ($activeRentalCourts as $court) {
     $nextDate = rental_court_next_datetime($court);
@@ -989,11 +1038,23 @@ function admin_match_list_item_payload(
         || ((string) $match['status'] === 'finalizado' && !$hasSavedResult);
     $isFinalized = $hasSavedResult;
     $isScheduled = (string) $match['status'] === 'programado';
+    $isNext = $latestMatch && (int) $latestMatch['id'] === $matchId
+        && strtotime((string) $match['match_date']) >= time()
+        && (string) $match['status'] !== 'finalizado';
+    $isExpired = strtotime((string) $match['match_date']) < time()
+        && (string) $match['status'] !== 'finalizado';
+    $isUpcoming = strtotime((string) $match['match_date']) >= time()
+        && (string) $match['status'] !== 'finalizado';
+    $teamsPublished = repo_match_teams_are_public($match);
     $canEditFormation = $canFinalize && count($historyTeams) > 0;
     $participantsCount = (int) $match['participants_count'];
     $ratingStatus = $historyRatingCounts[$matchId] ?? ['player_count' => $participantsCount, 'rated_count' => 0];
-    $missingAwards = $isFinalized && (($historyAwardCounts[$matchId] ?? 0) === 0);
+    $valuationMode = match_valuation_mode($match);
+    $missingAwards = $isFinalized
+        && match_valuation_includes_awards($valuationMode)
+        && (($historyAwardCounts[$matchId] ?? 0) === 0);
     $missingRating = $isFinalized
+        && match_valuation_includes_ratings($valuationMode)
         && (int) $ratingStatus['player_count'] > 0
         && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
     $needsValuations = $missingAwards || $missingRating;
@@ -1017,6 +1078,7 @@ function admin_match_list_item_payload(
         date('d/m/Y H:i', strtotime((string) $match['match_date'])),
         $matchCourtLabel,
         admin_match_status_label((string) $match['status']),
+        $teamsPublished ? 'equipos publicados' : 'equipos sin publicar',
         implode(' ', $captainSearch),
         $scoreLine,
     ]));
@@ -1034,9 +1096,16 @@ function admin_match_list_item_payload(
         'missingAwards' => $missingAwards,
         'missingRating' => $missingRating,
         'needsValuations' => $needsValuations,
+        'valuationMode' => $valuationMode,
+        'valuationModeLabel' => match_valuation_mode_label($valuationMode),
         'canFinalize' => $canFinalize,
         'isFinalized' => $isFinalized,
         'isScheduled' => $isScheduled,
+        'isNext' => $isNext,
+        'isExpired' => $isExpired,
+        'isUpcoming' => $isUpcoming,
+        'teamsPublished' => $teamsPublished,
+        'teamsPublishedLabel' => $teamsPublished ? 'Equipos publicados' : 'Equipos sin publicar',
         'canEditFormation' => $canEditFormation,
         'isFocused' => $focusedMatchId === $matchId,
         'isLatest' => $latestMatch && (int) $latestMatch['id'] === $matchId,
@@ -1063,6 +1132,9 @@ function admin_match_list_item_payload(
 $scheduledCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'programado'));
 $readyCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'sorteado'));
 $finishedCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'finalizado'));
+$upcomingCount = count(array_filter($matches, static fn(array $m): bool => strtotime((string) $m['match_date']) >= time() && (string) $m['status'] !== 'finalizado'));
+$expiredCount = count(array_filter($matches, static fn(array $m): bool => strtotime((string) $m['match_date']) < time() && (string) $m['status'] !== 'finalizado'));
+$unpublishedCount = count(array_filter($matches, static fn(array $m): bool => (string) $m['status'] === 'sorteado' && !repo_match_teams_are_public($m)));
 $encounterMatchItems = [];
 foreach ($matches as $matchIndex => $matchRow) {
     $encounterMatchItems[] = admin_match_list_item_payload(
@@ -1091,6 +1163,9 @@ $encuentrosReactPayload = [
         'scheduled' => $scheduledCount,
         'ready' => $readyCount,
         'finished' => $finishedCount,
+        'upcoming' => $upcomingCount,
+        'expired' => $expiredCount,
+        'unpublished' => $unpublishedCount,
         'total' => $totalMatches,
     ],
     'matches' => $encounterMatchItems,
@@ -1229,9 +1304,19 @@ ob_start();
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team data-rental-court-field-input>
         <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
+      <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
+        <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Valoraciones de la fecha</label>
+        <select class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" name="valuation_mode" data-valuation-mode-select>
+          <?php foreach (match_valuation_modes() as $valuationModeValue => $valuationModeLabel): ?>
+            <option value="<?= h((string) $valuationModeValue) ?>" <?= selected_attr($form['valuation_mode'] === $valuationModeValue) ?>><?= h((string) $valuationModeLabel) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <small class="<?= $showCreateSection && !$showEditSection ? 'mt-1.5 block text-xs font-semibold text-lime-50/72' : '' ?>">Define que se carga al finalizar la fecha: puntajes, premios o ambos. Los goles se cargan siempre.</small>
+      </div>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 text-sm font-semibold text-emerald-100/85 shadow-sm shadow-emerald-950/15 md:col-span-2' : 'form-row' ?>">
         <strong class="block text-xs font-black uppercase text-lime-100/85">Configuración aplicada</strong>
         <span>Rehacer sorteo: <?= (int) $form['allow_redraw'] === 1 ? 'sí' : 'no' ?> | Veces permitidas: <?= h((string) $form['redraw_limit']) ?>.</span>
+        <span>Valoraciones: <?= h(match_valuation_mode_label($form['valuation_mode'])) ?>.</span>
         <a class="mt-2 inline-flex w-fit rounded-lg border border-lime-200/35 bg-emerald-950/70 px-2.5 py-1 text-xs font-black text-lime-100 no-underline" href="configuracion.php">Editar configuración</a>
       </div>
     </div>
@@ -1511,8 +1596,14 @@ ob_start();
         $latestIsFinalized = $latestHasSavedResult;
         $latestCanEditCaptainFormation = $latestCanFinalize && count($latestTeams) > 0;
         $latestRatingStatus = $historyRatingCounts[$latestId] ?? ['player_count' => (int) $latestMatch['participants_count'], 'rated_count' => 0];
-        $latestMissingAwards = $latestIsFinalized && (($historyAwardCounts[$latestId] ?? 0) === 0);
-        $latestMissingRating = $latestIsFinalized && (int) $latestRatingStatus['player_count'] > 0 && (int) $latestRatingStatus['rated_count'] < (int) $latestRatingStatus['player_count'];
+        $latestValuationMode = match_valuation_mode($latestMatch);
+        $latestMissingAwards = $latestIsFinalized
+            && match_valuation_includes_awards($latestValuationMode)
+            && (($historyAwardCounts[$latestId] ?? 0) === 0);
+        $latestMissingRating = $latestIsFinalized
+            && match_valuation_includes_ratings($latestValuationMode)
+            && (int) $latestRatingStatus['player_count'] > 0
+            && (int) $latestRatingStatus['rated_count'] < (int) $latestRatingStatus['player_count'];
         $latestNeedsValuations = $latestMissingAwards || $latestMissingRating;
         $latestFormationUrl = 'finalizar_partido.php?match_id=' . $latestId . '&edit_formations=1#formaciones';
         $latestFinishUrl = 'finalizar_partido.php?match_id=' . $latestId . '&show_score=1#resultado';
@@ -1595,8 +1686,14 @@ ob_start();
           $cardPage = intdiv($matchIndex, $matchesPerPage) + 1;
           $participantsCount = (int) $m['participants_count'];
           $ratingStatus = $historyRatingCounts[$matchId] ?? ['player_count' => $participantsCount, 'rated_count' => 0];
-          $missingAwards = $isFinalized && (($historyAwardCounts[$matchId] ?? 0) === 0);
-          $missingRating = $isFinalized && (int) $ratingStatus['player_count'] > 0 && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
+          $valuationMode = match_valuation_mode($m);
+          $missingAwards = $isFinalized
+              && match_valuation_includes_awards($valuationMode)
+              && (($historyAwardCounts[$matchId] ?? 0) === 0);
+          $missingRating = $isFinalized
+              && match_valuation_includes_ratings($valuationMode)
+              && (int) $ratingStatus['player_count'] > 0
+              && (int) $ratingStatus['rated_count'] < (int) $ratingStatus['player_count'];
           $needsValuations = $missingAwards || $missingRating;
           $formationUrl = 'finalizar_partido.php?match_id=' . $matchId . '&edit_formations=1#formaciones';
           $finishUrl = 'finalizar_partido.php?match_id=' . $matchId . '&show_score=1#resultado';
@@ -1665,7 +1762,7 @@ ob_start();
             <?php elseif ($canFinalize): ?>
               Equipos generados. Puedes ajustar formaciones o finalizar con resultado.
             <?php elseif ($needsValuations): ?>
-              Resultado cargado. Faltan puntajes o premios por completar.
+              <?= h(match_valuation_pending_note($valuationMode, $missingRating, $missingAwards)) ?>
             <?php else: ?>
               Fecha cerrada. Resultado y detalle disponibles.
             <?php endif; ?>

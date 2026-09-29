@@ -520,15 +520,18 @@ function profile_render_match_detail_content(array $match, int $currentPlayerId)
 {
     $matchId = (int) $match['id'];
     $participants = repo_match_participants($matchId);
-    $groupedTeams = profile_next_match_grouped_players($matchId);
-    $teamTotals = repo_team_totals($matchId);
-    $matchTeams = repo_match_teams($matchId);
+    $teamsVisible = repo_match_teams_are_public($match);
+    $groupedTeams = $teamsVisible ? profile_next_match_grouped_players($matchId) : [];
+    $teamTotals = $teamsVisible ? repo_team_totals($matchId) : [];
+    $matchTeams = $teamsVisible ? repo_match_teams($matchId) : [];
     $teamLabels = $matchTeams ? repo_match_team_labels($match, $matchTeams) : [];
 
     ob_start();
     ?>
     <?php if (!$groupedTeams): ?>
-      <p>Los equipos todavia no fueron formados. Cuando esten sorteados o elegidos por capitanes, se mostrara la formacion aca.</p>
+      <p><?= !$teamsVisible && (string) ($match['status'] ?? '') === 'sorteado'
+          ? 'Los equipos estan en edicion. Se mostraran cuando el administrador publique la fecha.'
+          : 'Los equipos todavia no fueron formados. Cuando esten sorteados o elegidos por capitanes, se mostrara la formacion aca.' ?></p>
       <?php if ($participants): ?>
         <div class="selected-player-list public-player-list">
           <?php foreach ($participants as $participant): ?>
@@ -864,7 +867,7 @@ if ($nextMatch) {
             $nextMatchVotePill = $canVoteCandidate ? 'Vota ahora!' : 'Votacion finalizada';
             $nextMatchVotePillClass = $canVoteCandidate ? 'is-open' : 'is-closed';
         }
-        if ((string) ($candidate['status'] ?? '') === 'sorteado') {
+        if ((string) ($candidate['status'] ?? '') === 'sorteado' && repo_match_teams_are_public($candidate)) {
             $nextMatchFormationsHtml = profile_render_next_match_formations($candidate, $playerId);
         }
         $nextMatchDetailHtml = profile_render_match_detail_content($candidate, $playerId);

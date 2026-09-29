@@ -424,6 +424,7 @@ try {
         'UPDATE matches
          SET status = :status, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
              draw_mode = :draw_mode, draw_started_at = COALESCE(draw_started_at, NOW()), draw_completed_at = NOW(),
+             teams_published_at = NULL,
              draw_audit_snapshot = :draw_audit_snapshot,
              redraw_count = redraw_count + :redraw_increment,
              formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)

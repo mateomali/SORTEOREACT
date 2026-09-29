@@ -91,6 +91,7 @@ function junta_summary_payload(array $summary, int $selectedMatchId): array
     $match = $summary['match'];
     $matchId = (int) $match['id'];
     $publication = $summary['publication'];
+    $valuationMode = match_valuation_mode($match);
     $historyStatus = $publication
         ? ('Publicado por ' . junta_publication_reason_label((string) $publication['reason']))
         : ($summary['directivo_complete'] ? 'Tu voto cargado' : 'Sin publicar');
@@ -104,6 +105,10 @@ function junta_summary_payload(array $summary, int $selectedMatchId): array
         'eligible' => (int) ($summary['status']['eligible'] ?? 0),
         'selected' => $selectedMatchId === $matchId,
         'historyStatus' => $historyStatus,
+        'valuationMode' => $valuationMode,
+        'valuationModeLabel' => match_valuation_mode_label($valuationMode),
+        'ratingsEnabled' => match_valuation_includes_ratings($valuationMode),
+        'awardsEnabled' => match_valuation_includes_awards($valuationMode),
     ];
 }
 
@@ -170,7 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $currentVoterId,
             is_array($_POST['rating'] ?? null) ? $_POST['rating'] : [],
             is_array($_POST['awards'] ?? null) ? $_POST['awards'] : [],
-            $participantIds
+            $participantIds,
+            match_valuation_mode($match)
         );
         directive_publish_if_ready($match, $participants);
         $redirectHash = '&vote_saved=1#junta-voto-estado';
@@ -190,14 +196,15 @@ foreach ($matches as $match) {
     $matchId = (int) $match['id'];
     $matchParticipants = repo_match_participants($matchId);
     $matchParticipantCount = count(junta_participant_ids($matchParticipants));
+    $matchValuationMode = match_valuation_mode($match);
     $matchPublication = directive_publication($matchId);
-    $matchStatus = directive_vote_status($matchId, $matchParticipantCount);
+    $matchStatus = directive_vote_status($matchId, $matchParticipantCount, $matchValuationMode);
     $matchDeadline = directive_voting_deadline($match);
     $matchOpen = directive_voting_is_open($match);
     $matchDirectivoComplete = is_directivo()
-        ? directive_member_completed_match($matchId, current_directivo_id(), $matchParticipantCount)
+        ? directive_member_completed_match($matchId, current_directivo_id(), $matchParticipantCount, $matchValuationMode)
         : ($isGuestVoter && (int) $guestVoteInvite['match_id'] === $matchId
-            ? directive_member_completed_match($matchId, (int) $guestVoteInvite['voter_member_id'], $matchParticipantCount)
+            ? directive_member_completed_match($matchId, (int) $guestVoteInvite['voter_member_id'], $matchParticipantCount, $matchValuationMode)
             : false);
     $summary = [
         'match' => $match,
@@ -240,15 +247,19 @@ if ($selectedMatch && $isGuestVoter && (int) $guestVoteInvite['match_id'] !== (i
 $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['id']) : [];
 $participantIds = junta_participant_ids($participants);
 $participantCount = count($participantIds);
+$selectedValuationMode = $selectedMatch ? match_valuation_mode($selectedMatch) : 'both';
+$valuationsIncludeRatings = match_valuation_includes_ratings($selectedValuationMode);
+$valuationsIncludeAwards = match_valuation_includes_awards($selectedValuationMode);
+$valuationsScopeText = match_valuation_scope_text($selectedValuationMode);
 $teams = $selectedMatch ? repo_match_teams((int) $selectedMatch['id']) : [];
 $teamLabels = $selectedMatch ? repo_match_team_labels($selectedMatch, $teams) : [];
 $awardDefinitions = award_definitions();
 $publication = $selectedMatch ? directive_publication((int) $selectedMatch['id']) : null;
-$voteStatus = $selectedMatch ? directive_vote_status((int) $selectedMatch['id'], $participantCount) : ['eligible' => 0, 'submitted' => 0];
+$voteStatus = $selectedMatch ? directive_vote_status((int) $selectedMatch['id'], $participantCount, $selectedValuationMode) : ['eligible' => 0, 'submitted' => 0];
 $voteProgressPercent = (int) ($voteStatus['eligible'] ?? 0) > 0
     ? min(100, (int) round(((int) ($voteStatus['submitted'] ?? 0) / (int) $voteStatus['eligible']) * 100))
     : 0;
-$inviteRows = (is_admin() && $selectedMatch) ? directive_vote_invites_for_match((int) $selectedMatch['id'], $participantCount) : [];
+$inviteRows = (is_admin() && $selectedMatch) ? directive_vote_invites_for_match((int) $selectedMatch['id'], $participantCount, $selectedValuationMode) : [];
 $invitePlayerOptions = [];
 if (is_admin() && $selectedMatch) {
     $invitedPlayerIds = array_flip(array_map(static fn(array $invite): int => (int) $invite['player_id'], $inviteRows));
@@ -262,7 +273,7 @@ $isOpen = $selectedMatch ? directive_voting_is_open($selectedMatch) : false;
 $currentVoteMemberId = is_directivo() ? current_directivo_id() : ($isGuestVoter ? (int) $guestVoteInvite['voter_member_id'] : 0);
 $myRatingVotes = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_rating_votes((int) $selectedMatch['id'], $currentVoteMemberId) : [];
 $myAwardVotes = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_award_votes((int) $selectedMatch['id'], $currentVoteMemberId) : [];
-$myVoteComplete = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_completed_match((int) $selectedMatch['id'], $currentVoteMemberId, $participantCount) : false;
+$myVoteComplete = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_completed_match((int) $selectedMatch['id'], $currentVoteMemberId, $participantCount, $selectedValuationMode) : false;
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
 $shouldReturnHomeAfterVote = (string) ($_GET['vote_saved'] ?? '') === '1';
 
@@ -334,6 +345,12 @@ if ($selectedMatch) {
         'currentVoteMemberId' => $currentVoteMemberId,
         'isAdmin' => is_admin(),
         'isDirectivo' => is_directivo(),
+        'valuationMode' => $selectedValuationMode,
+        'valuationModeLabel' => match_valuation_mode_label($selectedValuationMode),
+        'valuationModeDescription' => match_valuation_mode_description($selectedValuationMode),
+        'valuationsScopeText' => $valuationsScopeText,
+        'ratingsEnabled' => $valuationsIncludeRatings,
+        'awardsEnabled' => $valuationsIncludeAwards,
         'participants' => $voteParticipants,
         'awards' => $awardsPayload,
         'inviteRows' => array_map(

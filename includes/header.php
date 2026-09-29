@@ -105,8 +105,8 @@ if (is_admin()) {
         ],
     ];
     $roleMenuGroups = [
-        'Jugadores' => $roleMenuGroups['Jugadores'],
         'Fechas' => $roleMenuGroups['Fechas'],
+        'Jugadores' => $roleMenuGroups['Jugadores'],
         'Gestion' => $roleMenuGroups['Gestion'],
         'Personas' => $roleMenuGroups['Personas'],
         'Salir' => $roleMenuGroups['Sesion'],

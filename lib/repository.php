@@ -40,6 +40,17 @@ function repo_match_by_id(int $id): ?array
     return $row ?: null;
 }
 
+function repo_match_teams_are_public(array $match): bool
+{
+    return (string) ($match['status'] ?? '') === 'finalizado'
+        || trim((string) ($match['teams_published_at'] ?? '')) !== '';
+}
+
+function repo_match_teams_visible_to_current_user(array $match): bool
+{
+    return is_admin() || repo_match_teams_are_public($match);
+}
+
 function repo_match_participants(int $matchId): array
 {
     $stmt = db()->prepare(

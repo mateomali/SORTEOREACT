@@ -858,3 +858,53 @@
     }
   });
 })();
+
+// Cajas de resultado con valor por defecto (0): al enfocar se limpian para
+// poder escribir el resultado nuevo sin borrar el 0 a mano. Si se sale de la
+// caja sin escribir nada, vuelve el valor por defecto.
+(() => {
+  const SELECTOR = '[data-finish-score-input]';
+  const root = document.documentElement;
+  if (root.dataset.finishScoreDefaultsBound === '1') return;
+  root.dataset.finishScoreDefaultsBound = '1';
+
+  const defaultValueOf = (input) => {
+    const attr = input.getAttribute('data-finish-default-value');
+    return attr === null ? '0' : attr;
+  };
+
+  const scoreInputFrom = (target) => (
+    target instanceof Element ? target.closest(SELECTOR) : null
+  );
+
+  document.addEventListener('focusin', (event) => {
+    const input = scoreInputFrom(event.target);
+    if (!input || input.readOnly || input.disabled) return;
+    if (input.dataset.finishDefaultCleared === '1') return;
+    if (String(input.value).trim() !== defaultValueOf(input)) return;
+    input.dataset.finishDefaultCleared = '1';
+    input.value = '';
+  });
+
+  document.addEventListener('focusout', (event) => {
+    const input = scoreInputFrom(event.target);
+    if (!input) return;
+    if (String(input.value).trim() !== '') {
+      input.dataset.finishDefaultCleared = '0';
+      return;
+    }
+    if (input.dataset.finishDefaultCleared !== '1') return;
+    input.dataset.finishDefaultCleared = '0';
+    input.value = defaultValueOf(input);
+  });
+
+  document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    form.querySelectorAll(SELECTOR).forEach((input) => {
+      if (String(input.value).trim() === '') {
+        input.value = defaultValueOf(input);
+      }
+    });
+  }, true);
+})();

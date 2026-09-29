@@ -702,6 +702,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         redirect('finalizar_partido.php?match_id=' . $matchId);
     }
 
+    $resultValuationMode = match_valuation_mode($match);
+    $resultIncludesRatings = match_valuation_includes_ratings($resultValuationMode);
+    $resultIncludesAwards = match_valuation_includes_awards($resultValuationMode);
+
     $participants = repo_match_participants($matchId);
     $assignedCount = 0;
     $teamsSeen = [];
@@ -766,11 +770,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         try {
             finish_save_team_goals($matchId, $teams, is_array($teamGoalsData) ? $teamGoalsData : []);
 
-            $upd = $pdo->prepare(
-                'UPDATE match_players
-                 SET goals = :goals, rating = :rating
-                 WHERE match_id = :mid AND player_id = :pid'
-            );
+            $upd = $resultIncludesRatings
+                ? $pdo->prepare(
+                    'UPDATE match_players
+                     SET goals = :goals, rating = :rating
+                     WHERE match_id = :mid AND player_id = :pid'
+                )
+                : $pdo->prepare(
+                    'UPDATE match_players
+                     SET goals = :goals
+                     WHERE match_id = :mid AND player_id = :pid'
+                );
 
             $allowedAwardPlayerIds = [];
             foreach ($participants as $player) {
@@ -780,17 +790,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                 }
                 $allowedAwardPlayerIds[] = $pid;
                 $goals = max(0, (int) ($goalsData[$pid] ?? 0));
-                $ratingRaw = $ratingData[$pid] ?? '';
-                $rating = null;
-                if ($ratingRaw !== '' && $ratingRaw !== null) {
-                    $rating = max(1.0, min(10.0, round(((float) $ratingRaw) * 2) / 2));
-                }
-                $upd->execute([
+                $params = [
                     'mid' => $matchId,
                     'pid' => $pid,
                     'goals' => $goals,
-                    'rating' => $rating,
-                ]);
+                ];
+                if ($resultIncludesRatings) {
+                    $ratingRaw = $ratingData[$pid] ?? '';
+                    $rating = null;
+                    if ($ratingRaw !== '' && $ratingRaw !== null) {
+                        $rating = max(1.0, min(10.0, round(((float) $ratingRaw) * 2) / 2));
+                    }
+                    $params['rating'] = $rating;
+                }
+                $upd->execute($params);
             }
 
             $teamAssignments = is_array($_POST['player_team'] ?? null) ? $_POST['player_team'] : [];
@@ -876,21 +889,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             }
 
             $parsedAwards = [];
-            foreach (award_definitions() as $code => $_definition) {
-                $rawAward = trim((string) ($awardData[$code] ?? ''));
-                if ($rawAward === '') {
-                    $parsedAwards[$code] = 0;
-                    continue;
+            if ($resultIncludesAwards) {
+                foreach (award_definitions() as $code => $_definition) {
+                    $rawAward = trim((string) ($awardData[$code] ?? ''));
+                    if ($rawAward === '') {
+                        $parsedAwards[$code] = 0;
+                        continue;
+                    }
+                    if (preg_match('/#(\d+)/', $rawAward, $matchAward)) {
+                        $parsedAwards[$code] = (int) $matchAward[1];
+                        continue;
+                    }
+                    throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
                 }
-                if (preg_match('/#(\d+)/', $rawAward, $matchAward)) {
-                    $parsedAwards[$code] = (int) $matchAward[1];
-                    continue;
-                }
-                throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
+                repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
             }
-            repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
 
-            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = NOW(), result_saved_at = COALESCE(result_saved_at, NOW()) WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = NOW(), result_saved_at = COALESCE(result_saved_at, NOW()), teams_published_at = COALESCE(teams_published_at, NOW()) WHERE id = :id');
             $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
 
             $pdo->commit();
@@ -938,7 +953,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $pdo->beginTransaction();
     try {
         finish_save_team_goals($matchId, $teams, is_array($teamGoalsData) ? $teamGoalsData : []);
-        $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW() WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW(), teams_published_at = COALESCE(teams_published_at, NOW()) WHERE id = :id');
         $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         $pdo->commit();
         flash('success', 'Resultado guardado. Fecha finalizada.');
@@ -1020,7 +1035,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
                 $roundRobinTeamGoals[(int) $teamNumber] = (int) $row['gf'];
             }
             finish_save_team_goals($matchId, $teams, $roundRobinTeamGoals);
-            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW() WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW(), teams_published_at = COALESCE(teams_published_at, NOW()) WHERE id = :id');
             $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         }
 
@@ -1067,6 +1082,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
 }
 
 $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
+$selectedValuationMode = $selectedMatch ? match_valuation_mode($selectedMatch) : 'both';
+$valuationsIncludeRatings = match_valuation_includes_ratings($selectedValuationMode);
+$valuationsIncludeAwards = match_valuation_includes_awards($selectedValuationMode);
+$valuationsScopeText = match_valuation_scope_text($selectedValuationMode);
 $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['id']) : [];
 $groupedTeams = $selectedMatch ? repo_grouped_team_players((int) $selectedMatch['id']) : [];
 $awardDefinitions = award_definitions();
@@ -1099,7 +1118,9 @@ require __DIR__ . '/includes/header.php';
   <section class="page-head">
     <div>
       <h1>Finalizar fecha</h1>
-      <p class="small-muted">Carga goles y calificacion por jugador para cerrar la fecha y sumar estadisticas.</p>
+      <p class="small-muted"><?= $valuationsIncludeRatings
+        ? 'Carga goles y calificacion por jugador para cerrar la fecha y sumar estadisticas.'
+        : 'Carga goles y premios de la fecha para cerrar y publicar el detalle.' ?></p>
     </div>
     <a class="btn btn-muted" href="<?= h($backUrl) ?>">Volver</a>
   </section>
@@ -1109,7 +1130,7 @@ require __DIR__ . '/includes/header.php';
   <section class="<?= $formationOnlyView ? 'mb-3.5' : 'card mb-3.5' ?>">
     <?php if (!$formationOnlyView): ?>
       <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
-      <p class="small-muted">Estado actual: <strong><?= h((string) $selectedMatch['status']) ?></strong></p>
+      <p class="small-muted">Estado actual: <strong><?= h((string) $selectedMatch['status']) ?></strong> | Valoraciones: <strong><?= h(match_valuation_mode_label($selectedValuationMode)) ?></strong></p>
     <?php endif; ?>
     <?php if (!$groupedTeams): ?>
       <p>No hay equipos sorteados todavia para esta fecha.</p>
@@ -1220,7 +1241,7 @@ require __DIR__ . '/includes/header.php';
               <button class="btn btn-primary" type="submit" name="action" value="calculate_round_robin_winner">Calcular ganador</button>
               <button class="btn btn-warning" type="submit" name="action" value="finalize_round_robin_date" data-confirm="Finalizar esta fecha y publicar el ganador?">Finalizar fecha</button>
               <?php if ($scoreSaved && !$valuationsLocked): ?>
-                <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
+                <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar ' : 'Editar ' ?><?= h($valuationsScopeText) ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
               <?php endif; ?>
               <?php if ($canEditFormations): ?>
                 <a class="btn <?= $editFormations ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_formations=<?= $editFormations ? '0' : '1' ?><?= $editFormations ? '' : '#formaciones' ?>" title="<?= $editFormations ? 'Ocultar formaciones y camisetas' : 'Editar formaciones y camisetas' ?>"><span class="finish-edit-icon"><?= $editFormations ? '-' : '+' ?></span><span><?= $editFormations ? 'Ocultar formaciones' : 'Ver formaciones' ?></span></a>
@@ -1246,18 +1267,18 @@ require __DIR__ . '/includes/header.php';
               <?php foreach ($matchTeams as $team): ?>
                 <div class="finish-result-team">
                   <label><?= h($teamLabels[(int) $team['team_number']] ?? ('Equipo ' . (int) $team['team_number'])) ?></label>
-                  <input type="number" min="0" step="1" name="team_goals[<?= (int) $team['team_number'] ?>]" value="<?= h((string) ((int) ($team['goals'] ?? 0))) ?>" required>
+                  <input type="number" min="0" step="1" name="team_goals[<?= (int) $team['team_number'] ?>]" value="<?= h((string) ((int) ($team['goals'] ?? 0))) ?>" required data-finish-score-input data-finish-default-value="0">
                 </div>
               <?php endforeach; ?>
             </div>
             <div class="btn-row finish-score-actions">
               <button class="btn btn-primary" type="submit" name="action" value="save_score" data-confirm="Guardar este resultado?">Guardar resultado</button>
               <?php if ($scoreSaved && !$valuationsLocked): ?>
-                <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar puntajes y premios' : 'Editar puntajes y premios' ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
+                <a class="btn <?= $editDetails ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_details=<?= $editDetails ? '0' : '1' ?><?= $editDetails ? '' : '#valoraciones' ?>" title="<?= $editDetails ? 'Ocultar ' : 'Editar ' ?><?= h($valuationsScopeText) ?>"><span class="finish-edit-icon"><?= $editDetails ? '-' : '+' ?></span><span><?= $editDetails ? 'Ocultar valoraciones' : 'Abrir valoraciones' ?></span></a>
               <?php elseif ($scoreSaved && $valuationsLocked): ?>
                 <span class="btn btn-disabled finish-edit-btn" title="Pasaron mas de 7 dias desde la finalizacion de la fecha"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones bloqueadas</span></span>
               <?php else: ?>
-                <span class="btn btn-disabled finish-edit-btn" title="Guarda el resultado para habilitar puntajes y premios"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></span>
+                <span class="btn btn-disabled finish-edit-btn" title="Guarda el resultado para habilitar la carga de <?= h($valuationsScopeText) ?>"><span class="finish-edit-icon">&#9999;</span><span>Valoraciones</span></span>
               <?php endif; ?>
               <?php if ($canEditFormations): ?>
                 <a class="btn <?= $editFormations ? 'btn-primary' : 'btn-muted' ?> finish-edit-btn" href="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?>&edit_formations=<?= $editFormations ? '0' : '1' ?><?= $editFormations ? '' : '#formaciones' ?>" title="<?= $editFormations ? 'Ocultar formaciones y camisetas' : 'Editar formaciones y camisetas' ?>"><span class="finish-edit-icon"><?= $editFormations ? '-' : '+' ?></span><span><?= $editFormations ? 'Ocultar formaciones' : 'Ver formaciones' ?></span></a>
@@ -1542,14 +1563,17 @@ require __DIR__ . '/includes/header.php';
 
         <details class="card finish-collapse finish-valuations" id="valoraciones" open>
           <summary>
-            <span>Puntajes y premios</span>
+            <span><?= h($valuationsIncludeRatings && $valuationsIncludeAwards ? 'Puntajes y premios' : ($valuationsIncludeRatings ? 'Puntajes' : 'Goles y premios')) ?></span>
             <small>Menu</small>
           </summary>
+          <?php if ($selectedValuationMode !== 'both'): ?>
+            <p class="small-muted"><?= h(match_valuation_mode_description($selectedValuationMode)) ?></p>
+          <?php endif; ?>
           <div class="finish-valuations-menu">
             <details class="finish-submenu finish-collapse finish-ratings-menu" open>
               <summary>
-                <span>Puntajes</span>
-                <small>Goles</small>
+                <span><?= $valuationsIncludeRatings ? 'Puntajes' : 'Goles' ?></span>
+                <small><?= $valuationsIncludeRatings ? 'Goles' : 'Por jugador' ?></small>
               </summary>
           <div
             data-react-root
@@ -1567,7 +1591,7 @@ require __DIR__ . '/includes/header.php';
                       <tr>
                         <th>Jugador</th>
                         <th>Goles</th>
-                        <th>Puntuacion</th>
+                        <?php if ($valuationsIncludeRatings): ?><th>Puntuacion</th><?php endif; ?>
                       </tr>
                     </thead>
                     <tbody>
@@ -1590,11 +1614,13 @@ require __DIR__ . '/includes/header.php';
                             <input type="hidden" name="player_position[<?= $playerId ?>]" value="<?= h((string) $line) ?>" data-finish-player-position-input>
                           </td>
                           <td data-label="Goles">
-                            <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>">
+                            <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>" data-finish-score-input data-finish-default-value="0">
                           </td>
+                          <?php if ($valuationsIncludeRatings): ?>
                           <td data-label="Puntuacion">
                             <input class="finish-number-input" type="number" min="1" max="10" step="0.5" name="rating[<?= $playerId ?>]" value="<?= h($ratingValue) ?>" placeholder="Opcional">
                           </td>
+                          <?php endif; ?>
                         </tr>
                       <?php endforeach; ?>
                     <?php endforeach; ?>
@@ -1606,6 +1632,7 @@ require __DIR__ . '/includes/header.php';
           </div>
             </details>
 
+            <?php if ($valuationsIncludeAwards): ?>
             <details class="finish-submenu finish-collapse finish-awards">
           <summary>
             <span>Premios</span>
@@ -1631,11 +1658,12 @@ require __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
           </div>
             </details>
+            <?php endif; ?>
           </div>
         </details>
 
         <div class="btn-row finish-valuations-actions">
-          <button class="btn btn-primary" type="submit" data-confirm="Guardar valoraciones y premios de esta fecha?">GUARDAR VALORACIONES</button>
+          <button class="btn btn-primary" type="submit" data-confirm="Guardar <?= h($valuationsScopeText) ?> de esta fecha?"><?= $valuationsIncludeRatings && $valuationsIncludeAwards ? 'GUARDAR VALORACIONES' : ($valuationsIncludeRatings ? 'GUARDAR PUNTAJES' : 'GUARDAR GOLES Y PREMIOS') ?></button>
         </div>
       </form>
       <?php if ($detailFormError !== ''): ?>
@@ -1645,7 +1673,7 @@ require __DIR__ . '/includes/header.php';
         </div>
       <?php endif; ?>
       <?php elseif (!$scoreSaved && !$formationOnlyView): ?>
-        <p class="flash flash-info">Guarda el resultado para habilitar la carga de puntajes y premios.</p>
+        <p class="flash flash-info">Guarda el resultado para habilitar la carga de <?= h($valuationsScopeText) ?>.</p>
       <?php endif; ?>
     <?php endif; ?>
   </section>

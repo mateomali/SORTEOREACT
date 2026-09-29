@@ -73,6 +73,21 @@ function ensure_directivos_schema(): void
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
     $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS match_director_vote_submissions (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            match_id INT UNSIGNED NOT NULL,
+            voter_id INT UNSIGNED NOT NULL,
+            valuation_mode ENUM('both', 'ratings', 'awards') NOT NULL DEFAULT 'both',
+            submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_director_vote_submission (match_id, voter_id),
+            INDEX idx_director_vote_submission_match (match_id),
+            CONSTRAINT fk_director_vote_submission_match FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            CONSTRAINT fk_director_vote_submission_voter FOREIGN KEY (voter_id) REFERENCES directive_members(id) ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    $pdo->exec(
         "CREATE TABLE IF NOT EXISTS match_director_publications (
             match_id INT UNSIGNED PRIMARY KEY,
             published_at DATETIME NOT NULL,
@@ -608,16 +623,80 @@ function directive_match_is_published(int $matchId): bool
     return (int) $stmt->fetchColumn() > 0;
 }
 
-function directive_member_completed_match(int $matchId, int $voterId, int $participantCount): bool
+function directive_member_completed_match(int $matchId, int $voterId, int $participantCount, ?string $valuationMode = null): bool
 {
     if ($voterId <= 0 || $participantCount <= 0) {
         return false;
     }
+
+    $mode = normalize_match_valuation_mode($valuationMode ?? directive_match_valuation_mode($matchId));
+    if (match_valuation_includes_ratings($mode)) {
+        $stmt = db()->prepare(
+            'SELECT COUNT(*) FROM match_director_rating_votes WHERE match_id = :mid AND voter_id = :voter_id'
+        );
+        $stmt->execute(['mid' => $matchId, 'voter_id' => $voterId]);
+        if ((int) $stmt->fetchColumn() >= $participantCount) {
+            return true;
+        }
+    }
+
+    return directive_vote_submission_exists($matchId, $voterId);
+}
+
+/**
+ * Modo de valoraciones de la fecha, para saber que debe votar la junta.
+ */
+function directive_match_valuation_mode(int $matchId): string
+{
+    $match = repo_match_by_id($matchId);
+    return $match ? match_valuation_mode($match) : 'both';
+}
+
+function directive_vote_submission_exists(int $matchId, int $voterId): bool
+{
+    ensure_directivos_schema();
     $stmt = db()->prepare(
-        'SELECT COUNT(*) FROM match_director_rating_votes WHERE match_id = :mid AND voter_id = :voter_id'
+        'SELECT COUNT(*) FROM match_director_vote_submissions WHERE match_id = :mid AND voter_id = :voter_id'
     );
     $stmt->execute(['mid' => $matchId, 'voter_id' => $voterId]);
-    return (int) $stmt->fetchColumn() >= $participantCount;
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+/**
+ * Votantes que enviaron su voto en esta fecha (puntajes completos o formulario enviado).
+ */
+function directive_completed_voter_ids(int $matchId, int $participantCount, ?string $valuationMode = null): array
+{
+    ensure_directivos_schema();
+    if ($matchId <= 0 || $participantCount <= 0) {
+        return [];
+    }
+
+    $mode = normalize_match_valuation_mode($valuationMode ?? directive_match_valuation_mode($matchId));
+    $completed = [];
+
+    if (match_valuation_includes_ratings($mode)) {
+        $stmt = db()->prepare(
+            'SELECT voter_id, COUNT(*) AS rating_count
+             FROM match_director_rating_votes
+             WHERE match_id = :mid
+             GROUP BY voter_id'
+        );
+        $stmt->execute(['mid' => $matchId]);
+        foreach ($stmt->fetchAll() as $row) {
+            if ((int) $row['rating_count'] >= $participantCount) {
+                $completed[(int) $row['voter_id']] = true;
+            }
+        }
+    }
+
+    $submissionStmt = db()->prepare('SELECT voter_id FROM match_director_vote_submissions WHERE match_id = :mid');
+    $submissionStmt->execute(['mid' => $matchId]);
+    foreach ($submissionStmt->fetchAll() as $row) {
+        $completed[(int) $row['voter_id']] = true;
+    }
+
+    return array_keys($completed);
 }
 
 function directive_member_rating_votes(int $matchId, int $voterId): array
@@ -662,7 +741,7 @@ function directive_publication(int $matchId): ?array
     return $row ?: null;
 }
 
-function directive_vote_status(int $matchId, int $participantCount): array
+function directive_vote_status(int $matchId, int $participantCount, ?string $valuationMode = null): array
 {
     ensure_directivos_schema();
     $eligible = directive_members(true);
@@ -670,88 +749,89 @@ function directive_vote_status(int $matchId, int $participantCount): array
     if (!$eligibleIds || $participantCount <= 0) {
         return ['eligible' => count($eligibleIds), 'submitted' => 0, 'eligible_ids' => $eligibleIds];
     }
-    $in = implode(',', array_fill(0, count($eligibleIds), '?'));
-    $stmt = db()->prepare(
-        "SELECT voter_id, COUNT(*) AS rating_count
-         FROM match_director_rating_votes
-         WHERE match_id = ? AND voter_id IN ($in)
-         GROUP BY voter_id"
-    );
-    $stmt->execute(array_merge([$matchId], $eligibleIds));
+
+    $completedIds = array_flip(directive_completed_voter_ids($matchId, $participantCount, $valuationMode));
     $submitted = 0;
-    foreach ($stmt->fetchAll() as $row) {
-        if ((int) $row['rating_count'] >= $participantCount) {
+    foreach ($eligibleIds as $eligibleId) {
+        if (isset($completedIds[$eligibleId])) {
             $submitted++;
         }
     }
+
     return ['eligible' => count($eligibleIds), 'submitted' => $submitted, 'eligible_ids' => $eligibleIds];
 }
 
-function directive_complete_vote_count(int $matchId, int $participantCount): int
+function directive_complete_vote_count(int $matchId, int $participantCount, ?string $valuationMode = null): int
 {
     ensure_directivos_schema();
     if ($participantCount <= 0) {
         return 0;
     }
-    $stmt = db()->prepare(
-        'SELECT voter_id, COUNT(*) AS rating_count
-         FROM match_director_rating_votes
-         WHERE match_id = :mid
-         GROUP BY voter_id'
-    );
-    $stmt->execute(['mid' => $matchId]);
-    $submitted = 0;
-    foreach ($stmt->fetchAll() as $row) {
-        if ((int) $row['rating_count'] >= $participantCount) {
-            $submitted++;
-        }
-    }
-    return $submitted;
+    return count(directive_completed_voter_ids($matchId, $participantCount, $valuationMode));
 }
 
-function directive_save_vote(int $matchId, int $voterId, array $ratings, array $awards, array $allowedPlayerIds): void
+function directive_save_vote(int $matchId, int $voterId, array $ratings, array $awards, array $allowedPlayerIds, ?string $valuationMode = null): void
 {
     ensure_directivos_schema();
+    $mode = normalize_match_valuation_mode($valuationMode ?? directive_match_valuation_mode($matchId));
+    $includeRatings = match_valuation_includes_ratings($mode);
+    $includeAwards = match_valuation_includes_awards($mode);
+    if (!$includeRatings && !$includeAwards) {
+        throw new RuntimeException('Esta fecha no tiene valoraciones habilitadas.');
+    }
+
     $allowed = array_flip(array_map('intval', $allowedPlayerIds));
     $pdo = db();
     $pdo->beginTransaction();
     try {
-        $ratingStmt = $pdo->prepare(
-            'INSERT INTO match_director_rating_votes (match_id, voter_id, player_id, rating)
-             VALUES (:mid, :voter_id, :pid, :rating)
-             ON DUPLICATE KEY UPDATE rating = VALUES(rating), updated_at = CURRENT_TIMESTAMP'
-        );
-        foreach ($allowedPlayerIds as $playerId) {
-            $pid = (int) $playerId;
-            if (!isset($ratings[$pid]) || trim((string) $ratings[$pid]) === '') {
-                throw new RuntimeException('Completa todos los puntajes antes de enviar tu voto.');
+        if ($includeRatings) {
+            $ratingStmt = $pdo->prepare(
+                'INSERT INTO match_director_rating_votes (match_id, voter_id, player_id, rating)
+                 VALUES (:mid, :voter_id, :pid, :rating)
+                 ON DUPLICATE KEY UPDATE rating = VALUES(rating), updated_at = CURRENT_TIMESTAMP'
+            );
+            foreach ($allowedPlayerIds as $playerId) {
+                $pid = (int) $playerId;
+                if (!isset($ratings[$pid]) || trim((string) $ratings[$pid]) === '') {
+                    throw new RuntimeException('Completa todos los puntajes antes de enviar tu voto.');
+                }
+                $rating = max(1.0, min(10.0, round(((float) $ratings[$pid]) * 2) / 2));
+                $ratingStmt->execute(['mid' => $matchId, 'voter_id' => $voterId, 'pid' => $pid, 'rating' => $rating]);
             }
-            $rating = max(1.0, min(10.0, round(((float) $ratings[$pid]) * 2) / 2));
-            $ratingStmt->execute(['mid' => $matchId, 'voter_id' => $voterId, 'pid' => $pid, 'rating' => $rating]);
         }
 
-        $definitions = award_definitions();
-        $deleteAward = $pdo->prepare('DELETE FROM match_director_award_votes WHERE match_id = :mid AND voter_id = :voter_id AND award_code = :code');
-        $awardStmt = $pdo->prepare(
-            'INSERT INTO match_director_award_votes (match_id, voter_id, award_code, player_id)
-             VALUES (:mid, :voter_id, :code, :pid)
-             ON DUPLICATE KEY UPDATE player_id = VALUES(player_id), updated_at = CURRENT_TIMESTAMP'
-        );
-        foreach ($definitions as $code => $_definition) {
-            $rawAward = trim((string) ($awards[$code] ?? ''));
-            if ($rawAward === '') {
-                $deleteAward->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code]);
-                continue;
+        if ($includeAwards) {
+            $definitions = award_definitions();
+            $deleteAward = $pdo->prepare('DELETE FROM match_director_award_votes WHERE match_id = :mid AND voter_id = :voter_id AND award_code = :code');
+            $awardStmt = $pdo->prepare(
+                'INSERT INTO match_director_award_votes (match_id, voter_id, award_code, player_id)
+                 VALUES (:mid, :voter_id, :code, :pid)
+                 ON DUPLICATE KEY UPDATE player_id = VALUES(player_id), updated_at = CURRENT_TIMESTAMP'
+            );
+            foreach ($definitions as $code => $_definition) {
+                $rawAward = trim((string) ($awards[$code] ?? ''));
+                if ($rawAward === '') {
+                    $deleteAward->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code]);
+                    continue;
+                }
+                if (preg_match('/#(\d+)/', $rawAward, $matchAward) !== 1) {
+                    throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
+                }
+                $pid = (int) $matchAward[1];
+                if (!isset($allowed[$pid])) {
+                    throw new RuntimeException('Premio invalido: el jugador no participo de la fecha.');
+                }
+                $awardStmt->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code, 'pid' => $pid]);
             }
-            if (preg_match('/#(\d+)/', $rawAward, $matchAward) !== 1) {
-                throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
-            }
-            $pid = (int) $matchAward[1];
-            if (!isset($allowed[$pid])) {
-                throw new RuntimeException('Premio invalido: el jugador no participo de la fecha.');
-            }
-            $awardStmt->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code, 'pid' => $pid]);
         }
+
+        $submissionStmt = $pdo->prepare(
+            'INSERT INTO match_director_vote_submissions (match_id, voter_id, valuation_mode, submitted_at)
+             VALUES (:mid, :voter_id, :mode, NOW())
+             ON DUPLICATE KEY UPDATE valuation_mode = VALUES(valuation_mode), submitted_at = VALUES(submitted_at), updated_at = CURRENT_TIMESTAMP'
+        );
+        $submissionStmt->execute(['mid' => $matchId, 'voter_id' => $voterId, 'mode' => $mode]);
+
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -776,7 +856,7 @@ function directive_publish_if_ready(array $match, array $participants): bool
     if ($participantCount === 0) {
         return false;
     }
-    $status = directive_vote_status($matchId, $participantCount);
+    $status = directive_vote_status($matchId, $participantCount, match_valuation_mode($match));
     $deadline = directive_voting_deadline($match);
     $allVoted = (int) $status['eligible'] > 0 && (int) $status['submitted'] >= (int) $status['eligible'];
     $deadlineExpired = $deadline !== null && time() >= $deadline && (int) $status['submitted'] > 0;
@@ -890,9 +970,10 @@ function directive_vote_invite_by_token(string $token): ?array
     return $id > 0 ? directive_vote_invite_by_id($id) : null;
 }
 
-function directive_vote_invites_for_match(int $matchId, int $participantCount = 0): array
+function directive_vote_invites_for_match(int $matchId, int $participantCount = 0, ?string $valuationMode = null): array
 {
     ensure_directivos_schema();
+    $mode = normalize_match_valuation_mode($valuationMode ?? directive_match_valuation_mode($matchId));
     $stmt = db()->prepare(
         'SELECT i.*, p.name AS player_name
          FROM match_director_vote_invites i
@@ -904,7 +985,7 @@ function directive_vote_invites_for_match(int $matchId, int $participantCount = 
     $rows = $stmt->fetchAll();
     foreach ($rows as &$row) {
         $row['vote_complete'] = $participantCount > 0
-            ? directive_member_completed_match($matchId, (int) $row['voter_member_id'], $participantCount)
+            ? directive_member_completed_match($matchId, (int) $row['voter_member_id'], $participantCount, $mode)
             : false;
     }
     unset($row);
@@ -926,8 +1007,11 @@ function directive_publish_match_results(array $match, array $participants, stri
     if ($participantCount === 0) {
         return false;
     }
-    $status = directive_vote_status($matchId, $participantCount);
-    if ($requireSubmittedVote && directive_complete_vote_count($matchId, $participantCount) <= 0) {
+    $mode = match_valuation_mode($match);
+    $includeRatings = match_valuation_includes_ratings($mode);
+    $includeAwards = match_valuation_includes_awards($mode);
+    $status = directive_vote_status($matchId, $participantCount, $mode);
+    if ($requireSubmittedVote && directive_complete_vote_count($matchId, $participantCount, $mode) <= 0) {
         throw new RuntimeException('Todavia no hay votos completos para publicar resultados.');
     }
     $reason = in_array($reason, ['all_voted', 'deadline', 'admin'], true) ? $reason : 'admin';
@@ -935,26 +1019,30 @@ function directive_publish_match_results(array $match, array $participants, stri
     $pdo = db();
     $pdo->beginTransaction();
     try {
-        $inPlayers = implode(',', array_fill(0, count($participantIds), '?'));
-        $ratingRows = [];
-        $stmt = $pdo->prepare(
-            "SELECT player_id, ROUND(AVG(rating), 1) AS rating
-             FROM match_director_rating_votes
-             WHERE match_id = ? AND player_id IN ($inPlayers)
-             GROUP BY player_id"
-        );
-        $stmt->execute(array_merge([$matchId], $participantIds));
-        foreach ($stmt->fetchAll() as $row) {
-            $ratingRows[(int) $row['player_id']] = (float) $row['rating'];
-        }
-        $updateRating = $pdo->prepare('UPDATE match_players SET rating = :rating WHERE match_id = :mid AND player_id = :pid');
-        foreach ($ratingRows as $playerId => $rating) {
-            $updateRating->execute(['mid' => $matchId, 'pid' => $playerId, 'rating' => $rating]);
+        if ($includeRatings) {
+            $inPlayers = implode(',', array_fill(0, count($participantIds), '?'));
+            $ratingRows = [];
+            $stmt = $pdo->prepare(
+                "SELECT player_id, ROUND(AVG(rating), 1) AS rating
+                 FROM match_director_rating_votes
+                 WHERE match_id = ? AND player_id IN ($inPlayers)
+                 GROUP BY player_id"
+            );
+            $stmt->execute(array_merge([$matchId], $participantIds));
+            foreach ($stmt->fetchAll() as $row) {
+                $ratingRows[(int) $row['player_id']] = (float) $row['rating'];
+            }
+            $updateRating = $pdo->prepare('UPDATE match_players SET rating = :rating WHERE match_id = :mid AND player_id = :pid');
+            foreach ($ratingRows as $playerId => $rating) {
+                $updateRating->execute(['mid' => $matchId, 'pid' => $playerId, 'rating' => $rating]);
+            }
         }
 
-        $allowedAwardPlayerIds = $participantIds;
-        $finalAwards = directive_resolve_awards($matchId, $allowedAwardPlayerIds);
-        repo_save_match_awards($matchId, $finalAwards, $allowedAwardPlayerIds);
+        if ($includeAwards) {
+            $allowedAwardPlayerIds = $participantIds;
+            $finalAwards = directive_resolve_awards($matchId, $allowedAwardPlayerIds);
+            repo_save_match_awards($matchId, $finalAwards, $allowedAwardPlayerIds);
+        }
 
         $insertPublication = $pdo->prepare(
             'INSERT INTO match_director_publications (match_id, published_at, reason, eligible_voters, submitted_voters)
@@ -976,23 +1064,36 @@ function directive_publish_match_results(array $match, array $participants, stri
     }
 }
 
-function directive_publish_due_results(): int
+/**
+ * Fechas finalizadas con votos de la junta pendientes de publicacion.
+ * Incluye fechas que solo votan premios (sin votos de puntaje).
+ */
+function directive_pending_publication_matches(): array
 {
     ensure_directivos_schema();
     $stmt = db()->query(
         "SELECT DISTINCT m.*
          FROM matches m
-         INNER JOIN match_director_rating_votes rv ON rv.match_id = m.id
          LEFT JOIN match_director_publications mp ON mp.match_id = m.id
          WHERE m.status = 'finalizado'
            AND m.finalized_at IS NOT NULL
            AND m.finalized_at <> ''
            AND mp.match_id IS NULL
+           AND (
+             EXISTS (SELECT 1 FROM match_director_rating_votes rv WHERE rv.match_id = m.id)
+             OR EXISTS (SELECT 1 FROM match_director_award_votes av WHERE av.match_id = m.id)
+             OR EXISTS (SELECT 1 FROM match_director_vote_submissions vs WHERE vs.match_id = m.id)
+           )
          ORDER BY m.match_date DESC, m.id DESC"
     );
+    return $stmt->fetchAll();
+}
 
+function directive_publish_due_results(): int
+{
+    ensure_directivos_schema();
     $published = 0;
-    foreach ($stmt->fetchAll() as $match) {
+    foreach (directive_pending_publication_matches() as $match) {
         if (directive_publish_if_ready($match, repo_match_participants((int) $match['id']))) {
             $published++;
         }
@@ -1047,6 +1148,9 @@ function directive_resolve_awards(int $matchId, array $allowedPlayerIds): array
         usort($rows, static function (array $a, array $b) use ($ratingAverages, $goals, $names): int {
             $aId = (int) $a['player_id'];
             $bId = (int) $b['player_id'];
+            // Gana el jugador con mas votos de la junta.
+            // Desempate: mejor promedio de la junta (si la fecha se puntua),
+            // luego mas goles en la fecha y por ultimo orden alfabetico.
             return ((int) $b['votes'] <=> (int) $a['votes'])
                 ?: (($ratingAverages[$bId] ?? 0.0) <=> ($ratingAverages[$aId] ?? 0.0))
                 ?: (($goals[$bId] ?? 0) <=> ($goals[$aId] ?? 0))
