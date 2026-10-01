@@ -576,7 +576,8 @@ function fieldLineMinimum(position, teamSize) {
   if (line === 'ARQ') return 1;
   if (fieldPlayers === 4) return REQUIRED_FIELD_LINES.includes(line) ? 1 : 0;
   if (fieldPlayers < 5) return 0;
-  if (line === 'DEF' || line === 'MED') return 2;
+  if (line === 'MED') return Number(teamSize) < 7 ? 1 : 2;
+  if (line === 'DEF') return 2;
   if (line === 'DEL') return 1;
   return 0;
 }
@@ -4160,25 +4161,35 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const handlePlayerPointerDown = (event, teamIndex, player, assignedPosition) => {
     event.stopPropagation();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.pointerType === 'mouse') event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (pointerDragRef.current.source) clearPointerDrag(true);
     const source = { teamIndex, playerKey: playerKey(player), assignedPosition, player };
     pointerDragRef.current = {
       active: false,
       hoverTarget: null,
       source,
+      pointerType: event.pointerType,
+      pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       suppressClick: false,
-      timer: window.setTimeout(() => beginPointerDrag(event, source), 140),
+      timer: event.pointerType === 'mouse' ? null : window.setTimeout(() => {
+        if (pointerDragRef.current.source === source) beginDragAtPoint(source, pointerDragRef.current.startX, pointerDragRef.current.startY);
+      }, 450),
     };
   };
 
   const handlePlayerPointerMove = (event) => {
     const pointerDrag = pointerDragRef.current;
-    if (!pointerDrag.source) return;
+    if (!pointerDrag.source || pointerDrag.pointerId !== event.pointerId) return;
     const moved = Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY);
     if (!pointerDrag.active && moved > 8) {
       if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
+      if (pointerDrag.pointerType !== 'mouse') {
+        clearPointerDrag(true);
+        return;
+      }
       beginPointerDrag(event, pointerDrag.source);
     }
     if (pointerDragRef.current.active) {
@@ -4269,7 +4280,9 @@ export function SorteoLegacyPageIsland({ root }) {
       startX: touch.clientX,
       startY: touch.clientY,
       suppressClick: false,
-      timer: window.setTimeout(() => beginDragAtPoint(source, touch.clientX, touch.clientY), 140),
+      timer: window.setTimeout(() => {
+        if (pointerDragRef.current.source === source) beginDragAtPoint(source, touch.clientX, touch.clientY);
+      }, 450),
     };
   };
 
@@ -4281,7 +4294,8 @@ export function SorteoLegacyPageIsland({ root }) {
     const moved = Math.hypot(touch.clientX - pointerDrag.startX, touch.clientY - pointerDrag.startY);
     if (!pointerDrag.active && moved > 8) {
       if (pointerDrag.timer) window.clearTimeout(pointerDrag.timer);
-      beginDragAtPoint(pointerDrag.source, touch.clientX, touch.clientY);
+      clearPointerDrag(true);
+      return;
     }
     if (pointerDragRef.current.active) {
       event.preventDefault();
@@ -4324,10 +4338,23 @@ export function SorteoLegacyPageIsland({ root }) {
       if (!pointerDragRef.current.source || event.pointerType === 'mouse') return;
       handlePlayerPointerCancel();
     };
+    // A non-passive touch listener prevents native scrolling only AFTER the
+    // deliberate hold. Pointer preventDefault alone cannot stop a touch pan.
+    const handleNativeTouchMove = (event) => {
+      if (!window.PointerEvent || !pointerDragRef.current.active) return;
+      if (event.cancelable) event.preventDefault();
+    };
+    const cancelPendingOnScroll = () => {
+      if (pointerDragRef.current.source && !pointerDragRef.current.active) clearPointerDrag(true);
+    };
+    window.addEventListener('touchmove', handleNativeTouchMove, { passive: false, capture: true });
+    window.addEventListener('scroll', cancelPendingOnScroll, { capture: true });
     window.addEventListener('pointermove', handleWindowPointerMove, { passive: false, capture: true });
     window.addEventListener('pointerup', handleWindowPointerUp, { passive: false, capture: true });
     window.addEventListener('pointercancel', handleWindowPointerCancel, { passive: false, capture: true });
     return () => {
+      window.removeEventListener('touchmove', handleNativeTouchMove, { capture: true });
+      window.removeEventListener('scroll', cancelPendingOnScroll, { capture: true });
       window.removeEventListener('pointermove', handleWindowPointerMove, { capture: true });
       window.removeEventListener('pointerup', handleWindowPointerUp, { capture: true });
       window.removeEventListener('pointercancel', handleWindowPointerCancel, { capture: true });

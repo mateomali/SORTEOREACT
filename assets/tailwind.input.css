@@ -23502,7 +23502,7 @@ body.page-sorteo-legacy .player-availability-range::-moz-range-thumb {
 }
 
 body.page-sorteo-legacy .team-formation [data-sorteo-drag-player] {
-  touch-action: none;
+  touch-action: auto;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

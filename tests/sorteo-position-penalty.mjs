@@ -9,14 +9,18 @@ const server = await createServer({
     enforce: 'pre',
     transform(code, id) {
       if (id.replaceAll('\\', '/').endsWith('/src/pages/SorteoLegacyPageIsland.jsx')) {
-        return `${code}\nexport { positionPenaltyPercent, CompactPlayerCard };`;
+        return `${code}\nexport { positionPenaltyPercent, CompactPlayerCard, fieldLineMinimum, fieldLineCountsFitLimits, getFormationCandidates };`;
       }
     },
   }],
 });
 
 try {
-  const { positionPenaltyPercent, CompactPlayerCard } = await server.ssrLoadModule('/src/pages/SorteoLegacyPageIsland.jsx');
+  const { positionPenaltyPercent, CompactPlayerCard, fieldLineMinimum, fieldLineCountsFitLimits } = await server.ssrLoadModule('/src/pages/SorteoLegacyPageIsland.jsx');
+  assert.equal(fieldLineMinimum('MED', 6), 1);
+  assert.equal(fieldLineMinimum('MED', 7), 2);
+  assert.equal(fieldLineCountsFitLimits({ ARQ: 1, DEF: 2, LAT: 0, MED: 1, DEL: 2 }, 6), true);
+  assert.equal(fieldLineCountsFitLimits({ ARQ: 1, DEF: 2, LAT: 0, MED: 1, DEL: 3 }, 7), false);
   const player = {
     nombre: 'PRUEBA', posicion: 'MED/DEL', puntuacion: 4,
     tecnica: 4, pase_vision: 4, ritmo_stat: 4, resistencia: 4,

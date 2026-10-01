@@ -32,6 +32,10 @@ function test_player(int $id, string $name, string $positions, float $skill, arr
     ], $overrides);
 }
 
+assert_true(draw_pitch_line_minimum('MED', 6) === 1, 'Con seis jugadores se permite un mediocampista.');
+assert_true(draw_pitch_line_minimum('MED', 7) === 2, 'Con siete jugadores se requieren dos mediocampistas.');
+assert_true(draw_pitch_line_minimum('DEF', 6) === 2, 'Se conserva el minimo de defensa para seis jugadores.');
+
 $players = [
     test_player(1, 'Arquero A', 'ARQ', 4.4, ['goalkeeper_skill' => 5.2]),
     test_player(2, 'Arquero B', 'ARQ', 4.2, ['goalkeeper_skill' => 5.0]),

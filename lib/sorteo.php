@@ -75,7 +75,10 @@ function draw_pitch_line_minimum(string $position, int $teamSize): int
     if ($fieldPlayers < 5) {
         return 0;
     }
-    if ($line === 'DEF' || $line === 'MED') {
+    if ($line === 'MED') {
+        return $teamSize < 7 ? 1 : 2;
+    }
+    if ($line === 'DEF') {
         return 2;
     }
     if ($line === 'DEL') {

@@ -86,8 +86,23 @@ test('mobile courts scroll horizontally and edge dragging reaches the other team
   const bounds = await scroller.boundingBox();
   const cdp = await page.context().newCDPSession(page);
   const point = (x, y) => [{ x, y, id: 1 }];
+  // Starting a normal vertical swipe on a player must scroll, never move it.
+  const beforeScroll = await page.evaluate(() => window.scrollY);
+  const beforePlayers = await page.locator('[data-sorteo-drag-player]').evaluateAll(nodes => nodes.map(node => [node.dataset.playerKey, node.dataset.teamIndex, node.dataset.assignedPosition]));
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(a.x + a.width / 2, a.y + a.height / 2) });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(bounds.x + bounds.width - 4, a.y + a.height / 2) });
+  for (let step = 1; step <= 6; step += 1) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(a.x + a.width / 2, a.y + a.height / 2 - step * 20) });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(beforeScroll + 40);
+  await expect(scroller).toHaveAttribute('data-dragging', 'false');
+  expect(await page.locator('[data-sorteo-drag-player]').evaluateAll(nodes => nodes.map(node => [node.dataset.playerKey, node.dataset.teamIndex, node.dataset.assignedPosition]))).toEqual(beforePlayers);
+  await expect(page.getByRole('region', { name: 'Mover o intercambiar jugador' })).toHaveCount(0);
+  await source.evaluate(node => node.scrollIntoView({ block: 'center', inline: 'nearest' }));
+  const heldBox = await source.boundingBox();
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(heldBox.x + heldBox.width / 2, heldBox.y + heldBox.height / 2) });
+  await expect(scroller).toHaveAttribute('data-dragging', 'true');
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(bounds.x + bounds.width - 4, heldBox.y + heldBox.height / 2) });
   await expect.poll(() => scroller.evaluate(node => node.scrollLeft)).toBeGreaterThan(geometry.width * .98);
   const b = await target.boundingBox();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(b.x + b.width / 2, b.y + b.height / 2) });
