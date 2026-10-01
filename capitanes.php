@@ -251,7 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'start
         $pdo->prepare('DELETE FROM match_teams WHERE match_id = :mid')->execute(['mid' => $matchId]);
         $pdo->prepare(
             'UPDATE match_players
-             SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0
+             SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0, is_substitute = 0
              WHERE match_id = :mid'
         )->execute(['mid' => $matchId]);
 
@@ -328,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
             $pdo->prepare('DELETE FROM match_teams WHERE match_id = :mid')->execute(['mid' => $matchId]);
             $pdo->prepare(
                 'UPDATE match_players
-                 SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0
+                 SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0, is_substitute = 0
                  WHERE match_id = :mid'
             )->execute(['mid' => $matchId]);
             $pdo->prepare('UPDATE matches SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL WHERE id = :mid')->execute(['mid' => $matchId]);

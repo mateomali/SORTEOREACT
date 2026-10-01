@@ -240,7 +240,7 @@ function profile_player_card(array $player, array $statLabels, array $statHelp):
 function profile_next_match_grouped_players(int $matchId): array
 {
     $stmt = db()->prepare(
-        "SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.lineup_order, mp.formation_line_order
+        "SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.is_substitute, mp.lineup_order, mp.formation_line_order
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid
@@ -255,10 +255,11 @@ function profile_next_match_grouped_players(int $matchId): array
     $grouped = [];
     foreach ($stmt->fetchAll() as $row) {
         $teamNumber = (int) $row['team_number'];
-        $line = (string) ($row['assigned_position'] ?: 'MED');
+        $line = !empty($row['is_substitute']) ? 'SUP' : (string) ($row['assigned_position'] ?: 'MED');
         if (!isset($grouped[$teamNumber])) {
             $grouped[$teamNumber] = array_fill_keys(player_formation_lines(), []);
         }
+        if ($line === 'SUP') $grouped[$teamNumber]['SUP'] = $grouped[$teamNumber]['SUP'] ?? [];
         if (!isset($grouped[$teamNumber][$line])) {
             $line = 'MED';
         }
@@ -285,9 +286,9 @@ function profile_render_next_match_formations(array $match, int $currentPlayerId
     foreach ($grouped as $teamNumber => $lines) {
         $label = $labels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber);
         $players = [];
-        foreach (player_formation_lines() as $line) {
+        foreach (array_keys($lines) as $line) {
             foreach (($lines[$line] ?? []) as $playerRow) {
-                $playerRow['assigned_position'] = $line;
+                if ($line !== 'SUP') $playerRow['assigned_position'] = $line;
                 $playerRow['rating'] = player_overall_rating($playerRow);
                 $players[] = $playerRow;
             }
@@ -608,6 +609,7 @@ function profile_render_match_detail_content(array $match, int $currentPlayerId)
                 </div>
               <?php endforeach; ?>
             </div>
+            <?= render_substitute_bench($lines['SUP'] ?? []) ?>
             <?= profile_render_team_characteristics($teamPlayers) ?>
           </article>
         <?php endforeach; ?>

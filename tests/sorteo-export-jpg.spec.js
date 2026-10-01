@@ -17,6 +17,21 @@ async function openSorteo(page) {
 }
 
 async function downloadJpg(page, name) {
+  await page.evaluate(() => {
+    window.exportContent = null;
+    const observer = new MutationObserver(() => {
+      const copy = document.querySelector('[data-export-formations]');
+      if (!copy) return;
+      window.exportContent = {
+        teams: copy.children.length,
+        sections: [...copy.children].map(card => [...card.children].map(node => node.matches('[data-team-title]') ? 'title' : node.matches('.team-formation') ? 'pitch' : 'extra')),
+        editingButtons: copy.querySelectorAll('button:not([data-sorteo-drag-player])').length,
+        extras: copy.querySelectorAll('select, [data-team-bench], .sorteo-team-stats').length,
+      };
+      observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
   const downloadReady = page.waitForEvent('download');
   if (name) {
     await page.locator('details').filter({ hasText: 'Exportar' }).first().locator('summary').click();
@@ -28,6 +43,7 @@ async function downloadJpg(page, name) {
   const exportPath = path.join('test-results', `${name ? 'desktop' : 'mobile'}-jpg-export.jpg`);
   fs.mkdirSync('test-results', { recursive: true });
   await download.saveAs(exportPath);
+  expect(await page.evaluate(() => window.exportContent)).toEqual({ teams: 2, sections: [['title', 'pitch'], ['title', 'pitch']], editingButtons: 0, extras: 0 });
   return fs.readFileSync(exportPath).toString('base64');
 }
 
@@ -84,7 +100,7 @@ test('la captura JPG en movil apila los equipos y conserva todo el texto', async
 
   const geometry = await page.locator('[data-teams-scroller]').evaluate((node) => ({
     cardWidth: Math.round(node.clientWidth),
-    cardHeights: [...node.querySelectorAll('[data-sorteo-team-card]')].map((card) => Math.round(card.getBoundingClientRect().height)),
+    cardHeights: [...node.querySelectorAll('[data-sorteo-team-card]')].map((card) => Math.round(card.querySelector('.team-formation').getBoundingClientRect().height)),
     carouselWidth: Math.round(node.scrollWidth),
   }));
   expect(geometry.cardHeights).toHaveLength(2);
@@ -103,14 +119,14 @@ test('la captura JPG en movil apila los equipos y conserva todo el texto', async
   expect(exportInfo.grayRuns).toBe(0);
 });
 
-test('la captura JPG en escritorio mantiene los equipos lado a lado', async ({ page }) => {
+test('la captura JPG en escritorio apila solo nombres y canchas', async ({ page }) => {
   test.setTimeout(120000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openSorteo(page);
   await page.locator('#download-controls').scrollIntoViewIfNeeded();
 
   const geometry = await page.locator('#equipos-generados').evaluate((node) => ({
-    width: Math.round(node.getBoundingClientRect().width),
+    width: Math.round(node.querySelector('[data-sorteo-team-card]').getBoundingClientRect().width),
     height: Math.round(node.getBoundingClientRect().height),
   }));
 
@@ -118,8 +134,8 @@ test('la captura JPG en escritorio mantiene los equipos lado a lado', async ({ p
   const exportInfo = await analyseExport(page, base64);
 
   expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.width - 2);
-  // En escritorio las dos canchas comparten las mismas filas: una sola franja verde.
-  expect(exportInfo.pitchBands).toHaveLength(1);
+  // Tambien en escritorio se comparten las canchas una debajo de la otra.
+  expect(exportInfo.pitchBands).toHaveLength(2);
   expect(exportInfo.grayRuns).toBe(0);
 });
 
@@ -157,7 +173,7 @@ test.describe('captura con densidad 2x', () => {
 
     const geometry = await page.locator('[data-teams-scroller]').evaluate((node) => ({
       cardWidth: Math.round(node.clientWidth),
-      cardHeights: [...node.querySelectorAll('[data-sorteo-team-card]')].map((card) => Math.round(card.getBoundingClientRect().height)),
+      cardHeights: [...node.querySelectorAll('[data-sorteo-team-card]')].map((card) => Math.round(card.querySelector('.team-formation').getBoundingClientRect().height)),
     }));
 
     const base64 = await downloadJpg(page);

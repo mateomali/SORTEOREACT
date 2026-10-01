@@ -1,0 +1,6 @@
+﻿ACTUALIZACION SEGURA PARA HOSTINGER (sitio existente)
+1. Hacer copia de seguridad de los archivos y la base de datos del servidor.
+2. Extraer el ZIP en la carpeta actual de la aplicacion (donde esta index.php), sobrescribiendo solo los archivos incluidos.
+3. Conservar en el servidor config.php, jugadores.csv, uploads/ y todos los datos existentes. No borrar la carpeta del sitio antes de subir.
+4. El ZIP no contiene configuracion ni credenciales locales, SQL, CSV de jugadores ni archivos de uploads. Requiere la configuracion y los datos del sitio existente.
+5. Despues de subir, comprobar inicio de sesion, inicio, jugadores, sorteo e historial.

@@ -59,7 +59,7 @@ function repo_match_visible_to_current_user(array $match): bool
 function repo_match_participants(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.lineup_order, mp.formation_line_order, mp.availability_percent, mp.goals, mp.rating
+        'SELECT p.*, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.is_substitute, mp.lineup_order, mp.formation_line_order, mp.availability_percent, mp.goals, mp.rating
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          WHERE mp.match_id = :mid
@@ -219,6 +219,10 @@ function repo_grouped_team_players(int $matchId): array
         if (!isset($grouped[$team])) {
             $grouped[$team] = array_fill_keys(player_formation_lines(), []);
         }
+        if (!empty($p['is_substitute'])) {
+            $grouped[$team]['SUP'][] = $p;
+            continue;
+        }
         $line = $p['assigned_position'] ?: 'MED';
         if (!isset($grouped[$team][$line])) {
             $line = 'MED';
@@ -250,7 +254,7 @@ function repo_team_totals(int $matchId): array
         'SELECT mp.team_number, p.*
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
-         WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL
+         WHERE mp.match_id = :mid AND mp.team_number IS NOT NULL AND mp.is_substitute = 0
          ORDER BY mp.team_number ASC, p.name ASC'
     );
     $stmt->execute(['mid' => $matchId]);

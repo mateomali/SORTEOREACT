@@ -135,6 +135,7 @@ function team_formation_summary_legacy(array $team): string
 {
     $counts = array_fill_keys(player_formation_lines(), 0);
     foreach ($team as $player) {
+        if (!empty($player['is_substitute'])) continue;
         $assigned = normalize_assigned_position_legacy(
             isset($player['assigned_position']) ? (string) $player['assigned_position'] : '',
             $player
@@ -251,6 +252,7 @@ foreach ($postedTeams as $teamIdx => $teamPayload) {
             }
             $allIds[] = $pid;
             $player = $participantsById[$pid];
+            $player['is_substitute'] = !empty($row['is_substitute']) ? 1 : 0;
             $player['assigned_position'] = isset($row['assigned_position']) ? (string) $row['assigned_position'] : '';
             if (isset($row['availability_percent'])) {
                 $player['availability_percent'] = max(1, min(100, (int) round((float) $row['availability_percent'])));
@@ -330,10 +332,19 @@ foreach ($teams as $team) {
     }
 }
 
+foreach ($teams as $team) {
+    $starters = array_filter($team, static fn(array $p): bool => empty($p['is_substitute']));
+    if (!$starters || count(array_filter($starters, static fn(array $p): bool => normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p) === 'ARQ')) !== 1) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'message' => 'Cada cancha necesita jugadores y exactamente un arquero.']);
+        exit;
+    }
+}
+
 $teamScores = array_map(
     static fn(array $team): float => array_sum(array_map(static function (array $p): float {
         return player_overall_rating(availability_adjusted_player_legacy($p));
-    }, $team)),
+    }, array_filter($team, static fn(array $p): bool => empty($p['is_substitute'])))),
     $teams
 );
 $maxDiff = $teamScores ? round(max($teamScores) - min($teamScores), 1) : 0.5;
@@ -360,7 +371,7 @@ try {
 
     $clearPlayers = $pdo->prepare(
         'UPDATE match_players
-         SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0
+         SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0, is_substitute = 0
          WHERE match_id = :mid'
     );
     $clearPlayers->execute(['mid' => $matchId]);
@@ -374,7 +385,7 @@ try {
     );
     $savePlayer = $pdo->prepare(
         'UPDATE match_players
-         SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
+         SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper, is_substitute = :is_substitute,
              lineup_order = :lineup_order, formation_line_order = :formation_line_order,
              availability_percent = :availability_percent
          WHERE match_id = :mid AND player_id = :player_id'
@@ -385,7 +396,7 @@ try {
         $totalSkill = 0.0;
         foreach ($team as $p) {
             $assigned = normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p);
-            $totalSkill += adjusted_position_rating_legacy($p, $assigned);
+            if (empty($p['is_substitute'])) $totalSkill += adjusted_position_rating_legacy($p, $assigned);
         }
         $saveTeam->execute([
             'mid' => $matchId,
@@ -412,7 +423,8 @@ try {
                 'player_id' => (int) $player['id'],
                 'team_number' => $teamNumber,
                 'assigned_position' => $assigned,
-                'is_goalkeeper' => $assigned === 'ARQ' ? 1 : 0,
+                'is_substitute' => (int) ($player['is_substitute'] ?? 0),
+                'is_goalkeeper' => empty($player['is_substitute']) && $assigned === 'ARQ' ? 1 : 0,
                 'lineup_order' => $lineupIndex + 1,
                 'formation_line_order' => $lineOrder[$assigned],
                 'availability_percent' => availability_percent_legacy($player),

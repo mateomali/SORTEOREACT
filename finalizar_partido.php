@@ -103,9 +103,9 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
 
     foreach ($groupedTeams as $teamNumber => $positionLines) {
         $lines[] = (string) ($teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber));
-        foreach (player_formation_lines() as $line) {
+        foreach (array_keys($positionLines) as $line) {
             foreach ($positionLines[$line] as $player) {
-                $playerParts = ['- ' . (string) $player['name']];
+                $playerParts = ['- ' . (string) $player['name'] . (!empty($player['is_substitute']) ? ' (suplente)' : '')];
                 $goals = (int) ($player['goals'] ?? 0);
                 if ($goals > 0) {
                     $playerParts[] = $goals . ' ' . ($goals === 1 ? 'gol' : 'goles');
@@ -170,7 +170,7 @@ function finish_formation_name_from_counts(array $counts): string
     ]);
 }
 
-function finish_save_match_formations(int $matchId, array $participants, array $teams, array $teamColorData, array $teamAssignments, array $positionAssignments): void
+function finish_save_match_formations(int $matchId, array $participants, array $teams, array $teamColorData, array $teamAssignments, array $positionAssignments, array $substituteAssignments = []): void
 {
     $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], $teams);
     $teamNumberSet = array_flip($teamNumbers);
@@ -194,12 +194,20 @@ function finish_save_match_formations(int $matchId, array $participants, array $
             'id' => $playerId,
             'team_number' => $teamNumber,
             'position' => $position,
+            'is_substitute' => (int) ($substituteAssignments[$playerId] ?? $player['is_substitute'] ?? 0) === 1 ? 1 : 0,
             'skill' => (float) ($player['skill'] ?? 0),
         ];
     }
 
     if (!$formationRows) {
         throw new RuntimeException('No hay jugadores asignados para guardar la formacion.');
+    }
+
+    foreach ($teamNumbers as $teamNumber) {
+        $starters = array_filter($formationRows, static fn(array $row): bool => (int) $row['team_number'] === $teamNumber && empty($row['is_substitute']));
+        if (!$starters || count(array_filter($starters, static fn(array $row): bool => $row['position'] === 'ARQ')) !== 1) {
+            throw new RuntimeException('Cada cancha necesita jugadores y exactamente un arquero.');
+        }
     }
 
     $pdo = db();
@@ -210,7 +218,7 @@ function finish_save_match_formations(int $matchId, array $participants, array $
         $updateAssignment = $pdo->prepare(
             'UPDATE match_players
              SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
-                 lineup_order = :lineup_order, formation_line_order = :formation_line_order
+                 is_substitute = :is_substitute, lineup_order = :lineup_order, formation_line_order = :formation_line_order
              WHERE match_id = :mid AND player_id = :pid'
         );
         foreach ($formationRows as $row) {
@@ -224,7 +232,8 @@ function finish_save_match_formations(int $matchId, array $participants, array $
                 'pid' => (int) $row['id'],
                 'team_number' => $teamNumber,
                 'assigned_position' => $position,
-                'is_goalkeeper' => $position === 'ARQ' ? 1 : 0,
+                'is_substitute' => (int) $row['is_substitute'],
+                'is_goalkeeper' => empty($row['is_substitute']) && $position === 'ARQ' ? 1 : 0,
                 'lineup_order' => $lineupOrder[$teamNumber],
                 'formation_line_order' => $lineOrder[$teamNumber][$position],
             ]);
@@ -240,6 +249,7 @@ function finish_save_match_formations(int $matchId, array $participants, array $
             $counts = array_fill_keys(player_formation_lines(), 0);
             $totalSkill = 0.0;
             foreach ($teamRows as $row) {
+                if (!empty($row['is_substitute'])) continue;
                 $counts[(string) $row['position']]++;
                 $totalSkill += (float) $row['skill'];
             }
@@ -669,9 +679,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $positionAssignments = is_array($_POST['player_position'] ?? null) ? $_POST['player_position'] : [];
 
     try {
-        finish_save_match_formations($matchId, $participants, $teams, $teamColorData, $teamAssignments, $positionAssignments);
+        finish_save_match_formations($matchId, $participants, $teams, $teamColorData, $teamAssignments, $positionAssignments, is_array($_POST['player_substitute'] ?? null) ? $_POST['player_substitute'] : []);
+        if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true]);
+            exit;
+        }
         flash('success', 'Formaciones y camisetas guardadas.');
     } catch (Throwable $e) {
+        if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
         flash('error', 'No se pudieron guardar las formaciones: ' . $e->getMessage());
     }
     redirect('finalizar_partido.php?match_id=' . $matchId . '&edit_formations=1&formation_saved=1#formaciones');
@@ -833,6 +854,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                         'id' => $pid,
                         'team_number' => $teamNumber,
                         'position' => $position,
+                        'is_substitute' => (int) ($player['is_substitute'] ?? 0),
                         'skill' => (float) ($player['skill'] ?? 0),
                     ];
                 }
@@ -856,7 +878,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                         'pid' => (int) $row['id'],
                         'team_number' => $teamNumber,
                         'assigned_position' => $position,
-                        'is_goalkeeper' => $position === 'ARQ' ? 1 : 0,
+                        'is_goalkeeper' => empty($row['is_substitute']) && $position === 'ARQ' ? 1 : 0,
                         'lineup_order' => $lineupOrder[$teamNumber],
                         'formation_line_order' => $lineOrder[$teamNumber][$position],
                     ]);
@@ -872,6 +894,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                     $counts = array_fill_keys(player_formation_lines(), 0);
                     $totalSkill = 0.0;
                     foreach ($teamRows as $row) {
+                        if (!empty($row['is_substitute'])) continue;
                         $counts[(string) $row['position']]++;
                         $totalSkill += (float) $row['skill'];
                     }
@@ -1316,7 +1339,7 @@ require __DIR__ . '/includes/header.php';
               $teamPlayerRows[(int) $team['team_number']] = [];
           }
           foreach ($groupedTeams as $teamNumber => $lines) {
-              foreach (player_formation_lines() as $line) {
+              foreach (array_keys($lines) as $line) {
                   foreach ($lines[$line] as $player) {
                       $teamPlayerRows[(int) $teamNumber][] = $player;
                   }
@@ -1345,6 +1368,7 @@ require __DIR__ . '/includes/header.php';
               'regularidad' => player_effective_stat($p, 'regularity'),
               'habilidad_arquero' => player_effective_stat($p, 'goalkeeper_skill'),
               'selected' => true,
+              'is_substitute' => (int) ($p['is_substitute'] ?? 0),
               'assigned_position' => finish_player_position($p),
           ], $participants);
           $formationPlayersById = [];
@@ -1511,6 +1535,7 @@ require __DIR__ . '/includes/header.php';
                             </select>
                           </td>
                           <td data-label="Linea">
+                            <input type="hidden" name="player_substitute[<?= $playerId ?>]" value="<?= (int) ($player['is_substitute'] ?? 0) ?>">
                             <select name="player_position[<?= $playerId ?>]" aria-label="Linea de <?= h((string) $player['name']) ?>">
                               <?php foreach (allowed_positions() as $position): ?>
                                 <option value="<?= h($position) ?>" <?= selected_attr($currentPosition === $position) ?>><?= h($position) ?></option>
@@ -1595,7 +1620,7 @@ require __DIR__ . '/includes/header.php';
                       </tr>
                     </thead>
                     <tbody>
-                    <?php foreach (player_formation_lines() as $line): ?>
+                    <?php foreach (array_keys($lines) as $line): ?>
                       <?php foreach ($lines[$line] as $p): ?>
                         <?php
                           $playerId = (int) $p['id'];
@@ -1611,7 +1636,7 @@ require __DIR__ . '/includes/header.php';
                             <strong><?= h((string) $p['name']) ?></strong>
                             <small data-finish-player-position-label><?= h((string) $line) ?></small>
                             <input type="hidden" name="player_team[<?= $playerId ?>]" value="<?= (int) $teamNumber ?>" data-finish-player-team-input>
-                            <input type="hidden" name="player_position[<?= $playerId ?>]" value="<?= h((string) $line) ?>" data-finish-player-position-input>
+                            <input type="hidden" name="player_position[<?= $playerId ?>]" value="<?= h(finish_player_position($p)) ?>" data-finish-player-position-input>
                           </td>
                           <td data-label="Goles">
                             <input class="finish-number-input" type="number" min="0" step="1" name="goals[<?= $playerId ?>]" value="<?= h($goalsValue) ?>" data-finish-score-input data-finish-default-value="0">

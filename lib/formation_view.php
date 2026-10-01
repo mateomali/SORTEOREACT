@@ -99,6 +99,10 @@ function formation_view_group_players(array $players): array
         if (!is_array($player)) {
             continue;
         }
+        if (!empty($player['is_substitute'])) {
+            $lines['SUP'][] = $player;
+            continue;
+        }
         $line = strtoupper((string) ($player['assigned_position'] ?? 'MED'));
         if (!isset($lines[$line])) {
             $line = 'MED';
@@ -194,7 +198,7 @@ function formation_view_render_team(array $team, array $options = []): string
         $html .= '</div></div>';
     }
 
-    $html .= '</div></article>';
+    $html .= '</div>' . render_substitute_bench($lines['SUP'] ?? []) . '</article>';
 
     return $html;
 }

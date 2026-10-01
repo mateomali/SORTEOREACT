@@ -1066,6 +1066,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                 </div>
               <?php endforeach; ?>
             </div>
+            <?= render_substitute_bench($lines['SUP'] ?? []) ?>
             <?= render_public_team_characteristics($teamPlayersForCharacteristics) ?>
           </article>
         <?php endforeach; ?>

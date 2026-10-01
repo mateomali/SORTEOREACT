@@ -24323,3 +24323,7 @@ body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"
   outline: 2px solid #1673db;
   outline-offset: 1px;
 }
+
+.sorteo-substitute-bench { margin-top: 12px; padding: 12px; border: 1px solid #d7e6df; border-radius: 8px; background: #fff; color: #173c2e; }
+.sorteo-substitute-bench h4 { margin: 0 0 8px; font-size: 14px; }
+.sorteo-substitute-bench ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }

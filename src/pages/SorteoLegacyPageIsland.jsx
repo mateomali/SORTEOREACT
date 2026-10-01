@@ -2680,7 +2680,8 @@ export function SorteoLegacyPageIsland({ root }) {
   const [maxDiff, setMaxDiff] = useState(0.7);
   const [sortKey, setSortKey] = useState('nombre');
   const [sortDirection, setSortDirection] = useState(1);
-  const [teams, setTeams] = useState(() => (initialTeams.length ? initialTeams : null));
+  const [teams, setTeams] = useState(() => (initialTeams.length ? initialTeams.map(team => team.filter(player => !Number(player.is_substitute))) : null));
+  const [benches, setBenches] = useState(() => Object.fromEntries(initialTeams.map((team, index) => [index, team.filter(player => Number(player.is_substitute))])));
   const [assignments, setAssignments] = useState(() => initialAssignments);
   const [teamColors, setTeamColors] = useState(() => Array.from(
     { length: payload.numTeams },
@@ -2927,6 +2928,7 @@ export function SorteoLegacyPageIsland({ root }) {
     const updateOne = (item) => (playerKey(item) === key ? normalizePlayer({ ...item, availability_percent: nextPercent }, 0) : item);
     setPlayers((current) => current.map(updateOne));
     setTeams((current) => (current ? current.map((team) => team.map(updateOne)) : current));
+    setBenches(current => Object.fromEntries(Object.entries(current).map(([index, reserve]) => [index, reserve.map(updateOne)])));
     if (persist && Number(player.id) > 0) {
       if (teams) markDrawDirty(true);
       persistPlayerAvailability(player.id, nextPercent);
@@ -2954,10 +2956,10 @@ export function SorteoLegacyPageIsland({ root }) {
       const stack = current[key] || [];
       return {
         ...current,
-        [key]: [...stack, { teams: teams ? teams.map((team) => team.slice()) : null, assignments: { ...assignments }, teamFormations: { ...teamFormations }, playerExchanges }].slice(-8),
+        [key]: [...stack, { teams: teams ? teams.map((team) => team.slice()) : null, assignments: { ...assignments }, teamFormations: { ...teamFormations }, playerExchanges, benches, lockedPlayerPositions, drawVariants, activeFormationVariants }].slice(-8),
       };
     });
-  }, [assignments, teamFormations, teams, playerExchanges]);
+  }, [assignments, teamFormations, teams, playerExchanges, benches, lockedPlayerPositions, drawVariants, activeFormationVariants]);
 
   const undoTeam = (teamIndex) => {
     const key = String(teamIndex);
@@ -2965,6 +2967,10 @@ export function SorteoLegacyPageIsland({ root }) {
     const snapshot = stack[stack.length - 1];
     if (!snapshot) return;
     setTeams(snapshot.teams);
+    setBenches(snapshot.benches || {});
+    setDrawVariants(snapshot.drawVariants || {});
+    setActiveFormationVariants(snapshot.activeFormationVariants || {});
+    setLockedPlayerPositions(snapshot.lockedPlayerPositions || {});
     setAssignments(snapshot.assignments || {});
     setTeamFormations(snapshot.teamFormations || {});
     setPlayerExchanges(snapshot.playerExchanges || []);
@@ -3124,6 +3130,7 @@ export function SorteoLegacyPageIsland({ root }) {
       const signature = drawSignature(result.teams);
       if (signature) seenDrawSignatures.current.add(signature);
       setTeams(result.teams);
+      setBenches({});
       setLockedPlayerPositions({});
       applyDefaultFormationVariants(result.teams, {}, {});
       setTeamFormations({});
@@ -3843,7 +3850,11 @@ export function SorteoLegacyPageIsland({ root }) {
     return validateDropTarget(source, targetTeamIndex, String(targetLine || '').toUpperCase(), null).ok;
   };
   const restorePlayerTeam = (key, teamIndex) => {
-    const restored = restorePlayerExchanges(teams, assignments, playerExchanges, key);
+    const reserveKeys = new Set(Object.values(benches).flat().map(playerKey));
+    const squads = teams.map((team, index) => [...team, ...(benches[index] || [])]);
+    const restored = restorePlayerExchanges(squads, assignments, playerExchanges, key);
+    setBenches(Object.fromEntries(restored.teams.map((team, index) => [index, team.filter(player => reserveKeys.has(playerKey(player)))])));
+    restored.teams = restored.teams.map(team => team.filter(player => !reserveKeys.has(playerKey(player))));
     pushUndo(teamIndex);
     setTeams(restored.teams);
     setAssignments(restored.assignments);
@@ -4361,6 +4372,45 @@ export function SorteoLegacyPageIsland({ root }) {
     };
   });
 
+  const changeBenchStatus = (teamIndex, player, toBench) => {
+    const team = teams?.[teamIndex] || [];
+    const key = playerKey(player);
+    const reserve = benches[teamIndex] || [];
+    if (!(toBench ? team : reserve).some(item => playerKey(item) === key)) return;
+    const remaining = toBench ? team.filter(item => playerKey(item) !== key) : [...team, player];
+    if (!remaining.length) {
+      setError('Debe quedar al menos un jugador en la cancha.');
+      return;
+    }
+    const locks = { ...lockedPlayerPositions };
+    if (toBench) delete locks[key];
+    const variants = generateTeamFormationVariants(remaining, assignments, locks, 3);
+    const preferred = chooseBestFormationVariant(variants);
+    const reorganized = preferred?.assignments || buildTeamAssignment(remaining, assignments);
+    if (!fieldLineCountsFitLimits(teamLineCounts(remaining, reorganized), remaining.length)
+      || remaining.some(item => locks[playerKey(item)] && reorganized[playerKey(item)] !== locks[playerKey(item)])) {
+      setError('No se puede reorganizar la cancha con estas posiciones bloqueadas. Desbloque\u00e1 una posici\u00f3n e intent? de nuevo.');
+      return;
+    }
+    pushUndo(teamIndex);
+    setTeams(current => current.map((items, index) => index === teamIndex ? remaining : items));
+    setBenches(current => ({ ...current, [teamIndex]: toBench ? [...reserve, player] : reserve.filter(item => playerKey(item) !== key) }));
+    setAssignments(current => {
+      const next = { ...current, ...reorganized };
+      if (toBench) delete next[key];
+      return next;
+    });
+    setLockedPlayerPositions(locks);
+    setTeamFormations(current => ({ ...current, [teamIndex]: 'auto' }));
+    setDrawVariants(current => ({ ...current, [teamIndex]: variants }));
+    setActiveFormationVariants(current => ({ ...current, [teamIndex]: preferred?.signature || '' }));
+    setMobileMoveSource(null);
+    setPreview(null);
+    markDrawDirty(true);
+    setError('');
+    setSuccess(`${player.nombre} ${toBench ? 'pas\u00f3 al banco' : 'volvi\u00f3 a la cancha'}. Se reorganiz\u00f3 el equipo.`);
+  };
+
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
     if (mobileMoveSource && Number(mobileMoveSource.teamIndex) !== teamIndex) {
       movePlayer(mobileMoveSource, teamIndex, assignedPosition, playerKey(player));
@@ -4413,6 +4463,7 @@ export function SorteoLegacyPageIsland({ root }) {
         const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
         text += `${player.nombre.toUpperCase()} - ${assigned} - ${adjustedPositionRatingForTeamSize(player, assigned, team.length).toFixed(1)} pts\n`;
       });
+      if ((benches[teamIndex] || []).length) text += `Banco de suplentes:\n${benches[teamIndex].map(player => player.nombre.toUpperCase()).join('\n')}\n`;
       text += `Total: ${teamScore(team, assignments).toFixed(1)} pts | Lentos: ${team.filter(isLowRhythmPlayer).length}\n\n`;
     });
     const link = document.createElement('a');
@@ -4427,7 +4478,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setError('Primero genera los equipos.');
       return;
     }
-    const text = teams.map((team, teamIndex) => `${getTeamDisplayName(teamIndex)}:\n${team.map((player) => player.nombre.toUpperCase()).join('\n')}`).join('\n\n');
+    const text = teams.map((team, teamIndex) => `${getTeamDisplayName(teamIndex)}:\n${team.map((player) => player.nombre.toUpperCase()).join('\n')}${(benches[teamIndex] || []).length ? '\nBanco de suplentes:\n' + benches[teamIndex].map(player => player.nombre.toUpperCase()).join('\n') : ''}`).join('\n\n');
     try {
       await navigator.clipboard.writeText(`${currentMatchupName}\n\n${text}`);
       setSuccess('Equipos copiados al portapapeles.');
@@ -4445,11 +4496,8 @@ export function SorteoLegacyPageIsland({ root }) {
     try {
       const target = teamsContainerRef.current;
       await waitForExportReadiness(target);
-      const mobile = window.matchMedia('(max-width: 760px)').matches;
       const cards = Array.from(target.querySelectorAll('[data-sorteo-team-card]'));
-      const exportWidth = Math.ceil(mobile && cards.length
-        ? cards[0].getBoundingClientRect().width
-        : target.getBoundingClientRect().width);
+      const exportWidth = Math.ceil(cards[0]?.getBoundingClientRect().width || target.getBoundingClientRect().width);
       // Freeze the browser's computed styles before moving the copy: ancestor
       // selectors, responsive typography and card/photo proportions stay intact.
       const copy = target.cloneNode(true);
@@ -4474,37 +4522,23 @@ export function SorteoLegacyPageIsland({ root }) {
       copy.style.gridTemplateRows = 'none';
       copy.style.minHeight = '0';
       copy.style.margin = '0';
-      if (mobile) {
-        const scroller = copy.querySelector('[data-teams-scroller]');
-        if (scroller) {
-          Object.assign(scroller.style, {
-            gridTemplateRows: 'none', gridAutoRows: 'auto',
-            gridAutoFlow: 'row', gridTemplateColumns: 'minmax(0, 1fr)',
-            gridAutoColumns: 'minmax(0, 1fr)', width: '100%', height: 'auto',
-            overflow: 'visible', paddingBottom: '0', scrollSnapType: 'none',
-          });
-          scroller.querySelectorAll('[data-sorteo-team-card]').forEach((card) => {
-            Object.assign(card.style, { width: '100%', minWidth: '0' });
-          });
-        }
-      }
-      // Include full names alongside the faithful pitch cards, whose compact
-      // labels can be ellipsized on small screens.
-      copy.querySelectorAll('[data-sorteo-team-card]').forEach((card) => {
-        const roster = document.createElement('div');
-        roster.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;padding:12px;border:1px solid #d7e6df;border-radius:8px;background:#ffffff;color:#173c2e;font-size:12px;line-height:1.4;';
-        card.querySelectorAll('[data-sorteo-drag-player]').forEach((player) => {
-          const name = player.querySelector('strong:last-child')?.textContent?.trim();
-          if (!name) return;
-          const entry = document.createElement('div');
-          entry.style.cssText = 'min-width:0;overflow-wrap:anywhere;font-weight:700;';
-          entry.textContent = name;
-          roster.appendChild(entry);
-        });
-        if (roster.childElementCount) card.appendChild(roster);
-        card.style.gridTemplateRows = 'none';
-        card.style.height = 'auto';
+      // The shared image contains only each team's name and its actual pitch.
+      // Stack all teams, on desktop as well as mobile, without changing the UI.
+      const exportCards = Array.from(copy.querySelectorAll('[data-sorteo-team-card]'));
+      exportCards.forEach((card) => {
+        const title = card.querySelector('[data-team-title]');
+        const pitch = card.querySelector('.team-formation');
+        if (!title || !pitch) throw new Error('No se encontró la cancha del equipo.');
+        title.replaceChildren(document.createTextNode(title.textContent.trim()));
+        Object.assign(title.style, { display: 'block', width: 'auto', height: 'auto', margin: '0', lineHeight: '1.3', whiteSpace: 'normal', overflow: 'visible' });
+        // Remove editing controls, retaining player cards and position labels.
+        pitch.querySelectorAll('button:not([data-sorteo-drag-player]), .line-label small, [data-sorteo-drop-marker]').forEach(node => node.remove());
+        card.replaceChildren(title, pitch);
+        Object.assign(card.style, { width: '100%', minWidth: '0', height: 'auto', gridTemplateRows: 'none', gridTemplateColumns: 'minmax(0, 1fr)', gap: '12px' });
       });
+      copy.replaceChildren(...exportCards);
+      copy.setAttribute('data-export-formations', '1');
+      Object.assign(copy.style, { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'none', gap: '16px', overflow: 'visible' });
       host.appendChild(copy);
       document.body.appendChild(host);
       let jpg;
@@ -4555,7 +4589,8 @@ export function SorteoLegacyPageIsland({ root }) {
       const color = getTeamColor(teamIndex);
       return {
         color_name: color.name,
-        players: team.map((player) => ({
+        players: [...team, ...(benches[teamIndex] || [])].map((player) => ({
+          is_substitute: !team.some(item => playerKey(item) === playerKey(player)),
           id: player.id,
           assigned_position: currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player),
           availability_percent: player.availability_percent,
@@ -4613,8 +4648,9 @@ export function SorteoLegacyPageIsland({ root }) {
       const teamNumber = teamIndex + 1;
       const currentAssignments = teamAssignments(teamIndex);
       formData.set(`team_color[${teamNumber}]`, getTeamColor(teamIndex).name);
-      team.forEach((player) => {
+      [...team, ...(benches[teamIndex] || [])].forEach((player) => {
         const key = playerKey(player);
+        formData.set(`player_substitute[${player.id}]`, team.some(item => playerKey(item) === key) ? '0' : '1');
         formData.set(`player_team[${player.id}]`, String(teamNumber));
         formData.set(`player_position[${player.id}]`, currentAssignments[key] || getPrimaryPlayerPosition(player));
       });
@@ -4622,10 +4658,12 @@ export function SorteoLegacyPageIsland({ root }) {
     try {
       const response = await fetch(`finalizar_partido.php?match_id=${encodeURIComponent(String(payload.matchId))}&edit_formations=1`, {
         method: 'POST',
+        headers: { Accept: 'application/json' },
         body: formData,
       });
-      if (!response.ok) {
-        throw new Error('No se pudieron guardar las formaciones.');
+      const saved = await response.json();
+      if (!response.ok || !saved.ok) {
+        throw new Error(saved.message || 'No se pudieron guardar las formaciones.');
       }
       setError('');
       setSaveState('saved');
@@ -5420,6 +5458,16 @@ export function SorteoLegacyPageIsland({ root }) {
                           <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
                         </div>
 
+                        <section className="grid gap-2 rounded-md border border-[#d7e6df] bg-white p-3" aria-label={`Banco de suplentes de ${getTeamDisplayName(teamIndex)}`} data-team-bench={teamIndex}>
+                          <h4 className="m-0 text-sm font-bold">Banco de suplentes ({(benches[teamIndex] || []).length})</h4>
+                          {(benches[teamIndex] || []).length ? (benches[teamIndex] || []).map(player => (
+                            <div key={playerKey(player)} className="flex items-center justify-between gap-2" data-bench-player={playerKey(player)}>
+                              <span className="min-w-0 break-words text-sm font-semibold">{player.nombre}</span>
+                              <button type="button" className={`${quietButtonClass} min-h-11 shrink-0`} onClick={() => changeBenchStatus(teamIndex, player, false)} data-html2canvas-ignore="true">Ingresar</button>
+                            </div>
+                          )) : <p className="m-0 text-xs text-[#526b62]">Sin suplentes</p>}
+                        </section>
+
                         <div className="sorteo-team-stats grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
                           <div className="flex flex-wrap gap-1.5 max-[760px]:gap-1">
                             {(summary.arquero > 0 ? [['Arquero', summary.arquero]] : [['Ataque', summary.ataque]])
@@ -5730,6 +5778,7 @@ export function SorteoLegacyPageIsland({ root }) {
               </button>
             </div>
           </div>
+          <button type="button" className={quietButtonClass} onClick={() => changeBenchStatus(Number(mobileMoveSource.teamIndex), mobileMovePlayer, true)}>Enviar al banco</button>
           <div className="grid grid-cols-5 gap-1">
             {FORMATION_LINES.map((line) => {
               const validation = validateDropTarget(mobileMoveSource, Number(mobileMoveSource.teamIndex), line, null);
@@ -5800,6 +5849,9 @@ export function SorteoLegacyPageIsland({ root }) {
                 <p className="m-0 text-xs font-semibold leading-relaxed text-white/70">
                   El puntaje usa las habilidades relevantes para cada posicion y ajuste por regularidad.
                 </p>
+                {teams?.some(team => team.some(player => playerKey(player) === playerKey(preview.player))) ? (
+                  <button type="button" className={quietButtonClass} onClick={() => changeBenchStatus(teams.findIndex(team => team.some(player => playerKey(player) === playerKey(preview.player))), preview.player, true)}>Enviar al banco</button>
+                ) : null}
                 <button
                   className="min-h-10 rounded-md border border-white/20 bg-white/10 px-3 text-sm font-black text-white transition-colors hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                   type="button"

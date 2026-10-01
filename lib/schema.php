@@ -273,6 +273,7 @@ function ensure_control_schema(): array
         ['match_teams', 'formation_data', 'formation_data TEXT NULL AFTER formation_name'],
         ['match_teams', 'color_name', 'color_name VARCHAR(40) NULL AFTER formation_data'],
         ['match_teams', 'goals', 'goals SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER color_name'],
+        ['match_players', 'is_substitute', 'is_substitute TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER is_goalkeeper'],
         ['match_players', 'lineup_order', 'lineup_order SMALLINT UNSIGNED NULL AFTER is_goalkeeper'],
         ['match_players', 'formation_line_order', 'formation_line_order TINYINT UNSIGNED NULL AFTER lineup_order'],
         ['match_players', 'availability_status', "availability_status ENUM('convocado', 'confirmado', 'baja') NOT NULL DEFAULT 'convocado' AFTER formation_line_order"],

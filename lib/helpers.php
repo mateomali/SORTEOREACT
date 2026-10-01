@@ -621,3 +621,14 @@ function sort_positions_for_display(array $positions): array
 }
 
 
+
+
+function render_substitute_bench(array $players): string
+{
+    if (!$players) return '';
+    $html = '<section class="sorteo-substitute-bench"><h4>Banco de suplentes</h4><ul>';
+    foreach ($players as $player) {
+        $html .= '<li>' . h((string) ($player['name'] ?? 'Jugador')) . '</li>';
+    }
+    return $html . '</ul></section>';
+}
