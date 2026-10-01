@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
+import { toJpeg } from 'html-to-image';
 
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
 const PITCH_LINES = ['ARQ', 'DEF', 'MED', 'DEL'];
@@ -4416,47 +4416,86 @@ export function SorteoLegacyPageIsland({ root }) {
     }
     setExporting(true);
     try {
-      const capture = typeof window.html2canvas === 'function' ? window.html2canvas : html2canvas;
       const target = teamsContainerRef.current;
       await waitForExportReadiness(target);
-      const sanitizedStylesheet = await loadSanitizedExportStylesheets();
-      const targetRect = target.getBoundingClientRect();
-      const mobileScroller = window.matchMedia('(max-width: 760px)').matches ? teamsScrollerRef.current : null;
-      const stackedHeight = stackedMobileExportHeight(target, mobileScroller);
-      const exportBackground = '#f6faf8';
-      const exportScale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-      const exportWidth = Math.ceil(targetRect.width);
-      // El lienzo se dibuja con un margen extra (que despues se recorta) para que las
-      // marcas de borde de html2canvas no queden sobre la cancha ni sobre los nombres.
-      const exportHeight = (stackedHeight ? Math.ceil(stackedHeight * 1.03) + 32 : Math.ceil(targetRect.height)) + EXPORT_EDGE_PADDING;
-      const viewportWidth = Math.ceil(window.innerWidth || document.documentElement.clientWidth || exportWidth);
-      const viewportHeight = Math.ceil(window.innerHeight || document.documentElement.clientHeight || exportHeight);
-      let canvas = await capture(target, {
-        backgroundColor: exportBackground,
-        scale: exportScale,
-        useCORS: true,
-        allowTaint: false,
-        imageTimeout: 15000,
-        x: -EXPORT_EDGE_PADDING,
-        y: -EXPORT_EDGE_PADDING,
-        width: exportWidth + EXPORT_EDGE_PADDING * 2,
-        height: exportHeight + EXPORT_EDGE_PADDING,
-        windowWidth: viewportWidth,
-        windowHeight: viewportHeight,
-        scrollX: window.scrollX,
-        scrollY: window.scrollY,
-        onclone: (clonedDocument) => {
-          injectFormationExportStyles(clonedDocument, sanitizedStylesheet);
-          if (stackedHeight) applyStackedMobileExportLayout(clonedDocument, exportWidth);
-        },
+      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      const cards = Array.from(target.querySelectorAll('[data-sorteo-team-card]'));
+      const exportWidth = Math.ceil(mobile && cards.length
+        ? cards[0].getBoundingClientRect().width
+        : target.getBoundingClientRect().width);
+      // Freeze the browser's computed styles before moving the copy: ancestor
+      // selectors, responsive typography and card/photo proportions stay intact.
+      const copy = target.cloneNode(true);
+      const originals = [target, ...target.querySelectorAll('*')];
+      const copies = [copy, ...copy.querySelectorAll('*')];
+      originals.forEach((original, index) => {
+        const computed = window.getComputedStyle(original);
+        const clone = copies[index];
+        for (const property of computed) {
+          clone.style.setProperty(property, computed.getPropertyValue(property));
+        }
+        clone.style.setProperty('animation', 'none');
+        clone.style.setProperty('transition', 'none');
+        if (original instanceof HTMLSelectElement) clone.value = original.value;
       });
-      canvas = trimExportCanvas(
-        cropExportCanvas(canvas, exportWidth, exportScale),
-        exportBackground,
-      );
+      copy.querySelectorAll('[data-html2canvas-ignore="true"]').forEach((node) => node.remove());
+      const host = document.createElement('div');
+      host.setAttribute('aria-hidden', 'true');
+      host.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none;';
+      copy.style.width = `${exportWidth}px`;
+      copy.style.height = 'auto';
+      copy.style.gridTemplateRows = 'none';
+      copy.style.minHeight = '0';
+      copy.style.margin = '0';
+      if (mobile) {
+        const scroller = copy.querySelector('[data-teams-scroller]');
+        if (scroller) {
+          Object.assign(scroller.style, {
+            gridTemplateRows: 'none', gridAutoRows: 'auto',
+            gridAutoFlow: 'row', gridTemplateColumns: 'minmax(0, 1fr)',
+            gridAutoColumns: 'minmax(0, 1fr)', width: '100%', height: 'auto',
+            overflow: 'visible', paddingBottom: '0', scrollSnapType: 'none',
+          });
+          scroller.querySelectorAll('[data-sorteo-team-card]').forEach((card) => {
+            Object.assign(card.style, { width: '100%', minWidth: '0' });
+          });
+        }
+      }
+      // Include full names alongside the faithful pitch cards, whose compact
+      // labels can be ellipsized on small screens.
+      copy.querySelectorAll('[data-sorteo-team-card]').forEach((card) => {
+        const roster = document.createElement('div');
+        roster.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;padding:12px;border:1px solid #d7e6df;border-radius:8px;background:#ffffff;color:#173c2e;font-size:12px;line-height:1.4;';
+        card.querySelectorAll('[data-sorteo-drag-player]').forEach((player) => {
+          const name = player.querySelector('strong:last-child')?.textContent?.trim();
+          if (!name) return;
+          const entry = document.createElement('div');
+          entry.style.cssText = 'min-width:0;overflow-wrap:anywhere;font-weight:700;';
+          entry.textContent = name;
+          roster.appendChild(entry);
+        });
+        if (roster.childElementCount) card.appendChild(roster);
+        card.style.gridTemplateRows = 'none';
+        card.style.height = 'auto';
+      });
+      host.appendChild(copy);
+      document.body.appendChild(host);
+      let jpg;
+      try {
+        await waitForPaint();
+        const height = Math.ceil(copy.getBoundingClientRect().height);
+        // Keep high resolution while bounding memory for long multi-team exports.
+        const pixelRatio = Math.min(2, Math.max(1, window.devicePixelRatio || 1), 8192 / Math.max(exportWidth, height));
+        jpg = await toJpeg(copy, {
+          backgroundColor: '#f6faf8', quality: 0.95,
+          width: exportWidth, height, pixelRatio,
+        });
+      } finally {
+        host.remove();
+      }
       const link = document.createElement('a');
       link.download = `formaciones_goodfellas_${new Date().toISOString().slice(0, 10)}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.href = jpg;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
