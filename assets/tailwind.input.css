@@ -23497,6 +23497,7 @@ body.page-sorteo-legacy .team-formation [data-sorteo-drag-player] {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
   -webkit-user-drag: none;
 }
 
@@ -24191,4 +24192,66 @@ body.page-finalizar-partido.page-sorteo-legacy .content .sorteo-team-card .sorte
     padding: 3px 5px !important;
     font-size: 0.62rem !important;
   }
+}
+
+@media (max-width: 760px) {
+  .sorteo-react-page #equipos-generados {
+    min-width: 0;
+    width: 100%;
+  }
+  .sorteo-react-page .sorteo-teams-scroller {
+    position: relative;
+    min-width: 0;
+    width: 100%;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    align-items: start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    padding-bottom: 8px;
+  }
+  .sorteo-react-page .sorteo-teams-scroller > [data-sorteo-team-card] {
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+  .sorteo-react-page .sorteo-teams-scroller[data-dragging="true"] {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+  }
+}
+
+/* Small exchange marker; retain a comfortable transparent touch target. */
+.sorteo-react-page button.sorteo-exchange-indicator {
+  position: absolute;
+  right: 15px;
+  left: auto;
+  top: -4px;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #1673db !important;
+  cursor: pointer;
+}
+.sorteo-react-page .sorteo-exchange-indicator svg {
+  width: 12px;
+  height: 12px;
+  padding: 1px;
+  border-radius: 3px;
+  background: #ffffff;
+}
+.sorteo-react-page .sorteo-exchange-indicator:focus-visible {
+  outline: 2px solid #1673db;
+  outline-offset: 1px;
 }

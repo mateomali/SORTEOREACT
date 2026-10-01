@@ -197,6 +197,7 @@ $matches = $pdo->query(
        CASE WHEN m.match_date < NOW() OR m.status = 'finalizado' THEN m.match_date END DESC"
 )->fetchAll();
 
+$matches = array_values(array_filter($matches, 'repo_match_visible_to_current_user'));
 $historyMatches = $matches;
 usort($historyMatches, static function (array $a, array $b): int {
     $dateComparison = strtotime((string) $b['match_date']) <=> strtotime((string) $a['match_date']);
@@ -279,6 +280,9 @@ $requestedMatchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
 $selectedMatch = null;
 if ($requestedMatchId > 0) {
     $selectedMatch = repo_match_by_id($requestedMatchId);
+    if ($selectedMatch && !repo_match_visible_to_current_user($selectedMatch)) {
+        $selectedMatch = null;
+    }
 }
 if (!$showHistoryPage && !$selectedMatch && $futureMatches) {
     $selectedMatch = repo_match_by_id((int) $futureMatches[0]['id']);

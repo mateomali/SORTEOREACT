@@ -48,7 +48,12 @@ function repo_match_teams_are_public(array $match): bool
 
 function repo_match_teams_visible_to_current_user(array $match): bool
 {
-    return is_admin() || repo_match_teams_are_public($match);
+    return repo_match_visible_to_current_user($match);
+}
+
+function repo_match_visible_to_current_user(array $match): bool
+{
+    return is_admin() || is_directivo() || repo_match_teams_are_public($match);
 }
 
 function repo_match_participants(int $matchId): array

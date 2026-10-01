@@ -1802,6 +1802,34 @@ function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
   );
 }
 
+export function restorePlayerExchanges(teams, assignments, exchanges, playerId) {
+  const affected = new Set([playerId]);
+  const undone = new Set();
+  // Later exchanges involving either player depend on the earlier exchange.
+  exchanges.forEach((exchange, index) => {
+    if (affected.has(exchange.sourceKey) || affected.has(exchange.targetKey)) {
+      undone.add(index);
+      affected.add(exchange.sourceKey);
+      affected.add(exchange.targetKey);
+    }
+  });
+  let nextTeams = teams.map(team => team.slice());
+  const nextAssignments = { ...assignments };
+  [...undone].reverse().forEach(index => {
+    const exchange = exchanges[index];
+    const players = nextTeams.flat();
+    const source = players.find(player => playerKey(player) === exchange.sourceKey);
+    const target = players.find(player => playerKey(player) === exchange.targetKey);
+    if (!source || !target) return;
+    nextTeams = nextTeams.map(team => team.filter(player => ![exchange.sourceKey, exchange.targetKey].includes(playerKey(player))));
+    nextTeams[exchange.sourceTeam].splice(exchange.sourceIndex, 0, source);
+    nextTeams[exchange.targetTeam].splice(exchange.targetIndex, 0, target);
+    nextAssignments[exchange.sourceKey] = exchange.sourcePosition;
+    nextAssignments[exchange.targetKey] = exchange.targetPosition;
+  });
+  return { teams: nextTeams, assignments: nextAssignments, exchanges: exchanges.filter((_, index) => !undone.has(index)) };
+}
+
 function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole = '', draggableProps = {}, onOpen }) {
   const { dragging = false, selected = false, locked = false, swapTarget = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
@@ -1827,8 +1855,13 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
       style={{
         '--sorteo-card-text': palette.color,
         '--sorteo-card-position': outOfPosition ? '#ffb4a8' : secondary ? '#ffe9a6' : palette.color,
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
         fontFamily: '"Barlow Condensed", sans-serif',
       }}
+      onContextMenu={(event) => event.preventDefault()}
+      onSelectStart={(event) => event.preventDefault()}
       onClick={(event) => {
         event.stopPropagation();
         onOpen?.();
@@ -2432,6 +2465,7 @@ export function SorteoLegacyPageIsland({ root }) {
   ));
   const [teamFormations, setTeamFormations] = useState({});
   const [undoStacks, setUndoStacks] = useState({});
+  const [playerExchanges, setPlayerExchanges] = useState([]);
   const [error, setError] = useState(payload.loadError);
   const [success, setSuccess] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -2459,6 +2493,9 @@ export function SorteoLegacyPageIsland({ root }) {
   const seenDrawSignatures = useRef(new Set(payload.savedDrawSignature ? [payload.savedDrawSignature] : []));
   const teamsContainerRef = useRef(null);
   const teamsFocusRef = useRef(null);
+  const teamsScrollerRef = useRef(null);
+  const [visibleTeamIndex, setVisibleTeamIndex] = useState(0);
+  const edgeScrollStepRef = useRef(null);
   const pointerDragRef = useRef({
     active: false,
     hoverTarget: null,
@@ -2652,10 +2689,10 @@ export function SorteoLegacyPageIsland({ root }) {
       const stack = current[key] || [];
       return {
         ...current,
-        [key]: [...stack, { teams: teams ? teams.map((team) => team.slice()) : null, assignments: { ...assignments }, teamFormations: { ...teamFormations } }].slice(-8),
+        [key]: [...stack, { teams: teams ? teams.map((team) => team.slice()) : null, assignments: { ...assignments }, teamFormations: { ...teamFormations }, playerExchanges }].slice(-8),
       };
     });
-  }, [assignments, teamFormations, teams]);
+  }, [assignments, teamFormations, teams, playerExchanges]);
 
   const undoTeam = (teamIndex) => {
     const key = String(teamIndex);
@@ -2665,6 +2702,8 @@ export function SorteoLegacyPageIsland({ root }) {
     setTeams(snapshot.teams);
     setAssignments(snapshot.assignments || {});
     setTeamFormations(snapshot.teamFormations || {});
+    setPlayerExchanges(snapshot.playerExchanges || []);
+    setMobileMoveSource(null);
     setSaveState('dirty');
     setManualActionCount((value) => Math.max(0, value - 1));
     setUndoStacks((current) => ({ ...current, [key]: stack.slice(0, -1) }));
@@ -2800,6 +2839,7 @@ export function SorteoLegacyPageIsland({ root }) {
       applyDefaultFormationVariants(result.teams, {}, {});
       setTeamFormations({});
       setUndoStacks({});
+      setPlayerExchanges([]);
       setAnalysisVisible(false);
       setManualComparisonBefore(null);
       setMaxDiff(Number(result.usedMaxDiff || maxDiff).toFixed(1));
@@ -3326,8 +3366,7 @@ export function SorteoLegacyPageIsland({ root }) {
     const key = String(source.playerKey);
     if (!Number.isFinite(sourceTeamIndex) || !teams[sourceTeamIndex]) return { ok: false, message: 'No se encontro el equipo de origen.' };
     if (!Number.isFinite(normalizedTargetTeamIndex) || !teams[normalizedTargetTeamIndex]) return { ok: false, message: 'No se encontro el equipo destino.' };
-    const resolvedTargetPlayerKey = targetPlayerKey
-      || (sourceTeamIndex !== normalizedTargetTeamIndex ? findCrossTeamSwapTargetKey(source, normalizedTargetTeamIndex, targetLine) : null);
+    const resolvedTargetPlayerKey = targetPlayerKey || null;
     if (sourceTeamIndex !== normalizedTargetTeamIndex && !resolvedTargetPlayerKey) {
       return { ok: false, message: 'Para cambiar de equipo, solta sobre un jugador disponible para intercambiar.' };
     }
@@ -3474,8 +3513,21 @@ export function SorteoLegacyPageIsland({ root }) {
     }
     pushUndo(normalizedTargetTeamIndex);
     if (sourceTeamIndex !== normalizedTargetTeamIndex) pushUndo(sourceTeamIndex);
+    if (sourceTeamIndex !== normalizedTargetTeamIndex && resolvedTargetPlayerKey) {
+      setPlayerExchanges(current => [...current, {
+        sourceKey: key,
+        targetKey: String(resolvedTargetPlayerKey),
+        sourceTeam: sourceTeamIndex,
+        targetTeam: normalizedTargetTeamIndex,
+        sourceIndex: teams[sourceTeamIndex].findIndex(player => playerKey(player) === key),
+        targetIndex: teams[normalizedTargetTeamIndex].findIndex(player => playerKey(player) === String(resolvedTargetPlayerKey)),
+        sourcePosition: buildTeamAssignment(teams[sourceTeamIndex], assignments)[key],
+        targetPosition: buildTeamAssignment(teams[normalizedTargetTeamIndex], assignments)[String(resolvedTargetPlayerKey)],
+      }]);
+    }
     markDrawDirty(true);
     setMobileMoveSource(null);
+    setError('');
     markFormationAsManual(normalizedTargetTeamIndex, sourceTeamIndex);
     clearActiveFormationVariant(normalizedTargetTeamIndex, sourceTeamIndex);
     setTeams((current) => buildMovedTeams(current));
@@ -3497,6 +3549,22 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const canDropSourceOnLine = (source, targetTeamIndex, targetLine) => {
     return validateDropTarget(source, targetTeamIndex, String(targetLine || '').toUpperCase(), null).ok;
+  };
+  const restorePlayerTeam = (key, teamIndex) => {
+    const restored = restorePlayerExchanges(teams, assignments, playerExchanges, key);
+    pushUndo(teamIndex);
+    setTeams(restored.teams);
+    setAssignments(restored.assignments);
+    setPlayerExchanges(restored.exchanges);
+    setLockedPlayerPositions(current => Object.fromEntries(Object.entries(current).map(([id, position]) => [id, restored.assignments[id] || position])));
+    const affectedTeams = teams.map((_, index) => index).filter(index => (
+      teams[index].some((player, slot) => playerKey(player) !== playerKey(restored.teams[index][slot]))
+    ));
+    markFormationAsManual(...affectedTeams);
+    clearActiveFormationVariant(...affectedTeams);
+    setMobileMoveSource(null);
+    setError('');
+    markDrawDirty(true);
   };
 
   const lineInsertPlacementFromElement = (element, clientX) => {
@@ -3538,15 +3606,18 @@ export function SorteoLegacyPageIsland({ root }) {
       : '';
     const items = Array.from(element.querySelectorAll('[data-sorteo-line-player-item="1"]'))
       .filter((item) => item.dataset.playerKey !== sourceKey);
+    const crossTeamDrop = Number(element.dataset.teamIndex) !== Number(dragState?.teamIndex ?? pointerDragRef.current.source?.teamIndex);
     let best = null;
     items.forEach((item) => {
       const card = item.querySelector('[data-sorteo-drag-player]');
       if (!card) return;
       const rect = card.getBoundingClientRect();
-      const expandedLeft = rect.left - 14;
-      const expandedRight = rect.right + 14;
-      const expandedTop = rect.top - 10;
-      const expandedBottom = rect.bottom + 10;
+      const horizontalTolerance = crossTeamDrop ? 2 : 14;
+      const verticalTolerance = crossTeamDrop ? 2 : 10;
+      const expandedLeft = rect.left - horizontalTolerance;
+      const expandedRight = rect.right + horizontalTolerance;
+      const expandedTop = rect.top - verticalTolerance;
+      const expandedBottom = rect.bottom + verticalTolerance;
       if (
         clientX < expandedLeft
         || clientX > expandedRight
@@ -3619,6 +3690,10 @@ export function SorteoLegacyPageIsland({ root }) {
     const resolvedTeamIndex = targetCard?.dataset?.teamIndex != null
       ? Number(targetCard.dataset.teamIndex)
       : (targetLine?.dataset?.teamIndex != null ? Number(targetLine.dataset.teamIndex) : teamIndex);
+    if (source && Number(source.teamIndex) !== resolvedTeamIndex && !targetCard && !targetPlayerKey) {
+      setError('Para intercambiar entre equipos, soltá el jugador directamente sobre otro jugador.');
+      return;
+    }
     const hoverPlayerKey = dragHoverTarget?.teamIndex === resolvedTeamIndex
       && dragHoverTarget?.playerKey
       ? String(dragHoverTarget.playerKey)
@@ -3685,7 +3760,7 @@ export function SorteoLegacyPageIsland({ root }) {
       const edgeWidth = Math.min(10, rect.width * 0.12);
       const onLeftEdge = clientX <= rect.left + edgeWidth;
       const onRightEdge = clientX >= rect.right - edgeWidth;
-      if (onLeftEdge || onRightEdge) {
+      if ((onLeftEdge || onRightEdge) && teamIndex === Number(source.teamIndex)) {
         const lineElement = targetCard.closest('.line-players[data-sorteo-drop-line]');
         const containerRect = lineElement?.getBoundingClientRect();
         const siblingCards = Array.from(lineElement?.querySelectorAll('[data-sorteo-line-player-item="1"]') || [])
@@ -3724,6 +3799,10 @@ export function SorteoLegacyPageIsland({ root }) {
         updateDragHoverTarget(nextTarget);
         return nextTarget;
       }
+      if (teamIndex !== Number(source.teamIndex)) {
+        updateDragHoverTarget(null);
+        return null;
+      }
       const placement = lineInsertPlacementFromElement(lineElement, clientX);
       const sourceKey = String(source.playerKey || '');
       const visibleCount = Array.from(lineElement.querySelectorAll('[data-sorteo-line-player-item="1"]'))
@@ -3741,8 +3820,12 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const finishPointerDrag = (clientX, clientY) => {
     const source = pointerDragRef.current.source;
-    const target = updatePointerDragHover(clientX, clientY) || pointerDragRef.current.hoverTarget;
+    const target = updatePointerDragHover(clientX, clientY);
     if (!source || !target) {
+      const landedTeam = document.elementFromPoint(clientX, clientY)?.closest?.('[data-sorteo-team-card]')?.dataset?.teamIndex;
+      if (source && landedTeam != null && Number(landedTeam) !== Number(source.teamIndex)) {
+        setError('Para intercambiar entre equipos, soltá el jugador directamente sobre otro jugador.');
+      }
       clearPointerDrag(true);
       return;
     }
@@ -3824,9 +3907,51 @@ export function SorteoLegacyPageIsland({ root }) {
     clearPointerDrag(true);
   };
 
+  edgeScrollStepRef.current = (elapsed) => {
+    const scroller = teamsScrollerRef.current;
+    if (!scroller || !dragPoint || !pointerDragRef.current.active || !window.matchMedia('(max-width: 760px)').matches) return;
+    const rect = scroller.getBoundingClientRect();
+    if (dragPoint.y < Math.max(0, rect.top) || dragPoint.y > Math.min(window.innerHeight - 88, rect.bottom)) return;
+    const left = Math.max(0, rect.left);
+    const right = Math.min(window.innerWidth, rect.right);
+    const edge = 52;
+    const velocity = dragPoint.x < left + edge
+      ? -Math.min(1, (left + edge - dragPoint.x) / edge)
+      : dragPoint.x > right - edge ? Math.min(1, (dragPoint.x - right + edge) / edge) : 0;
+    if (!velocity) return;
+    scroller.scrollLeft += velocity * elapsed * 0.8;
+    const target = updatePointerDragHover(dragPoint.x, dragPoint.y);
+    if (!target) updateDragHoverTarget(null);
+  };
+
+  useEffect(() => {
+    if (!dragState) return undefined;
+    let frame;
+    let previous = performance.now();
+    const step = (now) => {
+      edgeScrollStepRef.current?.(Math.min(32, now - previous));
+      previous = now;
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [Boolean(dragState)]);
+
+  const scrollToTeam = (index) => {
+    const scroller = teamsScrollerRef.current;
+    const card = scroller?.children[index];
+    if (!card) return;
+    if (!window.matchMedia('(max-width: 760px)').matches) {
+      card.querySelector('.team-formation')?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      return;
+    }
+    scroller.scrollTo({ left: card.offsetLeft - scroller.children[0].offsetLeft, behavior: 'smooth' });
+  };
+
   const touchPointFromEvent = (event) => event.touches?.[0] || event.changedTouches?.[0] || null;
 
   const handlePlayerTouchStart = (event, teamIndex, player, assignedPosition) => {
+    if (window.PointerEvent) return;
     const touch = touchPointFromEvent(event);
     if (!touch) return;
     event.stopPropagation();
@@ -3843,6 +3968,7 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const handlePlayerTouchMove = (event) => {
+    if (window.PointerEvent) return;
     const touch = touchPointFromEvent(event);
     const pointerDrag = pointerDragRef.current;
     if (!touch || !pointerDrag.source) return;
@@ -3860,6 +3986,7 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const handlePlayerTouchEnd = (event) => {
+    if (window.PointerEvent) return;
     const touch = touchPointFromEvent(event);
     const pointerDrag = pointerDragRef.current;
     if (!pointerDrag.source) return;
@@ -3874,6 +4001,7 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const handlePlayerTouchCancel = () => {
+    if (window.PointerEvent) return;
     clearPointerDrag(true);
   };
 
@@ -3901,6 +4029,10 @@ export function SorteoLegacyPageIsland({ root }) {
   });
 
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
+    if (mobileMoveSource && Number(mobileMoveSource.teamIndex) !== teamIndex) {
+      movePlayer(mobileMoveSource, teamIndex, assignedPosition, playerKey(player));
+      return;
+    }
     if (window.matchMedia?.('(max-width: 760px)').matches && !isFixedGoalkeeper(player) && !lockedPlayerPositions[playerKey(player)]) {
       setMobileMoveSource({
         teamIndex,
@@ -3983,7 +4115,9 @@ export function SorteoLegacyPageIsland({ root }) {
       await waitForExportReadiness(target);
       const sanitizedStylesheet = await loadSanitizedExportStylesheets();
       const targetRect = target.getBoundingClientRect();
-      const exportWidth = Math.ceil(targetRect.width);
+      const mobileScroller = window.matchMedia('(max-width: 760px)').matches ? teamsScrollerRef.current : null;
+      const teamWidth = mobileScroller?.clientWidth || 0;
+      const exportWidth = Math.ceil(targetRect.width + (mobileScroller ? mobileScroller.scrollWidth - mobileScroller.clientWidth : 0));
       const exportHeight = Math.ceil(targetRect.height);
       const viewportWidth = Math.ceil(window.innerWidth || document.documentElement.clientWidth || exportWidth);
       const viewportHeight = Math.ceil(window.innerHeight || document.documentElement.clientHeight || exportHeight);
@@ -3999,7 +4133,19 @@ export function SorteoLegacyPageIsland({ root }) {
         windowHeight: viewportHeight,
         scrollX: window.scrollX,
         scrollY: window.scrollY,
-        onclone: (clonedDocument) => injectFormationExportStyles(clonedDocument, sanitizedStylesheet),
+        onclone: (clonedDocument) => {
+          injectFormationExportStyles(clonedDocument, sanitizedStylesheet);
+          if (mobileScroller) {
+            const clonedTarget = clonedDocument.querySelector('#equipos-generados');
+            const clonedScroller = clonedDocument.querySelector('[data-teams-scroller]');
+            clonedTarget.style.setProperty('width', `${exportWidth}px`, 'important');
+            clonedScroller.style.setProperty('width', `${exportWidth}px`, 'important');
+            clonedScroller.style.setProperty('grid-auto-columns', `${teamWidth}px`, 'important');
+            clonedScroller.style.setProperty('overflow', 'visible', 'important');
+            clonedScroller.style.setProperty('scroll-snap-type', 'none', 'important');
+            clonedScroller.scrollLeft = 0;
+          }
+        },
       });
       const link = document.createElement('a');
       link.download = `formaciones_goodfellas_${new Date().toISOString().slice(0, 10)}.jpg`;
@@ -4481,7 +4627,20 @@ export function SorteoLegacyPageIsland({ root }) {
                 <div ref={teamsFocusRef} className="w-full scroll-mt-4 rounded-lg border border-[#d7e6df] bg-white px-4 py-2 text-center text-lg font-black text-[#07130f] shadow-sm sm:scroll-mt-6" data-sorteo-matchup-title="1">
                   {currentMatchupName}
                 </div>
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="grid gap-2" data-html2canvas-ignore="true">
+                  <div className="flex flex-wrap gap-2 min-[761px]:hidden" role="group" aria-label="Elegir cancha">
+                    {teams.map((_, index) => (
+                      <button key={index} type="button" className={visibleTeamIndex === index ? secondaryButtonClass : quietButtonClass} aria-pressed={visibleTeamIndex === index} onClick={() => scrollToTeam(index)}>{getTeamDisplayName(index)}</button>
+                    ))}
+                  </div>
+                  <p className="m-0 text-sm text-[#063d2b] min-[761px]:hidden"><strong>← Deslizá entre canchas →</strong><br />Para intercambiar: llevá el jugador al borde, esperá que avance la cancha y soltalo sobre otro jugador. También podés tocar su tarjeta.</p>
+                  <p className="m-0 hidden text-sm text-[#063d2b] min-[761px]:block"><strong>Intercambiar jugadores ↔</strong> Arrastrá una tarjeta hasta un jugador del otro equipo y soltala. Ambos cambian de equipo.</p>
+                </div>
+                <div ref={teamsScrollerRef} data-teams-scroller="1" data-dragging={dragState ? 'true' : 'false'} className="sorteo-teams-scroller grid gap-4 xl:grid-cols-2" onScroll={event => {
+                  const scroller = event.currentTarget;
+                  const step = scroller.children[1] ? scroller.children[1].offsetLeft - scroller.children[0].offsetLeft : scroller.clientWidth;
+                  setVisibleTeamIndex(Math.max(0, Math.min(teams.length - 1, Math.round(scroller.scrollLeft / Math.max(1, step)))));
+                }}>
                   {teams.map((team, teamIndex) => {
                     const color = getTeamColor(teamIndex);
                     const currentAssignments = teamAssignments(teamIndex);
@@ -4573,6 +4732,13 @@ export function SorteoLegacyPageIsland({ root }) {
                           </div>
                         </div>
 
+                        <div className="grid gap-1" data-html2canvas-ignore="true" data-team-navigation="1">
+                          <div className="flex items-center justify-between gap-2">
+                            {teamIndex > 0 ? <button type="button" className={`${quietButtonClass} !min-h-10 text-xs`} onClick={() => scrollToTeam(teamIndex - 1)} aria-label={`Ver cancha de ${getTeamDisplayName(teamIndex - 1)}`}><span aria-hidden="true" className="text-lg">←</span> {getTeamDisplayName(teamIndex - 1)}</button> : <span />}
+                            {teamIndex < teams.length - 1 ? <button type="button" className={`${quietButtonClass} !min-h-10 text-xs`} onClick={() => scrollToTeam(teamIndex + 1)} aria-label={`Ver cancha de ${getTeamDisplayName(teamIndex + 1)}`}>{getTeamDisplayName(teamIndex + 1)} <span aria-hidden="true" className="text-lg">→</span></button> : <span />}
+                          </div>
+                          <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
+                        </div>
                         <div
                           className={`team-formation relative grid h-[600px] grid-rows-[minmax(0,.8fr)_repeat(3,minmax(0,1fr))] gap-2 overflow-hidden rounded-lg border-2 border-t-4 border-emerald-200 p-3 text-white max-[760px]:h-[430px] max-[760px]:gap-1 max-[760px]:p-1.5 ${pitchBackgroundClass}`}
                           style={{ borderTopColor: teamColorAccentHex(teamIndex) }}
@@ -4580,6 +4746,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
                         >
+                          {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="pointer-events-none absolute left-2 right-12 top-2 z-30 rounded border border-white/70 bg-[#063d2b] px-2 py-1 text-center text-xs font-bold text-white" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
                           <button className="formation-undo-button absolute right-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-md border border-white/35 bg-[#063d2b]/90 text-white shadow-sm transition-colors hover:bg-[#05291d] disabled:cursor-not-allowed disabled:opacity-40 max-[760px]:right-1.5 max-[760px]:top-1.5 max-[760px]:h-8 max-[760px]:w-8" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio" title="Deshacer ultimo cambio">
                             <Icon name="undo" />
                           </button>
@@ -4731,6 +4898,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                           draggableProps={{
                                             draggable: false,
                                             dragging: dragState?.playerKey === key,
+                                            selected: mobileMoveSource?.playerKey === key,
                                             locked: Boolean(lockedPlayerPositions[key]),
                                             swapTarget: isSwapTarget,
                                             onPointerDown: (event) => handlePlayerPointerDown(event, teamIndex, player, assigned),
@@ -4776,6 +4944,20 @@ export function SorteoLegacyPageIsland({ root }) {
                                             'data-assigned-position': assigned,
                                           }}
                                         />
+                                        {playerExchanges.some(exchange => exchange.sourceKey === key || exchange.targetKey === key) ? (
+                                          <button
+                                            type="button"
+                                            className="sorteo-exchange-indicator"
+                                            aria-label={`Volver ${player.nombre} a su equipo y posicion inicial`}
+                                            title="Deshacer intercambio y volver al equipo y posicion inicial"
+                                            data-undo-player-exchange={key}
+                                            onPointerDown={event => event.stopPropagation()}
+                                            onTouchStart={event => event.stopPropagation()}
+                                            onClick={event => { event.stopPropagation(); restorePlayerTeam(key, teamIndex); }}
+                                          >
+                                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 5h11m-3-3 3 3-3 3M14 11H3m3-3-3 3 3 3" /></svg>
+                                          </button>
+                                        ) : null}
                                       </span>
                                     );
                                   })}
@@ -5096,18 +5278,18 @@ export function SorteoLegacyPageIsland({ root }) {
       ) : null}
 
       {mobileMoveSource && mobileMovePlayer ? (
-        <div className="fixed inset-x-0 bottom-[88px] z-[60] grid gap-2 border-t border-[#d7e6df] bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden">
+        <div role="region" aria-label="Mover o intercambiar jugador" className="fixed inset-x-0 bottom-[88px] z-[60] grid max-h-[60dvh] gap-2 overflow-y-auto border-t border-[#d7e6df] bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <strong className="block truncate text-sm font-black text-[#07130f]">{mobileMoveSource.playerName}</strong>
-              <span className="text-xs font-bold text-[#526b62]">Mover desde {mobileMoveSource.assignedPosition}</span>
+              <span className="text-xs font-bold text-[#526b62]">{getTeamDisplayName(Number(mobileMoveSource.teamIndex))} · Mover desde {mobileMoveSource.assignedPosition}</span>
             </div>
             <div className="flex shrink-0 gap-1">
               <button className={quietButtonClass} type="button" onClick={() => { setPreview({ player: mobileMovePlayer, assignedPosition: mobileMoveSource.assignedPosition, teamSize: teams?.[Number(mobileMoveSource.teamIndex)]?.length || playersPerTeam }); setMobileMoveSource(null); }}>
                 Ficha
               </button>
               <button className={quietButtonClass} type="button" onClick={() => setMobileMoveSource(null)} aria-label="Cerrar destinos">
-                <Icon name="x" />
+                Cancelar
               </button>
             </div>
           </div>
@@ -5129,6 +5311,26 @@ export function SorteoLegacyPageIsland({ root }) {
               );
             })}
           </div>
+          <p className="text-sm font-bold">Intercambiar con otro equipo</p>
+          {teams.map((team, targetTeamIndex) => {
+            if (targetTeamIndex === Number(mobileMoveSource.teamIndex)) return null;
+            const targetAssignments = buildTeamAssignment(team, assignments);
+            return (
+              <fieldset key={targetTeamIndex} className="grid grid-cols-2 gap-2">
+                <legend className="mb-1 text-sm font-bold">{getTeamDisplayName(targetTeamIndex)}</legend>
+                {team.map((player) => {
+                  const key = playerKey(player);
+                  const position = targetAssignments[key];
+                  const validation = validateDropTarget(mobileMoveSource, targetTeamIndex, position, key);
+                  return (
+                    <button key={key} type="button" className={`${quietButtonClass} min-h-11 text-left disabled:opacity-55`} disabled={!validation.ok} title={validation.message || `Intercambiar con ${player.nombre}`} onClick={() => movePlayer(mobileMoveSource, targetTeamIndex, position, key)}>
+                      <span>{player.nombre} · {position}{!validation.ok ? <span className="block text-xs">{validation.message}</span> : null}</span>
+                    </button>
+                  );
+                })}
+              </fieldset>
+            );
+          })}
         </div>
       ) : null}
 
@@ -5177,6 +5379,10 @@ export function SorteoLegacyPageIsland({ root }) {
         </>
       ) : null}
 
+      {dragState && teams ? <div className="pointer-events-none fixed inset-x-0 top-1/2 z-[110] flex justify-between min-[761px]:hidden" aria-hidden="true">
+        {visibleTeamIndex > 0 ? <span className="rounded-r border border-white bg-[#075bb5] px-2 py-3 text-xs font-bold text-white">←<br />Otra cancha</span> : <span />}
+        {visibleTeamIndex < teams.length - 1 ? <span className="rounded-l border border-white bg-[#075bb5] px-2 py-3 text-right text-xs font-bold text-white">→<br />Otra cancha</span> : <span />}
+      </div> : null}
       {dragState && dragPoint ? (
         <div className="pointer-events-none fixed z-[100]" style={{ left: dragPoint.x + 16, top: dragPoint.y - 8 }}>
           <div className="absolute -left-7 -top-3 h-9 w-9 rounded-full bg-lime-200/30 blur-md" />
