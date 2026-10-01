@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
@@ -730,7 +730,36 @@ function normalizeAssignments(assignments) {
   return { ...(assignments || {}) };
 }
 
+// Armado de formacion: es el calculo mas caro del sorteo y se repite decenas de veces
+// por candidato (cada metrica de balance vuelve a pedirlo). Se guarda por equipo y se
+// recalcula solo si el plantel cambia; la clave es el propio array del equipo.
+const teamAssignmentCache = new WeakMap();
+
 function buildTeamAssignment(team, assignmentOverrides = {}) {
+  let hasOverrides = false;
+  if (assignmentOverrides) {
+    for (const key in assignmentOverrides) {
+      if (Object.hasOwn(assignmentOverrides, key)) {
+        hasOverrides = true;
+        break;
+      }
+    }
+  }
+  if (hasOverrides) return buildTeamAssignmentImpl(team, assignmentOverrides);
+  const cached = teamAssignmentCache.get(team);
+  if (
+    cached
+    && cached.players.length === team.length
+    && cached.players.every((player, index) => player === team[index])
+  ) {
+    return { ...cached.assignments };
+  }
+  const assignments = buildTeamAssignmentImpl(team, assignmentOverrides);
+  teamAssignmentCache.set(team, { players: team.slice(), assignments });
+  return assignments;
+}
+
+function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
   const assignment = {};
   const teamSize = team.length;
   team.forEach((player) => {
@@ -1259,28 +1288,52 @@ function teamsFitFormationRules(teams, teamSize) {
   });
 }
 
-function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, weights, avoidSignatures = new Set()) {
+// La busqueda del sorteo es intensiva: si corre de un tiron, el navegador se queda
+// congelado (y con el, la barra de progreso). Este reloj corta el trabajo en porciones
+// y devuelve el control al navegador para que pueda pintar entre medio.
+const GENERATION_TIME_SLICE_MS = 60;
+
+function createGenerationClock() {
+  let sliceStart = performance.now();
+  return async (force = false) => {
+    if (!force && performance.now() - sliceStart < GENERATION_TIME_SLICE_MS) return false;
+    sliceStart = performance.now();
+    await new Promise((resolve) => { window.setTimeout(resolve, 0); });
+    return true;
+  };
+}
+
+async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, weights, avoidSignatures = new Set(), options = {}) {
+  const yieldToUi = options.yieldToUi || (async () => false);
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
   if (players.length !== teamSize * 2 || players.length > 20 || teamSize < 2) return null;
   let best = null;
   let bestEval = null;
   const selected = [0];
-  const totalPlatinum = players.filter(isPlatinumPlayer).length;
+  const pickedFlags = new Array(players.length).fill(false);
+  pickedFlags[0] = true;
+  // Los conteos de platinum se mantienen al vuelo (antes se recorria el arreglo entero en
+  // cada nodo del arbol, que era la mayor perdida de tiempo del sorteo exacto).
+  const platinumFlags = players.map(isPlatinumPlayer);
+  const platinumSuffix = new Array(players.length + 1).fill(0);
+  for (let index = players.length - 1; index >= 0; index -= 1) {
+    platinumSuffix[index] = platinumSuffix[index + 1] + (platinumFlags[index] ? 1 : 0);
+  }
+  const totalPlatinum = platinumSuffix[0];
   const minPlatinumPerTeam = Math.floor(totalPlatinum / 2);
   const maxPlatinumPerTeam = Math.ceil(totalPlatinum / 2);
+  let selectedPlatinum = platinumFlags[0] ? 1 : 0;
 
-  const visit = (start) => {
-    const selectedPlatinum = selected.filter((index) => isPlatinumPlayer(players[index])).length;
+  const visit = async (start) => {
     if (selectedPlatinum > maxPlatinumPerTeam) return;
-    const remainingPlatinum = players.slice(start).filter(isPlatinumPlayer).length;
-    if (selectedPlatinum + remainingPlatinum < minPlatinumPerTeam) return;
+    if (selectedPlatinum + platinumSuffix[start] < minPlatinumPerTeam) return;
     if (selected.length === teamSize) {
       if (selectedPlatinum < minPlatinumPerTeam || selectedPlatinum > maxPlatinumPerTeam) return;
-      const picked = new Set(selected);
       const left = [];
       const right = [];
-      players.forEach((player, index) => {
-        (picked.has(index) ? left : right).push(player);
-      });
+      for (let index = 0; index < players.length; index += 1) {
+        (pickedFlags[index] ? left : right).push(players[index]);
+      }
       const teams = [left, right];
       if (!teamsFitFormationRules(teams, teamSize)) return;
       const evaluationBase = scoreTeams(teams, pairHistory, {}, weights);
@@ -1295,27 +1348,38 @@ function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, 
     }
 
     const remaining = teamSize - selected.length;
+    const topLevel = selected.length === 1;
     for (let index = start; index <= players.length - remaining; index += 1) {
       selected.push(index);
-      visit(index + 1);
+      pickedFlags[index] = true;
+      if (platinumFlags[index]) selectedPlatinum += 1;
+      await visit(index + 1);
+      if (platinumFlags[index]) selectedPlatinum -= 1;
+      pickedFlags[index] = false;
       selected.pop();
+      await yieldToUi();
+      if (topLevel && onProgress) {
+        onProgress((index - start + 1) / Math.max(1, players.length - remaining - start + 1));
+      }
     }
   };
 
-  visit(1);
+  await visit(1);
   return best ? { teams: best, evaluation: bestEval, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
 }
 
-function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights, avoidSignatures = new Set()) {
+async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights, avoidSignatures = new Set(), options = {}) {
   const teamSize = players.length / numTeams;
+  const yieldToUi = options.yieldToUi || (async () => false);
   if (numTeams === 2 && players.length <= 20) {
-    const exact = generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, weights, avoidSignatures);
+    const exact = await generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, weights, avoidSignatures, options);
     if (exact) return exact;
   }
   const attempts = Math.min(180, Math.max(60, players.length * 4));
   let best = null;
   let bestEval = null;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    await yieldToUi();
     const candidate = buildCandidateTeams(shuffle(players), numTeams, teamSize, pairHistory, weights);
     if (!candidate) continue;
     const improved = improveBySwaps(candidate, teamSize, pairHistory, weights);
@@ -1851,7 +1915,7 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
   return (
     <button
       type="button"
-      className={`relative block aspect-[1000/820] ${widthClass} shrink-0 bg-transparent !min-h-0 !rounded-none p-0 text-left transition cursor-grab active:cursor-grabbing ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 scale-[1.06] ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
+      className={`relative block aspect-[1000/820] ${widthClass} shrink-0 bg-transparent !min-h-0 !rounded-none p-0 text-left transition duration-150 ease-out cursor-grab active:cursor-grabbing active:scale-[0.97] ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 scale-[1.06] ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
       style={{
         '--sorteo-card-text': palette.color,
         '--sorteo-card-position': outOfPosition ? '#ffb4a8' : secondary ? '#ffe9a6' : palette.color,
@@ -1935,6 +1999,7 @@ function PitchDropMarker({ line, style = null }) {
       className="pointer-events-none absolute top-1/2 z-40 grid aspect-[1000/940] w-[58px] -translate-y-1/2 place-items-center overflow-hidden rounded-lg border-2 border-dashed border-lime-200 bg-[#063d2b]/78 text-lime-100 shadow-[0_0_0_3px_rgba(217,249,157,.28),0_0_22px_rgba(217,249,157,.45)] min-[380px]:w-[64px] sm:w-[70px] xl:w-[82px] 2xl:w-[88px]"
       style={style || undefined}
       data-lane-role={isLateral ? 'lateral' : undefined}
+      data-sorteo-drop-marker="1"
       aria-hidden="true"
     >
       <span className="sorteo-drop-pulse absolute inset-0 rounded-lg" aria-hidden="true" />
@@ -2339,9 +2404,171 @@ function injectFormationExportStyles(clonedDocument, sanitizedStylesheet = '') {
       opacity: 1 !important;
     }
     #equipos-generados .formation-card-preview-overlay { display: none !important; }
+    /* html2canvas dibuja las sombras exteriores como un marco gris alrededor de cada
+       caja (bien visible sobre el titulo y las tarjetas), asi que en la captura se
+       dibujan sin sombra. */
+    #equipos-generados,
+    #equipos-generados * { box-shadow: none !important; }
+    /* html2canvas dibuja el texto un par de pixeles mas abajo que el navegador y los
+       titulos con recorte (truncate) salian cortados por abajo en la captura. Los
+       nombres de equipo son cortos, asi que alcanza con no recortarlos. */
+    #equipos-generados .team-head h3 { overflow: visible !important; }
   `;
   clonedDocument.head.appendChild(style);
   scrubUnsupportedComputedColors(clonedDocument);
+  replaceExportSelectsWithStaticText(clonedDocument);
+}
+
+/**
+ * html2canvas pinta el valor de los <select> con su propia cuenta de linea y lo recorta
+ * contra la caja, asi que en la captura el texto salia cortado por abajo. Para la imagen
+ * se reemplazan por un bloque con el mismo aspecto y el texto completo.
+ */
+function replaceExportSelectsWithStaticText(clonedDocument) {
+  const selectors = Array.from(clonedDocument.querySelectorAll('#equipos-generados select'));
+  selectors.forEach((select) => {
+    const styles = clonedDocument.defaultView.getComputedStyle(select);
+    const rect = select.getBoundingClientRect();
+    const value = select.options?.[select.selectedIndex]?.text || '';
+    const replacement = clonedDocument.createElement('div');
+    replacement.className = select.className;
+    replacement.setAttribute('data-export-select-value', '1');
+    replacement.textContent = value;
+    replacement.style.setProperty('display', 'flex', 'important');
+    replacement.style.setProperty('align-items', 'center', 'important');
+    replacement.style.setProperty('justify-content', 'flex-start', 'important');
+    replacement.style.setProperty('box-sizing', 'border-box', 'important');
+    replacement.style.setProperty('width', '100%', 'important');
+    replacement.style.setProperty('min-height', `${Math.round(rect.height)}px`, 'important');
+    replacement.style.setProperty('padding', `${styles.paddingTop} ${styles.paddingRight} ${styles.paddingBottom} ${styles.paddingLeft}`, 'important');
+    replacement.style.setProperty('font-family', styles.fontFamily, 'important');
+    replacement.style.setProperty('font-size', styles.fontSize, 'important');
+    replacement.style.setProperty('font-weight', styles.fontWeight, 'important');
+    replacement.style.setProperty('line-height', '1.2', 'important');
+    replacement.style.setProperty('color', styles.color, 'important');
+    replacement.style.setProperty('background-color', styles.backgroundColor, 'important');
+    replacement.style.setProperty('border-radius', styles.borderRadius, 'important');
+    replacement.style.setProperty('border', `${styles.borderWidth} ${styles.borderStyle} ${styles.borderColor}`, 'important');
+    select.replaceWith(replacement);
+  });
+}
+
+/**
+ * En pantallas chicas la cancha se muestra en un carrusel horizontal: capturar ese
+ * carrusel tal cual queda producia una tira ancha con las dos canchas aplastadas.
+ * Para exportar una imagen fiel se apilan los equipos uno debajo del otro con el
+ * mismo ancho que tienen en pantalla, asi que hay que recalcular el alto del lienzo.
+ */
+function stackedMobileExportHeight(target, scroller) {
+  if (!target || !scroller) return null;
+  const cards = Array.from(scroller.querySelectorAll('[data-sorteo-team-card]'));
+  if (cards.length < 2) return null;
+  const targetGap = Number.parseFloat(window.getComputedStyle(target).rowGap) || 0;
+  const scrollerGap = Number.parseFloat(window.getComputedStyle(scroller).rowGap) || 0;
+  const stackedScrollerHeight = cards.reduce(
+    (total, card) => total + card.getBoundingClientRect().height,
+    0,
+  ) + scrollerGap * (cards.length - 1);
+  // html2canvas descarta los bloques marcados con data-html2canvas-ignore, por eso el
+  // alto se calcula solo con los hijos que realmente se dibujan.
+  const visibleChildren = Array.from(target.children).filter((child) => (
+    child.getAttribute('data-html2canvas-ignore') !== 'true'
+    && window.getComputedStyle(child).display !== 'none'
+  ));
+  return Math.ceil(visibleChildren.reduce((total, child, index) => (
+    total
+    + (child === scroller ? stackedScrollerHeight : child.getBoundingClientRect().height)
+    + (index > 0 ? targetGap : 0)
+  ), 0));
+}
+
+function applyStackedMobileExportLayout(clonedDocument, exportWidth) {
+  const clonedTarget = clonedDocument.querySelector('#equipos-generados');
+  const clonedScroller = clonedDocument.querySelector('[data-teams-scroller]');
+  if (!clonedTarget || !clonedScroller) return;
+  clonedTarget.style.setProperty('width', `${exportWidth}px`, 'important');
+  clonedScroller.style.setProperty('grid-auto-flow', 'row', 'important');
+  clonedScroller.style.setProperty('grid-template-columns', 'minmax(0, 1fr)', 'important');
+  clonedScroller.style.setProperty('grid-auto-columns', 'minmax(0, 1fr)', 'important');
+  clonedScroller.style.setProperty('grid-auto-rows', 'auto', 'important');
+  clonedScroller.style.setProperty('width', '100%', 'important');
+  clonedScroller.style.setProperty('overflow', 'visible', 'important');
+  clonedScroller.style.setProperty('scroll-snap-type', 'none', 'important');
+  clonedScroller.style.setProperty('padding-bottom', '0px', 'important');
+  clonedScroller.scrollLeft = 0;
+  Array.from(clonedScroller.querySelectorAll('[data-sorteo-team-card]')).forEach((card) => {
+    card.style.setProperty('width', '100%', 'important');
+    card.style.setProperty('min-width', '0', 'important');
+    card.style.setProperty('scroll-snap-align', 'none', 'important');
+  });
+}
+
+function hexToRgbChannels(hex) {
+  const value = String(hex || '').replace('#', '');
+  const normalized = value.length === 3 ? value.split('').map((char) => char + char).join('') : value;
+  return {
+    r: Number.parseInt(normalized.slice(0, 2), 16) || 0,
+    g: Number.parseInt(normalized.slice(2, 4), 16) || 0,
+    b: Number.parseInt(normalized.slice(4, 6), 16) || 0,
+  };
+}
+
+// html2canvas deja una marca gris pegada a los bordes del lienzo (se ve como una barra
+// sobre el borde derecho y otra sobre el izquierdo). Se dibuja con este margen extra y
+// despues se recorta, asi la captura queda limpia.
+const EXPORT_EDGE_PADDING = 40;
+
+function cropExportCanvas(canvas, exportWidth, scale) {
+  const offset = Math.max(0, Math.round(EXPORT_EDGE_PADDING * scale));
+  const width = Math.min(Math.round(exportWidth * scale), canvas.width - offset * 2);
+  const height = Math.max(1, canvas.height - offset);
+  if (width <= 0 || (offset === 0 && width === canvas.width && height === canvas.height)) return canvas;
+  const cropped = canvas.ownerDocument.createElement('canvas');
+  cropped.width = width;
+  cropped.height = height;
+  const context = cropped.getContext('2d');
+  if (!context) return canvas;
+  context.drawImage(canvas, offset, offset, width, height, 0, 0, width, height);
+  return cropped;
+}
+
+/**
+ * El alto del lienzo se calcula con un margen para no cortar contenido; este recorte
+ * quita la franja de fondo sobrante para que la captura quede ajustada al contenido.
+ */
+function trimExportCanvas(canvas, backgroundHex) {
+  const context = canvas.getContext('2d');
+  if (!context) return canvas;
+  const background = hexToRgbChannels(backgroundHex);
+  const { width, height } = canvas;
+  let pixels;
+  try {
+    pixels = context.getImageData(0, 0, width, height).data;
+  } catch {
+    return canvas;
+  }
+  const rowHasContent = (row) => {
+    const offset = row * width * 4;
+    for (let x = 0; x < width; x += 1) {
+      const index = offset + x * 4;
+      if (
+        Math.abs(pixels[index] - background.r) > 4
+        || Math.abs(pixels[index + 1] - background.g) > 4
+        || Math.abs(pixels[index + 2] - background.b) > 4
+      ) return true;
+    }
+    return false;
+  };
+  let lastContentRow = height - 1;
+  while (lastContentRow > 0 && !rowHasContent(lastContentRow)) lastContentRow -= 1;
+  if (!rowHasContent(lastContentRow)) return canvas;
+  const trimmedHeight = Math.min(height, lastContentRow + 1 + 16);
+  if (trimmedHeight >= height) return canvas;
+  const trimmed = canvas.ownerDocument.createElement('canvas');
+  trimmed.width = width;
+  trimmed.height = trimmedHeight;
+  trimmed.getContext('2d').drawImage(canvas, 0, 0);
+  return trimmed;
 }
 
 function PlayerFormModal({ mode, player, onClose, onSave }) {
@@ -2470,11 +2697,11 @@ export function SorteoLegacyPageIsland({ root }) {
   const [success, setSuccess] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generationStage, setGenerationStage] = useState('');
+  const [generationProgress, setGenerationProgress] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [formModal, setFormModal] = useState(null);
   const [preview, setPreview] = useState(null);
   const [dragState, setDragState] = useState(null);
-  const [dragPoint, setDragPoint] = useState(null);
   const [dragHoverTarget, setDragHoverTarget] = useState(null);
   const [persistedRedrawCount, setPersistedRedrawCount] = useState(payload.redrawCount);
   const [redrawsUsedThisSession, setRedrawsUsedThisSession] = useState(0);
@@ -2509,15 +2736,52 @@ export function SorteoLegacyPageIsland({ root }) {
   const updateDragHoverTarget = useCallback((nextTarget) => {
     pointerDragRef.current.hoverTarget = nextTarget;
     setDragHoverTarget((current) => {
+      // La posicion horizontal exacta del marcador no entra en la comparacion: se aplica
+      // directo sobre el DOM para no re-renderizar la cancha en cada movimiento.
       const currentKey = current
-        ? `${current.teamIndex}|${current.line || ''}|${current.targetLine || ''}|${current.playerKey || ''}|${current.insertIndex ?? ''}|${Math.round(Number(current.insertX ?? -1))}`
+        ? `${current.teamIndex}|${current.line || ''}|${current.targetLine || ''}|${current.playerKey || ''}|${current.insertIndex ?? ''}`
         : '';
       const nextKey = nextTarget
-        ? `${nextTarget.teamIndex}|${nextTarget.line || ''}|${nextTarget.targetLine || ''}|${nextTarget.playerKey || ''}|${nextTarget.insertIndex ?? ''}|${Math.round(Number(nextTarget.insertX ?? -1))}`
+        ? `${nextTarget.teamIndex}|${nextTarget.line || ''}|${nextTarget.targetLine || ''}|${nextTarget.playerKey || ''}|${nextTarget.insertIndex ?? ''}`
         : '';
       return currentKey === nextKey ? current : nextTarget;
     });
   }, []);
+
+  const dragPointRef = useRef(null);
+  const dragGhostRef = useRef(null);
+  const dragMarkerRef = useRef(null);
+  const dragFrameRef = useRef({ frame: 0, x: 0, y: 0 });
+
+  const positionDragGhost = useCallback((clientX, clientY) => {
+    dragPointRef.current = { x: clientX, y: clientY };
+    const ghost = dragGhostRef.current;
+    if (ghost) {
+      ghost.style.transform = `translate3d(${Math.round(clientX + 16)}px, ${Math.round(clientY - 8)}px, 0)`;
+    }
+  }, []);
+
+  const applyDropMarkerPosition = useCallback(() => {
+    const marker = dragMarkerRef.current;
+    if (!marker) return;
+    // La variable se escribe sobre el propio marcador (no sobre la linea) para que el
+    // navegador no recalcule el estilo de todas las cartas de esa linea.
+    const node = document.querySelector('[data-sorteo-drop-marker="1"]');
+    if (node) node.style.setProperty('--sorteo-drop-x', `${Math.round(marker.x)}px`);
+  }, []);
+
+  const scheduleDragHoverUpdate = useCallback((clientX, clientY) => {
+    positionDragGhost(clientX, clientY);
+    const state = dragFrameRef.current;
+    state.x = clientX;
+    state.y = clientY;
+    if (state.frame) return;
+    state.frame = requestAnimationFrame(() => {
+      state.frame = 0;
+      updatePointerDragHoverRef.current?.(state.x, state.y);
+      applyDropMarkerPosition();
+    });
+  }, [applyDropMarkerPosition, positionDragGhost]);
 
   const selectedPlayers = useMemo(() => (lockedMatch ? players.slice() : players.filter((player) => player.selected)), [lockedMatch, players]);
   const playersPerTeam = useMemo(() => {
@@ -2815,16 +3079,40 @@ export function SorteoLegacyPageIsland({ root }) {
     };
 
     setGenerating(true);
+    setGenerationProgress(0);
     await advanceGenerationStage('Preparando arqueros');
     try {
       await advanceGenerationStage('Repartiendo platinum');
       const avoidSignatures = new Set(seenDrawSignatures.current);
       if (teams) avoidSignatures.add(drawSignature(teams));
       let result = null;
-      for (let diff = Math.max(0.5, maxDiff); diff <= FLEXIBLE_MAX_DIFF; diff += 0.5) {
-        await advanceGenerationStage(diff <= Math.max(0.5, maxDiff) ? 'Balanceando posiciones' : `Ampliando diff a ${diff.toFixed(1)}`);
-        result = generateBalancedTeams(candidates, numTeams, Math.min(diff, STRICT_MAX_DIFF), payload.pairHistory, payload.drawBalanceWeights, nextGenerationIsRedraw ? avoidSignatures : new Set());
+      const yieldToUi = createGenerationClock();
+      let lastReportedProgress = 0;
+      const reportProgress = (fraction) => {
+        const bounded = Math.max(0, Math.min(0.99, Number(fraction) || 0));
+        if (bounded - lastReportedProgress < 0.02 && bounded < 0.99) return;
+        lastReportedProgress = bounded;
+        setGenerationProgress(bounded);
+      };
+      const diffStart = Math.max(0.5, maxDiff);
+      const diffSteps = Math.max(1, Math.round((FLEXIBLE_MAX_DIFF - diffStart) / 0.5) + 1);
+      for (let diff = diffStart; diff <= FLEXIBLE_MAX_DIFF; diff += 0.5) {
+        const diffIndex = Math.max(0, Math.round((diff - diffStart) / 0.5));
+        await advanceGenerationStage(diff <= diffStart ? 'Balanceando posiciones' : `Ampliando diff a ${diff.toFixed(1)}`);
+        result = await generateBalancedTeams(
+          candidates,
+          numTeams,
+          Math.min(diff, STRICT_MAX_DIFF),
+          payload.pairHistory,
+          payload.drawBalanceWeights,
+          nextGenerationIsRedraw ? avoidSignatures : new Set(),
+          {
+            yieldToUi,
+            onProgress: (fraction) => reportProgress((diffIndex + fraction) / diffSteps),
+          },
+        );
         await advanceGenerationStage('Optimizando puntaje');
+        reportProgress((diffIndex + 1) / diffSteps);
         if (result && (!nextGenerationIsRedraw || !avoidSignatures.has(drawSignature(result.teams)))) break;
       }
       if (!result) {
@@ -2862,6 +3150,7 @@ export function SorteoLegacyPageIsland({ root }) {
     } finally {
       setGenerating(false);
       setGenerationStage('');
+      setGenerationProgress(0);
     }
   }, [applyDefaultFormationVariants, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
 
@@ -3531,7 +3820,9 @@ export function SorteoLegacyPageIsland({ root }) {
     markFormationAsManual(normalizedTargetTeamIndex, sourceTeamIndex);
     clearActiveFormationVariant(normalizedTargetTeamIndex, sourceTeamIndex);
     setTeams((current) => buildMovedTeams(current));
-    setAnalysisVisible(true);
+    // El panel de analisis es pesado: se monta como transicion para que la cancha se
+    // actualice primero y el movimiento se sienta inmediato.
+    startTransition(() => setAnalysisVisible(true));
     if ((targetLine && FORMATION_LINES.includes(targetLine)) || targetKeyForAssignment) {
       setAssignments((current) => {
         const next = { ...current };
@@ -3667,7 +3958,7 @@ export function SorteoLegacyPageIsland({ root }) {
     img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     event.dataTransfer.setDragImage(img, 0, 0);
     setDragState({ ...source, player });
-    setDragPoint({ x: event.clientX, y: event.clientY });
+    positionDragGhost(event.clientX, event.clientY);
     updateDragHoverTarget({ teamIndex, line: pitchLineForPosition(assignedPosition), targetLine: assignedPosition, playerKey: playerKey(player) });
   };
 
@@ -3718,8 +4009,9 @@ export function SorteoLegacyPageIsland({ root }) {
       ? Number(dragHoverTarget.insertIndex)
       : null;
     movePlayer(source, Number.isFinite(resolvedTeamIndex) ? resolvedTeamIndex : teamIndex, resolvedLine, resolvedTargetPlayerKey, resolvedInsertIndex);
+    dragMarkerRef.current = null;
     setDragState(null);
-    setDragPoint(null);
+    dragPointRef.current = null;
     setDragHoverTarget(null);
   };
 
@@ -3742,9 +4034,12 @@ export function SorteoLegacyPageIsland({ root }) {
       }, 250);
     }
     setDragState(null);
-    setDragPoint(null);
+    dragPointRef.current = null;
+    dragMarkerRef.current = null;
     setDragHoverTarget(null);
   };
+
+  const updatePointerDragHoverRef = useRef(null);
 
   const updatePointerDragHover = (clientX, clientY) => {
     const source = pointerDragRef.current.source || dragState;
@@ -3773,7 +4068,8 @@ export function SorteoLegacyPageIsland({ root }) {
         const targetLineForPlacement = line === 'DEF'
           ? defenseInsertRole(siblingCards.length, insertIndex)
           : assigned;
-        const nextTarget = { teamIndex, line, targetLine: targetLineForPlacement, insertIndex, insertX };
+        const nextTarget = { teamIndex, line, targetLine: targetLineForPlacement, insertIndex };
+        dragMarkerRef.current = { teamIndex, line, x: insertX };
         updateDragHoverTarget(nextTarget);
         return nextTarget;
       }
@@ -3811,12 +4107,15 @@ export function SorteoLegacyPageIsland({ root }) {
       const targetLineForPlacement = line === 'DEF'
         ? defenseInsertRole(visibleCount, placement.insertIndex)
         : line;
-      const nextTarget = { teamIndex, line, targetLine: targetLineForPlacement, ...placement };
+      const nextTarget = { teamIndex, line, targetLine: targetLineForPlacement, insertIndex: placement.insertIndex };
+      dragMarkerRef.current = { teamIndex, line, x: placement.insertX };
       updateDragHoverTarget(nextTarget);
       return nextTarget;
     }
     return null;
   };
+
+  updatePointerDragHoverRef.current = updatePointerDragHover;
 
   const finishPointerDrag = (clientX, clientY) => {
     const source = pointerDragRef.current.source;
@@ -3846,7 +4145,7 @@ export function SorteoLegacyPageIsland({ root }) {
     pointerDragRef.current.active = true;
     pointerDragRef.current.source = source;
     setDragState(source);
-    setDragPoint({ x: clientX, y: clientY });
+    positionDragGhost(clientX, clientY);
     updateDragHoverTarget({
       teamIndex: source.teamIndex,
       line: pitchLineForPosition(source.assignedPosition),
@@ -3885,8 +4184,7 @@ export function SorteoLegacyPageIsland({ root }) {
     if (pointerDragRef.current.active) {
       event.preventDefault();
       event.stopPropagation();
-      setDragPoint({ x: event.clientX, y: event.clientY });
-      updatePointerDragHover(event.clientX, event.clientY);
+      scheduleDragHoverUpdate(event.clientX, event.clientY);
     }
   };
 
@@ -3909,6 +4207,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   edgeScrollStepRef.current = (elapsed) => {
     const scroller = teamsScrollerRef.current;
+    const dragPoint = dragPointRef.current;
     if (!scroller || !dragPoint || !pointerDragRef.current.active || !window.matchMedia('(max-width: 760px)').matches) return;
     const rect = scroller.getBoundingClientRect();
     if (dragPoint.y < Math.max(0, rect.top) || dragPoint.y > Math.min(window.innerHeight - 88, rect.bottom)) return;
@@ -3921,8 +4220,15 @@ export function SorteoLegacyPageIsland({ root }) {
     if (!velocity) return;
     scroller.scrollLeft += velocity * elapsed * 0.8;
     const target = updatePointerDragHover(dragPoint.x, dragPoint.y);
+    applyDropMarkerPosition();
     if (!target) updateDragHoverTarget(null);
   };
+
+  useEffect(() => {
+    if (!dragState) return;
+    const point = dragPointRef.current;
+    if (point) positionDragGhost(point.x, point.y);
+  }, [dragState, positionDragGhost]);
 
   useEffect(() => {
     if (!dragState) return undefined;
@@ -3980,7 +4286,7 @@ export function SorteoLegacyPageIsland({ root }) {
     if (pointerDragRef.current.active) {
       event.preventDefault();
       event.stopPropagation();
-      setDragPoint({ x: touch.clientX, y: touch.clientY });
+      scheduleDragHoverUpdate(touch.clientX, touch.clientY);
       updatePointerDragHover(touch.clientX, touch.clientY);
     }
   };
@@ -4063,7 +4369,7 @@ export function SorteoLegacyPageIsland({ root }) {
       return next;
     });
     setActiveFormationVariants((current) => ({ ...current, [String(teamIndex)]: variant.signature }));
-    setAnalysisVisible(true);
+    startTransition(() => setAnalysisVisible(true));
     setSuccess(`Variante aplicada en ${getTeamDisplayName(teamIndex)}.`);
   };
 
@@ -4116,37 +4422,38 @@ export function SorteoLegacyPageIsland({ root }) {
       const sanitizedStylesheet = await loadSanitizedExportStylesheets();
       const targetRect = target.getBoundingClientRect();
       const mobileScroller = window.matchMedia('(max-width: 760px)').matches ? teamsScrollerRef.current : null;
-      const teamWidth = mobileScroller?.clientWidth || 0;
-      const exportWidth = Math.ceil(targetRect.width + (mobileScroller ? mobileScroller.scrollWidth - mobileScroller.clientWidth : 0));
-      const exportHeight = Math.ceil(targetRect.height);
+      const stackedHeight = stackedMobileExportHeight(target, mobileScroller);
+      const exportBackground = '#f6faf8';
+      const exportScale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+      const exportWidth = Math.ceil(targetRect.width);
+      // El lienzo se dibuja con un margen extra (que despues se recorta) para que las
+      // marcas de borde de html2canvas no queden sobre la cancha ni sobre los nombres.
+      const exportHeight = (stackedHeight ? Math.ceil(stackedHeight * 1.03) + 32 : Math.ceil(targetRect.height)) + EXPORT_EDGE_PADDING;
       const viewportWidth = Math.ceil(window.innerWidth || document.documentElement.clientWidth || exportWidth);
       const viewportHeight = Math.ceil(window.innerHeight || document.documentElement.clientHeight || exportHeight);
-      const canvas = await capture(target, {
-        backgroundColor: '#f6faf8',
-        scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1)),
+      let canvas = await capture(target, {
+        backgroundColor: exportBackground,
+        scale: exportScale,
         useCORS: true,
         allowTaint: false,
         imageTimeout: 15000,
-        width: exportWidth,
-        height: exportHeight,
+        x: -EXPORT_EDGE_PADDING,
+        y: -EXPORT_EDGE_PADDING,
+        width: exportWidth + EXPORT_EDGE_PADDING * 2,
+        height: exportHeight + EXPORT_EDGE_PADDING,
         windowWidth: viewportWidth,
         windowHeight: viewportHeight,
         scrollX: window.scrollX,
         scrollY: window.scrollY,
         onclone: (clonedDocument) => {
           injectFormationExportStyles(clonedDocument, sanitizedStylesheet);
-          if (mobileScroller) {
-            const clonedTarget = clonedDocument.querySelector('#equipos-generados');
-            const clonedScroller = clonedDocument.querySelector('[data-teams-scroller]');
-            clonedTarget.style.setProperty('width', `${exportWidth}px`, 'important');
-            clonedScroller.style.setProperty('width', `${exportWidth}px`, 'important');
-            clonedScroller.style.setProperty('grid-auto-columns', `${teamWidth}px`, 'important');
-            clonedScroller.style.setProperty('overflow', 'visible', 'important');
-            clonedScroller.style.setProperty('scroll-snap-type', 'none', 'important');
-            clonedScroller.scrollLeft = 0;
-          }
+          if (stackedHeight) applyStackedMobileExportLayout(clonedDocument, exportWidth);
         },
       });
+      canvas = trimExportCanvas(
+        cropExportCanvas(canvas, exportWidth, exportScale),
+        exportBackground,
+      );
       const link = document.createElement('a');
       link.download = `formaciones_goodfellas_${new Date().toISOString().slice(0, 10)}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
@@ -4298,17 +4605,75 @@ export function SorteoLegacyPageIsland({ root }) {
       ? 'border-[#9fc8b5] bg-[#f4fbf7] text-[#063d2b]'
       : 'border-[#d7e6df] bg-[#f8fbfa] text-[#526b62]';
 
+  // Datos derivados por equipo: formaciones puntuadas, totales, conteos por linea y
+  // jugadores por linea. Son los calculos mas caros del render y solo cambian cuando
+  // cambian los equipos, las posiciones o los bloqueos; antes se recalculaban en cada
+  // render (arrastre, hover, abrir paneles, etc.).
+  const teamViews = useMemo(() => {
+    if (!teams) return [];
+    return teams.map((team, teamIndex) => {
+      const teamAssignmentsForIndex = teamAssignments(teamIndex);
+      const linePlayers = Object.fromEntries(PITCH_LINES.map((line) => [line, []]));
+      team.forEach((player) => {
+        const assigned = teamAssignmentsForIndex[playerKey(player)] || getPrimaryPlayerPosition(player);
+        const pitchLine = pitchLineForPosition(assigned);
+        (linePlayers[pitchLine] || linePlayers.MED).push(player);
+      });
+      return {
+        color: getTeamColor(teamIndex),
+        assignments: teamAssignmentsForIndex,
+        linePlayers,
+        lineCounts: teamLineCounts(team, teamAssignmentsForIndex),
+        summary: teamTotalsSummary(team, assignments),
+        formationOptions: getScoredFormationOptions(team, teamAssignmentsForIndex, lockedPlayerPositions),
+        formationSelectValue: teamFormationSelectValue(team, teamAssignmentsForIndex, teamFormations[teamIndex], isFormationEditor, isFormationEditor),
+      };
+    });
+  }, [assignments, getTeamColor, isFormationEditor, lockedPlayerPositions, teamAssignments, teamFormations, teams]);
+
+  // Validacion de cada linea durante el arrastre: se calcula una vez por objetivo de
+  // arrastre (antes se recalculaba para las lineas de los dos equipos en cada render).
+  const dropValidationByLine = useMemo(() => {
+    if (!dragState || !teams) return null;
+    const map = new Map();
+    teams.forEach((team, teamIndex) => {
+      FORMATION_LINES.forEach((line) => {
+        map.set(`${teamIndex}|${line}`, validateDropTarget(dragState, teamIndex, line, null));
+      });
+    });
+    return map;
+  }, [assignments, dragState, lockedPlayerPositions, teams, validateDropTarget]);
+
+  // Abrir el analisis en el telefono movia el contenido sin avisar: al abrirlo desde la
+  // barra inferior se desplaza hasta el panel para que se vea el resultado.
+  const analysisScrollPendingRef = useRef(false);
+  const toggleAnalysisPanel = useCallback(() => {
+    const next = !analysisVisible;
+    if (next && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 760px)').matches) {
+      analysisScrollPendingRef.current = true;
+    }
+    setAnalysisVisible(next);
+  }, [analysisVisible]);
+
+  useEffect(() => {
+    if (!analysisVisible || !analysisScrollPendingRef.current) return;
+    analysisScrollPendingRef.current = false;
+    const panel = document.querySelector('[data-sorteo-analysis]');
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [analysisVisible]);
+
   return (
     <section
       className={`sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5 ${mobileMoveSource ? 'max-[760px]:pb-56' : teams ? 'max-[760px]:pb-32' : ''}`}
       onDragOver={(event) => {
         if (!dragState) return;
         event.preventDefault();
-        setDragPoint({ x: event.clientX, y: event.clientY });
+        positionDragGhost(event.clientX, event.clientY);
       }}
       onDragEnd={() => {
         setDragState(null);
-        setDragPoint(null);
+        dragPointRef.current = null;
+        dragMarkerRef.current = null;
         setDragHoverTarget(null);
       }}
     >
@@ -4599,10 +4964,22 @@ export function SorteoLegacyPageIsland({ root }) {
             <div id="generateTeamsLoading" className={`${generating ? 'grid' : 'hidden'} gap-2 rounded-lg border border-[#9fc8b5] bg-[#f4fbf7] px-4 py-3 text-sm font-bold text-[#063d2b]`} role="status" aria-live="polite" aria-busy={generating}>
               <div className="flex items-center justify-between gap-3">
                 <strong className="block">Generando equipos...</strong>
-                <span className="text-xs font-black text-[#526b62]">{generationStage || 'Balanceando'}</span>
+                <span className="text-xs font-black text-[#526b62]">
+                  {generationStage || 'Balanceando'}
+                  {generationProgress > 0 ? <span className="ml-1 text-[#063d2b]">{Math.round(generationProgress * 100)}%</span> : null}
+                </span>
               </div>
-              <div className="sorteo-generate-progress" role="progressbar" aria-label="Progreso de generacion de equipos" aria-valuetext="Buscando la combinacion mas equilibrada">
-                <span />
+              <div
+                className="sorteo-generate-progress"
+                role="progressbar"
+                aria-label="Progreso de generacion de equipos"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={generationProgress > 0 ? Math.round(generationProgress * 100) : undefined}
+                aria-valuetext={generationProgress > 0 ? `${Math.round(generationProgress * 100)} por ciento` : 'Buscando la combinacion mas equilibrada'}
+                data-progress={generationProgress > 0 ? 'determinate' : 'indeterminate'}
+              >
+                <span style={generationProgress > 0 ? { width: `${Math.max(4, Math.round(generationProgress * 100))}%` } : undefined} />
               </div>
               <div className="flex flex-wrap gap-1.5 text-[11px] font-black text-[#526b62]" aria-hidden="true">
                 {GENERATION_STEPS.map((step) => (
@@ -4642,23 +5019,14 @@ export function SorteoLegacyPageIsland({ root }) {
                   setVisibleTeamIndex(Math.max(0, Math.min(teams.length - 1, Math.round(scroller.scrollLeft / Math.max(1, step)))));
                 }}>
                   {teams.map((team, teamIndex) => {
-                    const color = getTeamColor(teamIndex);
-                    const currentAssignments = teamAssignments(teamIndex);
-                    const linePlayers = Object.fromEntries(PITCH_LINES.map((line) => [line, []]));
-                    team.forEach((player) => {
-                        const assigned = currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player);
-                        const pitchLine = pitchLineForPosition(assigned);
-                        (linePlayers[pitchLine] || linePlayers.MED).push(player);
-                      });
-                    const summary = teamTotalsSummary(team, assignments);
-                    const formationOptions = getScoredFormationOptions(team, currentAssignments, lockedPlayerPositions);
-                    const formationSelectValue = teamFormationSelectValue(
-                      team,
-                      currentAssignments,
-                      teamFormations[teamIndex],
-                      isFormationEditor,
-                      isFormationEditor,
-                    );
+                    const view = teamViews[teamIndex] || {};
+                    const color = view.color || getTeamColor(teamIndex);
+                    const currentAssignments = view.assignments || teamAssignments(teamIndex);
+                    const linePlayers = view.linePlayers || Object.fromEntries(PITCH_LINES.map((line) => [line, []]));
+                    const summary = view.summary || teamTotalsSummary(team, assignments);
+                    const formationOptions = view.formationOptions || [];
+                    const formationSelectValue = view.formationSelectValue
+                      || teamFormationSelectValue(team, currentAssignments, teamFormations[teamIndex], isFormationEditor, isFormationEditor);
                     return (
                       <article key={teamIndex} className="team-card sorteo-team-card team grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2" data-team-index={teamIndex} data-sorteo-team-card="1">
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -4757,7 +5125,7 @@ export function SorteoLegacyPageIsland({ root }) {
                             const hasProjectedLaterals = line === 'DEF'
                               && lineList.some((player) => (currentAssignments[playerKey(player)] || getPrimaryPlayerPosition(player)) === 'LAT');
                             const label = line === 'DEF' ? 'DEF/LAT' : line;
-                            const lineCounts = teamLineCounts(team, currentAssignments);
+                            const lineCounts = view.lineCounts || teamLineCounts(team, currentAssignments);
                             const count = line === 'DEF' ? lineCounts.DEF + lineCounts.LAT : lineCounts[line];
                             const max = line === 'ARQ' ? 1 : maxFieldPlayersPerLine(team.length);
                             const canTuneLine = line !== 'ARQ';
@@ -4767,9 +5135,9 @@ export function SorteoLegacyPageIsland({ root }) {
                               && dragHoverTarget?.line === line
                               && !dragHoverTarget?.playerKey,
                             );
-                            const markerLeft = isLineHoverTarget && Number.isFinite(Number(dragHoverTarget?.insertX))
-                              ? `clamp(22px, ${Number(dragHoverTarget.insertX)}px, calc(100% - 22px))`
-                              : '50%';
+                            // La posicion fina del marcador la actualiza el arrastre directo
+                            // sobre el DOM (--sorteo-drop-x) para no re-renderizar la cancha.
+                            const markerLeft = 'clamp(22px, var(--sorteo-drop-x, 50%), calc(100% - 22px))';
                             const visibleLineCount = lineList.filter((player) => playerKey(player) !== String(dragState?.playerKey || '')).length;
                             const visualInsertIndex = isLineHoverTarget && Number.isFinite(Number(dragHoverTarget?.insertIndex))
                               ? Math.max(0, Math.min(Number(dragHoverTarget.insertIndex), visibleLineCount))
@@ -4779,7 +5147,8 @@ export function SorteoLegacyPageIsland({ root }) {
                               : (dragHoverTarget?.targetLine || line);
                             const lineValidationTarget = line === 'DEF' && visualInsertIndex !== null ? markerLine : line;
                             const lineDropValidation = isDraggingPlayer
-                              ? validateDropTarget(dragState, teamIndex, lineValidationTarget, null)
+                              ? (dropValidationByLine?.get(`${teamIndex}|${lineValidationTarget}`)
+                                || validateDropTarget(dragState, teamIndex, lineValidationTarget, null))
                               : null;
                             const lineCanAcceptDrop = Boolean(lineDropValidation?.ok);
                             const lineBlockMessage = lineDropValidation && !lineDropValidation.ok ? lineDropValidation.message : '';
@@ -4930,7 +5299,9 @@ export function SorteoLegacyPageIsland({ root }) {
                                                   const targetLineForPlacement = line === 'DEF'
                                                     ? defenseInsertRole(siblingCards.length, insertIndex)
                                                     : assigned;
-                                                  updateDragHoverTarget({ teamIndex, line, targetLine: targetLineForPlacement, insertIndex, insertX });
+                                                  dragMarkerRef.current = { teamIndex, line, x: insertX };
+                                                  updateDragHoverTarget({ teamIndex, line, targetLine: targetLineForPlacement, insertIndex });
+                                                  applyDropMarkerPosition();
                                                 } else {
                                                   updateDragHoverTarget({ teamIndex, line, targetLine: assigned, playerKey: key });
                                                 }
@@ -5037,7 +5408,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   <button className={`${quietButtonClass} w-full justify-start border-transparent px-3 shadow-none`} type="button" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); downloadTeamsText(); }}><Icon name="download" />Descargar texto</button>
                 </div>
               </details>
-              <button className={secondaryButtonClass} type="button" onClick={() => setAnalysisVisible((visible) => !visible)} aria-expanded={analysisVisible}>
+              <button className={secondaryButtonClass} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}
               </button>
@@ -5058,20 +5429,20 @@ export function SorteoLegacyPageIsland({ root }) {
           </div>
 
           {teams ? (
-            <div className={`fixed inset-x-0 bottom-0 z-50 grid ${mobileActionGridClass} gap-1 border-t border-[#d7e6df] bg-white px-2 py-2 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden`}>
+            <div data-sorteo-mobile-actions="1" className={`fixed inset-x-0 bottom-0 z-50 grid ${mobileActionGridClass} gap-1 border-t border-[#d7e6df] bg-white px-2 py-2 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden`}>
               <span className={`col-span-full justify-self-end rounded-md border px-2 py-1 text-[11px] font-black ${saveStateClass}`}>
                 {saveStateLabel}{manualActionCount > 0 ? ` | ${manualActionCount}` : ''}
               </span>
-              <button className={`${quietButtonClass} min-h-11 justify-center px-2 text-xs`} type="button" onClick={downloadTeamsJpg} disabled={exporting}>
+              <button className={`${quietButtonClass} sorteo-mobile-action-button disabled:cursor-wait disabled:opacity-70`} type="button" onClick={downloadTeamsJpg} disabled={exporting}>
                 <Icon name="download" />
                 {exporting ? 'JPG...' : 'JPG'}
               </button>
-              <button className={`${secondaryButtonClass} min-h-11 justify-center px-2 text-xs`} type="button" onClick={() => setAnalysisVisible((visible) => !visible)} aria-expanded={analysisVisible}>
+              <button className={`${secondaryButtonClass} sorteo-mobile-action-button`} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar' : 'Analizar'}
               </button>
               {lockedMatch ? (
-                <button className={`${primaryButtonClass} min-h-11 justify-center px-2 text-xs`} type="button" onClick={isFormationEditor ? saveFormations : saveDraw}>
+                <button className={`${primaryButtonClass} sorteo-mobile-action-button`} type="button" onClick={isFormationEditor ? saveFormations : saveDraw}>
                   <Icon name="save" />
                   Guardar
                 </button>
@@ -5080,7 +5451,7 @@ export function SorteoLegacyPageIsland({ root }) {
           ) : null}
 
           {teams && analysisVisible && drawAnalysis ? (
-            <section className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-4" data-sorteo-analysis="1" aria-label="Analisis de equipos">
+            <section className="sorteo-analysis-panel grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-4" data-sorteo-analysis="1" aria-label="Analisis de equipos">
               <div className="grid gap-2 border-b border-[#d7e6df] pb-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div>
                   <h3 className="m-0 text-base font-black text-[#07130f]">Analisis de equipos</h3>
@@ -5278,7 +5649,7 @@ export function SorteoLegacyPageIsland({ root }) {
       ) : null}
 
       {mobileMoveSource && mobileMovePlayer ? (
-        <div role="region" aria-label="Mover o intercambiar jugador" className="fixed inset-x-0 bottom-[88px] z-[60] grid max-h-[60dvh] gap-2 overflow-y-auto border-t border-[#d7e6df] bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden">
+        <div role="region" aria-label="Mover o intercambiar jugador" className="sorteo-mobile-tray fixed inset-x-0 bottom-[88px] z-[60] grid max-h-[60dvh] gap-2 overflow-y-auto border-t border-[#d7e6df] bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <strong className="block truncate text-sm font-black text-[#07130f]">{mobileMoveSource.playerName}</strong>
@@ -5383,8 +5754,12 @@ export function SorteoLegacyPageIsland({ root }) {
         {visibleTeamIndex > 0 ? <span className="rounded-r border border-white bg-[#075bb5] px-2 py-3 text-xs font-bold text-white">←<br />Otra cancha</span> : <span />}
         {visibleTeamIndex < teams.length - 1 ? <span className="rounded-l border border-white bg-[#075bb5] px-2 py-3 text-right text-xs font-bold text-white">→<br />Otra cancha</span> : <span />}
       </div> : null}
-      {dragState && dragPoint ? (
-        <div className="pointer-events-none fixed z-[100]" style={{ left: dragPoint.x + 16, top: dragPoint.y - 8 }}>
+      {dragState && teams ? (
+        <div
+          ref={dragGhostRef}
+          className="pointer-events-none fixed left-0 top-0 z-[100] [will-change:transform]"
+          data-sorteo-drag-ghost="1"
+        >
           <div className="absolute -left-7 -top-3 h-9 w-9 rounded-full bg-lime-200/30 blur-md" />
           <div className="absolute -left-10 -top-6 h-16 w-16 rounded-full border border-lime-200/50" />
           <div className="relative transition-transform duration-100" style={{ transform: 'scale(1.1) rotate(2deg)' }}>

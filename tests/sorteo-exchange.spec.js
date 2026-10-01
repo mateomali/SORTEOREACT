@@ -108,5 +108,8 @@ test('mobile courts scroll horizontally and edge dragging reaches the other team
     await image.decode();
     return { width: image.naturalWidth, height: image.naturalHeight };
   }, base64);
-  expect(dimensions.width).toBeGreaterThanOrEqual(geometry.total);
+  // La captura apila los equipos (una cancha debajo de la otra), asi que el ancho es el
+  // de una cancha y el alto cubre las dos tarjetas.
+  expect(dimensions.width).toBeLessThanOrEqual(geometry.width * 2);
+  expect(dimensions.height).toBeGreaterThan(dimensions.width);
 });

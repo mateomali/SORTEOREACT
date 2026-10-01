@@ -2789,6 +2789,14 @@
     animation: sorteo-generate-progress 1.05s ease-in-out infinite;
   }
 
+  /* Con progreso real (el sorteo informa en que porcentaje va) la barra deja de ser
+     indeterminada y crece de forma continua. */
+  body.page-sorteo-legacy .sorteo-react-page .sorteo-generate-progress[data-progress="determinate"] > span {
+    animation: none;
+    transform: none;
+    transition: width 180ms ease-out;
+  }
+
   @keyframes sorteo-generate-progress {
     0% {
       transform: translateX(-110%);
@@ -24220,6 +24228,66 @@ body.page-finalizar-partido.page-sorteo-legacy .content .sorteo-team-card .sorte
   .sorteo-react-page .sorteo-teams-scroller[data-dragging="true"] {
     scroll-snap-type: none;
     scroll-behavior: auto;
+  }
+}
+
+/* Barra fija de acciones del sorteo en movil.
+   Las reglas base del sitio (button, .btn) fijan alto, padding y tipografia con una
+   especificidad enorme, asi que el alto tactil se define aca: 44px reales y los tres
+   botones alineados. */
+body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"] button {
+  min-height: 44px !important;
+  width: 100% !important;
+  min-width: 0;
+  padding: 8px !important;
+  gap: 6px !important;
+  border-radius: 10px;
+  font-size: 0.8rem !important;
+  line-height: 1.12;
+  white-space: nowrap;
+}
+
+body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"] button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+/* Entradas suaves de los paneles de la cancha: antes aparecian de golpe y el cambio se
+   sentia tosco (sobre todo en el telefono, donde la bandeja tapa media pantalla). */
+@keyframes sorteo-tray-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sorteo-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sorteo-react-page .sorteo-mobile-tray {
+  animation: sorteo-tray-in 180ms ease-out both;
+}
+
+.sorteo-react-page .sorteo-analysis-panel {
+  animation: sorteo-panel-in 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sorteo-react-page .sorteo-mobile-tray,
+  .sorteo-react-page .sorteo-analysis-panel {
+    animation: none;
   }
 }
 
