@@ -794,6 +794,7 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
 
   const fixedGoalkeepers = team.filter(isFixedGoalkeeper);
   const goalkeeperCandidates = fixedGoalkeepers.length ? fixedGoalkeepers : team
+    .filter(canPlayGoalkeeper)
     .slice()
     .sort((a, b) => {
       const aCan = canPlayGoalkeeper(a);
@@ -1007,13 +1008,13 @@ function countSpread(values) {
   return values.length ? Math.max(...values) - Math.min(...values) : 0;
 }
 
-function positionBalancePenalty(teams, assignmentOverrides = {}) {
+function positionBalancePenalty(teams, assignmentOverrides = {}, cachedAssignments = null) {
   if (!teams.length) return 0;
   const teamSize = Math.max(...teams.map((team) => team.length), 0);
   const countsByLine = Object.fromEntries(FIELD_LINES.map((line) => [line, []]));
   let penalty = 0;
-  teams.forEach((team) => {
-    const counts = teamLineCounts(team, buildTeamAssignment(team, assignmentOverrides));
+  teams.forEach((team, index) => {
+    const counts = teamLineCounts(team, cachedAssignments?.[index] || buildTeamAssignment(team, assignmentOverrides));
     FIELD_LINES.forEach((line) => {
       const count = Number(counts[line] || 0);
       countsByLine[line].push(count);
@@ -1163,17 +1164,45 @@ function platinumSpread(teams, assignmentOverrides = {}) {
   return countSpread(teams.map((team) => tierCountsForTeam(team, assignmentOverrides).supreme || 0));
 }
 
+function lineStrengthBalance(teams, assignmentOverrides = {}, cachedAssignments = null) {
+  const assigned = cachedAssignments || teams.map((team) => buildTeamAssignment(team, assignmentOverrides));
+  const details = {};
+  let eliteExcess = 0;
+  let strengthGap = 0;
+  REQUIRED_FIELD_LINES.forEach((line) => {
+    // Natural positions prevent hiding strong defenders by assigning them elsewhere.
+    const naturalPools = teams.map((team) => team.filter((player) => !isFixedGoalkeeper(player) && pitchLineForPosition(getPrimaryPlayerPosition(player)) === line));
+    const ranked = naturalPools.flat().slice().sort((a, b) => adjustedPositionRating(b, getPrimaryPlayerPosition(b)) - adjustedPositionRating(a, getPrimaryPlayerPosition(a)));
+    const cutoff = ranked.length ? adjustedPositionRating(ranked[Math.min(teams.length, ranked.length) - 1], getPrimaryPlayerPosition(ranked[Math.min(teams.length, ranked.length) - 1])) : Infinity;
+    const strongestKeys = new Set(ranked.filter((player) => adjustedPositionRating(player, getPrimaryPlayerPosition(player)) >= cutoff - 0.000001).map(playerKey));
+    const eliteCounts = naturalPools.map((pool) => pool.filter((player) => strongestKeys.has(playerKey(player))).length);
+    eliteExcess += Math.max(0, countSpread(eliteCounts) - 1);
+    const naturalTotals = naturalPools.map((pool) => pool.reduce((sum, player) => sum + adjustedPositionRating(player, getPrimaryPlayerPosition(player)), 0));
+    const naturalAverages = naturalPools.map((pool, index) => pool.length ? naturalTotals[index] / pool.length : 0);
+    const assignedTotals = teams.map((team, index) => team.reduce((sum, player) => (
+      pitchLineForPosition(assigned[index][playerKey(player)]) === line ? sum + adjustedPositionRating(player, assigned[index][playerKey(player)]) : sum
+    ), 0));
+    const totalsGap = countSpread(naturalTotals);
+    const averageGap = ranked.length ? countSpread(naturalAverages) : 0;
+    const assignedGap = countSpread(assignedTotals);
+    strengthGap += (totalsGap + averageGap + assignedGap) / REQUIRED_FIELD_LINES.length;
+    details[line] = { eliteCounts, naturalTotals, naturalAverages, assignedTotals };
+  });
+  return { eliteExcess, strengthGap, details };
+}
+
 function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) {
-  const totals = teams.map((team) => teamScore(team, assignmentOverrides));
+  const assignments = teams.map((team) => buildTeamAssignment(team, assignmentOverrides));
+  const totals = teams.map((team, index) => team.reduce((sum, player) => sum + adjustedPositionRating(player, assignments[index][playerKey(player)]), 0));
   const diff = Math.max(...totals) - Math.min(...totals);
   const slowCounts = teams.map((team) => team.filter(isLowRhythmPlayer).length);
   const slowSpread = Math.max(...slowCounts) - Math.min(...slowCounts);
   const irregularCounts = teams.map((team) => team.filter(isIrregularPlayer).length);
   const irregularSpread = Math.max(...irregularCounts) - Math.min(...irregularCounts);
-  const supremeSpread = platinumSpread(teams, assignmentOverrides);
+  const supremeSpread = countSpread(teams.map((team, index) => team.filter((player) => playerCardTier(adjustedPositionRating(player, assignments[index][playerKey(player)])) === 'supreme').length));
   const teamSize = Math.max(...teams.map((team) => team.length), 0);
-  const linePenalty = teams.reduce((sum, team) => {
-    const counts = teamLineCounts(team, buildTeamAssignment(team, assignmentOverrides));
+  const linePenalty = teams.reduce((sum, team, index) => {
+    const counts = teamLineCounts(team, assignments[index]);
     const pitchCounts = {
       ARQ: counts.ARQ,
       DEF: counts.DEF + counts.LAT,
@@ -1203,8 +1232,13 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
   const lineStrength = lineStrengthPenalty(teams, assignmentOverrides);
   const profileDistribution = profileDistributionPenalty(teams);
   const hardTierPenalty = supremeSpread > 1 ? 100000000 : 0;
+  const lineBalance = lineStrengthBalance(teams, assignmentOverrides, assignments);
   return {
-    value: hardTierPenalty + (diff * 1000) + (slowSpread * 60) + (irregularSpread * 95) + linePenalty + positionBalancePenalty(teams, assignmentOverrides) + tierBalancePenalty(teams, assignmentOverrides) + positionUsePenalty(teams, assignmentOverrides) + lineStrength.penalty + profileDistribution.penalty + statPenalty + historicalRepeatPenalty(teams, pairHistory),
+    value: hardTierPenalty + (lineBalance.eliteExcess * 1000000) + ((diff + lineBalance.strengthGap) * 1000) + (slowSpread * 60) + (irregularSpread * 95) + linePenalty + positionBalancePenalty(teams, assignmentOverrides, assignments) + tierBalancePenalty(teams, assignmentOverrides) + positionUsePenalty(teams, assignmentOverrides) + lineStrength.penalty + profileDistribution.penalty + statPenalty + historicalRepeatPenalty(teams, pairHistory),
+    linePenalty,
+    eliteExcess: lineBalance.eliteExcess,
+    balanceScore: diff + lineBalance.strengthGap,
+    lineBalance,
     diff,
     slowSpread,
     irregularSpread,
@@ -1275,6 +1309,21 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
   return teams.every((team) => team.length === teamSize) ? teams : null;
 }
 
+function isBetterDraw(evaluation, best) {
+  if (!best) return true;
+  // Preserve mandatory rules and redraw uniqueness before comparing balance.
+  for (const field of ['signaturePenalty', 'linePenalty', 'eliteExcess']) {
+    const left = Number(evaluation[field] || 0);
+    const right = Number(best[field] || 0);
+    if (left !== right) return left < right;
+  }
+  const balance = Number(evaluation.balanceScore ?? evaluation.diff);
+  const bestBalance = Number(best.balanceScore ?? best.diff);
+  if (Math.abs(balance - bestBalance) > 0.000001) return balance < bestBalance;
+  if (Math.abs(evaluation.diff - best.diff) > 0.000001) return evaluation.diff < best.diff;
+  return evaluation.value + 0.001 < best.value;
+}
+
 function improveBySwaps(teams, teamSize, pairHistory, weights) {
   let best = teams.map((team) => team.slice());
   let bestEval = scoreTeams(best, pairHistory, {}, weights);
@@ -1290,8 +1339,10 @@ function improveBySwaps(teams, teamSize, pairHistory, weights) {
             const candidate = best.map((team) => team.slice());
             [candidate[a][i], candidate[b][j]] = [candidate[b][j], candidate[a][i]];
             if (!candidate.every((team) => team.length === teamSize)) continue;
+            if (!teamsRespectGoalkeepers(candidate)) continue;
+            if (platinumSpread(candidate) > 1) continue;
             const evaluation = scoreTeams(candidate, pairHistory, {}, weights);
-            if (evaluation.value + 0.001 < bestEval.value) {
+            if (isBetterDraw(evaluation, bestEval)) {
               best = candidate;
               bestEval = evaluation;
               changed = true;
@@ -1304,8 +1355,17 @@ function improveBySwaps(teams, teamSize, pairHistory, weights) {
   return { teams: best, evaluation: bestEval };
 }
 
+function teamsRespectGoalkeepers(teams) {
+  const fixedCount = teams.flat().filter(isFixedGoalkeeper).length;
+  return teams.every((team) => {
+    const fixed = team.filter(isFixedGoalkeeper);
+    if (fixed.length > 1 || (fixedCount === teams.length && fixed.length !== 1)) return false;
+    return team.some(canPlayGoalkeeper);
+  });
+}
+
 function teamsFitFormationRules(teams, teamSize) {
-  return platinumSpread(teams) <= 1 && teams.every((team) => {
+  return teamsRespectGoalkeepers(teams) && platinumSpread(teams) <= 1 && teams.every((team) => {
     if (team.length !== teamSize) return false;
     const counts = teamLineCounts(team, buildTeamAssignment(team));
     return fieldLineCountsFitLimits(counts, teamSize);
@@ -1333,6 +1393,8 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
   if (players.length !== teamSize * 2 || players.length > 20 || teamSize < 2) return null;
   let best = null;
   let bestEval = null;
+  let evaluatedCandidates = 0;
+  let visited = 0;
   const selected = [0];
   const pickedFlags = new Array(players.length).fill(false);
   pickedFlags[0] = true;
@@ -1361,10 +1423,11 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
       const teams = [left, right];
       if (!teamsFitFormationRules(teams, teamSize)) return;
       const evaluationBase = scoreTeams(teams, pairHistory, {}, weights);
+      evaluatedCandidates += 1;
       const signature = drawSignature(teams);
       const signaturePenalty = avoidSignatures.has(signature) ? 100000000 : 0;
-      const evaluation = { ...evaluationBase, value: evaluationBase.value + signaturePenalty, signature };
-      if (!bestEval || evaluation.value < bestEval.value) {
+      const evaluation = { ...evaluationBase, value: evaluationBase.value + signaturePenalty, signaturePenalty, signature };
+      if (isBetterDraw(evaluation, bestEval)) {
         best = teams;
         bestEval = evaluation;
       }
@@ -1389,7 +1452,7 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
   };
 
   await visit(1);
-  return best ? { teams: best, evaluation: bestEval, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
+  return best ? { teams: best, evaluation: bestEval, evaluatedCandidates, exhaustive: true, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
 }
 
 async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights, avoidSignatures = new Set(), options = {}) {
@@ -1399,33 +1462,41 @@ async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, we
     const exact = await generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHistory, weights, avoidSignatures, options);
     if (exact) return exact;
   }
-  const attempts = Math.min(180, Math.max(60, players.length * 4));
+  const attempts = Math.min(180, Math.max(120, players.length * 4));
   let best = null;
   let bestEval = null;
+  let evaluatedCandidates = 0;
+  const finalists = [];
+  const consider = (teams, evaluationBase) => {
+    if (!teamsFitFormationRules(teams, teamSize)) return;
+    evaluatedCandidates += 1;
+    const signature = drawSignature(teams);
+    const signaturePenalty = avoidSignatures.has(signature) ? 100000000 : 0;
+    const evaluation = { ...evaluationBase, value: evaluationBase.value + signaturePenalty, signaturePenalty, signature };
+    if (isBetterDraw(evaluation, bestEval)) {
+      best = teams;
+      bestEval = evaluation;
+    }
+  };
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await yieldToUi();
+    options.onProgress?.(attempt / (attempts + 8));
     const candidate = buildCandidateTeams(shuffle(players), numTeams, teamSize, pairHistory, weights);
     if (!candidate) continue;
-    const improved = improveBySwaps(candidate, teamSize, pairHistory, weights);
-    if (platinumSpread(improved.teams) > 1) continue;
-    const signature = drawSignature(improved.teams);
-    const signaturePenalty = avoidSignatures.has(signature) ? 100000000 : 0;
-    const evaluation = { ...improved.evaluation, value: improved.evaluation.value + signaturePenalty, signature };
-    if (!bestEval || evaluation.value < bestEval.value) {
-      best = improved.teams;
-      bestEval = evaluation;
-      if (
-        !signaturePenalty
-        && bestEval.diff <= maxDiff
-        && bestEval.slowSpread <= 1
-        && bestEval.irregularSpread <= 1
-        && bestEval.platinumSpread <= 1
-        && bestEval.profileDistributionSpread <= 1
-        && bestEval.lineStrengthSpread <= 2
-      ) break;
-    }
+    const evaluation = scoreTeams(candidate, pairHistory, {}, weights);
+    consider(candidate, evaluation);
+    const signaturePenalty = avoidSignatures.has(drawSignature(candidate)) ? 100000000 : 0;
+    finalists.push({ teams: candidate, evaluation: { ...evaluation, signaturePenalty } });
+    finalists.sort((a, b) => isBetterDraw(a.evaluation, b.evaluation) ? -1 : isBetterDraw(b.evaluation, a.evaluation) ? 1 : 0);
+    if (finalists.length > 8) finalists.pop();
   }
-  return best ? { teams: best, evaluation: bestEval, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
+  for (let index = 0; index < finalists.length; index += 1) {
+    await yieldToUi();
+    options.onProgress?.((attempts + index) / (attempts + finalists.length));
+    const improved = improveBySwaps(finalists[index].teams, teamSize, pairHistory, weights);
+    consider(improved.teams, improved.evaluation);
+  }
+  return best ? { teams: best, evaluation: bestEval, evaluatedCandidates, exhaustive: false, usedMaxDiff: Math.max(maxDiff, bestEval.diff) } : null;
 }
 
 function assignmentSignatureForTeam(team, assignments = {}) {
@@ -3069,7 +3140,9 @@ export function SorteoLegacyPageIsland({ root }) {
     setError('');
     setSuccess('');
     const rawSelected = lockedMatch ? players.slice() : players.filter((player) => player.selected);
-    const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true).map(playerKey));
+    const naturalGoalkeepers = rawSelected.filter((player) => getPrimaryPlayerPosition(player) === 'ARQ');
+    const requiredNaturalKeys = new Set(naturalGoalkeepers.length === numTeams ? naturalGoalkeepers.map(playerKey) : []);
+    const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true || requiredNaturalKeys.has(playerKey(player))).map(playerKey));
     if (selectedGoalkeeperKeys.size > numTeams) {
       setError(`Elegiste ${selectedGoalkeeperKeys.size} arqueros para ${numTeams} equipos. Deja como maximo 1 arquero por equipo.`);
       return null;
@@ -3183,9 +3256,7 @@ export function SorteoLegacyPageIsland({ root }) {
       const emergencyMessage = prepared.emergencyGoalkeepers.length
         ? ` Arqueros de emergencia: ${prepared.emergencyGoalkeepers.map((player) => player.nombre).join(', ')}.`
         : '';
-      const balanceMessage = result.evaluation.diff <= maxDiff
-        ? `Equipos generados con diferencia maxima ${Number(result.usedMaxDiff || maxDiff).toFixed(1)}.`
-        : `Se genero el mejor equilibrio encontrado. Diferencia de puntos: ${result.evaluation.diff.toFixed(1)}.`;
+      const balanceMessage = `${result.exhaustive ? 'Mejor combinacion valida' : 'Mejor resultado encontrado'} entre ${result.evaluatedCandidates} combinaciones validas, equilibrando defensa, medio y ataque. Diferencia de puntos: ${result.evaluation.diff.toFixed(2)}.`;
       setSuccess(`${balanceMessage}${emergencyMessage}`);
       return result.teams;
     } finally {

@@ -17,7 +17,7 @@ function h(string $value): string
 function player_photo_path(array $player): string
 {
     $path = trim(str_replace('\\', '/', (string) ($player['photo_path'] ?? '')));
-    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/')) {
+    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/') || !is_file(__DIR__ . '/../' . $path)) {
         return 'assets/players/default-player-silhouette.png';
     }
     return $path;

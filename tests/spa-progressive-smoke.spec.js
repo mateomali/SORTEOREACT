@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8001';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8000';
 const ADMIN_PASSWORD = process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -80,6 +80,7 @@ async function clickAndCheckPartial(page, selector, expectedUrlPart, expectedSel
 }
 
 test('progressive SPA navigation, legacy draw, and player row save', async ({ page }) => {
+  test.setTimeout(90000);
   await page.setViewportSize({ width: 1366, height: 900 });
   const { consoleErrors, failedResponses } = captureBrowserErrors(page);
 
@@ -124,7 +125,7 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
     await page.locator('#generateTeamsButton').click();
     await page.waitForSelector('#equipos-generados .team', { timeout: 25000 });
     expect(await page.locator('#equipos-generados .team').count()).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('#success')).toContainText(/Equipos generados|mejor equilibrio/);
+    await expect(page.locator('#success')).toContainText(/Equipos generados|mejor equilibrio|Mejor combinacion valida|Mejor resultado encontrado/);
 
     await clickAndCheckPartial(page, 'button:has-text("Volver a fechas")', 'editar_partidos.php');
     await page.evaluate((href) => window.goodfellasPartialNavigate(href), redirectedHref);

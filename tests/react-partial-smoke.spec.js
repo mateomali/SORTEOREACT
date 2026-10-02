@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8001';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8000';
 const ADMIN_PASSWORD = process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026';
 
 async function adminLogin(page, next = 'index.php') {
@@ -63,7 +63,7 @@ for (const profile of [
     }
     await clickVisibleNavHref(page, 'estadisticas.php');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('main.content')).toContainText(/Estadisticas|Ranking|Temporada/i);
+    await expect(page.locator('main.content')).toContainText(/Estad[ií]sticas|Ranking|Temporada/i);
 
     if (profile.viewport.width <= 760) {
       await page.getByRole('button', { name: /Abrir menu|Menu/i }).click();
@@ -175,7 +175,7 @@ test('admin create match participant controls react without submitting', async (
   const random = controls.getByRole('button', { name: /Seleccion al azar/i });
   if (await random.count()) {
     await random.click();
-    await expect(controls.locator('.participant-react-helper')).toContainText(/convocados/i);
+    await expect(controls.locator('[aria-live="polite"]')).toContainText(/convocados/i);
   }
 
   const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);

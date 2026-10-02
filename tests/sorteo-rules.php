@@ -168,4 +168,39 @@ assert_true($twoDefenderAssignment['line_limit_ok'], 'Un equipo con 2 DEF y 0 LA
 assert_true(($twoDefenderAssignment['line_counts']['DEF'] ?? 0) === 2, 'Los dos defensores deben quedar como DEF.');
 assert_true(($twoDefenderAssignment['line_counts']['LAT'] ?? 0) === 0, 'No se debe inventar un LAT cuando hay 2 DEF naturales.');
 
+$mixedKeeperTeams = array_map(static fn(array $team): array => array_map(static function (array $player): array {
+    if (player_primary_position($player) === 'ARQ') {
+        $player['positions'] = 'ARQ/MED';
+    }
+    return $player;
+}, $team['players']), $threeTeams);
+assert_true(validate_teams($mixedKeeperTeams, 9, 100.0), 'Los arqueros con posicion secundaria deben poder ocupar un arco cada uno.');
+$keeperIndex = array_search(true, array_map(static fn(array $player): bool => player_primary_position($player) === 'ARQ', $mixedKeeperTeams[1]), true);
+$fieldIndex = array_search(false, array_map(static fn(array $player): bool => player_primary_position($player) === 'ARQ', $mixedKeeperTeams[0]), true);
+[$mixedKeeperTeams[0][$fieldIndex], $mixedKeeperTeams[1][$keeperIndex]] = [$mixedKeeperTeams[1][$keeperIndex], $mixedKeeperTeams[0][$fieldIndex]];
+assert_true(!validate_teams($mixedKeeperTeams, 9, 100.0), 'No aceptar dos arqueros juntos aunque uno pueda jugar de MED.');
+
+$linePools = [];
+foreach (['DEF', 'MED', 'DEL'] as $lineIndex => $line) {
+    for ($index = 0; $index < 6; $index++) {
+        $linePools[$line][] = test_player(500 + $lineIndex * 10 + $index, "$line $index", $line, $index < 3 ? 4.5 : 2.5);
+    }
+}
+$concentrated = [
+    [$threeTeamPlayers[0], $linePools['DEF'][0], $linePools['DEF'][1], $linePools['MED'][3], $linePools['MED'][4], $linePools['DEL'][0], $linePools['DEL'][3]],
+    [$threeTeamPlayers[1], $linePools['DEF'][3], $linePools['DEF'][4], $linePools['MED'][0], $linePools['MED'][1], $linePools['DEL'][1], $linePools['DEL'][4]],
+    [$threeTeamPlayers[2], $linePools['DEF'][2], $linePools['DEF'][5], $linePools['MED'][2], $linePools['MED'][5], $linePools['DEL'][2], $linePools['DEL'][5]],
+];
+$distributed = [];
+for ($index = 0; $index < 3; $index++) {
+    $distributed[$index] = [$threeTeamPlayers[$index]];
+    foreach (['DEF', 'MED', 'DEL'] as $line) {
+        $distributed[$index][] = $linePools[$line][$index];
+        $distributed[$index][] = $linePools[$line][$index + 3];
+    }
+}
+assert_true(draw_line_strength_balance($concentrated)['elite_excess'] > 0, 'Detectar los mejores defensores y medios juntos.');
+assert_true(draw_line_strength_balance($distributed)['elite_excess'] === 0, 'Repartir los mejores de cada linea entre los tres equipos.');
+assert_true(draw_teams_balance_is_better($distributed, $concentrated, draw_player_band_ids(array_merge(...$distributed))), 'Preferir equilibrio por lineas aunque los totales sean similares.');
+
 echo "OK sorteo rules\n";

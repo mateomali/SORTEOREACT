@@ -443,6 +443,10 @@ function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
 {
     $scores = [];
     $slowCounts = [];
+    $keeperCounts = array_map(static fn(array $team): int => count(array_filter($team, static fn(array $player): bool => player_primary_position($player) === 'ARQ' || is_emergency_goalkeeper($player))), $teams);
+    if (array_sum($keeperCounts) === count($teams) && min($keeperCounts) !== 1) {
+        return false;
+    }
     foreach ($teams as $team) {
         if (count($team) !== $teamSize) {
             return false;
@@ -825,6 +829,72 @@ function draw_teams_quality_score(array $teams, array $bands): float
     return $cost;
 }
 
+function draw_teams_point_difference(array $teams): float
+{
+    $totals = array_map(static function (array $team): float {
+        $assignment = build_team_position_assignment($team)['assignment'];
+        return array_sum(array_map(static fn(array $player): float => player_position_rating($player, $assignment[(int) $player['id']]), $team));
+    }, $teams);
+    return max($totals) - min($totals);
+}
+
+function draw_line_strength_balance(array $teams): array
+{
+    $assignments = array_map(static fn(array $team): array => build_team_position_assignment($team)['assignment'], $teams);
+    $eliteExcess = 0;
+    $strengthGap = 0.0;
+    foreach (['DEF', 'MED', 'DEL'] as $line) {
+        $pools = array_map(static fn(array $team): array => array_values(array_filter($team, static fn(array $player): bool => draw_pitch_line(player_primary_position($player)) === $line)), $teams);
+        $ranked = array_merge(...$pools);
+        usort($ranked, static fn(array $a, array $b): int => player_position_rating($b, player_primary_position($b)) <=> player_position_rating($a, player_primary_position($a)));
+        $strongestIds = [];
+        if ($ranked) {
+            $cutoffPlayer = $ranked[min(count($teams), count($ranked)) - 1];
+            $cutoff = player_position_rating($cutoffPlayer, player_primary_position($cutoffPlayer));
+            foreach ($ranked as $player) {
+                if (player_position_rating($player, player_primary_position($player)) >= $cutoff - 0.000001) {
+                    $strongestIds[(int) $player['id']] = true;
+                }
+            }
+        }
+        $eliteCounts = array_map(static fn(array $pool): int => count(array_filter($pool, static fn(array $player): bool => isset($strongestIds[(int) $player['id']]))), $pools);
+        $eliteExcess += max(0, draw_count_spread($eliteCounts) - 1);
+        $naturalTotals = array_map(static fn(array $pool): float => array_sum(array_map(static fn(array $player): float => player_position_rating($player, player_primary_position($player)), $pool)), $pools);
+        $averages = [];
+        $assignedTotals = [];
+        foreach ($teams as $index => $team) {
+            $averages[] = $pools[$index] ? $naturalTotals[$index] / count($pools[$index]) : 0.0;
+            $total = 0.0;
+            foreach ($team as $player) {
+                $position = $assignments[$index][(int) $player['id']];
+                if (draw_pitch_line($position) === $line) {
+                    $total += player_position_rating($player, $position);
+                }
+            }
+            $assignedTotals[] = $total;
+        }
+        $strengthGap += ((max($naturalTotals) - min($naturalTotals)) + (max($averages) - min($averages)) + (max($assignedTotals) - min($assignedTotals))) / 3;
+    }
+    return ['elite_excess' => $eliteExcess, 'strength_gap' => $strengthGap];
+}
+
+function draw_teams_balance_is_better(array $candidate, ?array $best, array $bands): bool
+{
+    if ($best === null) {
+        return true;
+    }
+    $candidateLines = draw_line_strength_balance($candidate);
+    $bestLines = draw_line_strength_balance($best);
+    if ($candidateLines['elite_excess'] !== $bestLines['elite_excess']) {
+        return $candidateLines['elite_excess'] < $bestLines['elite_excess'];
+    }
+    $difference = (draw_teams_point_difference($candidate) + $candidateLines['strength_gap']) - (draw_teams_point_difference($best) + $bestLines['strength_gap']);
+    if (abs($difference) > 0.000001) {
+        return $difference < 0;
+    }
+    return draw_teams_quality_score($candidate, $bands) + 0.0001 < draw_teams_quality_score($best, $bands);
+}
+
 function draw_optimized_team_swap(array $teams, int $teamSize, float $maxDiff, array $bands): ?array
 {
     $currentScore = draw_teams_quality_score($teams, $bands);
@@ -845,7 +915,7 @@ function draw_optimized_team_swap(array $teams, int $teamSize, float $maxDiff, a
                     }
 
                     $score = draw_teams_quality_score($candidate, $bands);
-                    if ($score + 0.0001 < $bestScore) {
+                    if (draw_teams_balance_is_better($candidate, $best ?? $teams, $bands)) {
                         $bestScore = $score;
                         $best = $candidate;
                     }
@@ -921,7 +991,7 @@ function draw_exact_two_team_candidate(array $players, int $teamSize, float $max
             }
 
             $score = draw_teams_quality_score($teams, $bands);
-            if ($bestScore === null || $score < $bestScore) {
+            if (draw_teams_balance_is_better($teams, $bestTeams, $bands)) {
                 $bestScore = $score;
                 $bestTeams = $teams;
             }
@@ -1119,6 +1189,8 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
                 $projectedTeams[$teamIndex][] = $player;
                 $cost += draw_team_low_liability_spread($projectedTeams) * 85.0;
                 $cost += draw_position_balance_penalty($projectedTeams);
+                $lineBalance = draw_line_strength_balance($projectedTeams);
+                $cost += ($lineBalance['elite_excess'] * 1000000.0) + ($lineBalance['strength_gap'] * 1000.0);
                 $cost += draw_tier_balance_penalty($projectedTeams);
                 $cost += draw_line_strength_balance_penalty($projectedTeams);
                 $cost += draw_profile_distribution_penalty($projectedTeams);
@@ -1189,7 +1261,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
         if (validate_teams($teams, $teamSize, $maxDiff)) {
             $validCandidates++;
             $qualityScore = draw_teams_quality_score($teams, $bands);
-            if ($bestScore === null || $qualityScore < $bestScore) {
+            if (draw_teams_balance_is_better($teams, $bestTeams, $bands)) {
                 $teams = draw_optimize_teams($teams, $teamSize, $maxDiff, $bands);
                 if (!validate_teams($teams, $teamSize, $maxDiff)) {
                     continue;
@@ -1212,7 +1284,7 @@ function generate_valid_teams(array $players, int $numTeams, float $maxDiff, int
         $exactTeams = draw_exact_two_team_candidate($players, $teamSize, $maxDiff, $bands);
         if ($exactTeams !== null) {
             $exactScore = draw_teams_quality_score($exactTeams, $bands);
-            if ($bestScore === null || $exactScore < $bestScore) {
+            if (draw_teams_balance_is_better($exactTeams, $bestTeams, $bands)) {
                 $bestTeams = $exactTeams;
             }
         }

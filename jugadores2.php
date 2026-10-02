@@ -358,8 +358,7 @@ function jugadores2_card_photo(array $player): string
 
 function jugadores2_edit_photo(array $player): string
 {
-    $path = jugadores2_photo_public_path((string) ($player['photo_path'] ?? ''));
-    return $path !== '' ? $path : jugadores2_card_photo($player);
+    return player_photo_path($player);
 }
 
 function jugadores2_regularidad_form(float $value): array
