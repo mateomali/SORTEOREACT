@@ -125,7 +125,7 @@ const primaryButtonClass = `inline-flex min-h-11 items-center justify-center gap
 const secondaryButtonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-4 text-sm font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
 const dangerButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-extrabold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 ${focusRing}`;
 const iconButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f5faf7] hover:text-[#063d2b] ${focusRing}`;
-const pitchBackgroundClass = 'bg-[linear-gradient(rgba(5,37,27,.10),rgba(5,37,27,.24)),url(/assets/images/captain-field-bg-vertical.jpg),linear-gradient(160deg,#0e7a43,#07563d)] [background-position:center,center,center] [background-repeat:no-repeat,no-repeat,no-repeat] [background-size:auto,100%_100%,auto]';
+
 const pitchLineToneClasses = {
   ARQ: 'border-l-4 border-l-amber-300/80 bg-amber-200/7',
   DEF: 'border-l-4 border-l-cyan-200/80 bg-cyan-200/7',
@@ -1901,7 +1901,7 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
   const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
-  const widthClass = 'w-[52px] min-[380px]:w-[58px] sm:w-[64px] xl:w-[72px] 2xl:w-[80px]';
+  const widthClass = 'gf-player-card';
   const outOfPosition = !getOrderedPlayerPositions(player).includes(assignedPosition);
   const secondary = !outOfPosition && assignedPosition !== getPrimaryPlayerPosition(player);
   const isLateral = String(assignedPosition || '').toUpperCase() === 'LAT' || laneRole === 'lateral';
@@ -1916,7 +1916,7 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
   return (
     <button
       type="button"
-      className={`relative block aspect-[1000/820] ${widthClass} shrink-0 bg-transparent !min-h-0 !rounded-none p-0 text-left transition duration-150 ease-out cursor-grab active:cursor-grabbing active:scale-[0.97] ${dragging ? 'scale-95 opacity-55' : 'hover:scale-[1.03]'} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 scale-[1.06] ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
+      className={`relative block ${widthClass} shrink-0 bg-transparent !min-h-0 !rounded-none p-0 text-left transition duration-150 ease-out cursor-grab active:cursor-grabbing ${dragging ? 'opacity-55' : ''} ${selected ? 'ring-2 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''} ${locked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-emerald-900' : ''} ${swapTarget ? 'z-20 ring-4 ring-lime-200 ring-offset-2 ring-offset-emerald-900' : ''}`}
       style={{
         '--sorteo-card-text': palette.color,
         '--sorteo-card-position': outOfPosition ? '#ffb4a8' : secondary ? '#ffe9a6' : palette.color,
@@ -1962,32 +1962,32 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
           </span>
         </span>
       ) : null}
-      <span className="sorteo-compact-rating absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-[3px] rounded-md bg-black/45 px-1.5 py-1">
+      <span className="sorteo-compact-rating absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-px rounded bg-black/45 p-[3%]">
         <strong
           className={`block font-black leading-none ${palette.text} ${textShadow}`}
-          style={{ fontSize: '1.12rem' }}
+          style={{ fontSize: 'clamp(10px, 25cqw, 26px)' }}
           data-sorteo-card-text="1"
         >
           {playerCardRating(adjusted)}
         </strong>
         <span className={`flex items-center gap-[2px] font-black uppercase leading-none ${textShadow}`}>
-          <span style={{ fontSize: '0.56rem', color: 'var(--sorteo-card-position)' }} data-sorteo-card-position="1">{assignedPosition}</span>
+          <span style={{ fontSize: 'clamp(6px, 12cqw, 12px)', color: 'var(--sorteo-card-position)' }} data-sorteo-card-position="1">{assignedPosition}</span>
           <span className="block aspect-square" style={{ width: '0.42rem', height: '0.42rem' }}><Arrow form={playerRegularityForm(player)} /></span>
         </span>
       </span>
       <span
-        className="sorteo-compact-photo absolute left-[40%] right-[6%] top-[12%] z-[25] flex h-[58%] items-center justify-center overflow-hidden rounded-[40%_40%_34%_34%]"
+        className="sorteo-compact-photo absolute left-[40%] right-[6%] top-[12%] z-[25] flex h-[48%] items-center justify-center overflow-hidden rounded-[40%_40%_34%_34%]"
         data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
         <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-center' : 'object-contain object-center opacity-55'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
       <PositionPenaltyBubble percent={positionPenalty} />
       <strong
-        className={`absolute left-[9%] right-[9%] top-[74%] z-30 block overflow-hidden text-ellipsis whitespace-nowrap text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
-        style={{ fontSize: '0.66rem' }}
+        className={`gf-player-name absolute left-[9%] right-[9%] top-[62%] bottom-[12%] z-30 flex items-center justify-center text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
+        style={{ fontSize: player.nombre.length > 18 ? 'clamp(5px, 9cqw, 12px)' : 'clamp(7px, 13cqw, 14px)' }}
         data-sorteo-card-text="1"
       >
-        {player.nombre}
+        <span className="gf-player-name-text">{player.nombre}</span>
       </strong>
     </button>
   );
@@ -3969,7 +3969,7 @@ export function SorteoLegacyPageIsland({ root }) {
     const img = new Image();
     img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     event.dataTransfer.setDragImage(img, 0, 0);
-    setDragState({ ...source, player });
+    setDragState({ ...source, player, cardWidth: event.currentTarget.getBoundingClientRect().width });
     positionDragGhost(event.clientX, event.clientY);
     updateDragHoverTarget({ teamIndex, line: pitchLineForPosition(assignedPosition), targetLine: assignedPosition, playerKey: playerKey(player) });
   };
@@ -4156,7 +4156,8 @@ export function SorteoLegacyPageIsland({ root }) {
   const beginDragAtPoint = (source, clientX, clientY) => {
     pointerDragRef.current.active = true;
     pointerDragRef.current.source = source;
-    setDragState(source);
+    const sourceCard = Array.from(document.querySelectorAll('[data-sorteo-drag-player]')).find(card => card.dataset.playerKey === String(source.playerKey));
+    setDragState({ ...source, cardWidth: sourceCard?.getBoundingClientRect().width || 64 });
     positionDragGhost(clientX, clientY);
     updateDragHoverTarget({
       teamIndex: source.teamIndex,
@@ -5212,8 +5213,8 @@ export function SorteoLegacyPageIsland({ root }) {
                           <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
                         </div>
                         <div
-                          className={`team-formation relative grid h-[600px] grid-rows-[minmax(0,.8fr)_repeat(3,minmax(0,1fr))] gap-2 overflow-hidden rounded-lg border-2 border-t-4 border-emerald-200 p-3 text-white max-[760px]:h-[430px] max-[760px]:gap-1 max-[760px]:p-1.5 ${pitchBackgroundClass}`}
-                          style={{ borderTopColor: teamColorAccentHex(teamIndex) }}
+                          className="team-formation gf-formation text-white"
+                          style={{ borderTopColor: teamColorAccentHex(teamIndex), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
                           data-sorteo-drop-team={teamIndex}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
@@ -5262,22 +5263,10 @@ export function SorteoLegacyPageIsland({ root }) {
                               : (lineCanAcceptDrop
                                 ? 'border-lime-200/70 bg-lime-200/15 ring-2 ring-lime-200/70'
                                 : 'opacity-45');
-                            const formationEditorLineGridClass = canTuneLine
-                              ? 'grid-cols-[34px_minmax(0,1fr)_28px] gap-1.5 max-[760px]:grid-cols-[29px_minmax(0,1fr)_24px] max-[760px]:gap-1'
-                              : 'grid-cols-[34px_minmax(0,1fr)] gap-1.5 max-[760px]:grid-cols-[29px_minmax(0,1fr)] max-[760px]:gap-1';
-                            const defaultLineGridClass = canTuneLine
-                              ? 'grid-cols-[54px_minmax(0,1fr)_34px] max-[760px]:grid-cols-[32px_minmax(0,1fr)_22px] max-[760px]:gap-0.5'
-                              : 'grid-cols-[54px_minmax(0,1fr)] max-[760px]:grid-cols-[38px_minmax(0,1fr)]';
-                            const lineGridClass = isFormationEditor ? formationEditorLineGridClass : defaultLineGridClass;
-                            const lineModeClass = isFormationEditor
-                              ? (canTuneLine ? 'finish-line-with-tools' : 'finish-line-basic')
-                              : (canTuneLine ? 'sorteo-line-with-tools' : 'sorteo-line-basic');
-                            const linePlayersClass = isFormationEditor
-                              ? 'line-players relative flex h-full min-h-0 flex-nowrap items-center justify-evenly gap-1.5 overflow-visible px-1.5 py-0 max-[760px]:gap-0.5 max-[760px]:px-0.5'
-                              : 'line-players relative flex h-full min-h-0 flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-lg border !border-white/15 !bg-emerald-950/24 p-1 shadow-[inset_0_2px_8px_rgba(2,14,9,.28)] max-[760px]:gap-1 max-[760px]:p-0.5';
-                            const lineStyle = isFormationEditor
-                              ? { gridTemplateColumns: canTuneLine ? '34px minmax(0, 1fr) 28px' : '34px minmax(0, 1fr)' }
-                              : undefined;
+                            const lineGridClass = '';
+                            const lineModeClass = 'gf-formation-row';
+                            const linePlayersClass = 'line-players gf-line-players';
+                            const lineStyle = { '--gf-player-count': Math.max(1, lineList.length) };
                             return (
                               <div
                                 key={line}
@@ -5348,7 +5337,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                     const opensGapBefore = visualInsertIndex !== null
                                       && key !== String(dragState?.playerKey || '')
                                       && visibleIndex === visualInsertIndex;
-                                    const gapClass = opensGapBefore ? 'ml-[54px] min-[380px]:ml-[64px] sm:ml-[70px] xl:ml-[82px] 2xl:ml-[88px]' : '';
+                                    const gapClass = opensGapBefore ? 'gf-insert-before' : '';
                                     const isSwapTarget = Boolean(
                                       dragState
                                       && dragHoverTarget?.playerKey === key
@@ -5358,7 +5347,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                     return (
                                       <span
                                         key={key}
-                                        className={`relative shrink-0 transition-[margin,transform,opacity] duration-150 ease-out ${gapClass}`}
+                                        className={`gf-player-slot relative ${gapClass}`}
                                         data-sorteo-line-player-item="1"
                                         data-player-key={key}
                                       >
@@ -5438,7 +5427,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                   })}
                                 </div>
                                 {canTuneLine ? (
-                                  <div className="grid justify-items-center gap-1 max-[760px]:gap-0.5">
+                                  <div className="gf-line-add grid justify-items-center gap-1 max-[760px]:gap-0.5">
                                     <button className="inline-flex !h-7 !min-h-0 w-7 items-center justify-center rounded-md border border-lime-200 bg-lime-200 !p-0 text-sm font-black leading-none text-[#07130f] shadow-sm transition hover:bg-lime-300 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-xs" type="button" onClick={() => pitchLineDelta(teamIndex, line, 1)} aria-label={`Agregar jugador a ${label}`} title={`Agregar jugador a ${label}`}>+</button>
                                   </div>
                                 ) : null}
@@ -5877,10 +5866,11 @@ export function SorteoLegacyPageIsland({ root }) {
           ref={dragGhostRef}
           className="pointer-events-none fixed left-0 top-0 z-[100] [will-change:transform]"
           data-sorteo-drag-ghost="1"
+          style={{ width: dragState.cardWidth || 64 }}
         >
           <div className="absolute -left-7 -top-3 h-9 w-9 rounded-full bg-lime-200/30 blur-md" />
           <div className="absolute -left-10 -top-6 h-16 w-16 rounded-full border border-lime-200/50" />
-          <div className="relative transition-transform duration-100" style={{ transform: 'scale(1.1) rotate(2deg)' }}>
+          <div className="relative transition-transform duration-100" style={{ width: '100%' }}>
             {currentDragBlockMessage ? (
               <div className="absolute -right-2 -top-2 z-20 w-44 border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-black leading-tight text-red-900 shadow-sm">
                 {currentDragBlockMessage}
