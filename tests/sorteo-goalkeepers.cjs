@@ -33,6 +33,12 @@ improveBySwaps = (...args) => {
   if (teamsFitFormationRules(result.teams, args[1])) examined.push(result.evaluation);
   return result;
 };
+const originalImproveAsync = improveBySwapsAsync;
+improveBySwapsAsync = async (...args) => {
+  const result = await originalImproveAsync(...args);
+  if (teamsFitFormationRules(result.teams, args[1])) examined.push(result.evaluation);
+  return result;
+};
 const progress = [];
 const draw = await generateBalancedTeams(players, 3, 6, {}, {}, new Set(), { onProgress: fraction => progress.push(fraction) });
 const smallPlayers = [players[0], players[1], ...players.slice(3, 11)];
@@ -77,17 +83,17 @@ run.then(() => {
 assert.equal(context.results.acceptsValid, true);
 assert.equal(context.results.acceptsBroken, false, 'Reject two fixed keepers together and a team without one');
 assert.equal(context.results.inventsKeeper, false, 'Do not assign a field player as keeper');
-assert.ok(Object.values(context.results.shortageAssignment).includes('DEL'), 'Cover attack with a field player when no natural striker is available');
+assert.equal(Object.values(context.results.shortageAssignment).includes('DEL'), false, 'Do not invent a striker when none is available');
 assert.equal(context.results.prefersSmallDiff, true, 'Minimum point difference takes priority over secondary penalties');
 assert.ok(context.results.progress.length >= 40, 'Complete the candidate search instead of stopping at the first acceptable draw');
 assert.equal(context.results.draws[0].evaluatedCandidates, context.results.examined.length);
-context.bestDrawEvaluation = context.results.draws[0].evaluation;
+context.bestDrawEvaluation = context.results.draws[0].bestEvaluation;
 for (const evaluation of context.results.examined) {
   context.otherEvaluation = evaluation;
   assert.equal(vm.runInContext('isBetterDraw(otherEvaluation, bestDrawEvaluation)', context), false, 'Present the best combined line and total balance among evaluated candidates');
 }
 assert.ok(context.results.exact.exhaustive);
-assert.ok(Math.abs(context.results.exact.evaluation.balanceScore - context.results.oracle.balanceScore) < 0.000001, 'Exhaustive two-team result agrees with independent enumeration');
+assert.ok(Math.abs(context.results.exact.bestEvaluation.balanceScore - context.results.oracle.balanceScore) < 0.000001, 'Exhaustive two-team result agrees with independent enumeration');
 assert.ok(context.results.concentratedEvaluation.eliteExcess > 0);
 assert.equal(context.results.hiddenEliteExcess, context.results.concentratedEvaluation.eliteExcess, 'Changing formation cannot hide natural line concentration');
 assert.equal(context.results.distributedEvaluation.eliteExcess, 0, 'Separate the strongest defenders and midfielders');
