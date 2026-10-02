@@ -33,12 +33,8 @@ async function downloadJpg(page, name) {
     observer.observe(document.body, { childList: true, subtree: true });
   });
   const downloadReady = page.waitForEvent('download');
-  if (name) {
-    await page.locator('details').filter({ hasText: 'Exportar' }).first().locator('summary').click();
-    await page.getByRole('button', { name: name }).click();
-  } else {
-    await page.getByRole('button', { name: 'JPG', exact: true }).click();
-  }
+  await page.locator('details').filter({ hasText: 'Exportar' }).first().locator('summary').click();
+  await page.getByRole('button', { name: 'Exportar JPG', exact:true }).click();
   const download = await downloadReady;
   const exportPath = path.join('test-results', `${name ? 'desktop' : 'mobile'}-jpg-export.jpg`);
   fs.mkdirSync('test-results', { recursive: true });
@@ -99,7 +95,7 @@ test('la captura JPG en movil apila los equipos y conserva todo el texto', async
   await page.locator('#download-controls').scrollIntoViewIfNeeded();
 
   const geometry = await page.locator('[data-teams-scroller]').evaluate((node) => ({
-    cardWidth: Math.round(node.clientWidth),
+    cardWidth: Math.round(node.querySelector('[data-sorteo-team-card]').getBoundingClientRect().width),
     cardHeights: [...node.querySelectorAll('[data-sorteo-team-card]')].map((card) => Math.round(card.querySelector('.team-formation').getBoundingClientRect().height)),
     carouselWidth: Math.round(node.scrollWidth),
   }));
@@ -151,7 +147,7 @@ test('los botones de la barra movil mantienen 44px de alto', async ({ page }) =>
     const rect = node.getBoundingClientRect();
     return { text: node.textContent.trim(), height: Math.round(rect.height), width: Math.round(rect.width), overflows: node.scrollWidth > node.clientWidth + 1 };
   }));
-  expect(buttons.length).toBeGreaterThanOrEqual(3);
+  expect(buttons.length).toBe(1);
   buttons.forEach((button) => {
     expect(button.height, `alto de ${button.text}`).toBeGreaterThanOrEqual(44);
     expect(button.overflows, `desborde de ${button.text}`).toBe(false);
@@ -172,7 +168,7 @@ test.describe('captura con densidad 2x', () => {
     await page.locator('#download-controls').scrollIntoViewIfNeeded();
 
     const geometry = await page.locator('[data-teams-scroller]').evaluate((node) => ({
-      cardWidth: Math.round(node.clientWidth),
+      cardWidth: Math.round(node.querySelector('[data-sorteo-team-card]').getBoundingClientRect().width),
       cardHeights: [...node.querySelectorAll('[data-sorteo-team-card]')].map((card) => Math.round(card.querySelector('.team-formation').getBoundingClientRect().height)),
     }));
 

@@ -30,6 +30,8 @@ $legacyMatch = null;
 $legacyPlayers = [];
 $legacyPairHistory = [];
 $legacySavedDrawSignature = '';
+$legacyInitialTeams = [];
+$legacyTeamColors = [];
 
 try {
     $legacyMatch = $legacyMatchId > 0 ? repo_match_by_id($legacyMatchId) : null;
@@ -132,6 +134,29 @@ try {
     $legacyLoadError = 'No se pudieron cargar datos de la fecha: ' . $e->getMessage();
 }
 
+// Restore the saved lineup using the same repository reads as the formation editor.
+if ($legacyMatch && (string) ($legacyMatch['status'] ?? '') === 'sorteado' && (string) ($legacyMatch['draw_mode'] ?? '') === 'random') {
+    try {
+        $savedParticipants = repo_match_participants($legacyMatchId);
+        $playersById = array_column($legacyPlayers, null, 'id');
+        $savedTeams = repo_match_teams($legacyMatchId);
+        foreach ($savedTeams as $savedTeam) {
+            $teamNumber = (int) $savedTeam['team_number'];
+            $rows = array_values(array_filter($savedParticipants, static fn(array $player): bool => (int) $player['team_number'] === $teamNumber));
+            usort($rows, static fn(array $left, array $right): int => (int) $left['lineup_order'] <=> (int) $right['lineup_order']);
+            $legacyInitialTeams[] = array_values(array_filter(array_map(static function (array $player) use ($playersById): ?array {
+                $base = $playersById[(int) $player['id']] ?? null;
+                return $base ? array_merge($base, ['assigned_position' => (string) $player['assigned_position'], 'is_substitute' => (int) $player['is_substitute']]) : null;
+            }, $rows)));
+            $legacyTeamColors[] = (string) $savedTeam['color_name'];
+        }
+    } catch (Throwable $e) {
+        $legacyInitialTeams = [];
+        $legacyTeamColors = [];
+        $legacyLoadError = 'No se pudieron recuperar los equipos guardados: ' . $e->getMessage();
+    }
+}
+
 $drawBalanceWeights = player_draw_balance_weights();
 $legacyDrawWeightsJson = json_encode([
     'general' => $drawBalanceWeights['general'],
@@ -157,6 +182,8 @@ $sorteoLegacyPayload = [
     ] : null,
     'loadError' => $legacyLoadError,
     'players' => $legacyPlayers,
+    'initialTeams' => $legacyInitialTeams,
+    'teamColors' => $legacyTeamColors,
     'pairHistory' => $legacyPairHistory,
     'drawBalanceWeights' => json_decode($legacyDrawWeightsJson ?: '{}', true),
     'allowRedraw' => $legacyMatch ? ((int) ($legacyMatch['allow_redraw'] ?? 1) === 1) : true,

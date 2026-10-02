@@ -24203,11 +24203,11 @@ body.page-finalizar-partido.page-sorteo-legacy .content .sorteo-team-card .sorte
 }
 
 @media (max-width: 760px) {
-  .sorteo-react-page #equipos-generados {
+  .sorteo-react-page:not(.gf-draw-workflow) #equipos-generados {
     min-width: 0;
     width: 100%;
   }
-  .sorteo-react-page .sorteo-teams-scroller {
+  .sorteo-react-page:not(.gf-draw-workflow) .sorteo-teams-scroller {
     position: relative;
     min-width: 0;
     width: 100%;
@@ -24221,11 +24221,11 @@ body.page-finalizar-partido.page-sorteo-legacy .content .sorteo-team-card .sorte
     scrollbar-width: thin;
     padding-bottom: 8px;
   }
-  .sorteo-react-page .sorteo-teams-scroller > [data-sorteo-team-card] {
+  .sorteo-react-page:not(.gf-draw-workflow) .sorteo-teams-scroller > [data-sorteo-team-card] {
     min-width: 0;
     scroll-snap-align: start;
   }
-  .sorteo-react-page .sorteo-teams-scroller[data-dragging="true"] {
+  .sorteo-react-page:not(.gf-draw-workflow) .sorteo-teams-scroller[data-dragging="true"] {
     scroll-snap-type: none;
     scroll-behavior: auto;
   }
@@ -24425,4 +24425,103 @@ body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"
   overflow: hidden;
   max-width: 100%;
   max-height: 100%;
+}
+
+/* Draw workflow: deliberately scoped away from finalizar_partido's editor. */
+.sorteo-react-page.gf-draw-workflow { padding: 12px; gap: 16px; }
+.gf-draw-workflow .gf-flow-intro { border: 0; background: white; box-shadow: none; padding: 12px 0; }
+.gf-workflow-header { display: grid; gap: 8px; }
+.gf-workflow-header h1 { margin: 0; font-size: clamp(19px, 3vw, 26px); font-weight: 900; }
+.gf-workflow-header p { margin: 0; color: #526b62; font-size: 13px; }
+.gf-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.gf-heading-row h2 { margin: 0; font-size: 16px; font-weight: 900; }
+.gf-heading-row strong { color: #063d2b; font-size: 13px; }
+.gf-workflow-header .gf-match-summary { color: #173c2e; font-weight: 700; }
+.gf-match-summary span { font-weight: 500; color: #526b62; }
+.gf-workflow-progress { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 12px 0 0; border-top: 1px solid #d7e6df; margin: 4px 0 0; }
+.gf-workflow-progress li { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #526b62; }
+.gf-workflow-progress li[data-complete="true"], .gf-workflow-progress li[aria-current="step"] { color: #063d2b; font-weight: 800; }
+.gf-workflow-body, .gf-workflow-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.gf-draw-workflow .gf-player-preparation { order: 0; border: 0; border-top: 1px solid #d7e6df; background: white; padding: 8px 0; box-shadow: none; }
+.gf-player-preparation > div:first-child { border: 0; padding: 0; }
+.gf-player-preparation > div:first-child p { font-size: 11px; }
+.gf-player-preparation > div:nth-child(2):not(#jugadores-container) { border: 0; background: transparent; padding: 0; }
+.gf-draw-workflow .gf-generation-panel { grid-column: auto; grid-row: auto; padding: 0; border: 0; background: white; box-shadow: none; }
+.gf-draw-workflow .gf-goalkeeper-preparation { border: 0; border-top: 1px solid #d7e6df; background: white; padding: 8px 0; }
+.gf-goalkeeper-preparation > div:nth-child(2) { padding: 0; border: 0; background: transparent; }
+.gf-attempts { font-size: 12px; margin: 0; color: #526b62; }
+.gf-draw-workflow #equipos-generados { grid-row: auto; grid-column: auto; gap: 8px; min-width: 0; }
+.gf-draw-workflow [data-sorteo-matchup-title] { padding: 8px 0; border: 0; background: transparent; box-shadow: none; font-size: 16px; }
+.gf-exchange-help { font-size: 12px; margin: 0; color: #526b62; }
+.gf-selection-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0; font-size: 13px; color: #063d2b; }
+.gf-selection-status a { text-decoration: underline; }
+.gf-draw-workflow .sorteo-teams-scroller { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row; grid-auto-columns: auto; align-items: start; gap: 12px; overflow: visible; padding: 0; min-width: 0; }
+.gf-draw-workflow [data-sorteo-team-card] { min-width: 0; padding: 0; border: 0; background: transparent; box-shadow: none; gap: 8px; }
+.gf-draw-workflow [data-sorteo-team-card] > .team-head { margin: 0; padding: 0; border: 0; background: transparent; display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.gf-draw-workflow .team-head h3 { font-size: 16px; overflow-wrap: anywhere; }
+.gf-draw-workflow .team-head > span { border: 0; background: transparent; padding: 0; }
+.gf-draw-workflow [data-sorteo-team-card] > .grid:has(select) { padding: 0; border: 0; background: transparent; }
+.gf-draw-workflow [data-sorteo-team-card] select { min-width: 0; width: 100%; max-width: 100%; padding-inline: 6px; }
+.gf-team-tactics, .gf-team-navigation, .gf-team-metrics { font-size: 12px; color: #526b62; }
+.gf-team-tactics summary, .gf-team-navigation summary, .gf-team-metrics summary { cursor: pointer; padding: 8px 0; }
+.gf-team-tactics label { display: grid; gap: 4px; }
+.gf-team-tactics p { margin: 4px 0; overflow-wrap: anywhere; }
+.gf-draw-workflow [data-team-bench] { border: 0; border-top: 1px solid #d7e6df; background: transparent; padding: 8px 0; }
+.gf-draw-workflow [data-team-bench] h4 { font-size: 12px; }
+.gf-draw-workflow [data-team-bench][data-empty="true"] p { margin: 0; font-size: 11px; }
+.gf-quick-analysis { display: grid; gap: 8px; border-top: 1px solid #d7e6df; padding: 12px 0; }
+.gf-quick-analysis p, .gf-quick-analysis ul { font-size: 13px; margin: 0; color: #526b62; }
+.gf-quick-analysis ul { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.gf-quick-comparison { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+.gf-quick-comparison caption { text-align: left; font-weight: 800; padding: 6px 0; }
+.gf-quick-comparison th, .gf-quick-comparison td { padding: 8px 4px; border-bottom: 1px solid #e3eee9; text-align: left; overflow-wrap: anywhere; }
+.gf-draw-workflow #download-controls { grid-column: auto; grid-row: auto; border: 0; border-top: 1px solid #d7e6df; padding: 12px 0; box-shadow: none; }
+.gf-draw-workflow #download-controls > div { justify-content: start; }
+.gf-save-help { margin: 0; font-size: 12px; color: #526b62; }
+.gf-draw-workflow .sorteo-analysis-panel { grid-column: auto; grid-row: auto; padding: 12px 0; border: 0; box-shadow: none; }
+.gf-draw-workflow .sorteo-analysis-panel :is(article, div, p):not(.team-radar) { box-shadow: none; }
+.gf-sticky-save { display: none; }
+.gf-tap-tools { position: static; min-width: 0; }
+.gf-tap-hint { margin: 0; font-size: 13px; color: #063d2b; }
+@media (max-width: 760px) {
+  .sorteo-react-page.gf-draw-workflow { padding: 6px 2px; gap: 12px; }
+  .gf-workflow-progress { gap: 4px; }
+  .gf-workflow-progress li { gap: 2px; font-size: 10px; }
+  .gf-draw-workflow .sorteo-teams-scroller { gap: 6px; }
+  .gf-draw-workflow [data-sorteo-team-card] { gap: 6px; }
+  .gf-draw-workflow [data-sorteo-team-card] > .team-head { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .gf-draw-workflow .team-head h3 { font-size: 13px; }
+  .gf-draw-workflow .team-head p { font-size: 10px; }
+  .gf-draw-workflow .team-head > span { min-height: 0; justify-self: start; font-size: 12px; }
+  .gf-draw-workflow [data-sorteo-team-card] > .grid:has(select) { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .gf-draw-workflow [data-sorteo-team-card] select { font-size: 11px; }
+  .gf-draw-workflow [data-bench-player] { flex-wrap: wrap; }
+  .gf-draw-workflow .gf-formation { min-width: 0; max-width: 100%; --gf-gutter: 28px; min-height: 460px; padding: 20px 3px 8px var(--gf-gutter); }
+  .gf-draw-workflow .gf-formation .line-label { font-size: 7px; gap: 3px; }
+  .gf-draw-workflow .gf-formation .line-label > span:first-child { padding-inline: 1px; }
+  .gf-draw-workflow .gf-formation .line-label small { font-size: 7px; }
+  .gf-draw-workflow .gf-formation .line-label button, .gf-draw-workflow .gf-line-add button { width: 24px; height: 24px; }
+  .gf-draw-workflow .gf-formation .gf-line-add { top: calc(50% + 32px); }
+  .gf-draw-workflow .gf-formation .formation-undo-button { width: 24px; height: 24px; top: 4px; right: 4px; }
+  .gf-sticky-save { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; position: sticky; bottom: 0; z-index: 45; border-top: 1px solid #d7e6df; background: white; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); font-size: 12px; }
+  .gf-sticky-save button { min-height: 44px; }
+}
+@container (max-width: 230px) {
+  .gf-draw-workflow .gf-line-players[data-player-count="3"],
+  .gf-draw-workflow .gf-line-players[data-player-count="4"],
+  .gf-draw-workflow .gf-line-players[data-player-count="5"] { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: center; gap: 10px 4px; }
+  .gf-draw-workflow .gf-player-slot { width: min(100%, 48px); }
+  .gf-draw-workflow .gf-line-players[data-player-count="5"] .gf-player-slot { width: min(100%, 40px); }
+  .gf-draw-workflow .gf-line-players[data-player-count="3"] .gf-player-slot:last-child,
+  .gf-draw-workflow .gf-line-players[data-player-count="5"] .gf-player-slot:last-child { grid-column: 1 / -1; }
+}
+
+/* Shared rows keep the two pitches aligned when one team opens its tools. */
+@supports (grid-template-rows: subgrid) {
+  .gf-draw-workflow .sorteo-teams-scroller { grid-template-rows: repeat(7, auto); }
+  .gf-draw-workflow [data-sorteo-team-card] { grid-template-rows: subgrid; grid-row: span 7; }
+}
+
+@container (max-width: 230px) {
+  .gf-draw-workflow button.sorteo-exchange-indicator { right: -5px; top: -14px; width: 16px; height: 16px; }
 }

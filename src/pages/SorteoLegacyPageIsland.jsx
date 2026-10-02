@@ -546,6 +546,19 @@ function drawSignature(teams) {
     .join('|');
 }
 
+function persistedLineupSnapshot(teams, benches, assignments, colors) {
+  if (!teams) return '';
+  return JSON.stringify(teams.map((team, index) => ({
+    color: colors[index],
+    players: [...team, ...(benches[index] || [])].map(player => ({
+      id: playerKey(player),
+      position: assignments[playerKey(player)] || getPrimaryPlayerPosition(player),
+      bench: !team.some(starter => playerKey(starter) === playerKey(player)),
+      availability: player.availability_percent,
+    })),
+  })));
+}
+
 function shuffle(items) {
   const copy = items.slice();
   for (let index = copy.length - 1; index > 0; index -= 1) {
@@ -1965,14 +1978,14 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
       <span className="sorteo-compact-rating absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-px rounded bg-black/45 p-[3%]">
         <strong
           className={`block font-black leading-none ${palette.text} ${textShadow}`}
-          style={{ fontSize: 'clamp(10px, 25cqw, 26px)' }}
+          style={{ fontSize: 'clamp(5px, 25cqw, 26px)' }}
           data-sorteo-card-text="1"
         >
           {playerCardRating(adjusted)}
         </strong>
         <span className={`flex items-center gap-[2px] font-black uppercase leading-none ${textShadow}`}>
-          <span style={{ fontSize: 'clamp(6px, 12cqw, 12px)', color: 'var(--sorteo-card-position)' }} data-sorteo-card-position="1">{assignedPosition}</span>
-          <span className="block aspect-square" style={{ width: '0.42rem', height: '0.42rem' }}><Arrow form={playerRegularityForm(player)} /></span>
+          <span style={{ fontSize: 'clamp(3px, 12cqw, 12px)', color: 'var(--sorteo-card-position)' }} data-sorteo-card-position="1">{assignedPosition}</span>
+          <span className="block aspect-square" style={{ width: 'clamp(2px, 6cqw, 7px)', height: 'clamp(2px, 6cqw, 7px)' }}><Arrow form={playerRegularityForm(player)} /></span>
         </span>
       </span>
       <span
@@ -2710,9 +2723,16 @@ export function SorteoLegacyPageIsland({ root }) {
   const [hasSavedDraw, setHasSavedDraw] = useState(payload.hasSavedDraw);
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
-  const [playersPanelOpen, setPlayersPanelOpen] = useState(() => !initialTeams.length);
-  const [goalkeeperPanelOpen, setGoalkeeperPanelOpen] = useState(() => !initialTeams.length);
+  const [playersPanelOpen, setPlayersPanelOpen] = useState(() => !initialTeams.length && !payload.players.length);
+  const [goalkeeperPanelOpen, setGoalkeeperPanelOpen] = useState(() => !initialTeams.length && Object.keys(initialManualGoalkeepers(payload.players.map(normalizePlayer))).length < payload.numTeams);
   const [saveState, setSaveState] = useState(() => (initialTeams.length ? 'saved' : 'idle'));
+  const [savingDraw, setSavingDraw] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => initialTeams.length ? persistedLineupSnapshot(teams, benches, initialAssignments, teamColors) : '');
+  const savedRosterSignature = useRef(payload.savedDrawSignature || (initialTeams.length ? drawSignature(initialTeams) : ''));
+  const lineupSnapshot = useMemo(() => persistedLineupSnapshot(teams, benches, assignments, teamColors), [teams, benches, assignments, teamColors]);
+  const workflowSaveState = teams ? (lineupSnapshot === savedSnapshot ? 'saved' : 'dirty') : 'idle';
+  const formationsUrl = payload.links?.finish ? `${payload.links.finish}&edit_formations=1#formaciones` : '';
+  const formationsReady = hasSavedDraw && workflowSaveState === 'saved';
   const [manualActionCount, setManualActionCount] = useState(0);
   const [mobileMoveSource, setMobileMoveSource] = useState(null);
   const [manualComparisonBefore, setManualComparisonBefore] = useState(null);
@@ -2797,13 +2817,15 @@ export function SorteoLegacyPageIsland({ root }) {
     () => selectedPlayers.filter((player) => manualGoalkeepers[playerKey(player)] === true),
     [manualGoalkeepers, selectedPlayers],
   );
+  const preparationGoalkeepers = teams ? teams.flat().filter(player => (assignments[playerKey(player)] || player.assigned_position || getPrimaryPlayerPosition(player)) === 'ARQ') : selectedGoalkeepers;
+  const preparationGoalkeepersReady = preparationGoalkeepers.length === numTeams;
   const goalkeeperLimitReached = selectedGoalkeepers.length >= numTeams;
   const availabilityAdjustedCount = useMemo(
     () => selectedPlayers.filter((player) => Number(player.availability_percent || 100) < 100).length,
     [selectedPlayers],
   );
-  const goalkeeperSummary = selectedGoalkeepers.length
-    ? selectedGoalkeepers.map((player) => player.nombre).join(' / ')
+  const goalkeeperSummary = preparationGoalkeepers.length
+    ? preparationGoalkeepers.map((player) => player.nombre).join(' / ')
     : 'Sin definir';
   const selectedAverageRating = useMemo(() => {
     if (!selectedPlayers.length) return 0;
@@ -3828,9 +3850,10 @@ export function SorteoLegacyPageIsland({ root }) {
     markFormationAsManual(normalizedTargetTeamIndex, sourceTeamIndex);
     clearActiveFormationVariant(normalizedTargetTeamIndex, sourceTeamIndex);
     setTeams((current) => buildMovedTeams(current));
+    setSuccess(resolvedTargetPlayerKey ? `${sourcePlayer.nombre} y ${validation.targetKeyForAssignment ? teams[normalizedTargetTeamIndex].find(item => playerKey(item) === validation.targetKeyForAssignment)?.nombre || 'el jugador destino' : 'el jugador destino'} intercambiados.` : `${sourcePlayer.nombre} movido de posición.`);
     // El panel de analisis es pesado: se monta como transicion para que la cancha se
     // actualice primero y el movimiento se sienta inmediato.
-    startTransition(() => setAnalysisVisible(true));
+    if (isFormationEditor) startTransition(() => setAnalysisVisible(true));
     if ((targetLine && FORMATION_LINES.includes(targetLine)) || targetKeyForAssignment) {
       setAssignments((current) => {
         const next = { ...current };
@@ -4231,7 +4254,7 @@ export function SorteoLegacyPageIsland({ root }) {
   edgeScrollStepRef.current = (elapsed) => {
     const scroller = teamsScrollerRef.current;
     const dragPoint = dragPointRef.current;
-    if (!scroller || !dragPoint || !pointerDragRef.current.active || !window.matchMedia('(max-width: 760px)').matches) return;
+    if (!isFormationEditor || !scroller || !dragPoint || !pointerDragRef.current.active || !window.matchMedia('(max-width: 760px)').matches) return;
     const rect = scroller.getBoundingClientRect();
     if (dragPoint.y < Math.max(0, rect.top) || dragPoint.y > Math.min(window.innerHeight - 88, rect.bottom)) return;
     const left = Math.max(0, rect.left);
@@ -4270,7 +4293,7 @@ export function SorteoLegacyPageIsland({ root }) {
     const scroller = teamsScrollerRef.current;
     const card = scroller?.children[index];
     if (!card) return;
-    if (!window.matchMedia('(max-width: 760px)').matches) {
+    if (!isFormationEditor || !window.matchMedia('(max-width: 760px)').matches) {
       card.querySelector('.team-formation')?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
       return;
     }
@@ -4447,7 +4470,7 @@ export function SorteoLegacyPageIsland({ root }) {
       return next;
     });
     setActiveFormationVariants((current) => ({ ...current, [String(teamIndex)]: variant.signature }));
-    startTransition(() => setAnalysisVisible(true));
+    if (isFormationEditor) startTransition(() => setAnalysisVisible(true));
     setSuccess(`Variante aplicada en ${getTeamDisplayName(teamIndex)}.`);
   };
 
@@ -4572,6 +4595,11 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const saveDraw = async () => {
+    if (savingDraw) return;
+    if (!isFormationEditor && payload.links?.finish && hasSavedDraw && redrawsUsedThisSession === 0 && teams
+      && drawSignature(teams.map((team, index) => [...team, ...(benches[index] || [])])) === savedRosterSignature.current) {
+      return saveFormations();
+    }
     if (!payload.matchId) {
       setError('Esta pantalla no esta vinculada a una fecha.');
       return;
@@ -4585,6 +4613,8 @@ export function SorteoLegacyPageIsland({ root }) {
       setError('Cada equipo necesita un color de camiseta distinto.');
       return;
     }
+    const submittedSnapshot = lineupSnapshot;
+    const submittedRosterSignature = drawSignature(teams.map((team, index) => [...team, ...(benches[index] || [])]));
     const teamsPayload = teams.map((team, teamIndex) => {
       const currentAssignments = teamAssignments(teamIndex);
       const color = getTeamColor(teamIndex);
@@ -4598,6 +4628,7 @@ export function SorteoLegacyPageIsland({ root }) {
         })),
       };
     });
+    setSavingDraw(true);
     try {
       const response = await fetch('guardar_sorteo.php', {
         method: 'POST',
@@ -4612,7 +4643,9 @@ export function SorteoLegacyPageIsland({ root }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || 'No se pudo guardar el sorteo.');
-      setPersistedRedrawCount((value) => value + redrawsUsedThisSession);
+      setPersistedRedrawCount((value) => value + (hasSavedDraw ? Math.max(1, redrawsUsedThisSession) : redrawsUsedThisSession));
+      setSavedSnapshot(submittedSnapshot);
+      savedRosterSignature.current = submittedRosterSignature;
       setRedrawsUsedThisSession(0);
       setHasSavedDraw(true);
       setGeneratedOnce(false);
@@ -4621,14 +4654,18 @@ export function SorteoLegacyPageIsland({ root }) {
       setError('');
       const manualMessage = manualActionCount > 0 ? ` Se conservaron ${manualActionCount} cambio${manualActionCount === 1 ? '' : 's'} manual${manualActionCount === 1 ? '' : 'es'} de cancha.` : '';
       setSuccess(`${data.message || 'Sorteo guardado correctamente en la fecha.'}${manualMessage}`);
-      window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 1200);
+      navigate(payload.links?.back || 'editar_partidos.php');
     } catch (saveError) {
       setSuccess('');
       setError(saveError.message || 'No se pudo guardar el sorteo.');
+    } finally {
+      setSavingDraw(false);
     }
   };
 
   const saveFormations = async () => {
+    if (savingDraw) return;
+    const submittedSnapshot = lineupSnapshot;
     if (!payload.matchId) {
       setError('Esta pantalla no esta vinculada a una fecha.');
       return;
@@ -4656,6 +4693,7 @@ export function SorteoLegacyPageIsland({ root }) {
         formData.set(`player_position[${player.id}]`, currentAssignments[key] || getPrimaryPlayerPosition(player));
       });
     });
+    setSavingDraw(true);
     try {
       const response = await fetch(`finalizar_partido.php?match_id=${encodeURIComponent(String(payload.matchId))}&edit_formations=1`, {
         method: 'POST',
@@ -4669,11 +4707,15 @@ export function SorteoLegacyPageIsland({ root }) {
       setError('');
       setSaveState('saved');
       setManualActionCount(0);
+      setSavedSnapshot(submittedSnapshot);
       setSuccess('Formaciones y camisetas guardadas.');
-      window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 1200);
+      if (isFormationEditor) window.setTimeout(() => navigate(payload.links?.back || 'editar_partidos.php'), 1200);
+      else navigate(payload.links?.back || 'editar_partidos.php');
     } catch (saveError) {
       setSuccess('');
       setError(saveError.message || 'No se pudieron guardar las formaciones.');
+    } finally {
+      setSavingDraw(false);
     }
   };
 
@@ -4700,13 +4742,14 @@ export function SorteoLegacyPageIsland({ root }) {
   const mobileMovePlayer = mobileMoveSource && teams?.[Number(mobileMoveSource.teamIndex)]
     ? teams[Number(mobileMoveSource.teamIndex)].find((player) => playerKey(player) === String(mobileMoveSource.playerKey))
     : null;
-  const playersPanelCollapsed = !playersPanelOpen && Boolean(teams) && !isFormationEditor;
-  const goalkeeperPanelCollapsed = !goalkeeperPanelOpen && Boolean(teams) && !isFormationEditor;
+  const playersPanelCollapsed = !playersPanelOpen && !isFormationEditor;
+  const goalkeeperPanelCollapsed = !goalkeeperPanelOpen && !isFormationEditor;
   const mobileActionGridClass = lockedMatch ? 'grid-cols-3' : 'grid-cols-2';
-  const saveStateLabel = saveState === 'dirty' ? 'Cambios sin guardar' : saveState === 'saved' ? 'Guardado' : 'Sin guardar';
-  const saveStateClass = saveState === 'dirty'
+  const displayedSaveState = isFormationEditor ? saveState : workflowSaveState;
+  const saveStateLabel = savingDraw ? 'Guardando…' : displayedSaveState === 'dirty' ? 'Cambios sin guardar' : displayedSaveState === 'saved' ? 'Equipos guardados' : 'Sin guardar';
+  const saveStateClass = displayedSaveState === 'dirty'
     ? 'border-amber-200 bg-amber-50 text-[#7a4b00]'
-    : saveState === 'saved'
+    : displayedSaveState === 'saved'
       ? 'border-[#9fc8b5] bg-[#f4fbf7] text-[#063d2b]'
       : 'border-[#d7e6df] bg-[#f8fbfa] text-[#526b62]';
 
@@ -4769,7 +4812,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   return (
     <section
-      className={`sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5 ${mobileMoveSource ? 'max-[760px]:pb-56' : teams ? 'max-[760px]:pb-32' : ''}`}
+      className={`sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5 ${!isFormationEditor ? 'gf-draw-workflow' : mobileMoveSource ? 'max-[760px]:pb-56' : teams ? 'max-[760px]:pb-32' : ''}`}
       onDragOver={(event) => {
         if (!dragState) return;
         event.preventDefault();
@@ -4782,7 +4825,7 @@ export function SorteoLegacyPageIsland({ root }) {
         setDragHoverTarget(null);
       }}
     >
-      <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4">
+      <div className={`grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4 ${!isFormationEditor ? 'gf-flow-intro' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button className={quietButtonClass} type="button" onClick={() => navigate(payload.links?.back || 'editar_partidos.php')}>
             <Icon name="arrowLeft" />
@@ -4801,6 +4844,7 @@ export function SorteoLegacyPageIsland({ root }) {
           ) : null}
         </div>
 
+        {isFormationEditor ? (
         <header className="grid gap-3 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div className="min-w-0">
             <p className="m-0 text-xs font-extrabold uppercase tracking-[.12em] text-[#526b62]">{isFormationEditor ? 'Formaciones' : 'Sorteo de equipos'}</p>
@@ -4838,18 +4882,34 @@ export function SorteoLegacyPageIsland({ root }) {
             </span>
           </div>
         </header>
+        ) : (
+        <header className="gf-workflow-header">
+          <div className="gf-heading-row"><h1>Generador GOODFELLAS</h1><strong data-draw-status>{teams ? saveStateLabel : drawReadiness.ready ? 'Listo para generar' : 'Revisar preparación'}</strong></div>
+          {payload.match ? <p>{payload.match.title} · {payload.match.matchDate}</p> : null}
+          <p className="gf-match-summary">{selectedPlayers.length} jugadores · {numTeams} equipos · {drawReadiness.teamSizeLabel}{drawAnalysis ? ` · Diferencia ${drawAnalysis.diff.toFixed(1)}` : ''} <span>· Media GEN {selectedPlayers.length ? playerCardRating(selectedAverageRating) : '—'}</span></p>
+          <ol className="gf-workflow-progress" aria-label="Progreso del sorteo">
+            <li data-step="players" data-complete={selectedPlayers.length > 0}><span>{selectedPlayers.length ? '✓' : '○'}</span> Jugadores</li>
+            <li data-step="goalkeepers" data-complete={selectedGoalkeepers.length === numTeams || Boolean(teams)}><span>{selectedGoalkeepers.length === numTeams || teams ? '✓' : '○'}</span> Arqueros</li>
+            <li data-step="teams" aria-current={!formationsReady ? 'step' : undefined}><span>{formationsReady ? '✓' : '●'}</span> Equipos</li>
+            <li data-step="formations" aria-current={formationsReady ? 'step' : undefined}><span>{formationsReady ? '●' : '🔒'}</span> Formaciones</li>
+          </ol>
+          <p className="gf-next-step">{formationsReady ? 'Equipos guardados. Continuá con las formaciones.' : hasSavedDraw ? 'Guardá los cambios para continuar a Formaciones.' : 'Guardá los equipos para continuar a Formaciones.'}</p>
+          {formationsReady && formationsUrl ? <button type="button" className={secondaryButtonClass} onClick={() => navigate(formationsUrl)}>Configurar formaciones →</button> : null}
+        </header>
+
+        )}
       </div>
 
-      <div className={`grid gap-4 ${isFormationEditor ? '' : 'lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]'}`}>
+      <div className={`grid gap-4 ${isFormationEditor ? '' : 'gf-workflow-body'}`}>
         {!isFormationEditor ? (
-        <aside className={`grid content-start gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm ${lockedMatch ? 'max-lg:order-2' : ''}`}>
+        <aside className={`grid content-start gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm gf-player-preparation`}>
           <div className="flex items-center justify-between gap-3 border-b border-[#d7e6df] pb-3">
             <div>
-              <h2 className="m-0 text-base font-black text-[#07130f]">Jugadores disponibles</h2>
+              <h2 className="m-0 text-base font-black text-[#07130f]">{playersPanelCollapsed ? `✓ ${selectedPlayers.length} jugadores seleccionados` : 'Jugadores disponibles'}</h2>
               <p className="m-0 text-xs font-semibold text-slate-500">{lockedMatch ? 'Plantel de la fecha' : 'Lista editable local'}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {teams ? (
+              {(!isFormationEditor || teams) ? (
                 <button className={quietButtonClass} type="button" onClick={() => setPlayersPanelOpen((open) => !open)} aria-expanded={playersPanelOpen}>
                   {playersPanelOpen ? 'Cerrar' : 'Editar'}
                 </button>
@@ -4866,12 +4926,9 @@ export function SorteoLegacyPageIsland({ root }) {
           {playersPanelCollapsed ? (
             <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3 text-sm font-bold text-[#526b62]">
               <div className="flex items-center justify-between gap-3">
-                <span>{selectedPlayers.length} jugadores</span>
-                <span>{availabilityAdjustedCount} con estado ajustado</span>
+                <span>{availabilityAdjustedCount ? `${availabilityAdjustedCount} con estado ajustado` : 'Todos con estado al 100%'}</span>
               </div>
-              <button className={secondaryButtonClass} type="button" onClick={() => setPlayersPanelOpen(true)}>
-                Editar jugadores
-              </button>
+              {isFormationEditor ? <button className={secondaryButtonClass} type="button" onClick={() => setPlayersPanelOpen(true)}>Editar jugadores</button> : null}
             </div>
           ) : (
             <>
@@ -4975,23 +5032,23 @@ export function SorteoLegacyPageIsland({ root }) {
         </aside>
         ) : null}
 
-        <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'lg:contents'} ${lockedMatch ? 'max-lg:order-1' : ''}`}>
+        <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'gf-workflow-main'}`}>
           {!isFormationEditor ? (
-          <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-start-2 lg:row-start-1">
-            <div className="grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2">
+          <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm gf-generation-panel">
+            <div className="gf-goalkeeper-preparation grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h3 className="m-0 text-sm font-black text-[#07130f]">Definir arqueros</h3>
+                  <h3 className="m-0 text-sm font-black text-[#07130f]">{goalkeeperPanelCollapsed && preparationGoalkeepersReady ? `✓ ${numTeams} arqueros definidos` : 'Definir arqueros'}</h3>
                   <p className="m-0 text-[11px] font-semibold text-[#526b62]">Se eligen antes de realizar el sorteo.</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {teams ? (
+                  {(!isFormationEditor || teams) ? (
                     <button className={quietButtonClass} type="button" onClick={() => setGoalkeeperPanelOpen((open) => !open)} aria-expanded={goalkeeperPanelOpen}>
                       {goalkeeperPanelOpen ? 'Cerrar' : 'Editar'}
                     </button>
                   ) : null}
-                  <span className={`rounded-md border px-2 py-1 text-xs font-black ${selectedGoalkeepers.length === numTeams ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
-                    {selectedGoalkeepers.length}/{numTeams}
+                  <span className={`rounded-md border px-2 py-1 text-xs font-black ${(goalkeeperPanelCollapsed ? preparationGoalkeepersReady : selectedGoalkeepers.length === numTeams) ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                    {goalkeeperPanelCollapsed ? preparationGoalkeepers.length : selectedGoalkeepers.length}/{numTeams}
                   </span>
                 </div>
               </div>
@@ -5050,22 +5107,23 @@ export function SorteoLegacyPageIsland({ root }) {
                       {item}
                     </p>
                   ))}
-                  {!drawReadiness.issues.length ? drawReadiness.warnings.map((item) => (
+                  {!drawReadiness.issues.length ? drawReadiness.warnings.filter(item => !teams || goalkeeperPanelOpen || !item.includes('manual')).map((item) => (
                     <p key={`warning-${item}`} className="m-0 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-3 py-2 text-xs font-bold text-[#526b62]">
                       {item}
                     </p>
                   )) : null}
                 </div>
               ) : null}
-              <button className={`${primaryButtonClass} w-full justify-center text-base sm:w-auto ${generateDisabled ? 'opacity-80' : ''}`} id="generateTeamsButton" type="button" onClick={generateTeams} disabled={generateDisabled}>
+              <button className={`${secondaryButtonClass} w-full justify-center text-base sm:w-auto ${generateDisabled ? 'opacity-80' : ''}`} id="generateTeamsButton" type="button" onClick={generateTeams} disabled={generateDisabled || savingDraw}>
                 <Icon name="dice" className="h-5 w-5" />
                 {generating ? 'Generando...' : generateButtonLabel}
               </button>
               <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-3 text-xs font-extrabold text-[#526b62]">
-                Max diff
+                Equilibrio objetivo
                 <input className="h-8 w-16 rounded-md border border-[#adc8bb] bg-white px-2 text-center text-sm font-black text-[#07130f]" type="number" min="0.5" max="6" step="0.1" value={maxDiff} onChange={(event) => setMaxDiff(event.target.value)} />
               </label>
             </div>
+            <p className="gf-attempts" data-draw-attempts>{payload.allowRedraw ? `${redrawsRemaining} intentos disponibles para rehacer` : 'Esta fecha no permite rehacer el sorteo'}</p>
             <div id="generateTeamsLoading" className={`${generating ? 'grid' : 'hidden'} gap-2 rounded-lg border border-[#9fc8b5] bg-[#f4fbf7] px-4 py-3 text-sm font-bold text-[#063d2b]`} role="status" aria-live="polite" aria-busy={generating}>
               <div className="flex items-center justify-between gap-3">
                 <strong className="block">Generando equipos...</strong>
@@ -5109,6 +5167,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <div ref={teamsFocusRef} className="w-full scroll-mt-4 rounded-lg border border-[#d7e6df] bg-white px-4 py-2 text-center text-lg font-black text-[#07130f] shadow-sm sm:scroll-mt-6" data-sorteo-matchup-title="1">
                   {currentMatchupName}
                 </div>
+                {isFormationEditor ? (
                 <div className="grid gap-2" data-html2canvas-ignore="true">
                   <div className="flex flex-wrap gap-2 min-[761px]:hidden" role="group" aria-label="Elegir cancha">
                     {teams.map((_, index) => (
@@ -5118,6 +5177,12 @@ export function SorteoLegacyPageIsland({ root }) {
                   <p className="m-0 text-sm text-[#063d2b] min-[761px]:hidden"><strong>← Deslizá entre canchas →</strong><br />Para intercambiar: llevá el jugador al borde, esperá que avance la cancha y soltalo sobre otro jugador. También podés tocar su tarjeta.</p>
                   <p className="m-0 hidden text-sm text-[#063d2b] min-[761px]:block"><strong>Intercambiar jugadores ↔</strong> Arrastrá una tarjeta hasta un jugador del otro equipo y soltala. Ambos cambian de equipo.</p>
                 </div>
+                ) : (
+                  <>
+                  {mobileMoveSource ? <p className="gf-selection-status" role="status">{mobileMoveSource.playerName} seleccionado — elegí un jugador del otro equipo. <button type="button" className={quietButtonClass} onClick={() => setMobileMoveSource(null)}>Cancelar</button> <a href="#gf-tap-tools">Más acciones</a></p> : null}
+                  <p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado para arrastrar o tocá un jugador y después su destino.</p>
+                  </>
+                )}
                 <div ref={teamsScrollerRef} data-teams-scroller="1" data-dragging={dragState ? 'true' : 'false'} className="sorteo-teams-scroller grid gap-4 xl:grid-cols-2" onScroll={event => {
                   const scroller = event.currentTarget;
                   const step = scroller.children[1] ? scroller.children[1].offsetLeft - scroller.children[0].offsetLeft : scroller.clientWidth;
@@ -5133,7 +5198,7 @@ export function SorteoLegacyPageIsland({ root }) {
                     const formationSelectValue = view.formationSelectValue
                       || teamFormationSelectValue(team, currentAssignments, teamFormations[teamIndex], isFormationEditor, isFormationEditor);
                     return (
-                      <article key={teamIndex} className="team-card sorteo-team-card team grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2" data-team-index={teamIndex} data-sorteo-team-card="1">
+                      <article key={teamIndex} className={`${isFormationEditor ? 'team-card team' : 'gf-team-column'} sorteo-team-card grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2`} data-team-index={teamIndex} data-sorteo-team-card="1">
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
                             <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]" data-team-title>
@@ -5170,6 +5235,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           </label>
                         </div>
 
+                        {isFormationEditor ? (
                         <div className="sorteo-formation-toolbar grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-2">
                           <div className="sorteo-formation-variants flex flex-wrap gap-1.5">
                             {drawVariants[String(teamIndex)]?.length ? (
@@ -5205,6 +5271,25 @@ export function SorteoLegacyPageIsland({ root }) {
                           </div>
                         </div>
 
+                        ) : (
+                          <details className="gf-team-tactics" data-html2canvas-ignore="true">
+                            <summary>Opciones tácticas</summary>
+                            <label>Variante
+                              <select className={inputClass} aria-label={`Variante de ${getTeamDisplayName(teamIndex)}`} value={activeFormationVariants[String(teamIndex)] || ''} onChange={event => {
+                                const variant = (drawVariants[String(teamIndex)] || []).find(item => item.signature === event.target.value);
+                                if (variant) applyTeamFormationVariant(teamIndex, variant);
+                              }}>
+                                <option value="" disabled>Personalizada</option>
+                                {(drawVariants[String(teamIndex)] || []).map((variant, index) => <option key={variant.signature} value={variant.signature}>{formationVariantLabel(index)} · {variant.lineText} · {variant.total.toFixed(1)} pts</option>)}
+                              </select>
+                            </label>
+                            <details><summary>Datos de las alternativas</summary>
+                              {(drawVariants[String(teamIndex)] || []).map((variant, index) => <p key={variant.signature}>{formationVariantLabel(index)}: {variant.lineText} · {variant.total.toFixed(1)} pts · {variant.diffCount} cambios</p>)}
+                              {!drawVariants[String(teamIndex)]?.length ? <p>Sin variantes disponibles</p> : null}
+                            </details>
+                          </details>
+                        )}
+                        {isFormationEditor ? (
                         <div className="grid gap-1" data-html2canvas-ignore="true" data-team-navigation="1">
                           <div className="flex items-center justify-between gap-2">
                             {teamIndex > 0 ? <button type="button" className={`${quietButtonClass} !min-h-10 text-xs`} onClick={() => scrollToTeam(teamIndex - 1)} aria-label={`Ver cancha de ${getTeamDisplayName(teamIndex - 1)}`}><span aria-hidden="true" className="text-lg">←</span> {getTeamDisplayName(teamIndex - 1)}</button> : <span />}
@@ -5212,6 +5297,15 @@ export function SorteoLegacyPageIsland({ root }) {
                           </div>
                           <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
                         </div>
+                        ) : <details className="gf-team-navigation" data-html2canvas-ignore="true"><summary>Navegar equipos</summary>
+                        <div className="grid gap-1" data-html2canvas-ignore="true" data-team-navigation="1">
+                          <div className="flex items-center justify-between gap-2">
+                            {teamIndex > 0 ? <button type="button" className={`${quietButtonClass} !min-h-10 text-xs`} onClick={() => scrollToTeam(teamIndex - 1)} aria-label={`Ver cancha de ${getTeamDisplayName(teamIndex - 1)}`}><span aria-hidden="true" className="text-lg">←</span> {getTeamDisplayName(teamIndex - 1)}</button> : <span />}
+                            {teamIndex < teams.length - 1 ? <button type="button" className={`${quietButtonClass} !min-h-10 text-xs`} onClick={() => scrollToTeam(teamIndex + 1)} aria-label={`Ver cancha de ${getTeamDisplayName(teamIndex + 1)}`}>{getTeamDisplayName(teamIndex + 1)} <span aria-hidden="true" className="text-lg">→</span></button> : <span />}
+                          </div>
+                          <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
+                        </div>
+                        </details>}
                         <div
                           className="team-formation gf-formation text-white"
                           style={{ borderTopColor: teamColorAccentHex(teamIndex), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
@@ -5294,6 +5388,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                   className={linePlayersClass}
                                   data-sorteo-drop-line={line}
                                   data-team-index={teamIndex}
+                                  data-player-count={lineList.length}
                                   onDragOver={(event) => {
                                     event.preventDefault();
                                     event.stopPropagation();
@@ -5436,6 +5531,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           })}
                         </div>
 
+                        {isFormationEditor ? (
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
                             <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]">
@@ -5447,7 +5543,8 @@ export function SorteoLegacyPageIsland({ root }) {
                           <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
                         </div>
 
-                        <section className="grid gap-2 rounded-md border border-[#d7e6df] bg-white p-3" aria-label={`Banco de suplentes de ${getTeamDisplayName(teamIndex)}`} data-team-bench={teamIndex}>
+                        ) : null}
+                        <section className="grid gap-2 rounded-md border border-[#d7e6df] bg-white p-3" aria-label={`Banco de suplentes de ${getTeamDisplayName(teamIndex)}`} data-team-bench={teamIndex} data-empty={!(benches[teamIndex] || []).length}>
                           <h4 className="m-0 text-sm font-bold">Banco de suplentes ({(benches[teamIndex] || []).length})</h4>
                           {(benches[teamIndex] || []).length ? (benches[teamIndex] || []).map(player => (
                             <div key={playerKey(player)} className="flex items-center justify-between gap-2" data-bench-player={playerKey(player)}>
@@ -5457,6 +5554,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           )) : <p className="m-0 text-xs text-[#526b62]">Sin suplentes</p>}
                         </section>
 
+                        {isFormationEditor ? (
                         <div className="sorteo-team-stats grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
                           <div className="flex flex-wrap gap-1.5 max-[760px]:gap-1">
                             {(summary.arquero > 0 ? [['Arquero', summary.arquero]] : [['Ataque', summary.ataque]])
@@ -5475,6 +5573,26 @@ export function SorteoLegacyPageIsland({ root }) {
                               ))}
                           </div>
                         </div>
+                        ) : <details className="gf-team-metrics"><summary>Estadísticas del equipo</summary>
+                        <div className="sorteo-team-stats grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
+                          <div className="flex flex-wrap gap-1.5 max-[760px]:gap-1">
+                            {(summary.arquero > 0 ? [['Arquero', summary.arquero]] : [['Ataque', summary.ataque]])
+                              .concat([
+                                ['Solidez', summary.solidez],
+                                ['Velocidad', summary.ritmo],
+                                ['Ida y vuelta', summary.resistencia],
+                                ['Pase/Vision', summary.pase_vision],
+                                ['Tecnica', summary.tecnica],
+                                ['Equipo', summary.compromiso],
+                                ['Mentalidad', summary.mentalidad],
+                                ['Regularidad', summary.regularidad],
+                              ])
+                              .map(([label, value]) => (
+                                <span key={label} className="rounded-md border border-[#d7e6df] bg-white px-2 py-1 max-[760px]:px-1.5 max-[760px]:py-0.5 max-[760px]:text-[10px]">{label} {Number(value).toFixed(1)}</span>
+                              ))}
+                          </div>
+                        </div>
+                        </details>}
                       </article>
                     );
                   })}
@@ -5487,10 +5605,21 @@ export function SorteoLegacyPageIsland({ root }) {
             )}
           </div>
 
-          <div id="download-controls" className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
+          {!isFormationEditor && teams && drawAnalysis ? (
+            <section className="gf-quick-analysis" aria-label="Análisis rápido">
+              <div className="gf-heading-row"><h2>Análisis del sorteo</h2><strong>Diferencia {drawAnalysis.diff.toFixed(1)}</strong></div>
+              <p>{actionAnalysis?.balance} · {actionAnalysis?.risk}</p>
+              <ul>{drawAnalysis.comparisons.slice(0, 3).map(item => <li key={item.field}>{item.label}: {item.highTeam} +{item.diff.toFixed(1)}</li>)}</ul>
+              {drawAnalysis.ruleChecks.some(rule => !rule.ok) ? <p>{drawAnalysis.ruleChecks.filter(rule => !rule.ok).length} aspectos para revisar: {drawAnalysis.ruleChecks.filter(rule => !rule.ok).map(rule => rule.label).join(' · ')}</p> : <p>✓ Sin alertas en las reglas del sorteo.</p>}
+              <table className="gf-quick-comparison"><caption>Comparación rápida</caption><thead><tr><th>Métrica</th>{drawAnalysis.summaries.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{[['ataque', 'Ataque'], ['tecnica', 'Técnica'], ['ritmo', 'Velocidad']].map(([field, label]) => <tr key={field}><th>{label}</th>{drawAnalysis.summaries.map(item => <td key={item.name}>{item.statValues[field].toFixed(1)}</td>)}</tr>)}</tbody></table>
+              <button className={quietButtonClass} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>{analysisVisible ? 'Ocultar análisis completo' : 'Ver análisis completo / comparación completa'}</button>
+            </section>
+          ) : null}
+
+          <div id="download-controls" data-save-state={displayedSaveState} className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black">
               <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${saveStateClass}`}>
-                <span className={`h-2 w-2 rounded-full ${saveState === 'saved' ? 'bg-emerald-500' : saveState === 'dirty' ? 'bg-amber-500' : 'bg-slate-400'}`} aria-hidden="true" />
+                <span className={`h-2 w-2 rounded-full ${displayedSaveState === 'saved' ? 'bg-emerald-500' : displayedSaveState === 'dirty' ? 'bg-amber-500' : 'bg-slate-400'}`} aria-hidden="true" />
                 {saveStateLabel}
               </span>
               {manualActionCount > 0 ? (
@@ -5511,17 +5640,15 @@ export function SorteoLegacyPageIsland({ root }) {
                   <button className={`${quietButtonClass} w-full justify-start border-transparent px-3 shadow-none`} type="button" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); downloadTeamsText(); }}><Icon name="download" />Descargar texto</button>
                 </div>
               </details>
-              <button className={secondaryButtonClass} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>
-                <Icon name="clipboard" />
-                {analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}
-              </button>
+              {isFormationEditor ? <button className={secondaryButtonClass} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>{analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}</button> : null}
               {lockedMatch ? (
-                <button className={primaryButtonClass} type="button" onClick={isFormationEditor ? saveFormations : saveDraw}>
-                  <Icon name="save" />
-                  {isFormationEditor ? 'Guardar formaciones' : 'Guardar sorteo'}
+                formationsReady && !isFormationEditor && formationsUrl ? <button className={primaryButtonClass} type="button" onClick={() => navigate(formationsUrl)}>Configurar formaciones →</button> :
+                <button className={primaryButtonClass} type="button" onClick={isFormationEditor ? saveFormations : saveDraw} disabled={savingDraw}>
+                  <Icon name="save" />{savingDraw ? 'Guardando…' : isFormationEditor ? 'Guardar formaciones' : 'Guardar equipos y continuar'}
                 </button>
               ) : null}
             </div>
+            {!isFormationEditor ? <p className="gf-save-help">{formationsReady ? 'Equipos guardados. El siguiente paso es configurar formaciones.' : 'Al guardar se habilitará la edición de formaciones.'}</p> : null}
             {manualActionCount > 0 || lockedPositionCount > 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
                 {manualActionCount > 0
@@ -5531,7 +5658,7 @@ export function SorteoLegacyPageIsland({ root }) {
             ) : null}
           </div>
 
-          {teams ? (
+          {teams && isFormationEditor ? (
             <div data-sorteo-mobile-actions="1" className={`fixed inset-x-0 bottom-0 z-50 grid ${mobileActionGridClass} gap-1 border-t border-[#d7e6df] bg-white px-2 py-2 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden`}>
               <span className={`col-span-full justify-self-end rounded-md border px-2 py-1 text-[11px] font-black ${saveStateClass}`}>
                 {saveStateLabel}{manualActionCount > 0 ? ` | ${manualActionCount}` : ''}
@@ -5739,6 +5866,12 @@ export function SorteoLegacyPageIsland({ root }) {
               ) : null}
             </section>
           ) : null}
+          {teams && !isFormationEditor && lockedMatch ? (
+            <div className="gf-sticky-save" data-sorteo-mobile-actions="1" aria-label="Guardar y continuar">
+              <span role="status">{saveStateLabel}</span>
+              {formationsReady && formationsUrl ? <button className={primaryButtonClass} type="button" onClick={() => navigate(formationsUrl)}>Formaciones →</button> : <button className={primaryButtonClass} type="button" disabled={savingDraw} onClick={saveDraw}>{savingDraw ? 'Guardando…' : 'Guardar'}</button>}
+            </div>
+          ) : null}
         </main>
       </div>
 
@@ -5752,7 +5885,7 @@ export function SorteoLegacyPageIsland({ root }) {
       ) : null}
 
       {mobileMoveSource && mobileMovePlayer ? (
-        <div role="region" aria-label="Mover o intercambiar jugador" className="sorteo-mobile-tray fixed inset-x-0 bottom-[88px] z-[60] grid max-h-[60dvh] gap-2 overflow-y-auto border-t border-[#d7e6df] bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden">
+        <div id="gf-tap-tools" role="region" aria-label="Mover o intercambiar jugador" className={isFormationEditor ? "sorteo-mobile-tray fixed inset-x-0 bottom-[88px] z-[60] grid max-h-[60dvh] gap-2 overflow-y-auto border-t border-[#d7e6df] bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(7,19,15,.10)] min-[761px]:hidden" : "gf-tap-tools sorteo-mobile-tray grid gap-2 border-t border-[#d7e6df] bg-white p-3 min-[761px]:hidden"}>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <strong className="block truncate text-sm font-black text-[#07130f]">{mobileMoveSource.playerName}</strong>
@@ -5786,6 +5919,7 @@ export function SorteoLegacyPageIsland({ root }) {
               );
             })}
           </div>
+          {!isFormationEditor ? <p className="gf-tap-hint" role="status">{mobileMoveSource.playerName} seleccionado — tocá un jugador del otro equipo para intercambiar.</p> : null}
           <p className="text-sm font-bold">Intercambiar con otro equipo</p>
           {teams.map((team, targetTeamIndex) => {
             if (targetTeamIndex === Number(mobileMoveSource.teamIndex)) return null;

@@ -431,6 +431,7 @@ function EditEncountersPage({ payload, root }) {
 
   const latest = matches.find((match) => Number(match.id) === Number(payload.latestId)) || null;
   const filtered = matches.filter((match) => {
+    if (latest && Number(match.id) === Number(latest.id)) return false;
     const matchesQuery = normalizedQuery === '' || String(match.searchText || '').includes(normalizedQuery);
     const matchesStatus = status === '' || match.status === status;
     const matchesScope = scope === ''

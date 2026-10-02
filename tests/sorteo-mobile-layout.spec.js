@@ -64,12 +64,13 @@ test('mobile pitch keeps cards, ratings and projected laterals inside their rows
   // DOM-only stress fixtures: no assignment or stored player data is modified.
   for (const width of [320, 760, 1280, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
-    for (const count of [1, 2, 3, 4]) {
+    for (const count of [1, 2, 3, 4, 5]) {
       const issues = await pitches.first().evaluate((field, count) => {
         const row = field.querySelector('[data-sorteo-drop-line=MED]');
         const line = row.querySelector('.line-players');
         const template = field.querySelector('[data-sorteo-line-player-item]').cloneNode(true);
         row.style.setProperty('--gf-player-count', count);
+        line.dataset.playerCount = String(count);
         line.replaceChildren(...Array.from({ length: count }, (_, i) => {
           const slot = template.cloneNode(true);
           slot.querySelector('.gf-player-name-text').textContent = i % 2 ? 'Juan Francisco Apellido Muy Largo' : 'Leo';
@@ -86,11 +87,12 @@ test('mobile pitch keeps cards, ratings and projected laterals inside their rows
         cards.forEach((card, i) => {
           const r = card.getBoundingClientRect();
           const name = card.querySelector('.gf-player-name');
+          if (r.top < bounds.top - 1 || r.bottom > bounds.bottom + 1) errors.push('card escapes row height');
           if (r.left < bounds.left - 1 || r.right > bounds.right + 1) errors.push('card escapes usable field');
           const text = name.querySelector('.gf-player-name-text');
           if (text.getBoundingClientRect().bottom > name.getBoundingClientRect().bottom + 1) errors.push('name escapes internal area');
           if (text.scrollHeight > text.clientHeight + 1 && getComputedStyle(text).webkitLineClamp !== '2') errors.push('long name lacks ellipsis');
-          if (cards[i + 1] && r.right > cards[i + 1].getBoundingClientRect().left) errors.push('overlap');
+          if (cards[i + 1]) { const next = cards[i + 1].getBoundingClientRect(); if (r.left < next.right && r.right > next.left && r.top < next.bottom && r.bottom > next.top) errors.push('overlap'); }
         });
         return errors;
       }, count);

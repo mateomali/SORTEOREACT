@@ -58,7 +58,7 @@ test('desktop drag and mobile destination list exchange players without saving',
   await expect(panel).toHaveCount(0);
 });
 
-test('mobile courts scroll horizontally and edge dragging reaches the other team', async ({ page }) => {
+test('mobile courts stay side by side and touch dragging reaches the other team', async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/login.php?next=sorteo_legacy_csv.php%3Fmatch_id%3D188`);
@@ -69,14 +69,9 @@ test('mobile courts scroll horizontally and edge dragging reaches the other team
   const scroller = page.locator('[data-teams-scroller]');
   await expect(scroller).toBeVisible({ timeout: 60000 });
   const geometry = await scroller.evaluate(node => ({ width: node.clientWidth, total: node.scrollWidth, tops: [...node.children].map(child => child.getBoundingClientRect().top), pageWidth: document.documentElement.scrollWidth }));
-  expect(geometry.total).toBeGreaterThan(geometry.width * 1.9);
+  expect(geometry.total).toBeLessThanOrEqual(geometry.width + 1);
   expect(geometry.tops[0]).toBe(geometry.tops[1]);
   expect(geometry.pageWidth).toBeLessThanOrEqual(390);
-  const navigation = page.getByRole('group', { name: 'Elegir cancha' });
-  await navigation.getByRole('button').nth(1).click();
-  await expect.poll(() => scroller.evaluate(node => node.scrollLeft)).toBeGreaterThan(geometry.width * .9);
-  await navigation.getByRole('button').first().click();
-  await expect.poll(() => scroller.evaluate(node => node.scrollLeft)).toBeLessThan(2);
   const source = page.locator('[data-sorteo-drag-player][data-team-index="0"]:not([data-assigned-position="ARQ"])').first();
   const target = page.locator('[data-sorteo-drag-player][data-team-index="1"]:not([data-assigned-position="ARQ"])').first();
   const sourceKey = await source.getAttribute('data-player-key');
@@ -102,8 +97,6 @@ test('mobile courts scroll horizontally and edge dragging reaches the other team
   const heldBox = await source.boundingBox();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(heldBox.x + heldBox.width / 2, heldBox.y + heldBox.height / 2) });
   await expect(scroller).toHaveAttribute('data-dragging', 'true');
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(bounds.x + bounds.width - 4, heldBox.y + heldBox.height / 2) });
-  await expect.poll(() => scroller.evaluate(node => node.scrollLeft)).toBeGreaterThan(geometry.width * .98);
   const b = await target.boundingBox();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(b.x + b.width / 2, b.y + b.height / 2) });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
@@ -112,7 +105,8 @@ test('mobile courts scroll horizontally and edge dragging reaches the other team
   await expect(scroller).toHaveAttribute('data-dragging', 'false');
   await page.screenshot({ path: 'test-results/sorteo-horizontal-mobile.png' });
   const downloadReady = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'JPG', exact: true }).click();
+  await page.locator('details').filter({hasText:'Exportar'}).first().locator('summary').click();
+  await page.getByRole('button', { name: 'Exportar JPG', exact: true }).click();
   const download = await downloadReady;
   const exportPath = 'test-results/sorteo-horizontal-export.jpg';
   await download.saveAs(exportPath);
