@@ -821,9 +821,15 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
         guard += 1;
         const counts = pitchLineCountsFromLogical(teamLineCounts(team, assignment));
         if ((counts[line] || 0) >= fieldLineMinimum(line, team.length)) break;
+        const hasNaturalCandidate = team.some((player) => (
+          assignment[playerKey(player)] !== 'ARQ'
+          && playerCanUseAssignedPosition(player, line)
+          && pitchLineForPosition(assignment[playerKey(player)]) !== line
+          && (counts[pitchLineForPosition(assignment[playerKey(player)])] || 0) > fieldLineMinimum(pitchLineForPosition(assignment[playerKey(player)]), team.length)
+        ));
         const candidate = team
           .filter((player) => assignment[playerKey(player)] !== 'ARQ')
-          .filter((player) => playerCanUseAssignedPosition(player, line))
+          .filter((player) => !hasNaturalCandidate || playerCanUseAssignedPosition(player, line))
           .filter((player) => {
             const currentLine = pitchLineForPosition(assignment[playerKey(player)]);
             return currentLine !== line && (counts[currentLine] || 0) > fieldLineMinimum(currentLine, team.length);

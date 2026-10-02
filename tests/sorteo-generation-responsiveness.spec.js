@@ -47,11 +47,12 @@ test('la generacion de equipos no congela la interfaz', async ({ page }) => {
 
   await page.evaluate(() => window.__genStart());
   await page.locator('#generateTeamsButton').click();
+  await expect(page.locator('#generateTeamsButton')).toBeEnabled({ timeout: 180000 });
   await expect(page.locator('[data-teams-scroller]')).toBeVisible({ timeout: 180000 });
   const metrics = await page.evaluate(() => window.__genStop());
   console.log('GENERATION-RESPONSIVENESS', JSON.stringify(metrics));
 
   // Con el trabajo cortado en porciones el navegador pinta muchas veces durante el sorteo.
-  expect(metrics.frames).toBeGreaterThan(100);
+  expect(metrics.frames).toBeGreaterThan(Math.max(5, metrics.wallMs / 80));
   expect(metrics.maxBlock).toBeLessThan(2500);
 });

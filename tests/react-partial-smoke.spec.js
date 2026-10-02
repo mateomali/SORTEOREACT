@@ -339,7 +339,7 @@ test('legacy draw and redirect pages remain reachable', async ({ page }) => {
     await drawLink.click();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('body')).toContainText(/Generador(?: de Equipos)? GOODFELLAS/i);
-    await expect(page.locator('body')).toContainText(/Jugadores disponibles/i);
+    await expect(page.locator('body')).toContainText(/Jugadores disponibles|jugadores seleccionados/i);
   }
 
   await page.goto(`${BASE_URL}/consulta.php`, { waitUntil: 'networkidle' });

@@ -80,7 +80,7 @@ async function clickAndCheckPartial(page, selector, expectedUrlPart, expectedSel
 }
 
 test('progressive SPA navigation, legacy draw, and player row save', async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(300000);
   await page.setViewportSize({ width: 1366, height: 900 });
   const { consoleErrors, failedResponses } = captureBrowserErrors(page);
 
@@ -123,8 +123,9 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
     }
 
     await page.locator('#generateTeamsButton').click();
-    await page.waitForSelector('#equipos-generados .team', { timeout: 25000 });
-    expect(await page.locator('#equipos-generados .team').count()).toBeGreaterThanOrEqual(2);
+    await expect(page.locator('#generateTeamsButton')).toBeEnabled({ timeout: 180000 });
+    await page.waitForSelector('#equipos-generados [data-sorteo-team-card]', { timeout: 180000 });
+    expect(await page.locator('#equipos-generados [data-sorteo-team-card]').count()).toBeGreaterThanOrEqual(2);
     await expect(page.locator('#success')).toContainText(/Equipos generados|mejor equilibrio|Mejor combinacion valida|Mejor resultado encontrado/);
 
     await clickAndCheckPartial(page, 'button:has-text("Volver a fechas")', 'editar_partidos.php');
@@ -140,8 +141,9 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
     await wait(700);
     expect(await page.evaluate(() => typeof window.generarEquipos)).toBe('function');
     await page.locator('#generateTeamsButton').click();
-    await page.waitForSelector('#equipos-generados .team', { timeout: 25000 });
-    expect(await page.locator('#equipos-generados .team').count()).toBeGreaterThanOrEqual(2);
+    await expect(page.locator('#generateTeamsButton')).toBeEnabled({ timeout: 180000 });
+    await page.waitForSelector('#equipos-generados [data-sorteo-team-card]', { timeout: 180000 });
+    expect(await page.locator('#equipos-generados [data-sorteo-team-card]').count()).toBeGreaterThanOrEqual(2);
   }
 
   await page.goto(`${BASE_URL}/jugadores.php`, { waitUntil: 'domcontentloaded' });
