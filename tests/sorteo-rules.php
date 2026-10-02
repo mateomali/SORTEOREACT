@@ -20,7 +20,9 @@ function test_player(int $id, string $name, string $positions, float $skill, arr
         'pace' => 'rapido',
         'skill' => $skill,
         'technique' => $skill,
+        'pass_vision' => $skill,
         'rhythm' => $skill,
+        'stamina' => $skill,
         'defense_physical' => $skill,
         'attack' => $skill,
         'teamwork' => $skill,
@@ -29,6 +31,10 @@ function test_player(int $id, string $name, string $positions, float $skill, arr
         'goalkeeper_skill' => $positions === 'ARQ' ? $skill : 2.0,
     ], $overrides);
 }
+
+assert_true(draw_pitch_line_minimum('MED', 6) === 1, 'Con seis jugadores se permite un mediocampista.');
+assert_true(draw_pitch_line_minimum('MED', 7) === 2, 'Con siete jugadores se requieren dos mediocampistas.');
+assert_true(draw_pitch_line_minimum('DEF', 6) === 2, 'Se conserva el minimo de defensa para seis jugadores.');
 
 $players = [
     test_player(1, 'Arquero A', 'ARQ', 4.4, ['goalkeeper_skill' => 5.2]),
@@ -61,8 +67,7 @@ foreach ($teams as $teamIndex => $team) {
     $lineCounts = $team['line_counts'] ?? array_fill_keys(['ARQ', 'DEF', 'LAT', 'MED', 'DEL'], 0);
     assert_true(count($playersInTeam) === 9, "Equipo {$teamIndex} debe tener 9 jugadores.");
     assert_true($lineCounts['ARQ'] === 1, "Equipo {$teamIndex} debe tener 1 arquero.");
-    assert_true($lineCounts['LAT'] >= 2, "Equipo {$teamIndex} debe tener al menos 2 laterales.");
-    assert_true($lineCounts['DEF'] >= 1, "Equipo {$teamIndex} debe cubrir defensa.");
+    assert_true(($lineCounts['DEF'] + $lineCounts['LAT']) >= 2, "Equipo {$teamIndex} debe cubrir defensa con 2 jugadores.");
     assert_true($lineCounts['MED'] >= 1, "Equipo {$teamIndex} debe cubrir medio.");
     assert_true($lineCounts['DEL'] >= 1, "Equipo {$teamIndex} debe cubrir delantero.");
     $platinumCounts[] = count(array_filter($playersInTeam, 'draw_player_is_platinum'));
@@ -97,6 +102,8 @@ $customWeights = player_normalize_position_stat_weights([
         'rhythm' => 0.25,
         'teamwork' => 0,
         'mentality' => 0,
+        'stamina' => 0,
+        'pass_vision' => 0,
         'defense_physical' => 0,
         'attack' => 0,
         'ignored_field' => 99,
@@ -111,6 +118,17 @@ assert_true(!isset($customWeights['BAD']), 'Las posiciones no soportadas no debe
 foreach (player_position_stat_weight_defaults() as $position => $_weights) {
     assert_true(abs(array_sum($customWeights[$position]) - 1.0) < 0.001, "Los pesos {$position} deben sumar 1.");
 }
+
+$secondaryForward = test_player(80, 'Secundario', 'MED/DEL', 4.0);
+$adaptedForward = test_player(81, 'Adaptado', 'DEF', 4.0);
+assert_true(
+    player_position_rating($secondaryForward, 'DEL', true) > player_position_rating($secondaryForward, 'DEL'),
+    'En cancha chica no se debe bajar puntaje por posicion secundaria.'
+);
+assert_true(
+    player_position_rating($adaptedForward, 'MED', true) > player_position_rating($adaptedForward, 'MED'),
+    'En cancha chica no se debe bajar puntaje por adaptacion de linea.'
+);
 
 $threeTeamPlayers = [
     test_player(101, 'Arquero 1', 'ARQ', 4.4, ['goalkeeper_skill' => 5.2]),
@@ -133,10 +151,56 @@ assert_true(is_array($threeTeams), 'Debe generar equipos validos para 3 equipos.
 foreach ($threeTeams as $teamIndex => $team) {
     $lineCounts = $team['line_counts'] ?? [];
     assert_true(($lineCounts['ARQ'] ?? 0) === 1, "Equipo triple {$teamIndex} debe tener 1 arquero.");
-    assert_true(($lineCounts['LAT'] ?? 0) >= 2, "Equipo triple {$teamIndex} debe tener 2 laterales.");
-    assert_true(($lineCounts['DEF'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir defensa.");
+    assert_true((($lineCounts['DEF'] ?? 0) + ($lineCounts['LAT'] ?? 0)) >= 2, "Equipo triple {$teamIndex} debe cubrir defensa con 2 jugadores.");
     assert_true(($lineCounts['MED'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir medio.");
     assert_true(($lineCounts['DEL'] ?? 0) >= 1, "Equipo triple {$teamIndex} debe cubrir delantero.");
 }
+
+$twoDefenderTeam = [
+    test_player(201, 'Arquero Chico', 'ARQ', 4.0, ['goalkeeper_skill' => 5.0]),
+    test_player(202, 'Def Chico A', 'DEF', 4.0),
+    test_player(203, 'Def Chico B', 'DEF', 3.9),
+    test_player(204, 'Med Chico', 'MED', 4.0),
+    test_player(205, 'Del Chico', 'DEL', 4.0),
+];
+$twoDefenderAssignment = build_team_position_assignment($twoDefenderTeam);
+assert_true($twoDefenderAssignment['line_limit_ok'], 'Un equipo con 2 DEF y 0 LAT debe ser una formacion valida.');
+assert_true(($twoDefenderAssignment['line_counts']['DEF'] ?? 0) === 2, 'Los dos defensores deben quedar como DEF.');
+assert_true(($twoDefenderAssignment['line_counts']['LAT'] ?? 0) === 0, 'No se debe inventar un LAT cuando hay 2 DEF naturales.');
+
+$mixedKeeperTeams = array_map(static fn(array $team): array => array_map(static function (array $player): array {
+    if (player_primary_position($player) === 'ARQ') {
+        $player['positions'] = 'ARQ/MED';
+    }
+    return $player;
+}, $team['players']), $threeTeams);
+assert_true(validate_teams($mixedKeeperTeams, 9, 100.0), 'Los arqueros con posicion secundaria deben poder ocupar un arco cada uno.');
+$keeperIndex = array_search(true, array_map(static fn(array $player): bool => player_primary_position($player) === 'ARQ', $mixedKeeperTeams[1]), true);
+$fieldIndex = array_search(false, array_map(static fn(array $player): bool => player_primary_position($player) === 'ARQ', $mixedKeeperTeams[0]), true);
+[$mixedKeeperTeams[0][$fieldIndex], $mixedKeeperTeams[1][$keeperIndex]] = [$mixedKeeperTeams[1][$keeperIndex], $mixedKeeperTeams[0][$fieldIndex]];
+assert_true(!validate_teams($mixedKeeperTeams, 9, 100.0), 'No aceptar dos arqueros juntos aunque uno pueda jugar de MED.');
+
+$linePools = [];
+foreach (['DEF', 'MED', 'DEL'] as $lineIndex => $line) {
+    for ($index = 0; $index < 6; $index++) {
+        $linePools[$line][] = test_player(500 + $lineIndex * 10 + $index, "$line $index", $line, $index < 3 ? 4.5 : 2.5);
+    }
+}
+$concentrated = [
+    [$threeTeamPlayers[0], $linePools['DEF'][0], $linePools['DEF'][1], $linePools['MED'][3], $linePools['MED'][4], $linePools['DEL'][0], $linePools['DEL'][3]],
+    [$threeTeamPlayers[1], $linePools['DEF'][3], $linePools['DEF'][4], $linePools['MED'][0], $linePools['MED'][1], $linePools['DEL'][1], $linePools['DEL'][4]],
+    [$threeTeamPlayers[2], $linePools['DEF'][2], $linePools['DEF'][5], $linePools['MED'][2], $linePools['MED'][5], $linePools['DEL'][2], $linePools['DEL'][5]],
+];
+$distributed = [];
+for ($index = 0; $index < 3; $index++) {
+    $distributed[$index] = [$threeTeamPlayers[$index]];
+    foreach (['DEF', 'MED', 'DEL'] as $line) {
+        $distributed[$index][] = $linePools[$line][$index];
+        $distributed[$index][] = $linePools[$line][$index + 3];
+    }
+}
+assert_true(draw_line_strength_balance($concentrated)['elite_excess'] > 0, 'Detectar los mejores defensores y medios juntos.');
+assert_true(draw_line_strength_balance($distributed)['elite_excess'] === 0, 'Repartir los mejores de cada linea entre los tres equipos.');
+assert_true(draw_teams_balance_is_better($distributed, $concentrated, draw_player_band_ids(array_merge(...$distributed))), 'Preferir equilibrio por lineas aunque los totales sean similares.');
 
 echo "OK sorteo rules\n";

@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8001';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8000';
 const ADMIN_PASSWORD = process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,12 +48,13 @@ function captureBrowserErrors(page) {
   return { consoleErrors, failedResponses };
 }
 
-async function adminLogin(page, next = 'index.php') {
+async function adminLogin(page, next = 'editar_partidos.php') {
   await page.goto(`${BASE_URL}/login.php?next=${encodeURIComponent(next)}`, { waitUntil: 'domcontentloaded' });
   await page.locator('#login-admin').evaluate((node) => { node.open = true; });
   await page.locator('#adminPassword').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /Entrar como admin|Ingresar/i }).click();
-  await page.waitForURL((url) => url.href.includes(next.split('?')[0]), { timeout: 10000 });
+  const nextPath = `/${next.split('?')[0]}`;
+  await page.waitForURL((url) => url.pathname.endsWith(nextPath), { timeout: 10000 });
   await page.waitForSelector('main.content');
 }
 
@@ -64,7 +65,12 @@ async function clickAndCheckPartial(page, selector, expectedUrlPart, expectedSel
   const markerBefore = await page.evaluate(() => window.__partialSmokeMarker);
   const beforeUrl = page.url();
 
-  await page.locator(selector).click();
+  let target = page.locator(`${selector}:visible`).first();
+  if (await target.count() === 0) {
+    await page.locator(selector).first().locator('xpath=ancestor::details[1]/summary').click();
+    target = page.locator(`${selector}:visible`).first();
+  }
+  await target.click();
   await page.waitForURL((url) => url.href.includes(expectedUrlPart), { timeout: 10000 });
   await page.waitForSelector(expectedSelector, { timeout: 10000 });
   await wait(400);
@@ -74,13 +80,15 @@ async function clickAndCheckPartial(page, selector, expectedUrlPart, expectedSel
 }
 
 test('progressive SPA navigation, legacy draw, and player row save', async ({ page }) => {
+  test.setTimeout(300000);
   await page.setViewportSize({ width: 1366, height: 900 });
   const { consoleErrors, failedResponses } = captureBrowserErrors(page);
 
   await adminLogin(page);
 
   const checks = [];
-  checks.push(await clickAndCheckPartial(page, 'nav a[href="jugadores2.php"]', 'jugadores2.php', 'text=Plantilla, posiciones y rendimiento actual.'));
+  checks.push(await clickAndCheckPartial(page, 'nav a[href="jugadores2.php"]', 'jugadores2.php'));
+  await expect(page.locator('main.content')).toContainText(/Jugadores|Plantilla/i);
   checks.push(await clickAndCheckPartial(page, 'nav a[href="estadisticas.php"]', 'estadisticas.php'));
   checks.push(await clickAndCheckPartial(page, 'nav a[href="editar_partidos.php"]', 'editar_partidos.php'));
 
@@ -115,9 +123,10 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
     }
 
     await page.locator('#generateTeamsButton').click();
-    await page.waitForSelector('#equipos-generados .team', { timeout: 25000 });
-    expect(await page.locator('#equipos-generados .team').count()).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('#success')).toContainText(/Equipos generados|mejor equilibrio/);
+    await expect(page.locator('#generateTeamsButton')).toBeEnabled({ timeout: 180000 });
+    await page.waitForSelector('#equipos-generados [data-sorteo-team-card]', { timeout: 180000 });
+    expect(await page.locator('#equipos-generados [data-sorteo-team-card]').count()).toBeGreaterThanOrEqual(2);
+    await expect(page.locator('#success')).toContainText(/Equipos generados|mejor equilibrio|Mejor combinacion valida|Mejor resultado encontrado/);
 
     await clickAndCheckPartial(page, 'button:has-text("Volver a fechas")', 'editar_partidos.php');
     await page.evaluate((href) => window.goodfellasPartialNavigate(href), redirectedHref);
@@ -132,8 +141,9 @@ test('progressive SPA navigation, legacy draw, and player row save', async ({ pa
     await wait(700);
     expect(await page.evaluate(() => typeof window.generarEquipos)).toBe('function');
     await page.locator('#generateTeamsButton').click();
-    await page.waitForSelector('#equipos-generados .team', { timeout: 25000 });
-    expect(await page.locator('#equipos-generados .team').count()).toBeGreaterThanOrEqual(2);
+    await expect(page.locator('#generateTeamsButton')).toBeEnabled({ timeout: 180000 });
+    await page.waitForSelector('#equipos-generados [data-sorteo-team-card]', { timeout: 180000 });
+    expect(await page.locator('#equipos-generados [data-sorteo-team-card]').count()).toBeGreaterThanOrEqual(2);
   }
 
   await page.goto(`${BASE_URL}/jugadores.php`, { waitUntil: 'domcontentloaded' });

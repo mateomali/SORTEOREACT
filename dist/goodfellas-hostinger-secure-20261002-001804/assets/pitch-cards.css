@@ -1,0 +1,130 @@
+/* ==========================================================================
+   Cancha: linea divisoria entre posiciones y cartas 20% mas grandes.
+
+   Se carga despues de tailwind.css y contrast-overrides.css, que definen los
+   tamanos de carta. Aqui no se reescriben esos valores: se escalan, para que
+   cada breakpoint siga su proporcion original.
+
+   Por que zoom y no width:
+     Los anchos de carta estan fijados en px en ~65 declaraciones de escritorio
+     y ~205 de movil, repartidas en 5 breakpoints (90/96/100/102/104/124/132px
+     en escritorio; 64/96/124px y mas en movil). Multiplicarlas una por una
+     seria fragil y se desincronizaria con cada cambio de diseno. zoom escala
+     el tamano usado del elemento, asi que 1.2 vale para todos los breakpoints.
+     Es seguro con el arrastre existente porque ningun script usa
+     offsetLeft/offsetTop/offsetWidth/offsetHeight: solo getBoundingClientRect()
+     y elementFromPoint(), que si respetan zoom.
+     html2canvas (exportacion a imagen) solo se carga en la cancha React del
+     sorteo, que se ajusta mas abajo sin zoom.
+
+   Para cambiar la magnitud, ajustar solo --gf-pitch-card-scale.
+   Para desactivar todo, poner --gf-pitch-card-scale: 1.
+   ========================================================================== */
+
+:root {
+  --gf-pitch-card-scale: 1.2;
+  --gf-pitch-divider-color: rgba(255, 255, 255, 0.4);
+  --gf-pitch-divider-shadow: 0 1px 0 rgba(2, 18, 11, 0.22);
+}
+
+/* --------------------------------------------------------------------------
+   1. Linea divisoria entre posiciones (ARQ / DEF / MED / DEL)
+   Se dibuja en el borde superior de cada linea a partir de la segunda, igual
+   que la divisoria que ya existia en inicio, historial y perfil. Empieza
+   despues de la columna de la etiqueta de posicion.
+   -------------------------------------------------------------------------- */
+
+:is(.team-formation, .captain-formation-field, .captain-editor-field,
+    .finish-formation-pitch-preview, .multi-draw-pitch-view)
+  :is(.formation-line, .captain-formation-line) {
+  position: relative;
+}
+
+:is(.team-formation, .captain-formation-field, .captain-editor-field,
+    .finish-formation-pitch-preview, .multi-draw-pitch-view)
+  :is(.formation-line, .captain-formation-line)
+  + :is(.formation-line, .captain-formation-line)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 42px; /* ancho de la columna de etiqueta en .formation-line */
+  right: 0;
+  height: 1px;
+  background: var(--gf-pitch-divider-color);
+  box-shadow: var(--gf-pitch-divider-shadow);
+  pointer-events: none;
+}
+
+/* En capitanes la columna de etiqueta es de 46px. */
+:is(.captain-formation-field, .captain-editor-field)
+  :is(.captain-formation-line) + :is(.captain-formation-line)::after {
+  left: 46px;
+}
+
+/* En el preview de finalizar partido la columna de etiqueta es de 54px. */
+.finish-formation-pitch-preview
+  .formation-line + .formation-line::after {
+  left: 54px;
+}
+
+/* Inicio, historial y perfil ya dibujan su propia divisoria (gradiente en
+   ::before) sobre estas lineas: no se les agrega una segunda. */
+body.page-index .content .match-history .team-formation .formation-line + .formation-line::after,
+body.page-historial .content .match-history .team-formation .formation-line + .formation-line::after,
+body.page-perfil .content .public-teams .team-formation .formation-line + .formation-line::after,
+body.page-index .content .home-captain-live-teams .team-formation .formation-line + .formation-line::after {
+  content: none;
+}
+
+/* La cancha React del sorteo no tiene divisoria: en tailwind.input.css la
+   regla .sorteo-react-page .gf-formation .gf-formation-row aplica border: 0,
+   que anula el border-b border-white/15 declarado en el JSX. Por eso aqui se
+   define el borde completo, no solo el color. */
+.sorteo-react-page .gf-formation .gf-formation-row:not(:last-child) {
+  border-bottom: 1px solid var(--gf-pitch-divider-color);
+}
+
+/* --------------------------------------------------------------------------
+   2. Cartas de cancha 20% mas grandes (vistas renderizadas en PHP)
+   Cubre inicio, historial, perfil, capitanes, finalizar partido y sorteo
+   multiple. Queda fuera a proposito:
+     - la galeria de la pagina de previews de carta, que no es una cancha;
+     - el preview de finalizar partido, porque sus cartas usan otra clase
+       (.sorteo-static-player-card, 90px) dentro de un .line-players con
+       flex-nowrap + overflow-hidden: crecerlas 20% recortaria cartas en vez
+       de agrandar la cancha. Requiere ajustar antes el alto fijo del preview.
+   -------------------------------------------------------------------------- */
+
+:is(.team-formation, .captain-formation-field, .captain-editor-field,
+    .finish-formation-pitch-preview, .multi-draw-pitch-view)
+  :is(.formation-player, .captain-formation-player) {
+  zoom: var(--gf-pitch-card-scale);
+}
+
+/* --------------------------------------------------------------------------
+   3. Cancha React del sorteo
+   La carta toma su ancho de .gf-player-slot:
+     min(100%, calc((100cqw - 12px) / var(--gf-line-capacity)))
+   El tope lo fija la capacidad de la linea (minimo 4), asi que en el caso
+   habitual la carta queda mas chica que su celda y sobra verde. Se amplia el
+   tope por --gf-pitch-card-scale y se recupera algo de espacio horizontal
+   para que las lineas de 5 o mas tambien crezcan.
+   -------------------------------------------------------------------------- */
+
+.sorteo-react-page .gf-formation .gf-player-slot {
+  width: min(100%, calc((100cqw - 12px) / var(--gf-line-capacity) * var(--gf-pitch-card-scale)));
+}
+
+/* La separacion entre cartas tambien cuenta como verde aprovechable. */
+.sorteo-react-page .gf-formation .gf-line-players {
+  gap: 2px;
+}
+
+/* Solo en escritorio: en movil la geometria del campo ya esta ajustada al
+   pixel (padding 20px 3px 8px 28px) y no conviene tocarla. */
+@media (min-width: 761px) {
+  .sorteo-react-page .gf-formation {
+    --gf-gutter: clamp(34px, 8%, 48px);
+    padding-right: 2%;
+  }
+}

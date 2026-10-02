@@ -12,9 +12,11 @@
     "build:react": "vite build",
     "db:import": "powershell -ExecutionPolicy Bypass -File scripts/importar-base-local.ps1",
     "dev:react": "vite --host 0.0.0.0",
+    "levantar-servidor": "powershell -ExecutionPolicy Bypass -File scripts/levantar-servidor-local.ps1",
     "serve:local": "powershell -ExecutionPolicy Bypass -File scripts/levantar-servidor-local.ps1",
     "test:react-smoke": "playwright test tests/react-partial-smoke.spec.js",
-    "test:sorteo": "php tests/sorteo-rules.php",
+    "test:sorteo": "php tests/sorteo-rules.php && npm run test:sorteo-react",
+    "test:sorteo-react": "node tests/sorteo-goalkeepers.cjs",
     "test:site-pages": "playwright test tests/site-pages-smoke.spec.js",
     "test:smoke": "npm run test:site-pages && npm run test:spa && npm run test:react-smoke",
     "test:spa": "playwright test tests/spa-progressive-smoke.spec.js",
@@ -34,6 +36,7 @@
     "vite": "^8.0.10"
   },
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1"
   }
 }

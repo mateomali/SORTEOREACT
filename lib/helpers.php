@@ -7,6 +7,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/schema.php';
+require_once __DIR__ . '/valuations.php';
 
 function h(string $value): string
 {
@@ -16,7 +17,7 @@ function h(string $value): string
 function player_photo_path(array $player): string
 {
     $path = trim(str_replace('\\', '/', (string) ($player['photo_path'] ?? '')));
-    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/')) {
+    if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'uploads/players/') || !is_file(__DIR__ . '/../' . $path)) {
         return 'assets/players/default-player-silhouette.png';
     }
     return $path;
@@ -275,56 +276,66 @@ function match_status_label(string $status): string
 
 function player_stat_fields(): array
 {
-    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity', 'goalkeeper_skill'];
+    return ['technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity', 'goalkeeper_skill'];
 }
 
 function player_field_stat_fields(): array
 {
-    return ['technique', 'rhythm', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
+    return ['technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 }
 
 function player_position_stat_weight_defaults(): array
 {
     return [
         'ARQ' => [
-            'goalkeeper_skill' => 0.42,
-            'defense_physical' => 0.14,
-            'rhythm' => 0.10,
-            'technique' => 0.10,
-            'teamwork' => 0.14,
+            'goalkeeper_skill' => 0.36,
+            'defense_physical' => 0.12,
+            'rhythm' => 0.08,
+            'stamina' => 0.08,
+            'technique' => 0.08,
+            'pass_vision' => 0.06,
+            'teamwork' => 0.12,
             'mentality' => 0.10,
         ],
         'DEF' => [
-            'defense_physical' => 0.28,
-            'rhythm' => 0.20,
-            'technique' => 0.18,
-            'teamwork' => 0.13,
-            'mentality' => 0.13,
-            'attack' => 0.08,
+            'defense_physical' => 0.25,
+            'stamina' => 0.17,
+            'rhythm' => 0.14,
+            'technique' => 0.12,
+            'pass_vision' => 0.10,
+            'teamwork' => 0.10,
+            'mentality' => 0.08,
+            'attack' => 0.04,
         ],
         'LAT' => [
-            'rhythm' => 0.24,
-            'defense_physical' => 0.22,
-            'technique' => 0.17,
-            'teamwork' => 0.15,
-            'attack' => 0.12,
-            'mentality' => 0.10,
+            'rhythm' => 0.20,
+            'defense_physical' => 0.18,
+            'stamina' => 0.16,
+            'pass_vision' => 0.14,
+            'technique' => 0.12,
+            'teamwork' => 0.12,
+            'attack' => 0.06,
+            'mentality' => 0.02,
         ],
         'MED' => [
-            'technique' => 0.24,
-            'rhythm' => 0.23,
-            'teamwork' => 0.19,
-            'mentality' => 0.13,
-            'defense_physical' => 0.12,
-            'attack' => 0.09,
+            'pass_vision' => 0.22,
+            'technique' => 0.18,
+            'teamwork' => 0.16,
+            'rhythm' => 0.14,
+            'stamina' => 0.12,
+            'mentality' => 0.10,
+            'defense_physical' => 0.05,
+            'attack' => 0.03,
         ],
         'DEL' => [
-            'attack' => 0.31,
-            'rhythm' => 0.20,
-            'technique' => 0.17,
-            'teamwork' => 0.14,
-            'mentality' => 0.10,
-            'defense_physical' => 0.08,
+            'attack' => 0.28,
+            'rhythm' => 0.18,
+            'technique' => 0.14,
+            'pass_vision' => 0.10,
+            'teamwork' => 0.10,
+            'stamina' => 0.08,
+            'mentality' => 0.08,
+            'defense_physical' => 0.04,
         ],
     ];
 }
@@ -332,7 +343,7 @@ function player_position_stat_weight_defaults(): array
 function player_normalize_position_stat_weights(array $weights): array
 {
     $defaults = player_position_stat_weight_defaults();
-    $allowedFields = ['goalkeeper_skill', 'defense_physical', 'rhythm', 'technique', 'teamwork', 'mentality', 'attack'];
+    $allowedFields = ['goalkeeper_skill', 'defense_physical', 'rhythm', 'stamina', 'technique', 'pass_vision', 'teamwork', 'mentality', 'attack'];
     $normalized = [];
     foreach ($defaults as $position => $defaultWeights) {
         $rawWeights = is_array($weights[$position] ?? null) ? $weights[$position] : $defaultWeights;
@@ -391,7 +402,9 @@ function player_draw_balance_weights(): array
         'general' => 50.0,
         'attack' => 15.0,
         'defense_physical' => 15.0,
-        'rhythm' => 18.0,
+        'rhythm' => 16.0,
+        'stamina' => 16.0,
+        'pass_vision' => 10.0,
         'technique' => 5.0,
         'teamwork' => 8.0,
         'mentality' => 10.0,
@@ -413,9 +426,11 @@ function player_effective_stat(array $player, string $field): float
 {
     $fallback = match ($field) {
         'technique', 'attack', 'teamwork', 'goalkeeper_skill' => (float) ($player['skill'] ?? 3.0),
+        'pass_vision' => isset($player['technique']) ? (float) $player['technique'] : (float) ($player['skill'] ?? 3.0),
         'mentality' => 3.0,
         'regularity' => 3.5,
         'rhythm' => (($player['pace'] ?? '') === 'lento') ? 2.0 : 4.0,
+        'stamina' => isset($player['rhythm']) ? (float) $player['rhythm'] : 3.5,
         'defense_physical' => 3.0,
         default => 3.0,
     };
@@ -432,22 +447,23 @@ function player_overall_rating(array $player): float
     return player_position_rating($player, player_primary_position($player));
 }
 
-function player_position_rating(array $player, string $position): float
+function player_position_rating(array $player, string $position, bool $ignorePositionFit = false): float
 {
     $position = strtoupper(trim($position));
+    $fitFactor = $ignorePositionFit ? 1.0 : player_position_fit_factor($player, $position);
     if ($position === 'ARQ') {
         $total = 0.0;
         foreach (player_goalkeeper_stat_weights() as $field => $weight) {
             $total += player_effective_stat($player, $field) * $weight;
         }
-        return round(player_apply_regularity_adjustment($total, $player) * player_position_fit_factor($player, $position), 1);
+        return round(player_apply_regularity_adjustment($total, $player) * $fitFactor, 1);
     }
 
     $total = 0.0;
     foreach (player_field_stat_weights($position) as $field => $weight) {
         $total += player_effective_stat($player, $field) * $weight;
     }
-    return round(player_apply_regularity_adjustment($total, $player) * player_position_fit_factor($player, $position), 1);
+    return round(player_apply_regularity_adjustment($total, $player) * $fitFactor, 1);
 }
 
 function player_best_natural_position(array $player): string
@@ -605,3 +621,14 @@ function sort_positions_for_display(array $positions): array
 }
 
 
+
+
+function render_substitute_bench(array $players): string
+{
+    if (!$players) return '';
+    $html = '<section class="sorteo-substitute-bench"><h4>Banco de suplentes</h4><ul>';
+    foreach ($players as $player) {
+        $html .= '<li>' . h((string) ($player['name'] ?? 'Jugador')) . '</li>';
+    }
+    return $html . '</ul></section>';
+}

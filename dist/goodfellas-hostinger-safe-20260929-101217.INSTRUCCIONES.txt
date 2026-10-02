@@ -1,0 +1,7 @@
+﻿ACTUALIZACION PARA HOSTINGER (sitio existente)
+1. Hacer copia de seguridad de los archivos y la base de datos del servidor.
+2. Extraer el contenido del ZIP en la carpeta actual de la aplicacion (donde esta index.php), sobrescribiendo los archivos incluidos.
+3. Conservar config.php, jugadores.csv, uploads/ y todos los datos existentes. No borrar la carpeta del sitio antes de subir.
+4. Este ZIP no contiene configuracion, credenciales locales, SQL, fotos de uploads ni datos CSV. No sirve como instalacion nueva sin configuracion previa.
+5. Incluye PHP, CSS/React compilados, recursos visuales y el APK de descarga. Comprobar login, jugadores, sorteo y votaciones despues de subir.
+Validacion local: build de produccion y sintaxis de todos los PHP incluidos. No se realizo despliegue ni prueba contra la base de datos de Hostinger.

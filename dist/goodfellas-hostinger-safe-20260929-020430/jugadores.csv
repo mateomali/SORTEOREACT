@@ -1,0 +1,28 @@
+nombre,puntuacion,posicion,ritmo,selected
+MARCELO,1.5,DEF,lento,true
+RODRI SUAREZ,2.5,DEF/ARQ,lento,true
+ALEJO,4,DEL,rápido,true
+FRANQUITO,3,MED,rápido,true
+JAVI,4,DEF,rápido,true
+PELA,4.5,DEL,lento,true
+CUERVO,5,MED/DEL,lento,true
+NICO,3,MED,rápido,true
+AUGUSTO,5,MED,rápido,true
+BRIAN,5,DEL,rápido,true
+MANU,5.5,MED,rápido,true
+VIKINGO,5.5,DEF/MED,rápido,true
+ANIBAL,2,ARQ/DEL,lento,true
+PABLO,4.5,DEF,rápido,true
+MAURI,3,DEL,lento,true
+ALE CUERVO,2.5,DEF,rápido,true
+CESAR,4,DEF,lento,true
+GUILLE,1,DEF/ARQ,lento,true
+SEBACORTEZ,4,DEF,lento,true
+TANQUE,3,DEL,rápido,true
+SANTI,3,MED,rápido,true
+ISMA,4.5,MED,rápido,true
+CRISTIAN,1,DEL,lento,true
+FRANCOK,3,DEF,rápido,true
+TIMO,3.5,DEF,rápido,true
+MATI ARQ,2.5,ARQ,rápido,true
+GONZA,4,ARQ,rápido,true

@@ -1,7 +1,8 @@
 param(
     [string] $BindAddress = '0.0.0.0',
     [int] $Port = 8000,
-    [switch] $EnsureFirewall
+    [switch] $EnsureFirewall,
+    [switch] $FullHttpCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,6 +53,30 @@ function Ensure-FirewallRule {
         Out-Null
 
     return "creada: $ruleName"
+}
+
+function Get-ServerStatus {
+    param(
+        [string] $Url,
+        [int] $LocalPort
+    )
+
+    if ($FullHttpCheck) {
+        try {
+            return (Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 10).StatusCode
+        } catch {
+            return "sin respuesta: $($_.Exception.Message)"
+        }
+    }
+
+    $connection = Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+
+    if ($connection) {
+        return 'escuchando'
+    }
+
+    return 'sin puerto activo'
 }
 
 New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
@@ -117,13 +142,9 @@ if ($existingPhpProcess) {
         Select-Object -ExpandProperty IPAddress -First 1
     $networkUrl = if ($lanIp) { "http://$lanIp`:$selectedPort/" } else { $null }
 
-    try {
-        $statusCode = (Invoke-WebRequest -Uri $localUrl -UseBasicParsing -TimeoutSec 10).StatusCode
-    } catch {
-        $statusCode = "sin respuesta: $($_.Exception.Message)"
-    }
+    $statusCode = Get-ServerStatus -Url $localUrl -LocalPort $selectedPort
 
-    [pscustomobject]@{
+    $result = [pscustomobject]@{
         Url = $localUrl
         NetworkUrl = $networkUrl
         BindAddress = $BindAddress
@@ -135,6 +156,12 @@ if ($existingPhpProcess) {
         PhpErrorLog = Join-Path $runtimeDir 'php-server.err.log'
         MysqlErrorLog = Join-Path $runtimeDir 'mysql.err.log'
     }
+
+    Write-Host "Servidor local listo: $localUrl"
+    if ($networkUrl) {
+        Write-Host "Red local: $networkUrl"
+    }
+    $result
     exit 0
 }
 
@@ -172,13 +199,9 @@ $lanIp = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
     Select-Object -ExpandProperty IPAddress -First 1
 $networkUrl = if ($lanIp) { "http://$lanIp`:$selectedPort/" } else { $null }
 
-try {
-    $statusCode = (Invoke-WebRequest -Uri $localUrl -UseBasicParsing -TimeoutSec 10).StatusCode
-} catch {
-    $statusCode = "sin respuesta: $($_.Exception.Message)"
-}
+$statusCode = Get-ServerStatus -Url $localUrl -LocalPort $selectedPort
 
-[pscustomobject]@{
+$result = [pscustomobject]@{
     Url = $localUrl
     NetworkUrl = $networkUrl
     BindAddress = $BindAddress
@@ -190,3 +213,9 @@ try {
     PhpErrorLog = $phpErr
     MysqlErrorLog = Join-Path $runtimeDir 'mysql.err.log'
 }
+
+Write-Host "Servidor local listo: $localUrl"
+if ($networkUrl) {
+    Write-Host "Red local: $networkUrl"
+}
+$result

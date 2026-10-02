@@ -1,0 +1,17 @@
+DirectoryIndex index.php
+
+AddType application/vnd.android.package-archive .apk
+
+<FilesMatch "^(config\.php|database\.sql|jugadores\.csv|package(-lock)?\.json|README\.md)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+RedirectMatch 404 /\.git
+RedirectMatch 404 /node_modules
+RedirectMatch 404 /\.tmp
+RedirectMatch 404 /backup

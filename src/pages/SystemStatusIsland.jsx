@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 export function SystemStatusIsland({ root }) {
   const payload = useMemo(() => {
-    const raw = root.querySelector('script[type="application/json"]')?.textContent || '{}';
+    const raw = root.dataset.payload || root.querySelector('script[type="application/json"]')?.textContent || '{}';
     try {
       return JSON.parse(raw);
     } catch (error) {
