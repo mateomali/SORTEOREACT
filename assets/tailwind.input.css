@@ -24541,3 +24541,68 @@ body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"
 @container (max-width: 230px) {
   .gf-draw-workflow button.sorteo-exchange-indicator { right: -5px; top: -14px; width: 16px; height: 16px; }
 }
+
+/* ---------------------------------------------------------------------------
+   Draw workflow en movil: una cancha por vez a pantalla completa (carrusel).
+   En escritorio se mantienen las dos canchas lado a lado (subgrid alineado).
+   ---------------------------------------------------------------------------
+*/
+@media (max-width: 760px) {
+  .gf-draw-workflow .sorteo-teams-scroller {
+    position: relative;
+    min-width: 0;
+    width: 100%;
+    grid-template-columns: none;
+    grid-template-rows: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    align-items: start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    padding-bottom: 8px;
+    gap: 6px;
+  }
+  .gf-draw-workflow .sorteo-teams-scroller > [data-sorteo-team-card] {
+    min-width: 0;
+    grid-row: auto;
+    grid-template-rows: none;
+    scroll-snap-align: start;
+  }
+  .gf-draw-workflow .sorteo-teams-scroller[data-dragging="true"] {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+  }
+}
+
+/* Mobile navigation can restore the simultaneous view of the teams. */
+@media (max-width: 760px) {
+  .gf-draw-workflow .sorteo-teams-scroller[data-show-both="true"] {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: clip;
+    scroll-snap-type: none;
+  }
+}
+
+.gf-pitch-size-toggle { display: none; }
+@media (max-width: 760px) {
+  .gf-draw-workflow .gf-pitch-size-toggle {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    top: 4px;
+    right: 36px;
+    z-index: 20;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 6px;
+    background: #063d2b;
+    color: white;
+    cursor: pointer;
+  }
+  .gf-pitch-size-toggle:focus-visible { outline: 2px solid #d9f99d; outline-offset: 2px; }
+}

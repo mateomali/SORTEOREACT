@@ -2754,6 +2754,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const teamsFocusRef = useRef(null);
   const teamsScrollerRef = useRef(null);
   const [visibleTeamIndex, setVisibleTeamIndex] = useState(0);
+  const [showBothTeams, setShowBothTeams] = useState(true);
   const edgeScrollStepRef = useRef(null);
   const pointerDragRef = useRef({
     active: false,
@@ -4303,11 +4304,14 @@ export function SorteoLegacyPageIsland({ root }) {
     const scroller = teamsScrollerRef.current;
     const card = scroller?.children[index];
     if (!card) return;
-    if (!isFormationEditor || !window.matchMedia('(max-width: 760px)').matches) {
-      card.querySelector('.team-formation')?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      if (!isFormationEditor) setShowBothTeams(false);
+      requestAnimationFrame(() => {
+        scroller.scrollTo({ left: card.offsetLeft - scroller.children[0].offsetLeft, behavior: 'smooth' });
+      });
       return;
     }
-    scroller.scrollTo({ left: card.offsetLeft - scroller.children[0].offsetLeft, behavior: 'smooth' });
+    card.querySelector('.team-formation')?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
   };
 
   const touchPointFromEvent = (event) => event.touches?.[0] || event.changedTouches?.[0] || null;
@@ -5193,7 +5197,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   <p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado para arrastrar o tocá un jugador y después su destino.</p>
                   </>
                 )}
-                <div ref={teamsScrollerRef} data-teams-scroller="1" data-dragging={dragState ? 'true' : 'false'} className="sorteo-teams-scroller grid gap-4 xl:grid-cols-2" onScroll={event => {
+                <div ref={teamsScrollerRef} data-teams-scroller="1" data-show-both={!isFormationEditor && showBothTeams ? 'true' : 'false'} data-dragging={dragState ? 'true' : 'false'} className="sorteo-teams-scroller grid gap-4 xl:grid-cols-2" onScroll={event => {
                   const scroller = event.currentTarget;
                   const step = scroller.children[1] ? scroller.children[1].offsetLeft - scroller.children[0].offsetLeft : scroller.clientWidth;
                   setVisibleTeamIndex(Math.max(0, Math.min(teams.length - 1, Math.round(scroller.scrollLeft / Math.max(1, step)))));
@@ -5212,7 +5216,7 @@ export function SorteoLegacyPageIsland({ root }) {
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
                             <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]" data-team-title>
-                              <span className={`h-3 w-3 rounded-full ${color.accent}`} aria-hidden="true" />
+                              <span className={`h-3 w-3 shrink-0 rounded-full ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
                               {getTeamDisplayName(teamIndex)}
                             </h3>
                             <p className="m-0 text-xs font-semibold text-slate-500">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>
@@ -5293,10 +5297,6 @@ export function SorteoLegacyPageIsland({ root }) {
                                 {(drawVariants[String(teamIndex)] || []).map((variant, index) => <option key={variant.signature} value={variant.signature}>{formationVariantLabel(index)} · {variant.lineText} · {variant.total.toFixed(1)} pts</option>)}
                               </select>
                             </label>
-                            <details><summary>Datos de las alternativas</summary>
-                              {(drawVariants[String(teamIndex)] || []).map((variant, index) => <p key={variant.signature}>{formationVariantLabel(index)}: {variant.lineText} · {variant.total.toFixed(1)} pts · {variant.diffCount} cambios</p>)}
-                              {!drawVariants[String(teamIndex)]?.length ? <p>Sin variantes disponibles</p> : null}
-                            </details>
                           </details>
                         )}
                         {isFormationEditor ? (
@@ -5307,15 +5307,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           </div>
                           <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
                         </div>
-                        ) : <details className="gf-team-navigation" data-html2canvas-ignore="true"><summary>Navegar equipos</summary>
-                        <div className="grid gap-1" data-html2canvas-ignore="true" data-team-navigation="1">
-                          <div className="flex items-center justify-between gap-2">
-                            {teamIndex > 0 ? <button type="button" className={`${quietButtonClass} !min-h-10 text-xs`} onClick={() => scrollToTeam(teamIndex - 1)} aria-label={`Ver cancha de ${getTeamDisplayName(teamIndex - 1)}`}><span aria-hidden="true" className="text-lg">←</span> {getTeamDisplayName(teamIndex - 1)}</button> : <span />}
-                            {teamIndex < teams.length - 1 ? <button type="button" className={`${quietButtonClass} !min-h-10 text-xs`} onClick={() => scrollToTeam(teamIndex + 1)} aria-label={`Ver cancha de ${getTeamDisplayName(teamIndex + 1)}`}>{getTeamDisplayName(teamIndex + 1)} <span aria-hidden="true" className="text-lg">→</span></button> : <span />}
-                          </div>
-                          <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
-                        </div>
-                        </details>}
+                        ) : null}
                         <div
                           className="team-formation gf-formation text-white"
                           style={{ borderColor: hexToRgba(teamColorAccentHex(teamIndex), 0.55), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
@@ -5324,6 +5316,25 @@ export function SorteoLegacyPageIsland({ root }) {
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
                         >
                           {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="pointer-events-none absolute left-2 right-12 top-2 z-30 rounded border border-white/70 bg-[#063d2b] px-2 py-1 text-center text-xs font-bold text-white" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
+                          {!isFormationEditor ? <button
+                            type="button"
+                            className="gf-pitch-size-toggle"
+                            data-html2canvas-ignore="true"
+                            aria-label={showBothTeams ? `Ampliar cancha de ${getTeamDisplayName(teamIndex)}` : 'Compactar cancha'}
+                            title={showBothTeams ? 'Ampliar cancha' : 'Compactar cancha'}
+                            aria-expanded={!showBothTeams}
+                            onClick={() => {
+                              if (showBothTeams) scrollToTeam(teamIndex);
+                              else {
+                                setShowBothTeams(true);
+                                requestAnimationFrame(() => teamsScrollerRef.current?.scrollTo({ left: 0, behavior: 'instant' }));
+                              }
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d={showBothTeams ? 'M8 3H3v5 M16 3h5v5 M3 16v5h5 M21 16v5h-5' : 'M3 8h5V3 M21 8h-5V3 M8 21v-5H3 M16 21v-5h5'} />
+                            </svg>
+                          </button> : null}
                           <button className="formation-undo-button absolute right-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-md border border-white/35 bg-[#063d2b]/90 text-white shadow-sm transition-colors hover:bg-[#05291d] disabled:cursor-not-allowed disabled:opacity-40 max-[760px]:right-1.5 max-[760px]:top-1.5 max-[760px]:h-8 max-[760px]:w-8" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio" title="Deshacer ultimo cambio">
                             <Icon name="undo" />
                           </button>
@@ -5545,7 +5556,7 @@ export function SorteoLegacyPageIsland({ root }) {
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
                             <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]">
-                              <span className={`h-3 w-3 rounded-full ${color.accent}`} aria-hidden="true" />
+                              <span className={`h-3 w-3 shrink-0 rounded-full ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
                               {getTeamDisplayName(teamIndex)}
                             </h3>
                             <p className="m-0 text-xs font-semibold text-slate-500">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>

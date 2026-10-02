@@ -23,6 +23,30 @@ test('real match 204 loads and both courts fit the mobile viewport', async ({pag
   await page.screenshot({path:'outputs/workflow-desktop-full.png',fullPage:true});
   await page.setViewportSize({width:390,height:950});
   await page.screenshot({path:'outputs/workflow-mobile-full.png',fullPage:true});
+  await expect(page.locator('.gf-team-navigation')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Mostrar ambos', exact: true })).toHaveCount(0);
+  const toggles = page.locator('.gf-pitch-size-toggle');
+  const scroller = page.locator('[data-teams-scroller]');
+  await expect(toggles.first()).toBeVisible();
+  for (const index of [1, 0]) {
+    await toggles.nth(index).click();
+    await expect(scroller).toHaveAttribute('data-show-both', 'false');
+    await expect(toggles.nth(index)).toHaveAttribute('aria-label', 'Compactar cancha');
+    await expect.poll(() => page.locator('.team-formation').nth(index).evaluate(field => {
+      const rect = field.getBoundingClientRect();
+      return rect.width > 300 && rect.left >= 0 && rect.right <= 390;
+    })).toBe(true);
+    await toggles.nth(index).click();
+    await expect(scroller).toHaveAttribute('data-show-both', 'true');
+  }
+  const bounds = await page.locator('.team-formation').evaluateAll(fields => fields.map(field => { const r = field.getBoundingClientRect(); return { left: r.left, right: r.right }; }));
+  expect(bounds[0].right).toBeLessThanOrEqual(bounds[1].left);
+  expect(bounds[1].right).toBeLessThanOrEqual(390);
+  await expect(page.getByText('Datos de las alternativas', { exact: true })).toHaveCount(0);
+  const rosa = page.locator('.team-head h3').filter({ hasText: /ROSA/i }).locator('span').first();
+  if (await rosa.count()) await expect(rosa).toHaveCSS('background-color', 'rgb(244, 114, 182)');
+  await page.setViewportSize({ width: 1280, height: 950 });
+  for (const toggle of await toggles.all()) await expect(toggle).toBeHidden();
   expect(errors).toEqual([]);
 });
 

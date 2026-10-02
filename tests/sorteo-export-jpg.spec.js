@@ -55,15 +55,18 @@ async function analyseExport(page, base64) {
     const context = canvas.getContext('2d');
     context.drawImage(image, 0, 0);
     const pitchRows = [];
+    const titleRows = [];
     let grayRuns = 0;
     for (let y = 0; y < canvas.height; y += 1) {
       const pixels = context.getImageData(0, y, canvas.width, 1).data;
       let green = 0;
+      let white = 0;
       let grayRun = 0;
       for (let x = 0; x < canvas.width; x += 1) {
         const index = x * 4;
         const [r, g, b] = [pixels[index], pixels[index + 1], pixels[index + 2]];
         if (g > r + 15 && g > b + 10 && g > 45 && g < 150) green += 1;
+        if (r > 235 && g > 235 && b > 235) white += 1;
         if (Math.abs(r - g) <= 3 && Math.abs(g - b) <= 3 && r > 200 && r < 210) {
           grayRun += 1;
           if (grayRun >= 6) grayRuns += 1;
@@ -72,17 +75,23 @@ async function analyseExport(page, base64) {
         }
       }
       if (green > canvas.width * 0.25) pitchRows.push(y);
+      // El titulo del equipo es texto sobre fondo claro: banda blanca entre canchas.
+      if (white > canvas.width * 0.5) titleRows.push(y);
     }
-    const bands = [];
-    pitchRows.forEach((y) => {
-      const current = bands[bands.length - 1];
-      if (current && y - current.end <= 40) current.end = y;
-      else bands.push({ start: y, end: y });
-    });
+    const merge = (rows) => {
+      const bands = [];
+      rows.forEach((y) => {
+        const current = bands[bands.length - 1];
+        if (current && y - current.end <= 40) current.end = y;
+        else bands.push({ start: y, end: y });
+      });
+      return bands;
+    };
     return {
       width: canvas.width,
       height: canvas.height,
-      pitchBands: bands.filter((band) => band.end - band.start > 250),
+      pitchBands: merge(pitchRows).filter((band) => band.end - band.start > 250),
+      titleBands: merge(titleRows).filter((band) => band.end - band.start > 8),
       grayRuns,
     };
   }, base64);
@@ -109,8 +118,8 @@ test('la captura JPG en movil apila los equipos y conserva todo el texto', async
   expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.cardWidth * 0.9);
   expect(exportInfo.height).toBeGreaterThanOrEqual((geometry.cardHeights[0] + geometry.cardHeights[1]) * 0.9);
   // Las dos canchas aparecen enteras y separadas verticalmente.
-  expect(exportInfo.pitchBands).toHaveLength(2);
-  expect(exportInfo.pitchBands[1].start).toBeGreaterThan(exportInfo.pitchBands[0].end);
+  expect(exportInfo.titleBands).toHaveLength(2);
+  expect(exportInfo.titleBands[1].start).toBeGreaterThan(exportInfo.titleBands[0].end);
   // Sin marcas grises de borde (sombras que html2canvas dibujaba como marcos).
   expect(exportInfo.grayRuns).toBe(0);
 });
@@ -131,7 +140,7 @@ test('la captura JPG en escritorio apila solo nombres y canchas', async ({ page 
 
   expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.width - 2);
   // Tambien en escritorio se comparten las canchas una debajo de la otra.
-  expect(exportInfo.pitchBands).toHaveLength(2);
+  expect(exportInfo.titleBands).toHaveLength(2);
   expect(exportInfo.grayRuns).toBe(0);
 });
 
@@ -178,7 +187,7 @@ test.describe('captura con densidad 2x', () => {
     expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.cardWidth * 2 * 0.95);
     expect(exportInfo.width).toBeLessThanOrEqual(geometry.cardWidth * 2 * 1.05);
     expect(exportInfo.height).toBeGreaterThanOrEqual((geometry.cardHeights[0] + geometry.cardHeights[1]) * 2 * 0.9);
-    expect(exportInfo.pitchBands).toHaveLength(2);
+    expect(exportInfo.titleBands).toHaveLength(2);
     expect(exportInfo.grayRuns).toBe(0);
   });
 });
