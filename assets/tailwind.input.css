@@ -13164,7 +13164,12 @@ body.page-index .content .match-history .public-teams .team-formation:not(.gf-fo
 body.page-index .content .match-history .public-teams .team-formation:not(.gf-formation).is-base-formation .formation-line:not(.gf-formation-row) + .formation-line:not(.gf-formation-row)::before,
   body.page-historial .content .match-history .public-teams .team-formation:not(.gf-formation).is-base-formation .formation-line:not(.gf-formation-row) + .formation-line:not(.gf-formation-row)::before {
   left: 54px;
-  background: linear-gradient(90deg, transparent, rgba(244, 255, 248, 0.42) 16%, rgba(244, 255, 248, 0.42) 84%, transparent);
+  background-image: radial-gradient(circle, rgba(245, 216, 103, 0.42) 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
   box-shadow: none;
 }
 
@@ -17754,10 +17759,14 @@ body.page-index .content .match-history .team-formation:not(.gf-formation) .form
   top: 0;
   left: 42px;
   right: 0;
-  height: 1px;
+  height: 2px;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(244, 255, 248, 0.72) 12%, rgba(244, 255, 248, 0.72) 88%, transparent);
-  box-shadow: 0 1px 0 rgba(2, 18, 11, 0.24);
+  background-image: radial-gradient(circle, rgba(245, 216, 103, 0.72) 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
 
 body.page-index .content .match-history .formation-player,
@@ -19371,10 +19380,14 @@ body.page-capitanes .content .captain-formation-line + .captain-formation-line::
   top: 0;
   left: 60px;
   right: 0;
-  height: 1px;
+  height: 2px;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(244, 255, 248, 0.72) 12%, rgba(244, 255, 248, 0.72) 88%, transparent);
-  box-shadow: 0 1px 0 rgba(2, 18, 11, 0.24);
+  background-image: radial-gradient(circle, rgba(245, 216, 103, 0.72) 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
 
 body.page-capitanes .content .captain-editor-field.captain-formation-field {
@@ -23385,8 +23398,11 @@ body.page-mis-valoraciones .valuation-table tr.has-stat-changes .valuation-playe
   top: calc(var(--gf-pitch-row-gap) * -0.5);
   left: calc(var(--gf-pitch-label-width) + var(--gf-pitch-row-gap));
   right: 0;
-  height: 1px;
-  background: rgba(244, 255, 248, 0.22);
+  height: 2px;
+  background-image: radial-gradient(circle, rgba(245, 216, 103, 0.22) 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
 }
 
 .team-formation:not(.gf-formation) .line-label,
@@ -24342,7 +24358,7 @@ body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"
   gap: 0;
   padding: 6% 4% 6% var(--gf-gutter);
   overflow: visible;
-  border: 1px solid #7fb89c;
+  border: 3px solid #7fb89c;
   border-radius: 8px;
   background: #173f25;
 }

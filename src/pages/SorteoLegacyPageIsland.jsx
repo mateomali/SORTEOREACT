@@ -101,7 +101,7 @@ const cardPalettes = {
 };
 
 const teamColorOptions = [
-  { name: 'ROSA', label: 'Rosa', accent: 'bg-rose-500', accentHex: '#f43f5e', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
+  { name: 'ROSA', label: 'Rosa', accent: 'bg-pink-400', accentHex: '#f472b6', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
   { name: 'AZUL', label: 'Azul', accent: 'bg-sky-500', accentHex: '#0ea5e9', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
   { name: 'NARANJA', label: 'Naranja', accent: 'bg-orange-500', accentHex: '#f97316', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
   { name: 'NEGRO', label: 'Negro', accent: 'bg-slate-950', accentHex: '#0f172a', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
@@ -109,6 +109,16 @@ const teamColorOptions = [
   { name: 'CAMISADO', label: 'Camisado', accent: 'bg-white ring-1 ring-slate-300', accentHex: '#ffffff', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
   { name: 'DESCAMISADO', label: 'Descamisado', accent: 'bg-stone-300', accentHex: '#cbd5e1', tag: 'bg-white text-[#07130f] border-[#d7e6df]' },
 ];
+
+function hexToRgba(hex, alpha) {
+  const value = String(hex || '#16a34a').replace('#', '');
+  const full = value.length === 3 ? value.split('').map((char) => char + char).join('') : value;
+  const num = parseInt(full, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 const positionWeights = {
   ARQ: { habilidad_arquero: 0.36, solidez: 0.12, ritmo_stat: 0.08, resistencia: 0.08, tecnica: 0.08, pase_vision: 0.06, compromiso: 0.12, mentalidad: 0.1 },
@@ -5308,7 +5318,7 @@ export function SorteoLegacyPageIsland({ root }) {
                         </details>}
                         <div
                           className="team-formation gf-formation text-white"
-                          style={{ borderTopColor: teamColorAccentHex(teamIndex), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
+                          style={{ borderColor: hexToRgba(teamColorAccentHex(teamIndex), 0.55), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
                           data-sorteo-drop-team={teamIndex}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
