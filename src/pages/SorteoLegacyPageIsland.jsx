@@ -4588,6 +4588,31 @@ export function SorteoLegacyPageIsland({ root }) {
     setSuccess(`${player.nombre} ${toBench ? 'pas\u00f3 al banco' : 'volvi\u00f3 a la cancha'}. Se reorganiz\u00f3 el equipo.`);
   };
 
+  const renderExchangeTargets = (source) => (
+    <div className="grid gap-2 rounded-md bg-white p-2 text-[#07130f]" data-exchange-options="true">
+          <p className="text-sm font-bold">Intercambiar con otro equipo</p>
+          {teams.map((team, targetTeamIndex) => {
+            if (targetTeamIndex === Number(source.teamIndex)) return null;
+            const targetAssignments = buildTeamAssignment(team, assignments);
+            return (
+              <fieldset key={targetTeamIndex} className="grid grid-cols-2 gap-2">
+                <legend className="mb-1 text-sm font-bold">{getTeamDisplayName(targetTeamIndex)}</legend>
+                {team.map((player) => {
+                  const key = playerKey(player);
+                  const position = targetAssignments[key];
+                  const validation = validateDropTarget(source, targetTeamIndex, position, key);
+                  return (
+                    <button key={key} data-exchange-player={key} type="button" className={`${quietButtonClass} min-h-11 text-left disabled:opacity-55`} disabled={!validation.ok} title={validation.message || `Intercambiar con ${player.nombre}`} onClick={() => { movePlayer(source, targetTeamIndex, position, key); setPreview(null); }}>
+                      <span>{player.nombre} · {position}{!validation.ok ? <span className="block text-xs">{validation.message}</span> : null}</span>
+                    </button>
+                  );
+                })}
+              </fieldset>
+            );
+          })}
+    </div>
+  );
+
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
     if (mobileMoveSource && Number(mobileMoveSource.teamIndex) !== teamIndex) {
       movePlayer(mobileMoveSource, teamIndex, assignedPosition, playerKey(player));
@@ -4699,23 +4724,62 @@ export function SorteoLegacyPageIsland({ root }) {
       copy.style.gridTemplateRows = 'none';
       copy.style.minHeight = '0';
       copy.style.margin = '0';
-      // The shared image contains only each team's name and its actual pitch.
+      // Keep the team score alongside its name in the shared image.
       // Stack all teams, on desktop as well as mobile, without changing the UI.
       const exportCards = Array.from(copy.querySelectorAll('[data-sorteo-team-card]'));
-      exportCards.forEach((card) => {
+      exportCards.forEach((card, teamIndex) => {
         const title = card.querySelector('[data-team-title]');
+        const heading = card.querySelector('.team-head');
         const pitch = card.querySelector('.team-formation');
         if (!title || !pitch) throw new Error('No se encontró la cancha del equipo.');
         title.replaceChildren(document.createTextNode(title.textContent.trim()));
         Object.assign(title.style, { display: 'block', width: 'auto', height: 'auto', margin: '0', lineHeight: '1.3', whiteSpace: 'normal', overflow: 'visible' });
         // Remove editing controls, retaining player cards and position labels.
         pitch.querySelectorAll('button:not([data-sorteo-drag-player]), .line-label small, [data-sorteo-drop-marker]').forEach(node => node.remove());
-        card.replaceChildren(title, pitch);
+        // Ancestor selectors no longer match in the detached export host. Make
+        // the pitch's pseudo-element a real layer so its SVG survives capture.
+        const originalPitch = cards[teamIndex].querySelector('.team-formation');
+        const fieldStyle = window.getComputedStyle(originalPitch, '::before');
+        const field = document.createElement('div');
+        field.setAttribute('data-export-pitch-background', '1');
+        for (const property of fieldStyle) field.style.setProperty(property, fieldStyle.getPropertyValue(property));
+        field.style.setProperty('content', 'normal');
+        pitch.prepend(field);
+        Object.assign(heading.style, { width: '100%', height: 'auto', gridTemplateColumns: 'minmax(0, 1fr) auto' });
+        heading.lastElementChild.style.whiteSpace = 'nowrap';
+        card.replaceChildren(heading, pitch);
         Object.assign(card.style, { width: '100%', minWidth: '0', height: 'auto', gridTemplateRows: 'none', gridTemplateColumns: 'minmax(0, 1fr)', gap: '12px' });
       });
       copy.replaceChildren(...exportCards);
+      if (drawAnalysis) {
+        const comparison = document.createElement('table');
+        comparison.setAttribute('data-export-comparison', '1');
+        comparison.style.cssText = `width:100%;border-collapse:collapse;color:#173c2e;background:#fff;font-size:${exportWidth < 300 ? 9 : 12}px;table-layout:fixed;`;
+        const caption = comparison.createCaption();
+        caption.textContent = 'Comparación rápida';
+        caption.style.cssText = 'text-align:left;font-weight:800;padding:8px 0;';
+        const addRow = (section, values) => {
+          const row = section.insertRow();
+          values.forEach((value, index) => {
+            const cell = document.createElement(section.tagName === 'THEAD' || index === 0 ? 'th' : 'td');
+            cell.textContent = value;
+            cell.style.cssText = 'padding:6px 2px;border-bottom:1px solid #d7e6df;text-align:left;overflow-wrap:normal;word-break:normal;font-size:inherit;line-height:1.4;text-transform:none;';
+            row.appendChild(cell);
+          });
+        };
+        addRow(comparison.createTHead(), ['Métrica', ...drawAnalysis.summaries.map(item => item.name)]);
+        const body = comparison.createTBody();
+        addRow(body, ['General', ...drawAnalysis.summaries.map(item => `${item.total.toFixed(1)} pts`)]);
+        [['ataque', 'Ataque'], ['tecnica', 'Técnica'], ['ritmo', 'Velocidad']].forEach(([field, label]) => {
+          addRow(body, [label, ...drawAnalysis.summaries.map(item => item.statValues[field].toFixed(1))]);
+        });
+        const comparisonHeader = document.createElement('div');
+        comparisonHeader.style.cssText = 'display:block;width:100%;padding-bottom:12px;';
+        comparisonHeader.appendChild(comparison);
+        copy.prepend(comparisonHeader);
+      }
       copy.setAttribute('data-export-formations', '1');
-      Object.assign(copy.style, { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'none', gap: '16px', overflow: 'visible' });
+      Object.assign(copy.style, { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'none', gridAutoRows: 'max-content', gap: '16px', overflow: 'visible' });
       host.appendChild(copy);
       document.body.appendChild(host);
       let jpg;
@@ -6080,26 +6144,7 @@ export function SorteoLegacyPageIsland({ root }) {
             })}
           </div>
           {!isFormationEditor ? <p className="gf-tap-hint" role="status">{mobileMoveSource.playerName} seleccionado — tocá un jugador del otro equipo para intercambiar.</p> : null}
-          <p className="text-sm font-bold">Intercambiar con otro equipo</p>
-          {teams.map((team, targetTeamIndex) => {
-            if (targetTeamIndex === Number(mobileMoveSource.teamIndex)) return null;
-            const targetAssignments = buildTeamAssignment(team, assignments);
-            return (
-              <fieldset key={targetTeamIndex} className="grid grid-cols-2 gap-2">
-                <legend className="mb-1 text-sm font-bold">{getTeamDisplayName(targetTeamIndex)}</legend>
-                {team.map((player) => {
-                  const key = playerKey(player);
-                  const position = targetAssignments[key];
-                  const validation = validateDropTarget(mobileMoveSource, targetTeamIndex, position, key);
-                  return (
-                    <button key={key} type="button" className={`${quietButtonClass} min-h-11 text-left disabled:opacity-55`} disabled={!validation.ok} title={validation.message || `Intercambiar con ${player.nombre}`} onClick={() => movePlayer(mobileMoveSource, targetTeamIndex, position, key)}>
-                      <span>{player.nombre} · {position}{!validation.ok ? <span className="block text-xs">{validation.message}</span> : null}</span>
-                    </button>
-                  );
-                })}
-              </fieldset>
-            );
-          })}
+          {renderExchangeTargets(mobileMoveSource)}
         </div>
       ) : null}
 
@@ -6132,6 +6177,11 @@ export function SorteoLegacyPageIsland({ root }) {
                 <p className="m-0 text-xs font-semibold leading-relaxed text-white/70">
                   El puntaje usa las habilidades relevantes para cada posicion y ajuste por regularidad.
                 </p>
+                {(() => {
+                  const teamIndex = teams?.findIndex(team => team.some(player => playerKey(player) === playerKey(preview.player))) ?? -1;
+                  if (teamIndex < 0) return null;
+                  return renderExchangeTargets({ teamIndex, playerKey: playerKey(preview.player), playerName: preview.player.nombre, assignedPosition: preview.assignedPosition });
+                })()}
                 {teams?.some(team => team.some(player => playerKey(player) === playerKey(preview.player))) ? (
                   <button type="button" className={quietButtonClass} onClick={() => changeBenchStatus(teams.findIndex(team => team.some(player => playerKey(player) === playerKey(preview.player))), preview.player, true)}>Enviar al banco</button>
                 ) : null}

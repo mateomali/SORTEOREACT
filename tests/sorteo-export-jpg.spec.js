@@ -23,8 +23,11 @@ async function downloadJpg(page, name) {
       const copy = document.querySelector('[data-export-formations]');
       if (!copy) return;
       window.exportContent = {
-        teams: copy.children.length,
-        sections: [...copy.children].map(card => [...card.children].map(node => node.matches('[data-team-title]') ? 'title' : node.matches('.team-formation') ? 'pitch' : 'extra')),
+        teams: copy.querySelectorAll('[data-sorteo-team-card]').length,
+        comparison: copy.querySelector('[data-export-comparison]')?.textContent,
+        scores: [...copy.querySelectorAll('.team-head')].map(node => node.textContent),
+        backgrounds: [...copy.querySelectorAll('[data-export-pitch-background]')].map(node => node.style.backgroundImage),
+        sections: [...copy.querySelectorAll('[data-sorteo-team-card]')].map(card => [...card.children].map(node => node.matches('.team-head') ? 'title' : node.matches('.team-formation') ? 'pitch' : 'extra')),
         editingButtons: copy.querySelectorAll('button:not([data-sorteo-drag-player])').length,
         extras: copy.querySelectorAll('select, [data-team-bench], .sorteo-team-stats').length,
       };
@@ -39,7 +42,12 @@ async function downloadJpg(page, name) {
   const exportPath = path.join('test-results', `${name ? 'desktop' : 'mobile'}-jpg-export.jpg`);
   fs.mkdirSync('test-results', { recursive: true });
   await download.saveAs(exportPath);
-  expect(await page.evaluate(() => window.exportContent)).toEqual({ teams: 2, sections: [['title', 'pitch'], ['title', 'pitch']], editingButtons: 0, extras: 0 });
+  const content = await page.evaluate(() => window.exportContent);
+  expect(content.comparison).toContain('Comparación rápida');
+  expect(content.comparison).toContain('General');
+  content.scores.forEach(score => expect(score).toMatch(/\d+\.\d pts/));
+  content.backgrounds.forEach(background => expect(background).toContain('formation-field.svg'));
+  expect(content).toMatchObject({ teams: 2, sections: [['title', 'pitch'], ['title', 'pitch']], editingButtons: 0, extras: 0 });
   return fs.readFileSync(exportPath).toString('base64');
 }
 
@@ -118,7 +126,7 @@ test('la captura JPG en movil apila los equipos y conserva todo el texto', async
   expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.cardWidth * 0.9);
   expect(exportInfo.height).toBeGreaterThanOrEqual((geometry.cardHeights[0] + geometry.cardHeights[1]) * 0.9);
   // Las dos canchas aparecen enteras y separadas verticalmente.
-  expect(exportInfo.titleBands).toHaveLength(2);
+  expect(exportInfo.titleBands.length).toBeGreaterThanOrEqual(2);
   expect(exportInfo.titleBands[1].start).toBeGreaterThan(exportInfo.titleBands[0].end);
   // Sin marcas grises de borde (sombras que html2canvas dibujaba como marcos).
   expect(exportInfo.grayRuns).toBe(0);
@@ -140,7 +148,7 @@ test('la captura JPG en escritorio apila solo nombres y canchas', async ({ page 
 
   expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.width - 2);
   // Tambien en escritorio se comparten las canchas una debajo de la otra.
-  expect(exportInfo.titleBands).toHaveLength(2);
+  expect(exportInfo.titleBands.length).toBeGreaterThanOrEqual(2);
   expect(exportInfo.grayRuns).toBe(0);
 });
 
@@ -187,7 +195,7 @@ test.describe('captura con densidad 2x', () => {
     expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.cardWidth * 2 * 0.95);
     expect(exportInfo.width).toBeLessThanOrEqual(geometry.cardWidth * 2 * 1.05);
     expect(exportInfo.height).toBeGreaterThanOrEqual((geometry.cardHeights[0] + geometry.cardHeights[1]) * 2 * 0.9);
-    expect(exportInfo.titleBands).toHaveLength(2);
+    expect(exportInfo.titleBands.length).toBeGreaterThanOrEqual(2);
     expect(exportInfo.grayRuns).toBe(0);
   });
 });
