@@ -81,25 +81,14 @@ function fieldLineLimit(position, teamSize) {
 }
 
 function fieldLineMinimum(position, teamSize) {
-  const line = String(position || '').toUpperCase();
-  const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
+  const line = pitchLineForPosition(String(position || '').toUpperCase());
   if (line === 'ARQ') return 1;
-  if (Number(teamSize) < 8) return pitchLineForPosition(line) === 'DEF' ? 2 : (['MED', 'DEL'].includes(line) ? 1 : 0);
-  if (fieldPlayers === 4) return REQUIRED_FIELD_LINES.includes(line) ? 1 : 0;
-  if (fieldPlayers < 5) return 0;
-  if (line === 'DEF' || line === 'MED') return 2;
-  if (line === 'DEL') return 1;
-  return 0;
+  if (line === 'DEF') return 2;
+  return ['MED', 'DEL'].includes(line) ? 1 : 0;
 }
 
 function logicalLineMinimum(position, teamSize) {
-  const line = String(position || '').toUpperCase();
-  if (line === 'ARQ') return 1;
-  if (Number(teamSize) < 8) return ['MED', 'DEL'].includes(line) ? 1 : 0;
-  if (!FIELD_LINES.includes(line)) return 0;
-  const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
-  if (line === 'LAT') return fieldPlayers >= 8 ? 2 : (fieldPlayers >= FIELD_LINES.length ? 1 : 0);
-  return fieldPlayers >= FIELD_LINES.length ? 1 : 0;
+  return ['ARQ', 'MED', 'DEL'].includes(String(position || '').toUpperCase()) ? 1 : 0;
 }
 
 function fieldLineCountsFitLimits(counts, teamSize) {

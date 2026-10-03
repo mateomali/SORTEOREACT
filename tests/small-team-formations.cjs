@@ -41,7 +41,7 @@ for (const fixture of cases) {
   legacyContext.size = fixture.size;
   assert.equal(vm.runInContext('fieldLineCountsFitLimits(counts,size)', legacyContext), fixture.valid);
 }
-assert.equal(run('fieldLineMinimum("MED",8)'), 2);
+assert.equal(run('fieldLineMinimum("MED",8)'), 1);
 assert.equal(run('maxFieldPlayersPerLine(8)'), 3);
 run(`let fixtureId = 0;
 function player(role) {
@@ -63,6 +63,16 @@ function player(role) {
       assert.equal(Object.values(assignment).filter(role => role === 'MED').length, 1);
       assert.equal(Object.values(assignment).filter(role => role === 'DEL').length, 1);
     }
+  }
+  const large = await run('generateBalancedTeams([player("ARQ"),player("ARQ"),...Array.from({length:6},()=>player("DEF")),...Array.from({length:2},()=>player("MED")),...Array.from({length:6},()=>player("DEL"))],2,0.7,{}, {})');
+  assert.ok(large?.evaluation.valid, 'Eight-player teams with one midfielder each must be valid');
+  for (const team of large.teams) {
+    context.team = team;
+    const roles = Object.values(run('buildTeamAssignment(team)'));
+    assert.equal(roles.filter(role=>role==='ARQ').length,1);
+    assert.ok(roles.filter(role=>role==='DEF'||role==='LAT').length>=2);
+    assert.equal(roles.filter(role=>role==='MED').length,1);
+    assert.ok(roles.filter(role=>role==='DEL').length>=1);
   }
   // Missing midfielders require one adaptation per team.
   const attackHeavy = await run('generateBalancedTeams([player("ARQ"),player("ARQ"),...Array.from({length:4},()=>player("LAT")),...Array.from({length:6},()=>player("DEL"))],2,0.7,{}, {})');
@@ -87,6 +97,10 @@ function player(role) {
   const map = role => ({positions:[role],assigned:role});
   const naturalTeams = Array.from({length:2},()=>['ARQ','DEF','DEF','MED','DEL'].map(map));
   assert.equal(formation.validate(naturalTeams),true);
+  const noKeeper = naturalTeams.map(team=>team.filter(p=>p.assigned !== 'ARQ'));
+  assert.equal(formation.validate(noKeeper),false,'Every team must have one goalkeeper');
+  const noDefense = naturalTeams.map(team=>team.map(p=>p.assigned === 'DEF' ? {positions:['MED'],assigned:'MED'} : p));
+  assert.equal(formation.validate(noDefense),false,'Natural roles do not excuse missing defenders');
   const bad = naturalTeams.map(team=>team.map(p=>({...p})));
   bad[0][1].assigned='MED'; bad[0][3].assigned='DEF';
   assert.equal(formation.validate(bad),false,'A manual swap outside natural positions cannot be justified by a local deficit');

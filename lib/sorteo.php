@@ -66,46 +66,14 @@ function draw_defense_side_line_limit(int $teamSize): int
 function draw_pitch_line_minimum(string $position, int $teamSize): int
 {
     $line = draw_pitch_line(strtoupper(trim($position)));
-    $fieldPlayers = max(0, $teamSize - 1);
-    if ($line === 'ARQ') {
-        return 1;
-    }
-    if ($teamSize < 8) {
-        return $line === 'DEF' ? 2 : (in_array($line, ['MED', 'DEL'], true) ? 1 : 0);
-    }
-    if ($fieldPlayers === 4) {
-        return in_array($line, player_required_lines(), true) ? 1 : 0;
-    }
-    if ($fieldPlayers < 5) {
-        return 0;
-    }
-    if ($line === 'MED') {
-        return $teamSize < 7 ? 1 : 2;
-    }
-    if ($line === 'DEF') {
-        return 2;
-    }
-    if ($line === 'DEL') {
-        return 1;
-    }
-    return 0;
+    if ($line === 'ARQ') return 1;
+    if ($line === 'DEF') return 2;
+    return in_array($line, ['MED', 'DEL'], true) ? 1 : 0;
 }
 
 function draw_logical_line_minimum(string $position, int $teamSize): int
 {
-    $position = strtoupper(trim($position));
-    if ($position === 'ARQ') {
-        return 1;
-    }
-    if ($teamSize < 8) return in_array($position, ['MED', 'DEL'], true) ? 1 : 0;
-    if (!in_array($position, player_field_lines(), true)) {
-        return 0;
-    }
-    $fieldPlayers = max(0, $teamSize - 1);
-    if ($position === 'LAT') {
-        return 0;
-    }
-    return $fieldPlayers >= count(player_field_lines()) ? 1 : 0;
+    return in_array(strtoupper(trim($position)), ['ARQ', 'MED', 'DEL'], true) ? 1 : 0;
 }
 
 function draw_line_limit(string $position, int $teamSize): int

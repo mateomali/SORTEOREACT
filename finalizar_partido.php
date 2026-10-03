@@ -190,12 +190,19 @@ function finish_save_match_formations(int $matchId, array $participants, array $
         if (!in_array($position, $allowedPositions, true)) {
             throw new RuntimeException('Hay una posicion invalida en la formacion.');
         }
+        $ratingPlayer = $player;
+        $availabilityFactor = max(1, min(100, (int) ($player['availability_percent'] ?? 100))) / 100;
+        if ($availabilityFactor < 1) {
+            foreach (['skill', 'technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity', 'goalkeeper_skill'] as $field) {
+                if (array_key_exists($field, $ratingPlayer)) $ratingPlayer[$field] = normalize_player_stat((float) $ratingPlayer[$field] * $availabilityFactor, 1.0);
+            }
+        }
         $formationRows[] = [
             'id' => $playerId,
             'team_number' => $teamNumber,
             'position' => $position,
             'is_substitute' => (int) ($substituteAssignments[$playerId] ?? $player['is_substitute'] ?? 0) === 1 ? 1 : 0,
-            'skill' => (float) ($player['skill'] ?? 0),
+            'skill' => player_position_rating($ratingPlayer, $position),
         ];
     }
 
@@ -207,6 +214,10 @@ function finish_save_match_formations(int $matchId, array $participants, array $
         $starters = array_filter($formationRows, static fn(array $row): bool => (int) $row['team_number'] === $teamNumber && empty($row['is_substitute']));
         if (!$starters || count(array_filter($starters, static fn(array $row): bool => $row['position'] === 'ARQ')) !== 1) {
             throw new RuntimeException('Cada cancha necesita jugadores y exactamente un arquero.');
+        }
+        $counts = array_count_values(array_column($starters, 'position'));
+        if (($counts['DEF'] ?? 0) + ($counts['LAT'] ?? 0) < 2 || ($counts['MED'] ?? 0) < 1 || ($counts['DEL'] ?? 0) < 1) {
+            throw new RuntimeException('Cada equipo necesita al menos 2 en defensa, 1 en medio y 1 en ataque.');
         }
     }
 

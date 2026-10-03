@@ -151,3 +151,38 @@ del sorteo: se imprime evaluación central con métricas por equipo, gaps de cad
 línea, máximo gap, total, ritmo, costo y restricciones. Desactivado por defecto.
 Los resultados de pruebas se guardan en `.tmp/sorteo-football-results.json` y
 `.tmp/sorteo-football-browser-results.json`.
+
+
+### Mínimos obligatorios por equipo
+
+Para cualquier tamaño de equipo, los titulares deben tener exactamente 1 ARQ,
+al menos 2 jugadores en la línea defensiva (DEF y LAT sumados), 1 MED y 1 DEL.
+Los suplentes no cuentan para estos mínimos. Con menos de 5 titulares no es
+posible cubrirlos. La generación, optimización, cambios de formación,
+intercambios y validación del servidor conservan esta cobertura. Las posiciones
+secundarias siguen disponibles. En el sorteo automático, la adaptación solo
+cubre faltantes reales del plantel. Los cambios manuales permiten cualquier
+posición de campo con el descuento de puntaje correspondiente. Un equipo de 8 o más jugadores también puede jugar con un único MED.
+
+Los controles + y - buscan una asignación completa para aumentar o reducir en
+uno la línea seleccionada, compensando otra línea. Pueden encadenar cambios
+mediante posiciones secundarias; conservan el arquero, los bloqueos y los
+mínimos. Priorizan posiciones válidas y pocos cambios antes del puntaje. Cuando
+no existe una redistribución que respete mínimos y bloqueos, mantienen la cancha
+y muestran el motivo.
+Pruebas de regresión: `npm run test:line-controls` (requiere servidor local).
+
+El selector de intercambios abre con jugadores en la misma posición asignada.
+La opción Todos muestra las demás posiciones. Cada candidato muestra la
+diferencia entre su puntaje en la posición de origen y el del jugador elegido,
+usando la escala de las tarjetas y aplicando los descuentos antes de comparar.
+Los jugadores bloqueados o fijados como arqueros conservan su indicador y
+explicación. Los movimientos manuales y su posición se conservan al guardar;
+los descuentos también se aplican a equipos pequeños.
+
+En móvil, dos toques sobre la misma tarjeta abren la ficha del jugador. El
+primer toque mantiene la selección para mover o intercambiar. Un intercambio
+por toque espera brevemente el segundo toque, de modo que abrir una ficha no
+intercambie jugadores por accidente. Cancelar también cancela esa espera.
+Los grupos de equipos en el selector usan nombre en mayúsculas y negrita,
+indicador de color junto al nombre y borde lateral del color del equipo.

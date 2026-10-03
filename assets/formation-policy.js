@@ -6,6 +6,7 @@
     const capacity = Array(8).fill(0), adapted = [];
     for (const team of teams) {
       const counts = Object.fromEntries(lines.map(line => [line, team.filter(p => pitch(p.assigned) === line).length]));
+      if (team.filter(p => p.assigned === 'ARQ').length !== 1 || lines.some(line => counts[line] < minimum[line])) return false;
       for (const player of team) {
         if (player.assigned === 'ARQ') continue;
         const natural = player.positions.map(pitch);
