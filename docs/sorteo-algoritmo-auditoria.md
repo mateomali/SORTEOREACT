@@ -160,12 +160,22 @@ al menos 2 jugadores en la línea defensiva (DEF y LAT sumados), 1 MED y 1 DEL.
 Los suplentes no cuentan para estos mínimos. Con menos de 5 titulares no es
 posible cubrirlos. La generación, optimización, cambios de formación,
 intercambios y validación del servidor conservan esta cobertura. Las posiciones
-secundarias siguen disponibles; la adaptación solo cubre faltantes reales del
-plantel. Un equipo de 8 o más jugadores también puede jugar con un único MED.
+secundarias siguen disponibles. En el sorteo automático, la adaptación solo
+cubre faltantes reales del plantel. Los cambios manuales permiten cualquier
+posición de campo con el descuento de puntaje correspondiente. Un equipo de 8 o más jugadores también puede jugar con un único MED.
 
 Los controles + y - buscan una asignación completa para aumentar o reducir en
 uno la línea seleccionada, compensando otra línea. Pueden encadenar cambios
 mediante posiciones secundarias; conservan el arquero, los bloqueos y los
 mínimos. Priorizan posiciones válidas y pocos cambios antes del puntaje. Cuando
-no existe una redistribución válida, mantienen la cancha y muestran el motivo.
+no existe una redistribución que respete mínimos y bloqueos, mantienen la cancha
+y muestran el motivo.
 Pruebas de regresión: `npm run test:line-controls` (requiere servidor local).
+
+El selector de intercambios abre con jugadores en la misma posición asignada.
+La opción Todos muestra las demás posiciones. Cada candidato muestra la
+diferencia entre su puntaje en la posición de origen y el del jugador elegido,
+usando la escala de las tarjetas y aplicando los descuentos antes de comparar.
+Los jugadores bloqueados o fijados como arqueros conservan su indicador y
+explicación. Los movimientos manuales y su posición se conservan al guardar;
+los descuentos también se aplican a equipos pequeños.

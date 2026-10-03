@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
+import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+const require = createRequire(import.meta.url);
+globalThis.GoodfellasRating = require('../assets/player-rating.js');
+globalThis.GoodfellasRating.configure(JSON.parse(readFileSync('assets/player-rating-policy.json', 'utf8')));
 
 // Exercise the page's real rating helpers without changing its public exports.
 const server = await createServer({
   server: { middlewareMode: true },
+  optimizeDeps: { noDiscovery: true, include: [] },
   plugins: [{
     name: 'position-penalty-test-exports',
     enforce: 'pre',
@@ -18,9 +24,9 @@ const server = await createServer({
 try {
   const { positionPenaltyPercent, CompactPlayerCard, fieldLineMinimum, fieldLineCountsFitLimits } = await server.ssrLoadModule('/src/pages/SorteoLegacyPageIsland.jsx');
   assert.equal(fieldLineMinimum('MED', 6), 1);
-  assert.equal(fieldLineMinimum('MED', 7), 2);
+  assert.equal(fieldLineMinimum('MED', 7), 1);
   assert.equal(fieldLineCountsFitLimits({ ARQ: 1, DEF: 2, LAT: 0, MED: 1, DEL: 2 }, 6), true);
-  assert.equal(fieldLineCountsFitLimits({ ARQ: 1, DEF: 2, LAT: 0, MED: 1, DEL: 3 }, 7), false);
+  assert.equal(fieldLineCountsFitLimits({ ARQ: 1, DEF: 2, LAT: 0, MED: 1, DEL: 3 }, 7), true);
   const player = {
     nombre: 'PRUEBA', posicion: 'MED/DEL', puntuacion: 4,
     tecnica: 4, pase_vision: 4, ritmo_stat: 4, resistencia: 4,
@@ -30,7 +36,8 @@ try {
   assert.equal(positionPenaltyPercent(player, 'MED', 9), 0, 'Primary position has no discount');
   assert.equal(positionPenaltyPercent(player, 'DEL', 9), 5, 'Lower-rated secondary position shows its discount');
   assert.equal(positionPenaltyPercent(player, 'DEF', 9), 10, 'Out-of-position discount is preserved');
-  assert.equal(positionPenaltyPercent(player, 'DEL', 6), 0, 'Small-team position exemption is preserved');
+  assert.equal(positionPenaltyPercent(player, 'DEL', 6), 5, 'Secondary-position discount applies in small teams too');
+  assert.equal(positionPenaltyPercent(player, 'DEF', 6), 10, 'Out-of-position discount applies in small teams too');
   assert.equal(positionPenaltyPercent(player, '', 9), 0, 'Missing position has no discount');
   assert.equal(positionPenaltyPercent({ ...player, ataque: 6, pase_vision: 1 }, 'DEL', 9), 0, 'A stronger secondary position has no discount');
 

@@ -450,15 +450,14 @@ function adjustedPositionRating(player, assignedPosition, options = {}) {
 }
 
 function adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize) {
-  const size = Number(teamSize || 0);
-  return adjustedPositionRating(player, assignedPosition, { ignorePositionFit: size > 0 && size < 7 });
+  return adjustedPositionRating(player, assignedPosition);
 }
 
 function positionPenaltyPercent(player, assignedPosition, teamSize = null) {
-  const size = Number(teamSize || 0);
-  if (size > 0 && size < 7) return 0;
   const position = String(assignedPosition || '').toUpperCase();
   if (!position || position === getPrimaryPlayerPosition(player)) return 0;
+  const natural = getOrderedPlayerPositions(player).includes(position);
+  if (!natural) return Math.round((1 - positionFitFactor(player, position)) * 100);
   const general = bestNaturalPlayerRating(player);
   const adjusted = adjustedPositionRating(player, position);
   if (!general || adjusted >= general) return 0;
@@ -2899,6 +2898,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [exporting, setExporting] = useState(false);
   const [formModal, setFormModal] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [exchangeFilter, setExchangeFilter] = useState('same');
   const [dragState, setDragState] = useState(null);
   const [dragHoverTarget, setDragHoverTarget] = useState(null);
   const [persistedRedrawCount, setPersistedRedrawCount] = useState(payload.redrawCount);
@@ -3707,7 +3707,7 @@ export function SorteoLegacyPageIsland({ root }) {
     if (!teams) return false;
     const proposed = teams.map(team => ({ ...buildTeamAssignment(team, assignments), ...changes }));
     const constraints = generationConstraints(teams, proposed);
-    return constraints.naturalPositions && constraints.goalkeeperRule && constraints.coverageViolations === 0;
+    return constraints.goalkeeperRule && proposed.every((positions, index) => fieldLineCountsFitLimits(teamLineCounts(teams[index], positions), teams[index].length));
   };
 
   const applyFormation = (teamIndex, value) => {
@@ -3732,7 +3732,7 @@ export function SorteoLegacyPageIsland({ root }) {
       : applyFormationToTeam(teams[teamIndex], formationValue);
     if (!nextAssignments) return;
     if (!proposedFormationFits(nextAssignments)) {
-      setError('La formacion debe cubrir todas las lineas usando posiciones naturales o secundarias; solo se adapta para cubrir faltantes reales.');
+      setError('La formacion debe respetar los minimos de cada linea y conservar un arquero.');
       return;
     }
     setAssignments((current) => ({ ...current, ...nextAssignments, ...lockedPlayerPositions }));
@@ -3751,7 +3751,7 @@ export function SorteoLegacyPageIsland({ root }) {
         ? `La linea ${line === 'DEF' ? 'DEF/LAT' : line} debe conservar al menos ${minimum} jugador${minimum === 1 ? '' : 'es'}.`
         : delta > 0 && count >= maximum
           ? `La linea ${line === 'DEF' ? 'DEF/LAT' : line} admite como maximo ${maximum} jugadores.`
-          : 'No hay una redistribucion disponible que respete los minimos, las posiciones y los jugadores bloqueados.');
+          : 'No hay una redistribucion disponible que respete los minimos y los jugadores bloqueados.');
       return;
     }
     pushUndo(teamIndex);
@@ -3866,7 +3866,7 @@ export function SorteoLegacyPageIsland({ root }) {
         if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) {
           proposedTargetAssignments[targetKeyForAssignment] = sourceLine;
         }
-        const normalizedTargetAssignments = normalizeCompactDefenseAssignments(proposedTargetTeam, proposedTargetAssignments);
+        const normalizedTargetAssignments = proposedTargetAssignments;
         const proposedTargetCounts = teamLineCounts(proposedTargetTeam, normalizedTargetAssignments);
         const targetFits = fieldLineCountsFitLimits(proposedTargetCounts, proposedTargetTeam.length);
 
@@ -3879,7 +3879,7 @@ export function SorteoLegacyPageIsland({ root }) {
           if (FORMATION_LINES.includes(sourceLine)) {
             proposedSourceAssignments[targetKeyForAssignment] = sourceLine;
           }
-          const normalizedSourceAssignments = normalizeCompactDefenseAssignments(proposedSourceTeam, proposedSourceAssignments);
+          const normalizedSourceAssignments = proposedSourceAssignments;
           proposedSourceCounts = teamLineCounts(proposedSourceTeam, normalizedSourceAssignments);
           proposedSourceTeamSize = proposedSourceTeam.length;
           sourceFits = fieldLineCountsFitLimits(proposedSourceCounts, proposedSourceTeamSize);
@@ -3897,7 +3897,7 @@ export function SorteoLegacyPageIsland({ root }) {
           : [...teams[normalizedTargetTeamIndex], sourcePlayer];
         const proposedAssignments = buildTeamAssignment(proposedTeam, assignments);
         proposedAssignments[key] = targetLine;
-        const normalizedAssignments = normalizeCompactDefenseAssignments(proposedTeam, proposedAssignments);
+        const normalizedAssignments = proposedAssignments;
         const proposedCounts = teamLineCounts(proposedTeam, normalizedAssignments);
         if (!fieldLineCountsFitLimits(proposedCounts, proposedTeam.length)) {
           return {
@@ -3907,18 +3907,6 @@ export function SorteoLegacyPageIsland({ root }) {
           };
         }
       }
-    }
-    const proposedTeams = teams.map(team => team.slice());
-    if (sourceTeamIndex !== normalizedTargetTeamIndex && sourcePlayer && targetPlayer) {
-      proposedTeams[sourceTeamIndex] = proposedTeams[sourceTeamIndex].map(p => playerKey(p) === key ? targetPlayer : p);
-      proposedTeams[normalizedTargetTeamIndex] = proposedTeams[normalizedTargetTeamIndex].map(p => playerKey(p) === String(resolvedTargetPlayerKey) ? sourcePlayer : p);
-    }
-    const overrides = { ...assignments };
-    if (targetLine) overrides[key] = targetLine;
-    if (targetPlayer && FORMATION_LINES.includes(sourceLine)) overrides[String(resolvedTargetPlayerKey)] = sourceLine;
-    const proposedPositions = proposedTeams.map(team => buildTeamAssignment(team, overrides));
-    if (!generationConstraints(proposedTeams, proposedPositions).naturalPositions) {
-      return { ok: false, message: 'Solo se permite adaptar posiciones para cubrir faltantes reales de jugadores naturales o secundarios.' };
     }
     return { ok: true, message: '', targetKeyForAssignment, sourceLine, sourcePlayer, resolvedTargetPlayerKey };
   }, [assignments, findCrossTeamSwapTargetKey, lockedPlayerPositions, teams]);
@@ -4013,12 +4001,7 @@ export function SorteoLegacyPageIsland({ root }) {
         const next = { ...current };
         if (targetLine && FORMATION_LINES.includes(targetLine)) next[key] = sourcePlayer && isFixedGoalkeeper(sourcePlayer) ? 'ARQ' : targetLine;
         if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) next[targetKeyForAssignment] = sourceLine;
-        const teamsForNormalization = movedTeamsSnapshot || teams;
-        let normalized = normalizeCompactDefenseAssignments(teamsForNormalization?.[normalizedTargetTeamIndex] || [], next);
-        if (sourceTeamIndex !== normalizedTargetTeamIndex) {
-          normalized = normalizeCompactDefenseAssignments(teamsForNormalization?.[sourceTeamIndex] || [], normalized);
-        }
-        return normalized;
+        return next;
       });
     }
   };
@@ -4592,30 +4575,59 @@ export function SorteoLegacyPageIsland({ root }) {
     setSuccess(`${player.nombre} ${toBench ? 'pas\u00f3 al banco' : 'volvi\u00f3 a la cancha'}. Se reorganiz\u00f3 el equipo.`);
   };
 
-  const renderExchangeTargets = (source) => (
-    <div className="grid gap-2 rounded-md bg-white p-2 text-[#07130f]" data-exchange-options="true">
-          <p className="text-sm font-bold">Intercambiar con otro equipo</p>
+  useEffect(() => { setExchangeFilter('same'); }, [preview?.player?.id, mobileMoveSource?.playerKey]);
+
+  const renderExchangeTargets = (source) => {
+    const sourceTeam = teams?.[Number(source.teamIndex)] || [];
+    const sourcePlayer = sourceTeam.find(player => playerKey(player) === String(source.playerKey));
+    if (!sourcePlayer) return null;
+    const sourcePosition = source.assignedPosition;
+    const sourceRating = playerCardRating(adjustedPositionRatingForTeamSize(sourcePlayer, sourcePosition, sourceTeam.length));
+    return (
+      <div className="grid min-w-0 gap-2 rounded-md bg-white p-2 text-[#07130f]" data-exchange-options="true">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="m-0 text-sm font-bold">Intercambiar con otro equipo</p>
+          <div className="flex gap-1" role="group" aria-label="Filtrar intercambios">
+            {[['same', 'Misma posicion'], ['all', 'Todos']].map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={exchangeFilter === value} onClick={() => setExchangeFilter(value)} className={`min-h-8 rounded border px-2 py-1 text-xs font-bold ${exchangeFilter === value ? 'border-emerald-900 bg-emerald-900 text-white' : 'border-[#c4d8ce] bg-white text-[#07130f]'}`}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <p className="m-0 text-[11px] text-[#526b62]">Diferencia en tu posicion ({sourcePosition}), con el descuento aplicado.</p>
+        <div className="grid max-h-[32dvh] gap-2 overflow-y-auto overscroll-contain" data-exchange-list="true">
           {teams.map((team, targetTeamIndex) => {
             if (targetTeamIndex === Number(source.teamIndex)) return null;
             const targetAssignments = buildTeamAssignment(team, assignments);
+            const candidates = team.filter(player => exchangeFilter === 'all' || targetAssignments[playerKey(player)] === sourcePosition);
             return (
-              <fieldset key={targetTeamIndex} className="grid grid-cols-2 gap-2">
-                <legend className="mb-1 text-sm font-bold">{getTeamDisplayName(targetTeamIndex)}</legend>
-                {team.map((player) => {
-                  const key = playerKey(player);
-                  const position = targetAssignments[key];
-                  const validation = validateDropTarget(source, targetTeamIndex, position, key);
-                  return (
-                    <button key={key} data-exchange-player={key} type="button" className={`${quietButtonClass} min-h-11 text-left disabled:opacity-55`} disabled={!validation.ok} title={validation.message || `Intercambiar con ${player.nombre}`} onClick={() => { movePlayer(source, targetTeamIndex, position, key); setPreview(null); }}>
-                      <span>{player.nombre} · {position}{!validation.ok ? <span className="block text-xs">{validation.message}</span> : null}</span>
-                    </button>
-                  );
-                })}
+              <fieldset key={targetTeamIndex} className="min-w-0 border-0 p-0">
+                <legend className="mb-1 text-xs font-bold">{getTeamDisplayName(targetTeamIndex)}</legend>
+                {!candidates.length ? <p className="m-0 py-1 text-xs text-[#526b62]">Sin jugadores en {sourcePosition}. Usa Todos para ver otras posiciones.</p> : null}
+                <div className="grid gap-1">
+                  {candidates.map(player => {
+                    const key = playerKey(player);
+                    const position = targetAssignments[key];
+                    const validation = validateDropTarget(source, targetTeamIndex, position, key);
+                    const incomingRating = playerCardRating(adjustedPositionRatingForTeamSize(player, sourcePosition, sourceTeam.length));
+                    const delta = incomingRating - sourceRating;
+                    const difference = `${delta > 0 ? '+' : ''}${delta} pts`;
+                    const reason = isFixedGoalkeeper(player) ? 'Arquero fijo' : lockedPlayerPositions[key] ? 'Bloqueado' : !validation.ok ? 'No disponible' : '';
+                    return (
+                      <button key={key} data-exchange-player={key} data-exchange-position={position} data-exchange-delta={delta} type="button" className="grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded border border-[#c4d8ce] bg-white px-2 py-1 text-left text-xs hover:bg-[#e7f2eb] disabled:cursor-not-allowed disabled:opacity-55" disabled={!validation.ok} title={validation.message || `${player.nombre} en ${sourcePosition}: ${incomingRating} pts; ${sourcePlayer.nombre}: ${sourceRating} pts. Diferencia: ${difference}.`} onClick={() => { movePlayer(source, targetTeamIndex, position, key); setPreview(null); }}>
+                        <span className="min-w-0 truncate font-bold">{player.nombre}</span>
+                        <span className="whitespace-nowrap text-[11px] text-[#526b62]">{reason || position}</span>
+                        <span className={`whitespace-nowrap font-black tabular-nums ${delta < 0 ? 'text-[#a23b24]' : delta > 0 ? 'text-[#12633c]' : 'text-[#526b62]'}`}>{difference}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </fieldset>
             );
           })}
-    </div>
-  );
+        </div>
+      </div>
+    );
+  };
 
   const handleTouchCard = (teamIndex, player, assignedPosition) => {
     if (mobileMoveSource && Number(mobileMoveSource.teamIndex) !== teamIndex) {
@@ -4637,7 +4649,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const applyTeamFormationVariant = (teamIndex, variant) => {
     if (!teams?.[teamIndex] || !variant?.assignments) return;
-    if (!proposedFormationFits(variant.assignments)) { setError('La variante requiere cambios de posicion que no corresponden a faltantes reales.'); return; }
+    if (!proposedFormationFits(variant.assignments)) { setError('La variante debe respetar los minimos de cada linea y conservar un arquero.'); return; }
     pushUndo(teamIndex);
     markDrawDirty(true);
     markFormationAsManual(teamIndex);
@@ -6157,9 +6169,9 @@ export function SorteoLegacyPageIsland({ root }) {
         <>
           <button className="fixed inset-0 z-[80] bg-black/70" type="button" aria-label="Cerrar ficha" onClick={() => setPreview(null)} />
           <section className="fixed inset-0 z-[90] grid place-items-center overflow-auto p-4" role="dialog" aria-modal="true" aria-label={`Ficha de ${preview.player.nombre}`}>
-            <div className="grid w-full max-w-3xl items-center gap-4 md:grid-cols-[minmax(260px,1fr)_260px]">
-              <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible justify-self-center">
-                <div className="origin-center scale-[1.72] sm:scale-[1.9]">
+            <div className="grid w-full max-w-4xl items-start gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+              <div className="relative grid aspect-[409/710] w-[168px] place-items-center overflow-visible justify-self-center md:w-[220px]">
+                <div className="origin-center scale-100 md:scale-[1.3]">
                   <FullPlayerCard player={preview.player} assignedPosition={preview.assignedPosition} teamSize={preview.teamSize || playersPerTeam} />
                 </div>
               </div>
@@ -6168,7 +6180,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   <h3 className="m-0 text-base font-black">{preview.player.nombre}</h3>
                   <p className="m-0 text-xs font-semibold text-white/70">Puntaje por posicion</p>
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   {playerPositionRatings(preview.player, preview.assignedPosition, preview.teamSize || playersPerTeam).map((rating) => (
                     <div key={rating.position} className={`grid grid-cols-[42px_minmax(0,1fr)_44px] items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-black ${rating.position === preview.assignedPosition ? 'border-lime-200 bg-lime-200/15' : 'border-white/15 bg-white/8'}`}>
                       <span>{rating.position}</span>

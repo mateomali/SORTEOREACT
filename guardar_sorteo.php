@@ -355,21 +355,9 @@ foreach ($teams as $team) {
     }
 }
 
-$starterTeams = array_map(static fn(array $team): array => array_values(array_filter($team, static fn(array $p): bool => empty($p['is_substitute']))), $teams);
-$starterAssignments = array_map(static function(array $team): array {
-    $positions = [];
-    foreach ($team as $player) $positions[(int)$player['id']] = normalize_assigned_position_legacy((string)($player['assigned_position'] ?? ''), $player);
-    return $positions;
-}, $starterTeams);
-if (!draw_assignments_respect_positions($starterTeams, $starterAssignments)) {
-    http_response_code(422);
-    echo json_encode(['ok' => false, 'message' => 'Solo se permite adaptar posiciones cuando faltan jugadores naturales o secundarios para cubrir una linea.']);
-    exit;
-}
-
 $teamScores = array_map(
     static fn(array $team): float => array_sum(array_map(static function (array $p): float {
-        return player_overall_rating(availability_adjusted_player_legacy($p));
+        return adjusted_position_rating_legacy($p, normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p));
     }, array_filter($team, static fn(array $p): bool => empty($p['is_substitute'])))),
     $teams
 );
