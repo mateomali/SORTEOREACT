@@ -2090,7 +2090,7 @@ export function restorePlayerExchanges(teams, assignments, exchanges, playerId) 
   return { teams: nextTeams, assignments: nextAssignments, exchanges: exchanges.filter((_, index) => !undone.has(index)) };
 }
 
-function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole = '', draggableProps = {}, onOpen }) {
+function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole = '', draggableProps = {}, onOpen, onDoubleOpen }) {
   const { dragging = false, selected = false, locked = false, swapTarget = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
   const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);
@@ -2124,8 +2124,9 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
       onSelectStart={(event) => event.preventDefault()}
       onClick={(event) => {
         event.stopPropagation();
-        onOpen?.();
+        onOpen?.(event);
       }}
+      onDoubleClick={(event) => { event.stopPropagation(); onDoubleOpen?.(event); }}
       aria-label={`Ver ficha de ${player.nombre}`}
       title={`${player.nombre} · ${assignedPosition} · Arrastrá para mover o intercambiar`}
       data-card-tier={tier}
@@ -2918,6 +2919,16 @@ export function SorteoLegacyPageIsland({ root }) {
   const formationsReady = hasSavedDraw && workflowSaveState === 'saved';
   const [manualActionCount, setManualActionCount] = useState(0);
   const [mobileMoveSource, setMobileMoveSource] = useState(null);
+  const lastCardTapRef = useRef(null);
+  const pendingCardExchangeRef = useRef(null);
+  useEffect(() => () => window.clearTimeout(pendingCardExchangeRef.current), []);
+  useEffect(() => {
+    if (!mobileMoveSource) {
+      window.clearTimeout(pendingCardExchangeRef.current);
+      pendingCardExchangeRef.current = null;
+      lastCardTapRef.current = null;
+    }
+  }, [mobileMoveSource]);
   const [manualComparisonBefore, setManualComparisonBefore] = useState(null);
   const [lockedPlayerPositions, setLockedPlayerPositions] = useState({});
   const [drawVariants, setDrawVariants] = useState({});
@@ -3099,7 +3110,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const getTeamDisplayName = useCallback((teamIndex) => {
     const color = getTeamColor(teamIndex);
-    return `Equipo ${color.label}`;
+    return `EQUIPO ${color.label.toUpperCase()}`;
   }, [getTeamColor]);
 
   const persistPlayerAvailability = useCallback(async (playerId, percent) => {
@@ -4314,6 +4325,9 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const beginDragAtPoint = (source, clientX, clientY) => {
+    window.clearTimeout(pendingCardExchangeRef.current);
+    pendingCardExchangeRef.current = null;
+    lastCardTapRef.current = null;
     pointerDragRef.current.active = true;
     pointerDragRef.current.source = source;
     const sourceCard = Array.from(document.querySelectorAll('[data-sorteo-drag-player]')).find(card => card.dataset.playerKey === String(source.playerKey));
@@ -4600,8 +4614,11 @@ export function SorteoLegacyPageIsland({ root }) {
             const targetAssignments = buildTeamAssignment(team, assignments);
             const candidates = team.filter(player => exchangeFilter === 'all' || targetAssignments[playerKey(player)] === sourcePosition);
             return (
-              <fieldset key={targetTeamIndex} className="min-w-0 border-0 p-0">
-                <legend className="mb-1 text-xs font-bold">{getTeamDisplayName(targetTeamIndex)}</legend>
+              <fieldset key={targetTeamIndex} className="min-w-0 rounded-md border border-[#c4d8ce] bg-[#f5faf7] p-2" style={{ borderLeft: `4px solid ${getTeamColor(targetTeamIndex).accentHex}` }}>
+                <legend className="flex items-center gap-2 px-1 text-xs font-black uppercase" data-exchange-team-title>
+                  <span className="h-3 w-3 shrink-0 rounded-sm border border-black/20" style={{ backgroundColor: getTeamColor(targetTeamIndex).accentHex }} data-team-color={getTeamColor(targetTeamIndex).name} aria-hidden="true" />
+                  {getTeamDisplayName(targetTeamIndex)}
+                </legend>
                 {!candidates.length ? <p className="m-0 py-1 text-xs text-[#526b62]">Sin jugadores en {sourcePosition}. Usa Todos para ver otras posiciones.</p> : null}
                 <div className="grid gap-1">
                   {candidates.map(player => {
@@ -4629,22 +4646,43 @@ export function SorteoLegacyPageIsland({ root }) {
     );
   };
 
-  const handleTouchCard = (teamIndex, player, assignedPosition) => {
-    if (mobileMoveSource && Number(mobileMoveSource.teamIndex) !== teamIndex) {
-      movePlayer(mobileMoveSource, teamIndex, assignedPosition, playerKey(player));
+  const openPlayerProfile = (teamIndex, player, assignedPosition) => {
+    window.clearTimeout(pendingCardExchangeRef.current);
+    pendingCardExchangeRef.current = null;
+    lastCardTapRef.current = null;
+    setMobileMoveSource(null);
+    setPreview({ player, assignedPosition, teamSize: teams?.[teamIndex]?.length || playersPerTeam });
+  };
+
+  const handleTouchCard = (teamIndex, player, assignedPosition, event) => {
+    const mobile = window.matchMedia?.('(max-width: 760px)').matches;
+    const key = playerKey(player);
+    const now = performance.now();
+    const lastTap = lastCardTapRef.current;
+    if (mobile && event?.detail !== 0 && lastTap?.key === key && now - lastTap.time <= 350) {
+      openPlayerProfile(teamIndex, player, assignedPosition);
       return;
     }
-    if (window.matchMedia?.('(max-width: 760px)').matches && !isFixedGoalkeeper(player) && !lockedPlayerPositions[playerKey(player)]) {
-      setMobileMoveSource({
-        teamIndex,
-        playerKey: playerKey(player),
-        playerName: player.nombre,
-        assignedPosition,
-      });
+    window.clearTimeout(pendingCardExchangeRef.current);
+    pendingCardExchangeRef.current = null;
+    lastCardTapRef.current = mobile && event?.detail !== 0 ? { key, time: now } : null;
+    if (mobileMoveSource && Number(mobileMoveSource.teamIndex) !== teamIndex) {
+      // Wait briefly so a double tap on the destination opens its profile without swapping.
+      if (mobile && event?.detail !== 0) {
+        pendingCardExchangeRef.current = window.setTimeout(() => {
+          pendingCardExchangeRef.current = null;
+          lastCardTapRef.current = null;
+          movePlayer(mobileMoveSource, teamIndex, assignedPosition, key);
+        }, 350);
+      } else movePlayer(mobileMoveSource, teamIndex, assignedPosition, key);
+      return;
+    }
+    if (mobile && !isFixedGoalkeeper(player) && !lockedPlayerPositions[key]) {
+      setMobileMoveSource({ teamIndex, playerKey: key, playerName: player.nombre, assignedPosition });
       setPreview(null);
       return;
     }
-    setPreview({ player, assignedPosition, teamSize: teams?.[teamIndex]?.length || playersPerTeam });
+    openPlayerProfile(teamIndex, player, assignedPosition);
   };
 
   const applyTeamFormationVariant = (teamIndex, variant) => {
@@ -5435,8 +5473,8 @@ export function SorteoLegacyPageIsland({ root }) {
                       <article key={teamIndex} className={`${isFormationEditor ? 'team-card team' : 'gf-team-column'} sorteo-team-card grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2`} data-team-index={teamIndex} data-sorteo-team-card="1">
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
-                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]" data-team-title>
-                              <span className={`h-3 w-3 shrink-0 rounded-full ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
+                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black uppercase text-[#07130f]" data-team-title>
+                              <span className={`h-3.5 w-3.5 shrink-0 rounded-sm border border-black/20 ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
                               {getTeamDisplayName(teamIndex)}
                             </h3>
                             <p className="m-0 text-xs font-semibold text-slate-500">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>
@@ -5692,7 +5730,8 @@ export function SorteoLegacyPageIsland({ root }) {
                                           assignedPosition={assigned}
                                           teamSize={team.length}
                                           laneRole={assigned === 'LAT' ? 'lateral' : ''}
-                                          onOpen={() => !dragState && !pointerDragRef.current.suppressClick && handleTouchCard(teamIndex, player, assigned)}
+                                          onOpen={(event) => !dragState && !pointerDragRef.current.suppressClick && handleTouchCard(teamIndex, player, assigned, event)}
+                                          onDoubleOpen={() => !dragState && !pointerDragRef.current.suppressClick && openPlayerProfile(teamIndex, player, assigned)}
                                           draggableProps={{
                                             draggable: false,
                                             dragging: dragState?.playerKey === key,
@@ -5775,8 +5814,8 @@ export function SorteoLegacyPageIsland({ root }) {
                         {isFormationEditor ? (
                         <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
-                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black text-[#07130f]">
-                              <span className={`h-3 w-3 shrink-0 rounded-full ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
+                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black uppercase text-[#07130f]">
+                              <span className={`h-3.5 w-3.5 shrink-0 rounded-sm border border-black/20 ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
                               {getTeamDisplayName(teamIndex)}
                             </h3>
                             <p className="m-0 text-xs font-semibold text-slate-500">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>

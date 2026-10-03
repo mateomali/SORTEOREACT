@@ -24,7 +24,7 @@
     "test:rating": "node tests/player-rating.cjs",
     "test:formations": "node tests/small-team-formations.cjs",
     "test:line-controls": "node tests/sorteo-line-controls.cjs && playwright test tests/sorteo-line-controls.spec.js --workers=1",
-    "test:manual-positions": "node tests/sorteo-position-penalty.mjs && playwright test tests/sorteo-manual-position.spec.js --workers=1"
+    "test:manual-positions": "node tests/sorteo-position-penalty.mjs && playwright test tests/sorteo-manual-position.spec.js tests/sorteo-mobile-double-tap.spec.js --workers=1"
   },
   "keywords": [],
   "author": "",

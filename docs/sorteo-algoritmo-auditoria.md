@@ -179,3 +179,10 @@ usando la escala de las tarjetas y aplicando los descuentos antes de comparar.
 Los jugadores bloqueados o fijados como arqueros conservan su indicador y
 explicación. Los movimientos manuales y su posición se conservan al guardar;
 los descuentos también se aplican a equipos pequeños.
+
+En móvil, dos toques sobre la misma tarjeta abren la ficha del jugador. El
+primer toque mantiene la selección para mover o intercambiar. Un intercambio
+por toque espera brevemente el segundo toque, de modo que abrir una ficha no
+intercambie jugadores por accidente. Cancelar también cancela esa espera.
+Los grupos de equipos en el selector usan nombre en mayúsculas y negrita,
+indicador de color junto al nombre y borde lateral del color del equipo.
