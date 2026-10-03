@@ -24607,28 +24607,26 @@ body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"
   .gf-pitch-size-toggle:focus-visible { outline: 2px solid #d9f99d; outline-offset: 2px; }
 }
 
-/* Team identity belongs to the pitch; preserve space for cards and controls. */
-.sorteo-react-page .gf-formation { padding-top: 112px; aspect-ratio: 3 / 5; }
-body.page-sorteo-legacy .sorteo-react-page .gf-formation > .gf-pitch-team-head {
-  position: absolute; top: 7px; left: 7px; right: 7px; bottom: auto; z-index: 10;
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px;
-  width: auto; height: auto; min-height: 0; align-items: center;
-  margin: 0; padding: 8px; background: #063d2b; color: white;
+/* Compact team identity immediately above the pitch. */
+.sorteo-react-page .gf-pitch-panel { min-width: 0; }
+body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px; align-items: center; margin: 0; padding: 5px 8px;
+  border-radius: 7px 7px 0 0; background: #063d2b; color: white;
 }
 body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head h3 {
-  display: flex; gap: 6px; overflow: visible; white-space: normal;
-  font-size: 14px; line-height: 1.2; color: white !important; font-weight: 900;
+  display: flex; gap: 6px; margin: 0; white-space: normal;
+  font-size: 13px; line-height: 1.15; color: white !important; font-weight: 900;
 }
 body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head p {
-  color: #d1e7db !important; font-size: 10px; line-height: 1.2;
+  margin: 2px 0 0; color: #d1e7db !important; font-size: 9px; line-height: 1.1;
 }
 body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head > span {
-  justify-self: start; min-height: 20px; padding: 2px 5px; font-size: 12px;
+  min-height: 24px; padding: 3px 5px; font-size: 12px; white-space: nowrap;
 }
-body.page-sorteo-legacy .sorteo-react-page .gf-formation .formation-undo-button,
-body.page-sorteo-legacy .sorteo-react-page .gf-formation .gf-pitch-size-toggle { top: 76px; }
+.sorteo-react-page .gf-pitch-panel > .gf-formation { border-top-left-radius: 0; border-top-right-radius: 0; }
 @media (max-width: 760px) {
-  .sorteo-react-page.gf-draw-workflow .gf-formation { padding-top: 112px; min-height: 552px; }
-  body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head h3 { font-size: 11px; }
-  body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head p { font-size: 9px; }
+  body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head { padding: 5px; gap: 4px; }
+  body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head h3 { font-size: 11px; gap: 4px; }
+  body.page-sorteo-legacy .sorteo-react-page .gf-pitch-team-head > span { font-size: 10px; padding: 3px; }
 }

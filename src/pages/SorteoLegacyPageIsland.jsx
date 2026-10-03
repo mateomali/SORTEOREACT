@@ -5569,13 +5569,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
                         </div>
                         ) : null}
-                        <div
-                          className="team-formation gf-formation text-white"
-                          style={{ borderColor: hexToRgba(teamColorAccentHex(teamIndex), 0.55), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
-                          data-sorteo-drop-team={teamIndex}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={(event) => handleDrop(event, teamIndex, null)}
-                        >
+                        <div className="gf-pitch-panel">
                         <div className="gf-pitch-team-head grid gap-2 rounded-md border border-white/25 bg-[#063d2b]/95 p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                           <div className="min-w-0">
                             <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black uppercase text-white" data-team-title>
@@ -5586,6 +5580,14 @@ export function SorteoLegacyPageIsland({ root }) {
                           </div>
                           <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
                         </div>
+                        <div
+                          className="team-formation gf-formation text-white"
+                          style={{ borderColor: hexToRgba(teamColorAccentHex(teamIndex), 0.55), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
+                          data-sorteo-drop-team={teamIndex}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={(event) => handleDrop(event, teamIndex, null)}
+                        >
+
                           {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="pointer-events-none absolute left-2 right-12 top-2 z-30 rounded border border-white/70 bg-[#063d2b] px-2 py-1 text-center text-xs font-bold text-white" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
                           {!isFormationEditor ? <button
                             type="button"
@@ -5822,6 +5824,7 @@ export function SorteoLegacyPageIsland({ root }) {
                               </div>
                             );
                           })}
+                        </div>
                         </div>
 
                         {isFormationEditor ? (

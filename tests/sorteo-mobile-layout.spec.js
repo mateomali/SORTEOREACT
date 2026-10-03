@@ -50,7 +50,7 @@ test('mobile pitch keeps cards, ratings and projected laterals inside their rows
     expect(problems, `pitch layout at ${width}px`).toEqual([]);
     if (width === 320) {
       await pitches.first().evaluate((field) => field.scrollIntoView({ block: 'start' }));
-      await pitches.first().screenshot({ path: 'test-results/sorteo-mobile-320.png' });
+      await page.locator('.gf-pitch-panel').first().screenshot({ path: 'test-results/sorteo-mobile-320.png' });
     }
   }
 
