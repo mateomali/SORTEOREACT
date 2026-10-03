@@ -6,21 +6,7 @@ require_once __DIR__ . '/helpers.php';
 function formation_view_card_rating(float $value): int
 {
     $clamped = max(1.0, min(6.0, $value));
-    $anchors = [
-        [1.0, 35.0],
-        [2.5, 54.0],
-        [3.0, 64.0],
-        [3.2, 69.0],
-        [3.5, 74.0],
-        [3.8, 79.0],
-        [4.0, 81.0],
-        [4.4, 86.0],
-        [4.5, 87.0],
-        [5.0, 92.0],
-        [5.2, 93.0],
-        [5.3, 94.0],
-        [6.0, 99.0],
-    ];
+    $anchors = player_rating_policy()['anchors'];
 
     for ($i = 0, $count = count($anchors) - 1; $i < $count; $i++) {
         [$fromRating, $fromOverall] = $anchors[$i];

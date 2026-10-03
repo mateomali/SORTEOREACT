@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
+require_once __DIR__ . '/lib/sorteo.php';
 
 require_admin();
 ensure_control_schema();
@@ -339,6 +340,32 @@ foreach ($teams as $team) {
         echo json_encode(['ok' => false, 'message' => 'Cada cancha necesita jugadores y exactamente un arquero.']);
         exit;
     }
+    $positionsOnPitch = array_map(static fn(array $p): string => normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p), $starters);
+    if (!in_array('MED', $positionsOnPitch, true) || !in_array('DEL', $positionsOnPitch, true)) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'message' => 'Cada equipo debe tener al menos 1 jugador en medio y 1 en ataque.']);
+        exit;
+    }
+    if (count($starters) < 8) {
+        $defenders = array_filter($starters, static fn(array $p): bool => in_array(normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p), ['DEF', 'LAT'], true));
+        if (count($defenders) < 2) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'message' => 'Cada equipo de menos de 8 jugadores necesita al menos 2 en defensa (DEF/LAT).']);
+            exit;
+        }
+    }
+}
+
+$starterTeams = array_map(static fn(array $team): array => array_values(array_filter($team, static fn(array $p): bool => empty($p['is_substitute']))), $teams);
+$starterAssignments = array_map(static function(array $team): array {
+    $positions = [];
+    foreach ($team as $player) $positions[(int)$player['id']] = normalize_assigned_position_legacy((string)($player['assigned_position'] ?? ''), $player);
+    return $positions;
+}, $starterTeams);
+if (!draw_assignments_respect_positions($starterTeams, $starterAssignments)) {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'message' => 'Solo se permite adaptar posiciones cuando faltan jugadores naturales o secundarios para cubrir una linea.']);
+    exit;
 }
 
 $teamScores = array_map(

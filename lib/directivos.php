@@ -273,11 +273,7 @@ function director_player_stat_labels(): array
 function director_stat_0_99_from_internal(float|string|int|null $value): int
 {
     $rating = normalize_player_stat($value);
-    $anchors = [
-        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-        [5.2, 93], [5.3, 94], [6.0, 99],
-    ];
+    $anchors = player_rating_policy()['anchors'];
     for ($index = 0; $index < count($anchors) - 1; $index++) {
         [$fromRating, $fromOverall] = $anchors[$index];
         [$toRating, $toOverall] = $anchors[$index + 1];
@@ -295,11 +291,7 @@ function director_internal_stat_from_0_99(float|string|int|null $value): ?float
         return null;
     }
     $overall = max(0.0, min(99.0, (float) $value));
-    $anchors = [
-        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-        [5.2, 93], [5.3, 94], [6.0, 99],
-    ];
+    $anchors = player_rating_policy()['anchors'];
     if ($overall <= 35) {
         return 1.0;
     }

@@ -1,0 +1,116 @@
+/* ==========================================================================
+   Cancha: cartas 20% mas grandes.
+
+   Se carga despues de tailwind.css y contrast-overrides.css, que definen los
+   tamanos de carta. Aqui no se reescriben esos valores: se escalan, para que
+   cada breakpoint siga su proporcion original.
+
+   Por que zoom y no width:
+     Los anchos de carta estan fijados en px en ~65 declaraciones de escritorio
+     y ~205 de movil, repartidas en 5 breakpoints (90/96/100/102/104/124/132px
+     en escritorio; 64/96/124px y mas en movil). Multiplicarlas una por una
+     seria fragil y se desincronizaria con cada cambio de diseno. zoom escala
+     el tamano usado del elemento, asi que 1.2 vale para todos los breakpoints.
+     Es seguro con el arrastre existente porque ningun script usa
+     offsetLeft/offsetTop/offsetWidth/offsetHeight: solo getBoundingClientRect()
+     y elementFromPoint(), que si respetan zoom.
+     html2canvas (exportacion a imagen) solo se carga en la cancha React del
+     sorteo, que se ajusta mas abajo sin zoom.
+
+   Para cambiar la magnitud, ajustar solo --gf-pitch-card-scale.
+   Para desactivar todo, poner --gf-pitch-card-scale: 1.
+
+   --------------------------------------------------------------------------
+   Sobre la divisoria entre posiciones (NO se agrega en las canchas PHP)
+   --------------------------------------------------------------------------
+   Las canchas renderizadas en PHP ya tienen su propia divisoria, dibujada en
+   ::before y centrada en el hueco entre lineas:
+
+     .team-formation:not(.gf-formation) .formation-line + .formation-line::before
+       (generica, con las variables --gf-pitch-row-gap / --gf-pitch-label-width)
+
+     body.page-capitanes .content .captain-formation-line + ...::before
+       (capitanes, left: 60px)
+
+     body.page-index / .page-historial / .page-perfil / .home-captain-live-teams
+       (variante con gradiente al 72% de opacidad)
+
+   Agregar otra linea encima dibujaba una segunda raya: en capitanes coincidia
+   exactamente con la existente y sumaba las opacidades, y en el resto quedaba
+   corrida unos pixeles. Por eso aca no se toca ninguna de esas vistas.
+
+   La unica cancha sin divisoria es la del sorteo (React): en tailwind.input.css,
+   .sorteo-react-page .gf-formation .gf-formation-row fija border: 0 (anulando
+   el border-b declarado en el JSX) y .formation-line::before { content: none }.
+   Ahi si se agrega, con el mismo tratamiento que usan las demas para que no
+   parezca un estilo nuevo.
+   ========================================================================== */
+
+:root {
+  --gf-pitch-card-scale: 1.2;
+}
+
+/* --------------------------------------------------------------------------
+   Cartas de cancha 20% mas grandes (vistas renderizadas en PHP)
+   Cubre inicio, historial, perfil, capitanes y sorteo multiple. Quedan fuera
+   a proposito:
+     - la galeria de la pagina de previews de carta, que no es una cancha;
+     - el preview de finalizar partido: sus cartas usan otra clase
+       (.sorteo-static-player-card, 90px) dentro de un .line-players con
+       flex-nowrap + overflow-hidden y alto fijo de 680px, asi que crecerlas
+       20% recortaria cartas en vez de agrandar la cancha. Para incluirlo hay
+       que ajustar antes la geometria de .finish-formation-pitch-preview.
+   -------------------------------------------------------------------------- */
+
+:is(.team-formation, .captain-formation-field, .captain-editor-field,
+    .multi-draw-pitch-view)
+  :is(.formation-player, .captain-formation-player) {
+  zoom: var(--gf-pitch-card-scale);
+}
+
+/* --------------------------------------------------------------------------
+   Cancha React del sorteo: divisoria entre posiciones
+   Las filas son adyacentes (margin y gap en 0), asi que la linea va en el
+   borde inferior de cada fila menos la ultima. Mismo gradiente y misma sombra
+   que la divisoria de capitanes y de inicio/historial/perfil, para que las
+   cuatro se vean iguales.
+   -------------------------------------------------------------------------- */
+
+.sorteo-react-page .gf-formation .gf-formation-row:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(245, 216, 103, 0.72) 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Cancha React del sorteo: tamano de carta
+   La carta toma su ancho de .gf-player-slot:
+     min(100%, calc((100cqw - 12px) / var(--gf-line-capacity)))
+   El tope lo fija la capacidad de la linea (minimo 4), asi que en el caso
+   habitual la carta queda mas chica que su celda y sobra verde. Se amplia el
+   tope por --gf-pitch-card-scale.
+
+   Nota: en las lineas que si llegan a la capacidad, el ancho lo limita la
+   celda de la fila, asi que ahi el crecimiento es menor. Ampliarlo mas
+   requeriria cambiar la geometria del campo (columna de etiquetas o padding),
+   que no se toca para no alterar el marco de la cancha.
+   -------------------------------------------------------------------------- */
+
+.sorteo-react-page .gf-formation .gf-player-slot {
+  width: min(100%, calc((100cqw - 12px) / var(--gf-line-capacity) * var(--gf-pitch-card-scale)));
+}
+
+/* La separacion entre cartas tambien cuenta como verde aprovechable. */
+.sorteo-react-page .gf-formation .gf-line-players {
+  gap: 2px;
+}

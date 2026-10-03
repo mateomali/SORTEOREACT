@@ -92,13 +92,6 @@
   const maxDiff = Math.max(0.1, Number(config.maxDiff || 1));
   const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
   const requiredPitchLines = ['ARQ', 'DEF', 'MED', 'DEL'];
-  const fieldStatWeights = {
-    DEF: { defense_physical: 0.25, stamina: 0.17, rhythm: 0.14, technique: 0.12, pass_vision: 0.10, teamwork: 0.10, mentality: 0.08, attack: 0.04 },
-    LAT: { rhythm: 0.20, defense_physical: 0.18, stamina: 0.16, pass_vision: 0.14, technique: 0.12, teamwork: 0.12, attack: 0.06, mentality: 0.02 },
-    MED: { pass_vision: 0.22, technique: 0.18, teamwork: 0.16, rhythm: 0.14, stamina: 0.12, mentality: 0.10, defense_physical: 0.05, attack: 0.03 },
-    DEL: { attack: 0.28, rhythm: 0.18, technique: 0.14, pass_vision: 0.10, teamwork: 0.10, stamina: 0.08, mentality: 0.08, defense_physical: 0.04 },
-  };
-  const goalkeeperStatWeights = { goalkeeper_skill: 0.36, defense_physical: 0.12, rhythm: 0.08, stamina: 0.08, technique: 0.08, pass_vision: 0.06, teamwork: 0.12, mentality: 0.10 };
   const drawBalanceWeights = {
     general: 50,
     attack: 15,
@@ -186,21 +179,14 @@
     .slice(0, 2);
   const positionIndex = (player, position) => parsePositions(player).indexOf(position);
   const hasPosition = (player, position) => positionIndex(player, position) !== -1;
-  const positionFitFactor = (player, position) => {
-    const index = positionIndex(player, position);
-    if (index === 0) return 1;
-    if (index === 1) return 0.95;
-    const naturalLines = parsePositions(player).map(pitchLine);
-    return naturalLines.includes(pitchLine(position)) ? 0.90 : 0.90;
-  };
+  const positionFitFactor = (player, position) => globalThis.GoodfellasRating.fit(parsePositions(player), position);
   const pitchLine = (position) => (position === 'LAT' ? 'DEF' : position);
   const lowRhythm = (player) => statValue(player, 'rhythm') <= 3;
-  const regularityAdjusted = (rating, player) => Math.max(1, Math.min(6, rating * (1 + ((statValue(player, 'regularity') - 3.5) / 50))));
+
   const positionRating = (player, position) => {
-    const weights = position === 'ARQ' ? goalkeeperStatWeights : (fieldStatWeights[position] || fieldStatWeights.MED);
-    const total = Object.entries(weights).reduce((sum, [field, weight]) => sum + (statValue(player, field) * weight), 0);
-    return Math.round(regularityAdjusted(total, player) * positionFitFactor(player, position) * 10) / 10;
-  };
+      const stats = Object.fromEntries(Object.keys(globalThis.GoodfellasRating.policy().weights.MED).concat('goalkeeper_skill', 'regularity').map(field => [field, statValue(player, field)]));
+      return globalThis.GoodfellasRating.position(stats, position, parsePositions(player));
+    };
   const bestNaturalPosition = (player) => parsePositions(player)
     .sort((left, right) => {
       const ratingDiff = positionRating(player, right) - positionRating(player, left);
@@ -213,36 +199,10 @@
   const maxItem = (items, valueGetter) => items.reduce((best, item) => (best === null || valueGetter(item) > valueGetter(best) ? item : best), null);
   const lineLimit = (position) => {
     if (position === 'ARQ') return 1;
-    return Math.max(1, Math.floor(Math.max(0, playersPerTeam - 1) / 2));
+    return playersPerTeam < 8 ? Math.max(0, playersPerTeam - 1) : Math.max(1, Math.floor(Math.max(0, playersPerTeam - 1) / 2));
   };
 
-  const cardRating = (value) => {
-    const clamped = Math.max(1, Math.min(6, Number(value) || 0));
-    const anchors = [
-      [1.0, 35.0],
-      [2.5, 54.0],
-      [3.0, 64.0],
-      [3.2, 69.0],
-      [3.5, 74.0],
-      [3.8, 79.0],
-      [4.0, 81.0],
-      [4.4, 86.0],
-      [4.5, 87.0],
-      [5.0, 92.0],
-      [5.2, 93.0],
-      [5.3, 94.0],
-      [6.0, 99.0],
-    ];
-    for (let index = 0; index < anchors.length - 1; index += 1) {
-      const [fromRating, fromOverall] = anchors[index];
-      const [toRating, toOverall] = anchors[index + 1];
-      if (clamped <= toRating) {
-        const ratio = (clamped - fromRating) / (toRating - fromRating);
-        return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-      }
-    }
-    return 99;
-  };
+  const cardRating = value => globalThis.GoodfellasRating.card(value);
 
   const cardTier = (rating) => {
     const overall = cardRating(rating);
@@ -558,7 +518,7 @@
       statTotals,
       lineCounts,
       pitchCounts,
-      missingLines: requiredPitchLines.filter((line) => (pitchCounts[line] || 0) <= 0),
+      missingLines: requiredPitchLines.filter((line) => (pitchCounts[line] || 0) < (playersPerTeam < 8 && line === 'DEF' ? 2 : 1)),
       overloadedLines: positions.filter((line) => {
         if (line === 'DEF') return (pitchCounts.DEF || 0) > lineLimit(line);
         if (line === 'LAT') return false;

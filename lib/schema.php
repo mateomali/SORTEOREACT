@@ -446,79 +446,15 @@ function backfill_control_schema(PDO $pdo): void
                goalkeeper_skill = COALESCE(goalkeeper_skill, CASE WHEN positions = 'ARQ' OR positions LIKE 'ARQ/%' OR positions LIKE '%/ARQ%' THEN skill ELSE NULL END)"
         );
 
-        $pdo->exec(
-            "UPDATE players
-             SET
-               skill = ROUND(LEAST(6.0, GREATEST(1.0,
-                 CASE
-                   WHEN positions = 'ARQ' OR positions LIKE 'ARQ/%' THEN
-                    (
-                      (COALESCE(goalkeeper_skill, skill) * 0.36)
-                      + (defense_physical * 0.12)
-                      + (rhythm * 0.08)
-                      + (stamina * 0.08)
-                      + (technique * 0.08)
-                      + (pass_vision * 0.06)
-                      + (teamwork * 0.12)
-                      + (mentality * 0.10)
-                     ) * (1 + ((regularity - 3.5) / 50.0))
-                   WHEN positions = 'DEF' OR positions LIKE 'DEF/%' THEN
-                    (
-                      (defense_physical * 0.25)
-                      + (stamina * 0.17)
-                      + (rhythm * 0.14)
-                      + (technique * 0.12)
-                      + (pass_vision * 0.10)
-                      + (teamwork * 0.10)
-                      + (mentality * 0.08)
-                      + (attack * 0.04)
-                     ) * (1 + ((regularity - 3.5) / 50.0))
-                   WHEN positions = 'LAT' OR positions LIKE 'LAT/%' THEN
-                    (
-                      (rhythm * 0.20)
-                      + (defense_physical * 0.18)
-                      + (stamina * 0.16)
-                      + (pass_vision * 0.14)
-                      + (technique * 0.12)
-                      + (teamwork * 0.12)
-                      + (attack * 0.06)
-                      + (mentality * 0.02)
-                     ) * (1 + ((regularity - 3.5) / 50.0))
-                   WHEN positions = 'DEL' OR positions LIKE 'DEL/%' THEN
-                    (
-                      (attack * 0.28)
-                      + (rhythm * 0.18)
-                      + (technique * 0.14)
-                      + (pass_vision * 0.10)
-                      + (teamwork * 0.10)
-                      + (stamina * 0.08)
-                      + (mentality * 0.08)
-                      + (defense_physical * 0.04)
-                     ) * (1 + ((regularity - 3.5) / 50.0))
-                   ELSE
-                     (
-                      (pass_vision * 0.22)
-                      + (technique * 0.18)
-                      + (teamwork * 0.16)
-                      + (rhythm * 0.14)
-                      + (stamina * 0.12)
-                      + (mentality * 0.10)
-                      + (defense_physical * 0.05)
-                      + (attack * 0.03)
-                     ) * (1 + ((regularity - 3.5) / 50.0))
-                 END
-               )),
-                 1
-               ),
-               pace = CASE WHEN rhythm <= 3.0 THEN 'lento' ELSE 'rapido' END
-             WHERE technique IS NOT NULL
-               AND rhythm IS NOT NULL
-               AND pass_vision IS NOT NULL
-               AND defense_physical IS NOT NULL
-               AND attack IS NOT NULL
-               AND teamwork IS NOT NULL
-               AND mentality IS NOT NULL
-               AND regularity IS NOT NULL"
-        );
+        // Use the same effective policy as cards, editors and draws, including custom weights.
+        $players = $pdo->query('SELECT * FROM players')->fetchAll(PDO::FETCH_ASSOC);
+        $updateRating = $pdo->prepare('UPDATE players SET skill = :skill, pace = :pace WHERE id = :id');
+        foreach ($players as $player) {
+            $rating = player_overall_rating($player);
+            $pace = player_pace_from_rhythm(player_effective_stat($player, 'rhythm'));
+            if ((float) $player['skill'] !== $rating || $player['pace'] !== $pace) {
+                $updateRating->execute(['skill' => $rating, 'pace' => $pace, 'id' => $player['id']]);
+            }
+        }
     }
 }

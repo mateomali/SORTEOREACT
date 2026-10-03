@@ -81,10 +81,13 @@ test('prepare, redraw, alternatives, save, reload and continue use the real pers
     await page.locator('.gf-player-preparation').getByRole('button',{name:'Cerrar',exact:true}).click();
     const keepers=page.locator('.gf-goalkeeper-preparation');
     if (await keepers.getByRole('button',{name:'Editar',exact:true}).count()) await keepers.getByRole('button',{name:'Editar',exact:true}).click();
-    // Complete the existing keeper controls; no automatic selection rules are changed.
-    const natural=keepers.locator('label').filter({hasText:'FRANCOK'}).locator('input[type=checkbox]');
+    // Derive keeper controls from the fixture roster; imports may change names.
+    const roster = stateOf(id).players;
+    const keeper = roster.find(player => player.positions.split('/')[0] === 'ARQ');
+    const second = roster.find(player => player.id !== keeper.id && player.positions.split('/').includes('ARQ'));
+    const natural=keepers.locator('label').filter({hasText:keeper.name}).locator('input[type=checkbox]');
     await natural.uncheck(); await natural.check();
-    await keepers.locator('label').filter({hasText:'GUILLE'}).locator('input[type=checkbox]').check();
+    await keepers.locator('label').filter({hasText:second.name}).locator('input[type=checkbox]').check();
     await expect(keepers.locator('input[type=checkbox]:checked')).toHaveCount(2);
     await page.locator('#generateTeamsButton').click();
     await expect(page.locator('.team-formation')).toHaveCount(2,{timeout:60000});

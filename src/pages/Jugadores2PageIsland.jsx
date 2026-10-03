@@ -32,14 +32,7 @@ const cardPalettes = {
 };
 
 const statFields = ['technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
-const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 99]];
-const positionWeights = {
-  ARQ: { goalkeeper_skill: 0.36, defense_physical: 0.12, rhythm: 0.08, stamina: 0.08, technique: 0.08, pass_vision: 0.06, teamwork: 0.12, mentality: 0.10 },
-  DEF: { defense_physical: 0.25, stamina: 0.17, rhythm: 0.14, technique: 0.12, pass_vision: 0.10, teamwork: 0.10, mentality: 0.08, attack: 0.04 },
-  LAT: { rhythm: 0.20, defense_physical: 0.18, stamina: 0.16, pass_vision: 0.14, technique: 0.12, teamwork: 0.12, attack: 0.06, mentality: 0.02 },
-  DEL: { attack: 0.28, rhythm: 0.18, technique: 0.14, pass_vision: 0.10, teamwork: 0.10, stamina: 0.08, mentality: 0.08, defense_physical: 0.04 },
-  MED: { pass_vision: 0.22, technique: 0.18, teamwork: 0.16, rhythm: 0.14, stamina: 0.12, mentality: 0.10, defense_physical: 0.05, attack: 0.03 },
-};
+
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
 const toolbarLinkClass = `inline-flex min-h-10 items-center justify-center rounded-lg border border-[#adc8bb] bg-white px-3 text-xs font-extrabold text-[#063d2b] no-underline transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
@@ -168,6 +161,7 @@ function normalizeSix(value, fallback = 3) {
 }
 
 function sixFromOverall(value) {
+  const anchors = globalThis.GoodfellasRating.policy().anchors;
   const overall = Math.max(35, Math.min(99, Math.round(Number(value) || 64)));
   for (let index = 0; index < anchors.length - 1; index += 1) {
     const [fromRating, fromOverall] = anchors[index];
@@ -181,16 +175,7 @@ function sixFromOverall(value) {
 }
 
 function overallFromSix(value) {
-  const clamped = Math.max(1, Math.min(6, Number(value) || 1));
-  for (let index = 0; index < anchors.length - 1; index += 1) {
-    const [fromRating, fromOverall] = anchors[index];
-    const [toRating, toOverall] = anchors[index + 1];
-    if (clamped <= toRating) {
-      const ratio = (clamped - fromRating) / (toRating - fromRating);
-      return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-    }
-  }
-  return 99;
+  return globalThis.GoodfellasRating.card(value);
 }
 
 function toneClass(overall) {
@@ -252,12 +237,9 @@ function playerForCardPosition(player, position) {
   };
 }
 
-function calculateOverallForPosition(overallValues, position) {
-  const weights = positionWeights[position] || positionWeights.MED;
-  let rating = Object.entries(weights).reduce((total, [field, weight]) => total + (sixFromOverall(overallValues[field] || 64) * weight), 0);
-  const regularity = sixFromOverall(overallValues.regularity || 74);
-  rating = Math.max(1, Math.min(6, rating * (1 + ((regularity - 3.5) / 50))));
-  return overallFromSix(Math.round(rating * 10) / 10);
+function calculateOverallForPosition(overallValues, position, positions = [position]) {
+  const stats = Object.fromEntries(Object.entries(overallValues).map(([field, value]) => [field, sixFromOverall(value)]));
+  return globalThis.GoodfellasRating.card(globalThis.GoodfellasRating.position(stats, position, positions));
 }
 
 function Arrow({ form }) {
@@ -596,7 +578,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
     const positionsToRate = [primary, secondary].filter(Boolean);
     return positionsToRate.map((position) => ({
       position,
-      overall: calculateOverallForPosition(overallValues, position),
+      overall: calculateOverallForPosition(overallValues, position, positionsToRate),
     }));
   }, [overallValues, primary, secondary]);
   const displayedOverall = previewPositionRatings[0]?.overall || calculateOverallForPosition(overallValues, primary || 'MED');

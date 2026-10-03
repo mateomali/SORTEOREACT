@@ -13,19 +13,7 @@ const goodfellasInitPlayers = () => {
       return Math.max(1, Math.min(6, Math.round(base * 10) / 10));
     };
     const formatRating = (rating) => Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
-    const cardOverallFromSix = (value) => {
-      const clamped = Math.max(1, Math.min(6, Number(value) || 1));
-      const anchors = [[1, 35], [2.5, 54], [3, 64], [3.2, 69], [3.5, 74], [3.8, 79], [4, 81], [4.4, 86], [4.5, 87], [5, 92], [5.2, 93], [5.3, 94], [6, 98]];
-      for (let index = 0; index < anchors.length - 1; index += 1) {
-        const [fromRating, fromOverall] = anchors[index];
-        const [toRating, toOverall] = anchors[index + 1];
-        if (clamped <= toRating) {
-          const ratio = (clamped - fromRating) / (toRating - fromRating);
-          return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-        }
-      }
-      return 98;
-    };
+    const cardOverallFromSix = value => globalThis.GoodfellasRating.card(value);
     const statBarColor = (value) => {
       const rating = Number(value) || 1;
       if (rating >= 5.95) return '#16a34a';
@@ -1462,66 +1450,13 @@ const goodfellasInitPlayers = () => {
       return `${'\u2605'.repeat(filled)}${'\u2606'.repeat(Math.max(0, 6 - filled))}`;
     };
 
-    const weightsByPosition = {
-      ARQ: {
-        goalkeeper_skill: 0.36,
-        defense_physical: 0.12,
-        rhythm: 0.08,
-        stamina: 0.08,
-        technique: 0.08,
-        pass_vision: 0.06,
-        teamwork: 0.12,
-        mentality: 0.10,
-      },
-      DEF: {
-        defense_physical: 0.25,
-        stamina: 0.17,
-        rhythm: 0.14,
-        technique: 0.12,
-        pass_vision: 0.10,
-        teamwork: 0.10,
-        mentality: 0.08,
-        attack: 0.04,
-      },
-      LAT: {
-        rhythm: 0.20,
-        defense_physical: 0.18,
-        stamina: 0.16,
-        pass_vision: 0.14,
-        technique: 0.12,
-        teamwork: 0.12,
-        attack: 0.06,
-        mentality: 0.02,
-      },
-      MED: {
-        pass_vision: 0.22,
-        technique: 0.18,
-        teamwork: 0.16,
-        rhythm: 0.14,
-        stamina: 0.12,
-        mentality: 0.10,
-        defense_physical: 0.05,
-        attack: 0.03,
-      },
-      DEL: {
-        attack: 0.28,
-        rhythm: 0.18,
-        technique: 0.14,
-        pass_vision: 0.10,
-        teamwork: 0.10,
-        stamina: 0.08,
-        mentality: 0.08,
-        defense_physical: 0.04,
-      },
-    };
 
     const positionRatingForScope = (scope, position) => {
-      const getValue = (name) => Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3));
-      const normalizedPosition = String(position || 'MED').toUpperCase();
-      const weights = weightsByPosition[normalizedPosition] || weightsByPosition.MED;
-      const raw = Object.entries(weights).reduce((total, [field, weight]) => total + (getValue(field) * weight), 0);
-      const regularityFactor = 1 + ((getValue('regularity') - 3.5) / 50);
-      return Math.max(1, Math.min(6, Math.round(raw * regularityFactor * 10) / 10));
+      const stats = Object.fromEntries([...statNames, 'goalkeeper_skill'].map(name => [name,
+        Number(scope.querySelector(`[data-stat-rating-input][name="${name}"]`)?.value || (name === 'regularity' ? 3.5 : 3))]));
+      const role = String(position || 'MED').toUpperCase();
+      const positions = selectedPositionsInOrder(scope);
+      return globalThis.GoodfellasRating.position(stats, role, positions.length ? positions : [role]);
     };
 
     const updatePositionSimulation = (scope) => {

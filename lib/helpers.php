@@ -284,60 +284,18 @@ function player_field_stat_fields(): array
     return ['technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 }
 
+function player_rating_policy(): array
+{
+    static $policy = null;
+    if ($policy === null) {
+        $policy = json_decode(file_get_contents(__DIR__ . '/../assets/player-rating-policy.json'), true, 512, JSON_THROW_ON_ERROR);
+    }
+    return $policy;
+}
+
 function player_position_stat_weight_defaults(): array
 {
-    return [
-        'ARQ' => [
-            'goalkeeper_skill' => 0.36,
-            'defense_physical' => 0.12,
-            'rhythm' => 0.08,
-            'stamina' => 0.08,
-            'technique' => 0.08,
-            'pass_vision' => 0.06,
-            'teamwork' => 0.12,
-            'mentality' => 0.10,
-        ],
-        'DEF' => [
-            'defense_physical' => 0.25,
-            'stamina' => 0.17,
-            'rhythm' => 0.14,
-            'technique' => 0.12,
-            'pass_vision' => 0.10,
-            'teamwork' => 0.10,
-            'mentality' => 0.08,
-            'attack' => 0.04,
-        ],
-        'LAT' => [
-            'rhythm' => 0.20,
-            'defense_physical' => 0.18,
-            'stamina' => 0.16,
-            'pass_vision' => 0.14,
-            'technique' => 0.12,
-            'teamwork' => 0.12,
-            'attack' => 0.06,
-            'mentality' => 0.02,
-        ],
-        'MED' => [
-            'pass_vision' => 0.22,
-            'technique' => 0.18,
-            'teamwork' => 0.16,
-            'rhythm' => 0.14,
-            'stamina' => 0.12,
-            'mentality' => 0.10,
-            'defense_physical' => 0.05,
-            'attack' => 0.03,
-        ],
-        'DEL' => [
-            'attack' => 0.28,
-            'rhythm' => 0.18,
-            'technique' => 0.14,
-            'pass_vision' => 0.10,
-            'teamwork' => 0.10,
-            'stamina' => 0.08,
-            'mentality' => 0.08,
-            'defense_physical' => 0.04,
-        ],
-    ];
+    return player_rating_policy()['weights'];
 }
 
 function player_normalize_position_stat_weights(array $weights): array
@@ -365,6 +323,14 @@ function player_normalize_position_stat_weights(array $weights): array
     return $normalized;
 }
 
+function player_resolve_position_stat_weights(array $weights): array
+{
+    $normalized = player_normalize_position_stat_weights($weights);
+    // Upgrade the previous shipped defaults; preserve genuinely customized weights.
+    return $normalized === player_normalize_position_stat_weights(player_rating_policy()['legacyWeights'])
+        ? player_normalize_position_stat_weights(player_position_stat_weight_defaults()) : $normalized;
+}
+
 function player_position_stat_weights_config(): array
 {
     static $cached = null;
@@ -377,7 +343,7 @@ function player_position_stat_weights_config(): array
         $stmt->execute(['setting_key' => 'position_stat_weights']);
         $raw = $stmt->fetchColumn();
         $decoded = $raw ? json_decode((string) $raw, true) : null;
-        $cached = player_normalize_position_stat_weights(is_array($decoded) ? $decoded : $defaults);
+        $cached = player_resolve_position_stat_weights(is_array($decoded) ? $decoded : $defaults);
     } catch (Throwable) {
         $cached = player_normalize_position_stat_weights($defaults);
     }
@@ -450,20 +416,13 @@ function player_overall_rating(array $player): float
 function player_position_rating(array $player, string $position, bool $ignorePositionFit = false): float
 {
     $position = strtoupper(trim($position));
-    $fitFactor = $ignorePositionFit ? 1.0 : player_position_fit_factor($player, $position);
-    if ($position === 'ARQ') {
-        $total = 0.0;
-        foreach (player_goalkeeper_stat_weights() as $field => $weight) {
-            $total += player_effective_stat($player, $field) * $weight;
-        }
-        return round(player_apply_regularity_adjustment($total, $player) * $fitFactor, 1);
-    }
-
+    $weights = $position === 'ARQ' ? player_goalkeeper_stat_weights() : player_field_stat_weights($position);
     $total = 0.0;
-    foreach (player_field_stat_weights($position) as $field => $weight) {
+    foreach ($weights as $field => $weight) {
         $total += player_effective_stat($player, $field) * $weight;
     }
-    return round(player_apply_regularity_adjustment($total, $player) * $fitFactor, 1);
+    $fit = $ignorePositionFit ? 1.0 : player_position_fit_factor($player, $position);
+    return round(player_apply_regularity_adjustment($total / array_sum($weights), $player) * $fit, 1);
 }
 
 function player_best_natural_position(array $player): string
@@ -492,7 +451,8 @@ function player_best_natural_rating(array $player): float
 function player_apply_regularity_adjustment(float $baseRating, array $player): float
 {
     $regularity = player_effective_stat($player, 'regularity');
-    $factor = 1.0 + (($regularity - 3.5) / 50.0);
+    $policy = player_rating_policy();
+    $factor = 1.0 + (($regularity - $policy['regularityCenter']) / $policy['regularityDivisor']);
     return max(1.0, min(6.0, $baseRating * $factor));
 }
 
@@ -561,11 +521,10 @@ function player_position_fit_factor(array $player, string $position): float
         return 1.0;
     }
     if ($naturalIndex === 1) {
-        return 0.95;
+        return player_rating_policy()['secondaryFit'];
     }
 
-    $naturalLines = array_map(static fn(string $naturalPosition): string => player_pitch_line($naturalPosition), $naturalPositions);
-    return in_array(player_pitch_line($position), $naturalLines, true) ? 0.90 : 0.90;
+    return player_rating_policy()['outsideFit'];
 }
 
 function parse_positions_csv(string $positions): array
