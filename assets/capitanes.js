@@ -490,17 +490,15 @@ const goodfellasInitCaptains = () => {
           sum--;
         }
 
-        if (total + 1 < 8) {
-          while (counts.DEF + counts.LAT < 2) {
-            const donor = ['MED', 'DEL'].sort((a, b) => counts[b] - counts[a]).find(line => counts[line] > 1);
-            if (!donor) break;
-            counts[donor]--;
-            counts.DEF++;
-          }
+        while (counts.DEF + counts.LAT < 2) {
+          const donor = ['MED', 'DEL'].sort((a, b) => counts[b] - counts[a]).find(line => counts[line] > 1);
+          if (!donor) break;
+          counts[donor]--;
+          counts.DEF++;
         }
         for (const required of ['MED', 'DEL']) {
           while (counts[required] < 1) {
-            const donor = lines.find(line => line !== required && (['DEF', 'LAT'].includes(line) ? counts.DEF + counts.LAT > (total + 1 < 8 ? 2 : 1) && counts[line] > 0 : counts[line] > 1));
+            const donor = lines.find(line => line !== required && (['DEF', 'LAT'].includes(line) ? counts.DEF + counts.LAT > 2 && counts[line] > 0 : counts[line] > 1));
             if (!donor) break;
             counts[donor]--;
             counts[required]++;
@@ -538,7 +536,7 @@ const goodfellasInitCaptains = () => {
           assigned: Number(number) === Number(teamNumber) && Number(player.id) === Number(playerId)
             ? nextPosition : formationDrafts[number]?.[player.id] || player.assigned_position || player.primary_position || 'MED',
         })));
-        if (!globalThis.GoodfellasFormation.validate(proposed, {DEF:2, MED: players.length < 8 ? 1 : 2, DEL:1})) {
+        if (!globalThis.GoodfellasFormation.validate(proposed, {DEF:2, MED: 1, DEL:1})) {
           showMessage('Solo se permite adaptar posiciones para cubrir faltantes reales de jugadores naturales o secundarios.', 'error');
           return false;
         }
@@ -551,7 +549,7 @@ const goodfellasInitCaptains = () => {
           showMessage('Cada equipo puede tener un solo arquero.', 'error');
           return false;
         }
-        if (players.length < 8 && pitchLineForPosition(currentPosition) === 'DEF' && pitchLineForPosition(nextPosition) !== 'DEF' && pitchCounts.DEF <= 2) {
+        if (pitchLineForPosition(currentPosition) === 'DEF' && pitchLineForPosition(nextPosition) !== 'DEF' && pitchCounts.DEF <= 2) {
           showMessage('Cada equipo debe mantener al menos 2 jugadores en defensa (DEF/LAT).', 'error');
           return false;
         }
@@ -574,9 +572,9 @@ const goodfellasInitCaptains = () => {
         })));
         const coverage = teams.every(team => {
           const count = line => team.filter(p => pitchLineForPosition(p.assigned) === line).length;
-          return count('ARQ') === 1 && count('DEF') >= (team.length < 8 ? 2 : 1) && count('MED') >= 1 && count('DEL') >= 1;
+          return count('ARQ') === 1 && count('DEF') >= 2 && count('MED') >= 1 && count('DEL') >= 1;
         });
-        return coverage && globalThis.GoodfellasFormation.validate(teams, {DEF:2,MED:teams[0]?.length < 8 ? 1 : 2,DEL:1});
+        return coverage && globalThis.GoodfellasFormation.validate(teams, {DEF:2,MED:1,DEL:1});
       };
       const rejectInvalidDraft = teamNumber => {
         if (formationDraftIsValid()) return false;

@@ -30,8 +30,24 @@ foreach (range(3, 7) as $size) {
         }
     }
 }
-if (draw_pitch_line_minimum('MED', 8) !== 2 || draw_main_field_line_limit(8) !== 3) {
-    throw new RuntimeException('Rules for eight-player teams must remain unchanged.');
+if (draw_pitch_line_minimum('MED', 8) !== 1 || draw_main_field_line_limit(8) !== 3) {
+    throw new RuntimeException('Eight-player teams must require one midfielder.');
+}
+foreach (range(8, 11) as $size) {
+    foreach ([
+        ['ARQ'=>1,'DEF'=>2,'LAT'=>0,'MED'=>1,'DEL'=>$size-4],
+        ['ARQ'=>1,'DEF'=>0,'LAT'=>2,'MED'=>1,'DEL'=>$size-4],
+        ['ARQ'=>1,'DEF'=>1,'LAT'=>0,'MED'=>3,'DEL'=>$size-5],
+    ] as $counts) {
+        $pitch = draw_pitch_line_counts($counts);
+        $expected = $pitch['DEF'] >= 2 && $pitch['MED'] >= 1 && $pitch['DEL'] >= 1
+            && max($pitch['DEF'], $pitch['MED'], $pitch['DEL']) <= draw_main_field_line_limit($size);
+        if (draw_line_counts_fit_limits($counts, $size) !== $expected) throw new RuntimeException('Large-team minimum mismatch');
+        try { validate_captain_formation_line_counts($counts); $captainValid = true; }
+        catch (RuntimeException) { $captainValid = false; }
+        if ($captainValid !== ($pitch['DEF'] >= 2 && max($pitch['DEF'], $pitch['MED'], $pitch['DEL']) <= 4)) throw new RuntimeException('Captain defense minimum mismatch');
+        $cases[] = ['size'=>$size, 'counts'=>$counts, 'valid'=>$expected];
+    }
 }
 $roster = [['id' => 1, 'name' => 'Keeper', 'positions' => 'ARQ', 'skill' => 3.5]];
 foreach (range(2, 10) as $id) {

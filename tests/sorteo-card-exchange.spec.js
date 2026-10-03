@@ -14,6 +14,22 @@ test('player detail offers valid exchanges on desktop and mobile',async({page})=
     await page.locator('#generateTeamsButton').click();
     const cards=page.locator('[data-sorteo-drag-player][data-team-index="0"]:not([data-assigned-position="ARQ"])');
     await expect(cards.first()).toBeVisible();
+    const assertCoverage = async () => {
+      const teams = await page.locator('[data-sorteo-drag-player]').evaluateAll(cards => cards.reduce((teams, card) => {
+        const counts = teams[card.dataset.teamIndex] ||= {ARQ:0,DEF:0,MED:0,DEL:0};
+        const role = card.dataset.assignedPosition === 'LAT' ? 'DEF' : card.dataset.assignedPosition;
+        counts[role] = (counts[role] || 0) + 1;
+        return teams;
+      }, {}));
+      expect(Object.keys(teams)).toHaveLength(2);
+      for (const counts of Object.values(teams)) {
+        expect(counts.ARQ).toBe(1);
+        expect(counts.DEF).toBeGreaterThanOrEqual(2);
+        expect(counts.MED).toBeGreaterThanOrEqual(1);
+        expect(counts.DEL).toBeGreaterThanOrEqual(1);
+      }
+    };
+    await assertCoverage();
     for(const mobile of [false,true]) {
       await page.setViewportSize({width:mobile?390:1440,height:1000});
       const source=cards.first();const key=await source.getAttribute('data-player-key');
@@ -28,6 +44,7 @@ test('player detail offers valid exchanges on desktop and mobile',async({page})=
       const targetKey=await target.getAttribute('data-exchange-player');
       await target.click();
       await expect(dialog).toHaveCount(0);
+      await assertCoverage();
       await expect(page.locator(`[data-sorteo-drag-player][data-player-key="${key}"]`)).toHaveAttribute('data-team-index','1');
       await expect(page.locator(`[data-sorteo-drag-player][data-player-key="${targetKey}"]`)).toHaveAttribute('data-team-index','0');
       await page.locator(`[data-undo-player-exchange="${key}"]`).click();

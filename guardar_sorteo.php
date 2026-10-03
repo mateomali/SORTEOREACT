@@ -346,13 +346,12 @@ foreach ($teams as $team) {
         echo json_encode(['ok' => false, 'message' => 'Cada equipo debe tener al menos 1 jugador en medio y 1 en ataque.']);
         exit;
     }
-    if (count($starters) < 8) {
-        $defenders = array_filter($starters, static fn(array $p): bool => in_array(normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p), ['DEF', 'LAT'], true));
-        if (count($defenders) < 2) {
-            http_response_code(422);
-            echo json_encode(['ok' => false, 'message' => 'Cada equipo de menos de 8 jugadores necesita al menos 2 en defensa (DEF/LAT).']);
-            exit;
-        }
+
+    $defenders = array_filter($starters, static fn(array $p): bool => in_array(normalize_assigned_position_legacy((string) ($p['assigned_position'] ?? ''), $p), ['DEF', 'LAT'], true));
+    if (count($defenders) < 2) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'message' => 'Cada equipo necesita al menos 2 en defensa (DEF/LAT).']);
+        exit;
     }
 }
 

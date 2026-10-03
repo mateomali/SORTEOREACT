@@ -266,11 +266,9 @@ function validate_captain_formation_line_counts(array $counts): void
         'MED' => (int) ($counts['MED'] ?? 0),
         'DEL' => (int) ($counts['DEL'] ?? 0),
     ];
-    if (array_sum($counts) < 8) {
-        if ($pitchCounts['DEF'] < 2) throw new RuntimeException('Cada equipo debe mantener al menos 2 jugadores en defensa (DEF/LAT).');
-        if ($pitchCounts['MED'] < 1 || $pitchCounts['DEL'] < 1) throw new RuntimeException('Cada equipo debe tener al menos 1 jugador en medio y 1 en ataque.');
-        return;
-    }
+    if ($pitchCounts['DEF'] < 2) throw new RuntimeException('Cada equipo debe mantener al menos 2 jugadores en defensa (DEF/LAT).');
+    if ($pitchCounts['MED'] < 1 || $pitchCounts['DEL'] < 1) throw new RuntimeException('Cada equipo debe tener al menos 1 jugador en medio y 1 en ataque.');
+    if (array_sum($counts) < 8) return;
     foreach ($pitchCounts as $count) {
         if ($count < 1) throw new RuntimeException('Ninguna linea de campo puede quedar vacia.');
         if ($count > 4) {

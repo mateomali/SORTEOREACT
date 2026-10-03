@@ -579,35 +579,18 @@ function fieldLineLimit(position, teamSize) {
 }
 
 function fieldLineMinimum(position, teamSize) {
-  const line = String(position || '').toUpperCase();
-  const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
+  const line = pitchLineForPosition(String(position || '').toUpperCase());
   if (line === 'ARQ') return 1;
-  if (Number(teamSize) < 8) return pitchLineForPosition(line) === 'DEF' ? 2 : (['MED', 'DEL'].includes(line) ? 1 : 0);
-  if (fieldPlayers === 4) return REQUIRED_FIELD_LINES.includes(line) ? 1 : 0;
-  if (fieldPlayers < 5) return 0;
-  if (line === 'MED') return Number(teamSize) < 7 ? 1 : 2;
   if (line === 'DEF') return 2;
-  if (line === 'DEL') return 1;
-  return 0;
+  return ['MED', 'DEL'].includes(line) ? 1 : 0;
 }
 
 function logicalLineMinimum(position, teamSize) {
-  const line = String(position || '').toUpperCase();
-  if (line === 'ARQ') return 1;
-  if (Number(teamSize) < 8) return ['MED', 'DEL'].includes(line) ? 1 : 0;
-  if (!FIELD_LINES.includes(line)) return 0;
-  const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
-  if (line === 'LAT') return 0;
-  return fieldPlayers >= FIELD_LINES.length ? 1 : 0;
+  return ['ARQ', 'MED', 'DEL'].includes(String(position || '').toUpperCase()) ? 1 : 0;
 }
 
 function logicalLineMinimumForCounts(position, teamSize, counts = {}) {
-  if (Number(teamSize) < 8) return ['ARQ', 'MED', 'DEL'].includes(String(position).toUpperCase()) ? 1 : 0;
-  const line = String(position || '').toUpperCase();
-  const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
-  if (line === 'DEF' && defenseTotal <= 2) return fieldLineMinimum('DEF', teamSize);
-  if (line === 'LAT' && defenseTotal <= 2) return 0;
-  return logicalLineMinimum(line, teamSize);
+  return logicalLineMinimum(position, teamSize);
 }
 
 function pitchLineCountsFromLogical(logicalCounts = {}) {
@@ -623,12 +606,7 @@ function fieldLineCountsFitLimits(counts, teamSize) {
   const pitchCounts = pitchLineCountsFromLogical(counts);
   const max = maxFieldPlayersPerLine(teamSize);
   const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
-  const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
-  const defenseRolesFit = Number(teamSize) < 8 || (defenseTotal <= 2
-    ? Number(counts?.LAT || 0) === 0
-    : Number(counts?.LAT || 0) === 0 || Number(counts?.DEF || 0) >= 1);
   return (!hasGoalkeeperCount || pitchCounts.ARQ === fieldLineMinimum('ARQ', teamSize))
-    && defenseRolesFit
     && REQUIRED_FIELD_LINES.every((line) => (
       pitchCounts[line] >= fieldLineMinimum(line, teamSize)
       && pitchCounts[line] <= max
@@ -659,13 +637,6 @@ function lineCountLabel(line, pitchCount = false) {
 function lineCountViolationMessage(counts, teamSize, { includeLogical = true } = {}) {
   const pitchCounts = pitchLineCountsFromLogical(counts);
   const max = maxFieldPlayersPerLine(teamSize);
-  const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
-  if (teamSize >= 8 && defenseTotal <= 2 && Number(counts?.LAT || 0) > 0) {
-    return 'No se puede mover: con 2 jugadores en DEF/LAT, ambos deben quedar como DEF.';
-  }
-  if (teamSize >= 8 && defenseTotal > 2 && Number(counts?.LAT || 0) > 0 && Number(counts?.DEF || 0) < 1) {
-    return 'No se puede mover: para usar LAT tiene que quedar al menos un DEF central.';
-  }
   const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
   if (hasGoalkeeperCount) {
     const requiredGoalkeepers = fieldLineMinimum('ARQ', teamSize);
@@ -1138,7 +1109,7 @@ function rosterFormationRules(players, numTeams, teamSize) {
     }
   }
   const rules = Object.fromEntries(REQUIRED_FIELD_LINES.map((line, index) => [line, {
-    minimum: teamSize < 8 ? (line === 'DEF' ? 2 : 1) : Math.max(line === 'DEF' ? 2 : 1, minimum[index]),
+    minimum: fieldLineMinimum(line, teamSize),
     maximum: Math.max(maxFieldPlayersPerLine(teamSize), Math.ceil(field.filter(player => pitchLineForPosition(getPrimaryPlayerPosition(player)) === line).length / Math.max(1, numTeams))),
     shortage: Math.max(0, fieldLineMinimum(line, teamSize) - minimum[index]),
   }]));

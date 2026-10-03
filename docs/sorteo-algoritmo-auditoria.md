@@ -151,3 +151,14 @@ del sorteo: se imprime evaluación central con métricas por equipo, gaps de cad
 línea, máximo gap, total, ritmo, costo y restricciones. Desactivado por defecto.
 Los resultados de pruebas se guardan en `.tmp/sorteo-football-results.json` y
 `.tmp/sorteo-football-browser-results.json`.
+
+
+### M?nimos obligatorios por equipo
+
+Para cualquier tama?o de equipo, los titulares deben tener exactamente 1 ARQ,
+al menos 2 jugadores en la l?nea defensiva (DEF y LAT sumados), 1 MED y 1 DEL.
+Los suplentes no cuentan para estos m?nimos. Con menos de 5 titulares no es
+posible cubrirlos. La generaci?n, optimizaci?n, cambios de formaci?n,
+intercambios y validaci?n del servidor conservan esta cobertura. Las posiciones
+secundarias siguen disponibles; la adaptaci?n solo cubre faltantes reales del
+plantel. Un equipo de 8 o m?s jugadores tambi?n puede jugar con un ?nico MED.
