@@ -1,0 +1,52 @@
+# Goodfellas Futbol - configuracion Apache para Hostinger.
+# Generado por scripts/create-hostinger-secure-bundle.ps1
+# Los patrones son relativos (sin ^/) para funcionar tanto en la raiz del
+# dominio como en un subdirectorio (por ejemplo /sorteo).
+
+DirectoryIndex index.php
+
+AddType application/vnd.android.package-archive .apk
+
+# Sin listado de directorios.
+Options -Indexes
+
+# --- Archivos que nunca deben servirse por HTTP ------------------------------
+<FilesMatch "^(config\.php|config\.local\.php|database\.sql|jugadores\.csv|package(-lock)?\.json|composer\.(json|lock)|README\.md|php\.ini|\.user\.ini|\.htaccess|\.htpasswd|\.env.*|\.git.*)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# --- Extensiones que no forman parte del runtime -----------------------------
+# assets/ solo contiene .js, .css, .png, .jpg y .svg, por lo que bloquear estas
+# extensiones no afecta a ninguna peticion legitima de la aplicacion.
+# Se exceptua robots.txt con un lookahead negativo: si el hosting tiene uno,
+# bloquearlo afectaria al indexado del sitio.
+<FilesMatch "^(?!robots\.txt$).*\.(sql|sqlite|db|csv|md|log|ps1|sh|bat|cmd|bak|old|orig|save|swp|ini|yml|yaml|json|lock|dist|txt|tmpl|tpl)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# --- Directorios de desarrollo que nunca deben existir en produccion ---------
+RedirectMatch 404 (?i)/(scripts|node_modules|vendor|src|tests|test-results|docs|outputs|storage|dist)(/|$)
+
+# --- Datos locales y copias de seguridad -------------------------------------
+RedirectMatch 404 (?i)/(logs|backup|tmp)(/|$)
+# Se mantienen los bloqueos del .htaccess anterior (/.git, /.tmp) y se suman
+# los directorios de trabajo habituales del proyecto.
+RedirectMatch 404 (?i)/\.(git|svn|hg|env|vscode|idea|tmp|tools|deploy|DS_Store)(/|$)
+
+# --- Diagnostico sin autenticacion (excluido de este bundle) -----------------
+RedirectMatch 404 (?i)/hostinger_diag\.php$
+
+# --- Acceso directo a librerias internas -------------------------------------
+# lib/ e includes/ solo se cargan con require __DIR__ desde PHP; ninguna pagina
+# ni asset los solicita por HTTP.
+RedirectMatch 404 (?i)/(lib|includes)/

@@ -304,6 +304,8 @@ foreach ($bad in $forbiddenNames) {
 # b) Ninguna extension de desarrollo.
 $forbiddenExtensions = @('.sql', '.csv', '.ps1', '.md', '.json', '.txt', '.log', '.yml', '.yaml', '.ini', '.bak', '.html')
 foreach ($rel in $bundledRelative) {
+    # Politica de valoracion leida por PHP en runtime; sigue bloqueada por HTTP.
+    if ($rel.Replace('\', '/') -eq 'assets/player-rating-policy.json') { continue }
     if ($forbiddenExtensions -contains ([System.IO.Path]::GetExtension($rel)).ToLowerInvariant()) {
         $problems.Add("Extension no permitida en el bundle: $rel")
     }
@@ -319,7 +321,7 @@ foreach ($dir in @('scripts', 'node_modules', 'src', 'tests', 'docs', 'backup', 
 # d) Ninguna credencial hardcodeada ni secreto local.
 #    Nota: [System.IO.Path]::GetExtension('.htaccess') devuelve cadena vacia,
 #    por eso tambien se comparan nombres sin extension.
-$textExtensions = @('.php', '.js', '.css', '.svg')
+$textExtensions = @('.php', '.js', '.css', '.svg', '.json')
 $textFileNames  = @('.htaccess')
 foreach ($file in $bundledFiles) {
     $isText = ($textExtensions -contains $file.Extension.ToLowerInvariant()) -or ($textFileNames -contains $file.Name)
@@ -381,7 +383,11 @@ Write-Ok "El .htaccess conserva las $($requiredHtaccessRules.Count) protecciones
 # Validacion de sintaxis PHP
 # ---------------------------------------------------------------------------
 $phpFiles = $bundledFiles | Where-Object { $_.Extension -ieq '.php' }
-$phpExe = (Get-Command php -ErrorAction SilentlyContinue).Source
+$phpCommand = Get-Command php -ErrorAction SilentlyContinue
+$phpExe = if ($phpCommand) { $phpCommand.Source } else { $null }
+if (-not $phpExe -and (Test-Path -LiteralPath 'C:\xampp\php\php.exe')) {
+    $phpExe = 'C:\xampp\php\php.exe'
+}
 
 if ($phpExe -and -not $SkipPhpLint) {
     Write-Step "Validando sintaxis PHP de $($phpFiles.Count) archivo(s) con $phpExe"
@@ -460,6 +466,9 @@ foreach ($required in @('index.php', 'configuracion.php', 'goodfellas.apk', 'ass
     }
 }
 Write-Ok 'Todos los archivos requeridos presentes.'
+if ($entryNames -notcontains 'assets/player-rating-policy.json') {
+    throw 'Falta la politica de valoracion requerida por PHP. Abortado.'
+}
 if ($entryNames -contains 'config.php') { throw 'El ZIP contiene config.php. Abortado.' }
 if ($entryNames | Where-Object { $_ -like '*hostinger_diag.php' }) { throw 'El ZIP contiene hostinger_diag.php. Abortado.' }
 if ($entryNames -contains 'assets/tailwind.input.css') { throw 'El ZIP contiene el origen de Tailwind. Abortado.' }
@@ -503,6 +512,7 @@ $reportLines.Add('Archivos de raiz excluidos:')
 foreach ($f in $skippedRootPhp) { $reportLines.Add("  - $f") }
 $reportLines.Add('')
 $reportLines.Add('Directorios incluidos: assets/ (sin tailwind.input.css), includes/, lib/, uploads/.htaccess')
+$reportLines.Add('Excepcion runtime: assets/player-rating-policy.json (leido por PHP, bloqueado por HTTP y escaneado por secretos).')
 $reportLines.Add('Directorios excluidos: scripts/, src/, tests/, docs/, backup/, logs/, tmp/, outputs/, dist/, node_modules/, android-goodfellas/, uploads/players/')
 $reportLines.Add('')
 $reportLines.Add('Endurecimiento aplicado en .htaccess:')
