@@ -153,12 +153,19 @@ Los resultados de pruebas se guardan en `.tmp/sorteo-football-results.json` y
 `.tmp/sorteo-football-browser-results.json`.
 
 
-### M?nimos obligatorios por equipo
+### Mínimos obligatorios por equipo
 
-Para cualquier tama?o de equipo, los titulares deben tener exactamente 1 ARQ,
-al menos 2 jugadores en la l?nea defensiva (DEF y LAT sumados), 1 MED y 1 DEL.
-Los suplentes no cuentan para estos m?nimos. Con menos de 5 titulares no es
-posible cubrirlos. La generaci?n, optimizaci?n, cambios de formaci?n,
-intercambios y validaci?n del servidor conservan esta cobertura. Las posiciones
-secundarias siguen disponibles; la adaptaci?n solo cubre faltantes reales del
-plantel. Un equipo de 8 o m?s jugadores tambi?n puede jugar con un ?nico MED.
+Para cualquier tamaño de equipo, los titulares deben tener exactamente 1 ARQ,
+al menos 2 jugadores en la línea defensiva (DEF y LAT sumados), 1 MED y 1 DEL.
+Los suplentes no cuentan para estos mínimos. Con menos de 5 titulares no es
+posible cubrirlos. La generación, optimización, cambios de formación,
+intercambios y validación del servidor conservan esta cobertura. Las posiciones
+secundarias siguen disponibles; la adaptación solo cubre faltantes reales del
+plantel. Un equipo de 8 o más jugadores también puede jugar con un único MED.
+
+Los controles + y - buscan una asignación completa para aumentar o reducir en
+uno la línea seleccionada, compensando otra línea. Pueden encadenar cambios
+mediante posiciones secundarias; conservan el arquero, los bloqueos y los
+mínimos. Priorizan posiciones válidas y pocos cambios antes del puntaje. Cuando
+no existe una redistribución válida, mantienen la cancha y muestran el motivo.
+Pruebas de regresión: `npm run test:line-controls` (requiere servidor local).

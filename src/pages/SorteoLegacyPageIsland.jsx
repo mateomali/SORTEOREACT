@@ -802,7 +802,13 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
     const invalid = violations + excessAdaptation;
     if (!best || invalid < best.violations || (invalid === best.violations && (state.adaptations < best.adaptations || (state.adaptations === best.adaptations && (state.changes < best.changes || (state.changes === best.changes && state.rating > best.rating)))))) best = { ...state, violations: invalid };
   }
-  return normalizeCompactDefenseAssignments(team, best?.assignment || {});
+  const normalized = normalizeCompactDefenseAssignments(team, best?.assignment || {});
+  for (const player of team) {
+    const key = playerKey(player);
+    const override = String(assignmentOverrides[key] || '').toUpperCase();
+    if (FORMATION_LINES.includes(override)) normalized[key] = override;
+  }
+  return normalized;
 }
 
 function teamLineCounts(team, assignments) {
@@ -1638,6 +1644,58 @@ function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPla
   const normalized = normalizeCompactDefenseAssignments(team, { ...baseAssignments, ...next });
   const compact = Object.fromEntries(team.map((player) => [playerKey(player), normalized[playerKey(player)] || getPrimaryPlayerPosition(player)]));
   return fieldLineCountsFitLimits(teamLineCounts(team, compact), team.length) ? compact : null;
+}
+
+// Search complete assignments so a secondary-position chain can free a slot.
+// Only the requested pitch line changes by one; one other line supplies/receives it.
+function planPitchLineAdjustment(team, baseAssignments, lockedPositions, requestedLine, delta, validate) {
+  const line = pitchLineForPosition(requestedLine);
+  if (!REQUIRED_FIELD_LINES.includes(line) || ![-1, 1].includes(delta)) return null;
+  const current = teamLineCounts(team, baseAssignments);
+  const pitchCounts = pitchLineCountsFromLogical(current);
+  const targetCount = pitchCounts[line] + delta;
+  if (targetCount < fieldLineMinimum(line, team.length) || targetCount > maxFieldPlayersPerLine(team.length)) return null;
+  if (pitchCounts.ARQ !== 1) return null;
+  let best = null;
+  const better = (candidate, previous) => !previous
+    || candidate.adapted < previous.adapted
+    || (candidate.adapted === previous.adapted && (candidate.changed < previous.changed
+      || (candidate.changed === previous.changed && candidate.rating > previous.rating)));
+  for (const other of REQUIRED_FIELD_LINES.filter(item => item !== line)) {
+    const target = { ...pitchCounts, [line]: targetCount, [other]: pitchCounts[other] - delta };
+    if (target[other] < fieldLineMinimum(other, team.length) || target[other] > maxFieldPlayersPerLine(team.length)) continue;
+    let states = new Map([['0,0,0', { counts:[0,0,0], adapted:0, changed:0, rating:0, assignment:{} }]]);
+    for (const player of team) {
+      const key = playerKey(player);
+      const assigned = baseAssignments[key];
+      const locked = lockedPositions[key];
+      if (assigned === 'ARQ') {
+        if (locked && locked !== 'ARQ') { states.clear(); break; }
+        for (const state of states.values()) state.assignment[key] = 'ARQ';
+        continue;
+      }
+      const roles = locked ? [locked] : FIELD_LINES;
+      const next = new Map();
+      for (const state of states.values()) for (const role of roles) {
+        const index = REQUIRED_FIELD_LINES.indexOf(pitchLineForPosition(role));
+        if (index < 0 || state.counts[index] >= target[REQUIRED_FIELD_LINES[index]]) continue;
+        const counts = state.counts.slice(); counts[index]++;
+        const candidate = {
+          counts, assignment:{...state.assignment,[key]:role},
+          adapted:state.adapted + Number(!getOrderedPlayerPositions(player).map(pitchLineForPosition).includes(pitchLineForPosition(role))),
+          changed:state.changed + Number(role !== assigned),
+          rating:state.rating + adjustedPositionRatingForTeamSize(player, role, team.length),
+        };
+        const signature = counts.join(',');
+        if (better(candidate, next.get(signature))) next.set(signature, candidate);
+      }
+      states = next;
+    }
+    const candidate = states.get(REQUIRED_FIELD_LINES.map(item => target[item]).join(','));
+    if (candidate && fieldLineCountsFitLimits(teamLineCounts(team, candidate.assignment), team.length)
+      && validate(candidate.assignment) && better(candidate, best)) best = candidate;
+  }
+  return best?.assignment || null;
 }
 
 function generateTeamFormationVariants(team, baseAssignments = {}, lockedPlayerPositions = {}, targetCount = 3) {
@@ -3680,94 +3738,29 @@ export function SorteoLegacyPageIsland({ root }) {
     setAssignments((current) => ({ ...current, ...nextAssignments, ...lockedPlayerPositions }));
   };
 
-  const lineDelta = (teamIndex, line, delta) => {
-    if (!teams?.[teamIndex]) return;
-    const team = teams[teamIndex];
-    const currentAssignments = buildTeamAssignment(team, assignments);
-    if (delta > 0) {
-      const counts = teamLineCounts(team, currentAssignments);
-      if ((counts[line] || 0) >= fieldLineLimit(line, team.length)) return;
-      const candidate = team
-        .filter((player) => currentAssignments[playerKey(player)] !== line && currentAssignments[playerKey(player)] !== 'ARQ')
-        .filter((player) => !lockedPlayerPositions[playerKey(player)])
-        .sort((a, b) => adjustedPositionRatingForTeamSize(b, line, team.length) - adjustedPositionRatingForTeamSize(a, line, team.length))[0];
-      if (candidate) {
-        pushUndo(teamIndex);
-        markDrawDirty(true);
-        markFormationAsManual(teamIndex);
-        clearActiveFormationVariant(teamIndex);
-        setAssignments((current) => ({ ...current, [playerKey(candidate)]: line }));
-      }
-      return;
-    }
-    const candidate = team
-      .filter((player) => currentAssignments[playerKey(player)] === line)
-      .filter((player) => !lockedPlayerPositions[playerKey(player)])
-      .filter(() => (teamLineCounts(team, currentAssignments)[line] || 0) > fieldLineMinimum(line, team.length))
-      .filter(player => { const fallback = bestNaturalPlayerPosition(player) === line ? 'MED' : bestNaturalPlayerPosition(player); return proposedFormationFits({[playerKey(player)]:fallback === 'ARQ' ? 'MED' : fallback}); })
-      .sort((a, b) => adjustedPositionRatingForTeamSize(a, line, team.length) - adjustedPositionRatingForTeamSize(b, line, team.length))[0];
-    if (candidate) {
-      const fallback = bestNaturalPlayerPosition(candidate) === line ? 'MED' : bestNaturalPlayerPosition(candidate);
-      pushUndo(teamIndex);
-      markDrawDirty(true);
-      markFormationAsManual(teamIndex);
-      clearActiveFormationVariant(teamIndex);
-      setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' ? 'MED' : fallback }));
-    }
-  };
-
   const pitchLineDelta = (teamIndex, line, delta) => {
-    if (line !== 'DEF') {
-      lineDelta(teamIndex, line, delta);
-      return;
-    }
-    if (!teams?.[teamIndex]) return;
-    const team = teams[teamIndex];
+    const team = teams?.[teamIndex];
+    if (!team) return;
     const currentAssignments = buildTeamAssignment(team, assignments);
-    const counts = teamLineCounts(team, currentAssignments);
-
-    if (delta > 0) {
-      const perPositionLimit = maxDefLatPlayersPerPosition(team.length);
-      if ((counts.DEF || 0) + (counts.LAT || 0) >= maxFieldPlayersPerLine(team.length)) return;
-      const candidate = team
-        .filter((player) => {
-          const currentLine = currentAssignments[playerKey(player)];
-          return currentLine !== 'ARQ' && currentLine !== 'DEF' && currentLine !== 'LAT';
-        })
-        .filter((player) => !lockedPlayerPositions[playerKey(player)])
-        .flatMap((player) => ['DEF', 'LAT']
-          .filter((targetLine) => (counts[targetLine] || 0) < perPositionLimit)
-          .map((targetLine) => ({ player, targetLine, rating: adjustedPositionRatingForTeamSize(player, targetLine, team.length) })))
-        .filter(candidate => proposedFormationFits({[playerKey(candidate.player)]:candidate.targetLine}))
-        .sort((a, b) => b.rating - a.rating)[0];
-    if (candidate) {
-      pushUndo(teamIndex);
-      markDrawDirty(true);
-      markFormationAsManual(teamIndex);
-      clearActiveFormationVariant(teamIndex);
-      setAssignments((current) => ({ ...current, [playerKey(candidate.player)]: candidate.targetLine }));
-    }
+    const nextAssignments = planPitchLineAdjustment(team, currentAssignments, lockedPlayerPositions, line, delta, proposedFormationFits);
+    if (!nextAssignments) {
+      const count = pitchLineCountsFromLogical(teamLineCounts(team, currentAssignments))[line];
+      const minimum = fieldLineMinimum(line, team.length);
+      const maximum = maxFieldPlayersPerLine(team.length);
+      setError(delta < 0 && count <= minimum
+        ? `La linea ${line === 'DEF' ? 'DEF/LAT' : line} debe conservar al menos ${minimum} jugador${minimum === 1 ? '' : 'es'}.`
+        : delta > 0 && count >= maximum
+          ? `La linea ${line === 'DEF' ? 'DEF/LAT' : line} admite como maximo ${maximum} jugadores.`
+          : 'No hay una redistribucion disponible que respete los minimos, las posiciones y los jugadores bloqueados.');
       return;
     }
-
-    const candidate = team
-      .filter((player) => ['DEF', 'LAT'].includes(currentAssignments[playerKey(player)]))
-      .filter((player) => !lockedPlayerPositions[playerKey(player)])
-      .filter(() => (counts.DEF || 0) + (counts.LAT || 0) > fieldLineMinimum('DEF', team.length))
-      .filter(player => { const fallback = bestNaturalPlayerPosition(player); return proposedFormationFits({[playerKey(player)]:['ARQ','DEF','LAT'].includes(fallback) ? 'MED' : fallback}); })
-      .sort((a, b) => {
-        const assignedA = currentAssignments[playerKey(a)];
-        const assignedB = currentAssignments[playerKey(b)];
-        return adjustedPositionRatingForTeamSize(a, assignedA, team.length) - adjustedPositionRatingForTeamSize(b, assignedB, team.length);
-      })[0];
-    if (candidate) {
-      const fallback = bestNaturalPlayerPosition(candidate);
-      pushUndo(teamIndex);
-      markDrawDirty(true);
-      markFormationAsManual(teamIndex);
-      clearActiveFormationVariant(teamIndex);
-      setAssignments((current) => ({ ...current, [playerKey(candidate)]: fallback === 'ARQ' || fallback === 'DEF' || fallback === 'LAT' ? 'MED' : fallback }));
-    }
+    pushUndo(teamIndex);
+    markDrawDirty(true);
+    markFormationAsManual(teamIndex);
+    clearActiveFormationVariant(teamIndex);
+    setAssignments(current => ({ ...current, ...nextAssignments }));
+    setError('');
+    setSuccess('');
   };
 
   const toggleLockedPosition = (player, assignedPosition) => {
