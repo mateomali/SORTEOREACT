@@ -123,7 +123,7 @@ function admin_config_position_weight_labels(): array
 function admin_config_position_weights(array $settings): array
 {
     $decoded = json_decode((string) ($settings['position_stat_weights'] ?? ''), true);
-    return player_normalize_position_stat_weights(is_array($decoded) ? $decoded : player_position_stat_weight_defaults());
+    return player_resolve_position_stat_weights(is_array($decoded) ? $decoded : player_position_stat_weight_defaults());
 }
 
 function admin_config_save_settings(array $input): void

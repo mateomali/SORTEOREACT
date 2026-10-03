@@ -266,7 +266,13 @@ function validate_captain_formation_line_counts(array $counts): void
         'MED' => (int) ($counts['MED'] ?? 0),
         'DEL' => (int) ($counts['DEL'] ?? 0),
     ];
+    if (array_sum($counts) < 8) {
+        if ($pitchCounts['DEF'] < 2) throw new RuntimeException('Cada equipo debe mantener al menos 2 jugadores en defensa (DEF/LAT).');
+        if ($pitchCounts['MED'] < 1 || $pitchCounts['DEL'] < 1) throw new RuntimeException('Cada equipo debe tener al menos 1 jugador en medio y 1 en ataque.');
+        return;
+    }
     foreach ($pitchCounts as $count) {
+        if ($count < 1) throw new RuntimeException('Ninguna linea de campo puede quedar vacia.');
         if ($count > 4) {
             throw new RuntimeException('Maximo 4 jugadores por linea en la formacion.');
         }
@@ -925,6 +931,17 @@ try {
             validate_captain_formation_line_counts($counts);
         }
 
+        $positionTeams = [];
+        $positionAssignments = [];
+        foreach ($rows as $row) {
+            $index = (int)$row['team_number'];
+            $positionTeams[$index][] = $row['player'];
+            $positionAssignments[$index][(int)$row['player_id']] = $row['position'];
+        }
+        if (!draw_assignments_respect_positions(array_values($positionTeams), array_values($positionAssignments))) {
+            throw new RuntimeException('Solo se permite adaptar posiciones para cubrir faltantes reales de jugadores naturales o secundarios.');
+        }
+
         $update = $pdo->prepare(
             'UPDATE match_players
              SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
@@ -1036,6 +1053,20 @@ try {
             if (!isset($teamPlayerLookup[(int) $row['player_id']])) {
                 throw new RuntimeException('La formacion incluye un jugador de otro equipo.');
             }
+        }
+
+        $positionTeams = [];
+        $positionAssignments = [];
+        $overrides = array_column($validRows, 'position', 'player_id');
+        foreach (repo_match_participants($matchId) as $player) {
+            if (!empty($player['is_substitute']) || empty($player['team_number'])) continue;
+            $index = (int)$player['team_number'];
+            $id = (int)$player['id'];
+            $positionTeams[$index][] = $player;
+            $positionAssignments[$index][$id] = $index === $teamNumber ? $overrides[$id] : ($player['assigned_position'] ?: player_primary_position($player));
+        }
+        if (!draw_assignments_respect_positions(array_values($positionTeams), array_values($positionAssignments))) {
+            throw new RuntimeException('Solo se permite adaptar posiciones para cubrir faltantes reales de jugadores naturales o secundarios.');
         }
 
         $update = $pdo->prepare(

@@ -23,23 +23,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
     };
     const ratingWithStar = (value) => `${formatSkill(value)} ⭐`;
 
-    const playerCardRating = (value) => {
-      const rating = Math.max(1, Math.min(6, Number(value || 0)));
-      const anchors = [
-        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-        [5.2, 93], [5.3, 94], [6.0, 99],
-      ];
-      for (let i = 0; i < anchors.length - 1; i += 1) {
-        const [fromRating, fromOverall] = anchors[i];
-        const [toRating, toOverall] = anchors[i + 1];
-        if (rating <= toRating) {
-          const ratio = (rating - fromRating) / (toRating - fromRating);
-          return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-        }
-      }
-      return 99;
-    };
+    const playerCardRating = value => globalThis.GoodfellasRating.card(value);
     const playerCardRatingHtml = (value, label = 'GEN') => `
       <span class="player-card-rating" title="Puntaje tarjeta">
         <strong>${playerCardRating(value)}</strong>
@@ -133,90 +117,16 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       .filter(Boolean);
     const primaryPosition = (player) => playerPositions(player)[0] || '';
     const pitchLineForPosition = (position) => String(position || '').toUpperCase() === 'LAT' ? 'DEF' : String(position || '').toUpperCase();
-    const positionFitFactor = (player, position) => {
-      const normalized = String(position || '').toUpperCase();
-      if (!normalized) return 1;
-      const naturalPositions = playerPositions(player);
-      const naturalIndex = naturalPositions.indexOf(normalized);
-      if (naturalIndex === 0) return 1;
-      if (naturalIndex === 1) return 0.95;
-      const naturalLines = naturalPositions.map(pitchLineForPosition);
-      return naturalLines.includes(pitchLineForPosition(normalized)) ? 0.90 : 0.90;
-    };
+    const positionFitFactor = (player, position) => globalThis.GoodfellasRating.fit(playerPositions(player), position);
     const isPositionChanged = (player, assignedPosition) => {
       const primary = primaryPosition(player);
       return primary !== '' && String(assignedPosition || '').toUpperCase() !== primary;
     };
-    const weightedPositionRating = (player, weights) => (
-      Object.entries(weights).reduce((total, [field, weight]) => total + (statValue(player, field) * weight), 0)
-    );
-    const applyRegularityAdjustment = (rating, player) => {
-      const factor = 1 + ((statValue(player, 'regularity') - 3.5) / 50);
-      return Math.max(1, Math.min(6, rating * factor));
-    };
     const adjustedPositionRating = (player, assignedPosition) => {
-      const position = String(assignedPosition || '').toUpperCase();
-      const generalRating = Number(player.skill || 0);
-      if (!position) {
-        return Math.max(1, Math.min(6, generalRating));
-      }
-      let rating = generalRating;
-      if (position === 'ARQ') {
-        const goalkeeperSkill = playerPositions(player).includes('ARQ') ? statValue(player, 'goalkeeper_skill') : 2.0;
-        rating = (goalkeeperSkill * 0.36)
-          + (statValue(player, 'defense_physical') * 0.12)
-          + (statValue(player, 'rhythm') * 0.08)
-          + (statValue(player, 'stamina') * 0.08)
-          + (statValue(player, 'technique') * 0.08)
-          + (statValue(player, 'pass_vision') * 0.06)
-          + (statValue(player, 'teamwork') * 0.12)
-          + (statValue(player, 'mentality') * 0.10);
-      } else if (position === 'DEF') {
-        rating = weightedPositionRating(player, {
-          defense_physical: 0.25,
-          stamina: 0.17,
-          rhythm: 0.14,
-          technique: 0.12,
-          pass_vision: 0.10,
-          teamwork: 0.10,
-          mentality: 0.08,
-          attack: 0.04,
-        });
-      } else if (position === 'LAT') {
-        rating = weightedPositionRating(player, {
-          rhythm: 0.20,
-          defense_physical: 0.18,
-          stamina: 0.16,
-          pass_vision: 0.14,
-          technique: 0.12,
-          teamwork: 0.12,
-          attack: 0.06,
-          mentality: 0.02,
-        });
-      } else if (position === 'MED') {
-        rating = weightedPositionRating(player, {
-          pass_vision: 0.22,
-          technique: 0.18,
-          teamwork: 0.16,
-          rhythm: 0.14,
-          stamina: 0.12,
-          mentality: 0.10,
-          defense_physical: 0.05,
-          attack: 0.03,
-        });
-      } else if (position === 'DEL') {
-        rating = weightedPositionRating(player, {
-          attack: 0.28,
-          rhythm: 0.18,
-          technique: 0.14,
-          pass_vision: 0.10,
-          teamwork: 0.10,
-          stamina: 0.08,
-          mentality: 0.08,
-          defense_physical: 0.04,
-        });
-      }
-      return Math.max(1, Math.min(6, applyRegularityAdjustment(rating, player) * positionFitFactor(player, position)));
+      const role = String(assignedPosition || '').toUpperCase();
+      if (!role) return Math.max(1, Math.min(6, Number(player.skill || 0)));
+      const stats = Object.fromEntries(Object.keys(globalThis.GoodfellasRating.policy().weights.MED).concat('goalkeeper_skill', 'regularity').map(field => [field, statValue(player, field)]));
+      return globalThis.GoodfellasRating.position(stats, role, playerPositions(player));
     };
     const renderTeamCharacteristics = (players) => {
       if (!players.length) return '';

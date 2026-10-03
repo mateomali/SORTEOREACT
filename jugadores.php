@@ -411,14 +411,15 @@ $ratingHelp = [
     '5 puntos' => 'Muy bueno.',
     '6 puntos' => 'Excelente.',
 ];
-$fieldWeightHelp = [
-    'Defensor' => 'Solidez 25%, Ida y vuelta 17%, Velocidad 14%, Tecnica 12%, Pase/Vision 10%, Juego en equipo 10%, Mentalidad 8%, Ataque 4%.',
-    'Lateral' => 'Velocidad 20%, Solidez 18%, Ida y vuelta 16%, Pase/Vision 14%, Tecnica 12%, Juego en equipo 12%, Ataque 6%, Mentalidad 2%.',
-    'Mediocampista' => 'Pase/Vision 22%, Tecnica 18%, Juego en equipo 16%, Velocidad 14%, Ida y vuelta 12%, Mentalidad 10%, Solidez 5%, Ataque 3%.',
-    'Delantero' => 'Ataque 28%, Velocidad 18%, Tecnica 14%, Pase/Vision 10%, Juego en equipo 10%, Ida y vuelta 8%, Mentalidad 8%, Solidez 4%.',
-    'Arquero' => 'Habilidad de arquero 36%, Solidez 12%, Juego en equipo 12%, Mentalidad 10%, Velocidad 8%, Ida y vuelta 8%, Tecnica 8%, Pase/Vision 6%.',
-    'Regularidad +/-5%' => 'Ajusta la valoracion final segun constancia: 6 suma 5%, 1 resta 5%, 3/4 quedan casi neutros.',
-];
+$fieldWeightHelp = [];
+foreach (player_position_stat_weights_config() as $role => $weights) {
+    $parts = [];
+    foreach ($weights as $field => $weight) {
+        $parts[] = ($statLabels[$field] ?? $field) . ' ' . rtrim(rtrim(number_format($weight * 100, 2, '.', ''), '0'), '.') . '%';
+    }
+    $fieldWeightHelp[player_position_labels()[$role]] = implode(', ', $parts) . '.';
+}
+$fieldWeightHelp['Regularidad +/-5%'] = 'Ajusta la valoracion final segun constancia: 6 suma 5%, 1 resta 5%, 3.5 es neutro.';
 
 function stat_rating_control(string $name, float $value, ?string $formId = null, bool $compact = false, bool $readonly = false): string
 {

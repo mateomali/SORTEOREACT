@@ -1,0 +1,60 @@
+REPORTE DE AUDITORIA DEL BUNDLE
+Bundle: goodfellas-hostinger-secure-20261002-162420.zip
+
+Paginas PHP de raiz incluidas:
+  + backup.php
+  + capitanes.php
+  + capitanes_api.php
+  + card_design_previews.php
+  + configuracion.php
+  + consulta.php
+  + crear_partido.php
+  + diagnostico_logs.php
+  + diagnostics_log.php
+  + directivos.php
+  + editar_partidos.php
+  + encuentros.php
+  + equipos_manual.php
+  + estadisticas.php
+  + exportar_fecha.php
+  + finalizar_partido.php
+  + guardar_estado_jugadores.php
+  + guardar_sorteo.php
+  + historial.php
+  + index.php
+  + jugadores.php
+  + jugadores2.php
+  + jugadores-card-preview.php
+  + junta_votaciones.php
+  + login.php
+  + logout.php
+  + migrar_csv.php
+  + migrar_schema.php
+  + mis_valoraciones.php
+  + perfil.php
+  + sorteo.php
+  + sorteo_legacy_csv.php
+  + sorteo_multiple.php
+  + sorteo_partido.php
+  + usuarios.php
+  + votar_sorteo.php
+
+Archivos de raiz excluidos:
+  - config.php
+  - hostinger_diag.php
+  - sorteo original.php
+
+Directorios incluidos: assets/ (sin tailwind.input.css), includes/, lib/, uploads/.htaccess
+Directorios excluidos: scripts/, src/, tests/, docs/, backup/, logs/, tmp/, outputs/, dist/, node_modules/, android-goodfellas/, uploads/players/
+
+Endurecimiento aplicado en .htaccess:
+  - Options -Indexes (sin listado de directorios)
+  - Bloqueo de config.php, database.sql, jugadores.csv, package*.json, composer.*, .env*, .git*, .htaccess, .htpasswd, php.ini
+  - Bloqueo de extensiones sql/csv/md/log/ps1/sh/bak/old/ini/yml/json/lock/txt/dist
+  - 404 para /scripts, /node_modules, /vendor, /src, /tests, /docs, /outputs, /dist, /storage
+  - 404 para /logs, /backup, /tmp y dotfiles
+  - 404 explicito para hostinger_diag.php
+  - 404 para acceso directo a /lib/ y /includes/
+
+Secretos locales escaneados: 3 valor(es) de config.php (no se listan aqui).
+Validacion de sintaxis PHP: OK (51 archivos)

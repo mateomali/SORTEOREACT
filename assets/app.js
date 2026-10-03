@@ -182,23 +182,7 @@
       .filter(Boolean);
     const linePlayers = (line) => line.querySelector('.line-players');
     const clampRating = (value) => Math.max(1, Math.min(6, Number(value || 0)));
-    const playerCardRating = (value) => {
-      const rating = clampRating(value);
-      const anchors = [
-        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-        [5.2, 93], [5.3, 94], [6.0, 98],
-      ];
-      for (let i = 0; i < anchors.length - 1; i += 1) {
-        const [fromRating, fromOverall] = anchors[i];
-        const [toRating, toOverall] = anchors[i + 1];
-        if (rating <= toRating) {
-          const ratio = (rating - fromRating) / (toRating - fromRating);
-          return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-        }
-      }
-      return 98;
-    };
+    const playerCardRating = value => globalThis.GoodfellasRating.card(value);
     const playerCardTier = (value) => {
       const overall = playerCardRating(value);
       if (overall >= 88) return 'supreme';
@@ -231,72 +215,13 @@
       const value = Number(card.dataset[datasetKey]);
       return Number.isFinite(value) && value > 0 ? value : fallback;
     };
-    const weightedCardRating = (card, weights) => (
-      Object.entries(weights).reduce((total, [field, weight]) => total + (cardStat(card, field) * weight), 0)
-    );
-    const applyCardRegularity = (rating, card) => clampRating(rating * (1 + ((cardStat(card, 'Regularity') - 3.5) / 50)));
+
     const adjustedCardRating = (card, assignedPosition) => {
       const position = String(assignedPosition || '').toUpperCase();
-      const generalRating = clampRating(card.dataset.playerSkill || 0);
-      const positions = cardPositions(card);
-      if (!position || positions.includes(position)) return generalRating;
-      let rating = generalRating;
-      if (position === 'ARQ') {
-        const goalkeeperSkill = positions.includes('ARQ') ? cardStat(card, 'GoalkeeperSkill') : 2.0;
-        rating = (goalkeeperSkill * 0.36)
-          + (cardStat(card, 'DefensePhysical') * 0.12)
-          + (cardStat(card, 'Rhythm') * 0.08)
-          + (cardStat(card, 'Stamina') * 0.08)
-          + (cardStat(card, 'Technique') * 0.08)
-          + (cardStat(card, 'PassVision') * 0.06)
-          + (cardStat(card, 'Teamwork') * 0.12)
-          + (cardStat(card, 'Mentality') * 0.10);
-      } else if (position === 'DEF') {
-        rating = weightedCardRating(card, {
-          DefensePhysical: 0.25,
-          Stamina: 0.17,
-          Rhythm: 0.14,
-          Technique: 0.12,
-          PassVision: 0.10,
-          Teamwork: 0.10,
-          Mentality: 0.08,
-          Attack: 0.04,
-        });
-      } else if (position === 'LAT') {
-        rating = weightedCardRating(card, {
-          Rhythm: 0.20,
-          DefensePhysical: 0.18,
-          Stamina: 0.16,
-          PassVision: 0.14,
-          Technique: 0.12,
-          Teamwork: 0.12,
-          Attack: 0.06,
-          Mentality: 0.02,
-        });
-      } else if (position === 'MED') {
-        rating = weightedCardRating(card, {
-          PassVision: 0.22,
-          Technique: 0.18,
-          Teamwork: 0.16,
-          Rhythm: 0.14,
-          Stamina: 0.12,
-          Mentality: 0.10,
-          DefensePhysical: 0.05,
-          Attack: 0.03,
-        });
-      } else if (position === 'DEL') {
-        rating = weightedCardRating(card, {
-          Attack: 0.28,
-          Rhythm: 0.18,
-          Technique: 0.14,
-          PassVision: 0.10,
-          Teamwork: 0.10,
-          Stamina: 0.08,
-          Mentality: 0.08,
-          DefensePhysical: 0.04,
-        });
-      }
-      return applyCardRegularity(rating, card);
+      if (!position) return clampRating(card.dataset.playerSkill || 0);
+      const fields = {goalkeeper_skill:'GoalkeeperSkill', defense_physical:'DefensePhysical', rhythm:'Rhythm', stamina:'Stamina', technique:'Technique', pass_vision:'PassVision', teamwork:'Teamwork', mentality:'Mentality', attack:'Attack', regularity:'Regularity'};
+      const stats = Object.fromEntries(Object.entries(fields).map(([field, dataset]) => [field, cardStat(card, dataset)]));
+      return globalThis.GoodfellasRating.position(stats, position, cardPositions(card));
     };
     const updatePlayerCardRating = (card) => {
       const ratingBox = card?.querySelector?.('.player-card-rating');
@@ -640,23 +565,7 @@
     document.documentElement.dataset.compactFormationPreviewBound = '1';
     let activePreview = null;
 
-    const previewCardRating = (value) => {
-      const rating = Math.max(1, Math.min(6, Number(value || 0)));
-      const anchors = [
-        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-        [5.2, 93], [5.3, 94], [6.0, 99],
-      ];
-      for (let index = 0; index < anchors.length - 1; index += 1) {
-        const [fromRating, fromOverall] = anchors[index];
-        const [toRating, toOverall] = anchors[index + 1];
-        if (rating <= toRating) {
-          const ratio = (rating - fromRating) / (toRating - fromRating);
-          return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-        }
-      }
-      return 99;
-    };
+    const previewCardRating = value => globalThis.GoodfellasRating.card(value);
 
     const previewCardStatValue = (card, field, fallbackField = '') => {
       const raw = card.dataset?.[field] || (fallbackField ? card.dataset?.[fallbackField] : '');
@@ -3047,13 +2956,6 @@
     const maxDiff = Math.max(0.1, Number(config.maxDiff || 1));
     const positions = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
     const requiredPitchLines = ['ARQ', 'DEF', 'MED', 'DEL'];
-    const fieldStatWeights = {
-      DEF: { defense_physical: 0.25, stamina: 0.17, rhythm: 0.14, technique: 0.12, pass_vision: 0.10, teamwork: 0.10, mentality: 0.08, attack: 0.04 },
-      LAT: { rhythm: 0.20, defense_physical: 0.18, stamina: 0.16, pass_vision: 0.14, technique: 0.12, teamwork: 0.12, attack: 0.06, mentality: 0.02 },
-      MED: { pass_vision: 0.22, technique: 0.18, teamwork: 0.16, rhythm: 0.14, stamina: 0.12, mentality: 0.10, defense_physical: 0.05, attack: 0.03 },
-      DEL: { attack: 0.28, rhythm: 0.18, technique: 0.14, pass_vision: 0.10, teamwork: 0.10, stamina: 0.08, mentality: 0.08, defense_physical: 0.04 },
-    };
-    const goalkeeperStatWeights = { goalkeeper_skill: 0.36, defense_physical: 0.12, rhythm: 0.08, stamina: 0.08, technique: 0.08, pass_vision: 0.06, teamwork: 0.12, mentality: 0.10 };
     const drawBalanceWeights = {
       general: 50,
       attack: 15,
@@ -3196,14 +3098,8 @@
     const playerHasPosition = (player, position) => playerPositionIndex(player, position) !== -1;
     const playerPrimaryPosition = (player) => parsePlayerPositions(player)[0] || 'MED';
     const pitchLine = (position) => (position === 'LAT' ? 'DEF' : position);
-    const playerPositionFitFactor = (player, position) => {
-      const index = playerPositionIndex(player, position);
-      if (index === 0) return 1;
-      if (index === 1) return 0.95;
-      const naturalLines = parsePlayerPositions(player).map(pitchLine);
-      return naturalLines.includes(pitchLine(position)) ? 0.90 : 0.90;
-    };
-    const mainLineLimit = () => Math.max(1, Math.floor(Math.max(0, playersPerTeam - 1) / 2));
+    const playerPositionFitFactor = (player, position) => globalThis.GoodfellasRating.fit(parsePlayerPositions(player), position);
+    const mainLineLimit = () => playersPerTeam < 8 ? Math.max(0, playersPerTeam - 1) : Math.max(1, Math.floor(Math.max(0, playersPerTeam - 1) / 2));
     const defenseSideLimit = () => mainLineLimit();
     const lineLimit = (position) => {
       if (position === 'ARQ') return 1;
@@ -3211,11 +3107,9 @@
       return mainLineLimit();
     };
 
-    const regularityAdjusted = (rating, player) => Math.max(1, Math.min(6, rating * (1 + ((statValue(player, 'regularity') - 3.5) / 50))));
     const positionRating = (player, position) => {
-      const weights = position === 'ARQ' ? goalkeeperStatWeights : (fieldStatWeights[position] || fieldStatWeights.MED);
-      const total = Object.entries(weights).reduce((sum, [field, weight]) => sum + (statValue(player, field) * weight), 0);
-      return Math.round(regularityAdjusted(total, player) * playerPositionFitFactor(player, position) * 10) / 10;
+      const stats = Object.fromEntries(Object.keys(globalThis.GoodfellasRating.policy().weights.MED).concat('goalkeeper_skill', 'regularity').map(field => [field, statValue(player, field)]));
+      return globalThis.GoodfellasRating.position(stats, position, parsePlayerPositions(player));
     };
     const bestNaturalPosition = (player) => parsePlayerPositions(player)
       .sort((left, right) => {
@@ -3294,7 +3188,7 @@
         statTotals,
         lineCounts,
         pitchCounts,
-        missingLines: requiredPitchLines.filter((line) => (pitchCounts[line] || 0) <= 0),
+        missingLines: requiredPitchLines.filter((line) => (pitchCounts[line] || 0) < (playersPerTeam < 8 && line === 'DEF' ? 2 : 1)),
         overloadedLines: positions.filter((line) => {
           if (line === 'DEF') return (pitchCounts.DEF || 0) > mainLineLimit();
           if (line === 'LAT') return false;

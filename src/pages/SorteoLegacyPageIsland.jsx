@@ -120,13 +120,10 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const positionWeights = {
-  ARQ: { habilidad_arquero: 0.36, solidez: 0.12, ritmo_stat: 0.08, resistencia: 0.08, tecnica: 0.08, pase_vision: 0.06, compromiso: 0.12, mentalidad: 0.1 },
-  DEF: { solidez: 0.25, resistencia: 0.17, ritmo_stat: 0.14, tecnica: 0.12, pase_vision: 0.1, compromiso: 0.1, mentalidad: 0.08, ataque: 0.04 },
-  LAT: { ritmo_stat: 0.2, solidez: 0.18, resistencia: 0.16, pase_vision: 0.14, tecnica: 0.12, compromiso: 0.12, ataque: 0.06, mentalidad: 0.02 },
-  DEL: { ataque: 0.28, ritmo_stat: 0.18, tecnica: 0.14, pase_vision: 0.1, compromiso: 0.1, resistencia: 0.08, mentalidad: 0.08, solidez: 0.04 },
-  MED: { pase_vision: 0.22, tecnica: 0.18, compromiso: 0.16, ritmo_stat: 0.14, resistencia: 0.12, mentalidad: 0.1, solidez: 0.05, ataque: 0.03 },
-};
+function ratingStats(player) {
+  const fields = { goalkeeper_skill: 'habilidad_arquero', defense_physical: 'solidez', rhythm: 'ritmo_stat', stamina: 'resistencia', technique: 'tecnica', pass_vision: 'pase_vision', teamwork: 'compromiso', mentality: 'mentalidad', attack: 'ataque', regularity: 'regularidad' };
+  return Object.fromEntries(Object.entries(fields).map(([field, legacy]) => [field, statValue(player, legacy)]));
+}
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
 const inputClass = `min-h-10 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60`;
@@ -259,7 +256,7 @@ function playerPhotoPositionStyle(player) {
 
 function normalizePlayer(raw, index) {
   const availabilityPercent = normalizeAvailabilityPercent(raw.availability_percent ?? raw.availabilityPercent ?? 100);
-  const baseRating = normalizeSix(raw.base_puntuacion ?? raw.puntuacion_base_match ?? raw.puntuacion ?? raw.rating ?? raw.overall, 3);
+  const baseRating = normalizeSix(raw.base_puntuacion ?? raw.puntuacion_base ?? raw.puntuacion_base_match ?? raw.puntuacion ?? raw.rating ?? raw.overall, 3);
   const baseRitmoStat = normalizeSix(raw.base_ritmo_stat ?? raw.ritmo_stat ?? raw.rhythm, normalizePace(raw.ritmo ?? raw.pace) === 'lento' ? 2 : 4);
   const baseResistencia = normalizeSix(raw.base_resistencia ?? raw.resistencia ?? raw.stamina, baseRitmoStat);
   const baseTecnica = normalizeSix(raw.base_tecnica ?? raw.tecnica ?? raw.technique, baseRating);
@@ -274,7 +271,7 @@ function normalizePlayer(raw, index) {
   const safePhoto = photoPath.startsWith('uploads/players/') && !photoPath.includes('..')
     ? photoPath
     : 'assets/players/default-player-silhouette.png';
-  return {
+  const player = {
     ...raw,
     id: raw.id ?? `local-${index + 1}-${String(raw.nombre || raw.name || 'jugador').replace(/\W+/g, '-').toLowerCase()}`,
     nombre: String(raw.nombre || raw.name || `Jugador ${index + 1}`).trim() || `Jugador ${index + 1}`,
@@ -310,6 +307,8 @@ function normalizePlayer(raw, index) {
     photo_zoom: clampPhotoZoom(raw.photo_zoom ?? raw.photoZoom, 100),
     selected: raw.selected !== false,
   };
+  player.puntuacion = adjustedPositionRating(player, getPrimaryPlayerPosition(player));
+  return player;
 }
 
 function playerKey(player) {
@@ -358,15 +357,7 @@ function pitchLineForPosition(position) {
 }
 
 function positionFitFactor(player, assignedPosition, ignorePositionFit = false) {
-  if (ignorePositionFit) return 1;
-  const position = String(assignedPosition || '').toUpperCase();
-  if (!position) return 1;
-  const naturalPositions = getOrderedPlayerPositions(player);
-  const naturalIndex = naturalPositions.indexOf(position);
-  if (naturalIndex === 0) return 1;
-  if (naturalIndex === 1) return 0.95;
-  const naturalLines = naturalPositions.map(pitchLineForPosition);
-  return naturalLines.includes(pitchLineForPosition(position)) ? 0.90 : 0.90;
+  return globalThis.GoodfellasRating.fit(getOrderedPlayerPositions(player), String(assignedPosition || '').toUpperCase(), ignorePositionFit);
 }
 
 function defenseLinePlayers(players, assignments) {
@@ -432,8 +423,7 @@ function isIrregularPlayer(player) {
 }
 
 function applyRegularityAdjustment(rating, player) {
-  const factor = 1 + ((statValue(player, 'regularidad') - 3.5) / 50);
-  return Math.max(1, Math.min(6, rating * factor));
+  return globalThis.GoodfellasRating.regularity(rating, ratingStats(player));
 }
 
 function historicalResultAdjustment(player) {
@@ -443,11 +433,7 @@ function historicalResultAdjustment(player) {
 
 function positionBaseRating(player, assignedPosition) {
   const position = String(assignedPosition || '').toUpperCase();
-  if (position === 'ARQ' && !canPlayGoalkeeper(player)) {
-    return 2;
-  }
-  const weights = positionWeights[position] || positionWeights.MED;
-  return Object.entries(weights).reduce((total, [field, weight]) => total + (statValue(player, field) * weight), 0);
+  return globalThis.GoodfellasRating.base(ratingStats(player), position);
 }
 
 const playerRatingCache = new WeakMap();
@@ -457,7 +443,7 @@ function adjustedPositionRating(player, assignedPosition, options = {}) {
   const cache = playerRatingCache.get(player) || {};
   if (Object.hasOwn(cache, key)) return cache[key];
   const positionalRating = applyRegularityAdjustment(positionBaseRating(player, position), player) * positionFitFactor(player, position, options.ignorePositionFit === true);
-  const rating = Math.max(1, Math.min(6, positionalRating + historicalResultAdjustment(player)));
+  const rating = Math.round(Math.max(1, Math.min(6, positionalRating + historicalResultAdjustment(player))) * 10) / 10;
   cache[key] = rating;
   playerRatingCache.set(player, cache);
   return rating;
@@ -494,21 +480,7 @@ function bestNaturalPlayerRating(player) {
 }
 
 function playerCardRating(value) {
-  const rating = Math.max(1, Math.min(6, Number(value || 0)));
-  const anchors = [
-    [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-    [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-    [5.2, 93], [5.3, 94], [6.0, 99],
-  ];
-  for (let index = 0; index < anchors.length - 1; index += 1) {
-    const [fromRating, fromOverall] = anchors[index];
-    const [toRating, toOverall] = anchors[index + 1];
-    if (rating <= toRating) {
-      const ratio = (rating - fromRating) / (toRating - fromRating);
-      return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-    }
-  }
-  return 99;
+  return globalThis.GoodfellasRating.card(value);
 }
 
 function playerCardTier(value) {
@@ -592,6 +564,7 @@ function shuffle(items) {
 
 function maxFieldPlayersPerLine(teamSize) {
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
+  if (Number(teamSize) < 8) return fieldPlayers;
   return fieldPlayers > 0 ? Math.max(1, Math.floor(fieldPlayers / 2)) : 0;
 }
 
@@ -609,6 +582,7 @@ function fieldLineMinimum(position, teamSize) {
   const line = String(position || '').toUpperCase();
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
   if (line === 'ARQ') return 1;
+  if (Number(teamSize) < 8) return pitchLineForPosition(line) === 'DEF' ? 2 : (['MED', 'DEL'].includes(line) ? 1 : 0);
   if (fieldPlayers === 4) return REQUIRED_FIELD_LINES.includes(line) ? 1 : 0;
   if (fieldPlayers < 5) return 0;
   if (line === 'MED') return Number(teamSize) < 7 ? 1 : 2;
@@ -620,6 +594,7 @@ function fieldLineMinimum(position, teamSize) {
 function logicalLineMinimum(position, teamSize) {
   const line = String(position || '').toUpperCase();
   if (line === 'ARQ') return 1;
+  if (Number(teamSize) < 8) return ['MED', 'DEL'].includes(line) ? 1 : 0;
   if (!FIELD_LINES.includes(line)) return 0;
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
   if (line === 'LAT') return 0;
@@ -627,6 +602,7 @@ function logicalLineMinimum(position, teamSize) {
 }
 
 function logicalLineMinimumForCounts(position, teamSize, counts = {}) {
+  if (Number(teamSize) < 8) return ['ARQ', 'MED', 'DEL'].includes(String(position).toUpperCase()) ? 1 : 0;
   const line = String(position || '').toUpperCase();
   const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
   if (line === 'DEF' && defenseTotal <= 2) return fieldLineMinimum('DEF', teamSize);
@@ -648,9 +624,9 @@ function fieldLineCountsFitLimits(counts, teamSize) {
   const max = maxFieldPlayersPerLine(teamSize);
   const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
   const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
-  const defenseRolesFit = defenseTotal <= 2
+  const defenseRolesFit = Number(teamSize) < 8 || (defenseTotal <= 2
     ? Number(counts?.LAT || 0) === 0
-    : Number(counts?.LAT || 0) === 0 || Number(counts?.DEF || 0) >= 1;
+    : Number(counts?.LAT || 0) === 0 || Number(counts?.DEF || 0) >= 1);
   return (!hasGoalkeeperCount || pitchCounts.ARQ === fieldLineMinimum('ARQ', teamSize))
     && defenseRolesFit
     && REQUIRED_FIELD_LINES.every((line) => (
@@ -684,10 +660,10 @@ function lineCountViolationMessage(counts, teamSize, { includeLogical = true } =
   const pitchCounts = pitchLineCountsFromLogical(counts);
   const max = maxFieldPlayersPerLine(teamSize);
   const defenseTotal = Number(counts?.DEF || 0) + Number(counts?.LAT || 0);
-  if (defenseTotal <= 2 && Number(counts?.LAT || 0) > 0) {
+  if (teamSize >= 8 && defenseTotal <= 2 && Number(counts?.LAT || 0) > 0) {
     return 'No se puede mover: con 2 jugadores en DEF/LAT, ambos deben quedar como DEF.';
   }
-  if (defenseTotal > 2 && Number(counts?.LAT || 0) > 0 && Number(counts?.DEF || 0) < 1) {
+  if (teamSize >= 8 && defenseTotal > 2 && Number(counts?.LAT || 0) > 0 && Number(counts?.DEF || 0) < 1) {
     return 'No se puede mover: para usar LAT tiene que quedar al menos un DEF central.';
   }
   const hasGoalkeeperCount = Object.prototype.hasOwnProperty.call(counts || {}, 'ARQ');
@@ -753,11 +729,22 @@ function prepareEmergencyGoalkeepers(players, numTeams) {
   const goalkeeperCandidates = players.filter((player) => getOrderedPlayerPositions(player).includes('ARQ') || player.manualGoalkeeper === true);
   const missing = Math.max(0, numTeams - goalkeeperCandidates.length);
   if (!missing) return { players, emergencyGoalkeepers: [] };
-  const emergencyIds = new Set(players
-    .filter((player) => !canPlayGoalkeeper(player))
-    .sort((a, b) => bestNaturalPlayerRating(a) - bestNaturalPlayerRating(b))
-    .slice(0, missing)
-    .map(playerKey));
+  const field = players.filter((player) => !canPlayGoalkeeper(player));
+  const isDefender = player => getOrderedPlayerPositions(player).some(position => pitchLineForPosition(position) === 'DEF');
+  let defenders = field.filter(isDefender).length;
+  const smallTeams = players.length / Math.max(1, numTeams) < 8;
+  const emergencyIds = new Set();
+  for (let index = 0; index < missing; index++) {
+    const candidate = field.filter(player => !emergencyIds.has(playerKey(player)))
+      .sort((a, b) => {
+        const protectDefense = smallTeams && defenders <= numTeams * 2;
+        return (protectDefense ? Number(isDefender(a)) - Number(isDefender(b)) : 0)
+          || bestNaturalPlayerRating(a) - bestNaturalPlayerRating(b);
+      })[0];
+    if (!candidate) break;
+    emergencyIds.add(playerKey(candidate));
+    if (isDefender(candidate)) defenders--;
+  }
   const prepared = players.map((player) => (emergencyIds.has(playerKey(player)) ? { ...player, emergencyGoalkeeper: true } : player));
   return { players: prepared, emergencyGoalkeepers: prepared.filter((player) => emergencyIds.has(playerKey(player))) };
 }
@@ -804,14 +791,15 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
   const fixed = team.filter(isFixedGoalkeeper);
   const rules = team.length ? rosterFormationRuleCache.get(team[0])?.rules : null;
   const keeper = fixed[0] || team.filter(canPlayGoalkeeper).sort((a, b) => goalkeeperSortValue(a) - goalkeeperSortValue(b))[0];
-  let states = new Map([['0,0,0', { counts: [0, 0, 0], changes: 0, assignment: keeper ? { [playerKey(keeper)]: 'ARQ' } : {} }]]);
+  let states = new Map([['0,0,0', { counts: [0, 0, 0], changes: 0, adaptations: 0, rating: 0, adaptedLines: [0, 0, 0], assignment: keeper ? { [playerKey(keeper)]: 'ARQ' } : {} }]]);
   for (const player of team.slice().sort((a, b) => playerKey(a).localeCompare(playerKey(b)))) {
     if (player === keeper) continue;
     const key = playerKey(player);
     const override = String(assignmentOverrides[key] || '').toUpperCase();
     const allowed = getOrderedPlayerPositions(player).filter(position => position !== 'ARQ');
     // Explicit manual overrides remain supported; automatic generation never uses them.
-    const positions = FORMATION_LINES.includes(override) ? [override] : allowed;
+    const fallback = REQUIRED_FIELD_LINES.filter(line => rules?.[line]?.canAdapt && !allowed.map(pitchLineForPosition).includes(line));
+    const positions = FORMATION_LINES.includes(override) ? [override] : [...allowed, ...fallback];
     if (!positions.length) return { ...Object.fromEntries(team.map(p => [playerKey(p), getPrimaryPlayerPosition(p)])), ...(keeper ? { [playerKey(keeper)]: 'ARQ' } : {}) };
     const next = new Map();
     for (const state of states.values()) {
@@ -820,9 +808,16 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
         const index = REQUIRED_FIELD_LINES.indexOf(pitchLineForPosition(position));
         if (index >= 0) counts[index] += 1;
         const changes = state.changes + (position === getPrimaryPlayerPosition(player) ? 0 : 1);
-        const signature = counts.join(',');
+        const isAdapted = !allowed.map(pitchLineForPosition).includes(pitchLineForPosition(position));
+        const adaptations = state.adaptations + Number(isAdapted);
+        const adaptedLines = state.adaptedLines.slice();
+        if (isAdapted && index >= 0) adaptedLines[index]++;
+        const rating = state.rating + adjustedPositionRatingForTeamSize(player, position, team.length);
+        const signature = counts.join(',') + ':' + adaptedLines.join(',');
         const existing = next.get(signature);
-        if (!existing || changes < existing.changes) next.set(signature, { counts, changes, assignment: { ...state.assignment, [key]: position } });
+        if (!existing || adaptations < existing.adaptations || (adaptations === existing.adaptations && (changes < existing.changes || (changes === existing.changes && rating > existing.rating)))) {
+          next.set(signature, { counts, changes, adaptations, adaptedLines, rating, assignment: { ...state.assignment, [key]: position } });
+        }
       }
     }
     states = next;
@@ -832,7 +827,9 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
     const violations = state.counts.reduce((sum, count, index) => sum
       + Math.max(0, (rules?.[REQUIRED_FIELD_LINES[index]]?.minimum ?? fieldLineMinimum(REQUIRED_FIELD_LINES[index], team.length)) - count)
       + Math.max(0, count - (rules?.[REQUIRED_FIELD_LINES[index]]?.maximum ?? maxFieldPlayersPerLine(team.length))), 0);
-    if (!best || violations < best.violations || (violations === best.violations && state.changes < best.changes)) best = { ...state, violations };
+    const excessAdaptation = state.adaptedLines.reduce((sum, count, index) => sum + (count > 0 ? Math.max(0, state.counts[index] - (rules?.[REQUIRED_FIELD_LINES[index]]?.minimum || 1)) : 0), 0);
+    const invalid = violations + excessAdaptation;
+    if (!best || invalid < best.violations || (invalid === best.violations && (state.adaptations < best.adaptations || (state.adaptations === best.adaptations && (state.changes < best.changes || (state.changes === best.changes && state.rating > best.rating)))))) best = { ...state, violations: invalid };
   }
   return normalizeCompactDefenseAssignments(team, best?.assignment || {});
 }
@@ -847,6 +844,7 @@ function teamLineCounts(team, assignments) {
 }
 
 function normalizeDefenseLaneAssignments(team, assignments = {}) {
+  if (team.length < 8) return { ...assignments };
   const defensePlayers = team.filter((player) => {
     const assigned = String(assignments[playerKey(player)] || getPrimaryPlayerPosition(player)).toUpperCase();
     return pitchLineForPosition(assigned) === 'DEF';
@@ -1140,30 +1138,44 @@ function rosterFormationRules(players, numTeams, teamSize) {
     }
   }
   const rules = Object.fromEntries(REQUIRED_FIELD_LINES.map((line, index) => [line, {
-    minimum: minimum[index],
+    minimum: teamSize < 8 ? (line === 'DEF' ? 2 : 1) : Math.max(line === 'DEF' ? 2 : 1, minimum[index]),
     maximum: Math.max(maxFieldPlayersPerLine(teamSize), Math.ceil(field.filter(player => pitchLineForPosition(getPrimaryPlayerPosition(player)) === line).length / Math.max(1, numTeams))),
     shortage: Math.max(0, fieldLineMinimum(line, teamSize) - minimum[index]),
   }]));
+  const required = REQUIRED_FIELD_LINES.map(line => rules[line].minimum * numTeams);
+  const deficits = unionCapacity.map((capacity, mask) => Math.max(0,
+    required.reduce((sum, count, index) => sum + ((mask & (1 << index)) ? count : 0), 0) - capacity));
+  rules.adaptationBudget = Math.max(0, ...deficits);
+  REQUIRED_FIELD_LINES.forEach((line, index) => {
+    rules[line].canAdapt = deficits.some((deficit, mask) => deficit > 0 && (mask & (1 << index)) !== 0);
+  });
   const entry = { numTeams, teamSize, players: new Set(players), rules };
   players.forEach(player => rosterFormationRuleCache.set(player, entry));
   return rules;
 }
 
 function generationConstraints(teams, assignments = null) {
-  const assigned = assignments || teams.map(team => buildTeamAssignment(team));
   const players = teams.flat();
   const numTeams = teams.length;
   const teamSize = teams[0]?.length || 0;
   const ids = players.map(playerKey);
+  const rules = rosterFormationRules(players, numTeams, teamSize);
+  const assigned = assignments || teams.map(team => buildTeamAssignment(team));
   const goalkeeperRule = teamsRespectGoalkeepers(teams, assigned);
   const sizes = numTeams >= 2 && numTeams <= 4 && Number.isInteger(teamSize) && teamSize >= 1 && teams.every(team => team.length === teamSize);
   const unique = new Set(ids).size === ids.length;
-  const naturalPositions = teams.every((team, index) => team.every(player => {
+  let adaptationCount = 0;
+  let naturalPositions = teams.every((team, index) => team.every(player => {
     const position = assigned[index][playerKey(player)];
-    return position === 'ARQ' ? canPlayGoalkeeper(player) : getOrderedPlayerPositions(player).map(pitchLineForPosition).includes(pitchLineForPosition(position));
+    if (position === 'ARQ') return canPlayGoalkeeper(player);
+    const line = pitchLineForPosition(position);
+    if (getOrderedPlayerPositions(player).map(pitchLineForPosition).includes(line)) return true;
+    adaptationCount++;
+    const lineCount = team.filter(p => pitchLineForPosition(assigned[index][playerKey(p)]) === line).length;
+    return rules[line]?.canAdapt === true && lineCount <= rules[line].minimum;
   }));
+  naturalPositions = naturalPositions && adaptationCount <= rules.adaptationBudget;
   const shortage = {};
-  const rules = rosterFormationRules(players, numTeams, teamSize);
   let coverageViolations = 0;
   REQUIRED_FIELD_LINES.forEach(line => {
     const required = rules[line].minimum;
@@ -1177,7 +1189,7 @@ function generationConstraints(teams, assignments = null) {
   // Preserve the existing platinum rule, using actual positional ratings.
   const platinum = platinumSpread(teams) <= 1;
   const violations = Number(!sizes) + Number(!unique) + Number(!goalkeeperRule) + Number(!naturalPositions) + Number(!platinum) + coverageViolations;
-  return { valid: violations === 0, violations, sizes, unique, goalkeeperRule, naturalPositions, platinum, coverageViolations, shortage };
+  return { valid: violations === 0, violations, sizes, unique, goalkeeperRule, naturalPositions, platinum, coverageViolations, shortage, adaptationCount, adaptationBudget: rules.adaptationBudget };
 }
 
 function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) {
@@ -1882,6 +1894,7 @@ function applyFormationToTeam(team, value) {
     for (let index = 0; index < counts[line]; index += 1) {
       const candidate = remaining
         .filter((player) => !assignments[playerKey(player)])
+        .filter(player => proposedFormationFits({[playerKey(player)]:line}))
         .sort((a, b) => adjustedPositionRatingForTeamSize(b, line, team.length) - adjustedPositionRatingForTeamSize(a, line, team.length))[0];
       if (candidate) assignments[playerKey(candidate)] = line;
     }
@@ -3230,7 +3243,7 @@ export function SorteoLegacyPageIsland({ root }) {
       return null;
     }
     if (teamSize < 5) {
-      setError(`Con ${teamSize} jugadores por equipo no se puede respetar la formacion minima: 1 arquero, laterales segun tamano de equipo, y cobertura en DEF, MED y DEL.`);
+      setError(`Con ${teamSize} jugadores por equipo no se puede respetar la formacion minima: 1 arquero, 2 en defensa (DEF/LAT), 1 en medio y 1 en ataque.`);
       return null;
     }
     const pureGoalkeepers = candidates.filter((player) => getOrderedPlayerPositions(player).length === 1 && getPrimaryPlayerPosition(player) === 'ARQ');
@@ -3475,6 +3488,7 @@ export function SorteoLegacyPageIsland({ root }) {
     }, 0);
     const lineIssues = summaries.flatMap((summary) => {
       const teamSize = teams[0]?.length || 0;
+      if (teamSize < 8) return fieldLineCountsFitLimits(summary.counts, teamSize) ? [] : [`${summary.name}: DEF/LAT o ARQ`];
       return FORMATION_LINES
         .filter((line) => {
           const count = Number(summary.counts?.[line] || 0);
@@ -3484,7 +3498,7 @@ export function SorteoLegacyPageIsland({ root }) {
     });
     const ruleChecks = [
       { label: 'Un arquero por equipo', ok: summaries.every((summary) => Number(summary.counts.ARQ || 0) === 1) },
-      { label: 'Laterales y lineas cubiertas', ok: lineIssues.length === 0 },
+      { label: (teams[0]?.length || 0) < 8 ? 'Al menos 2 en defensa (DEF/LAT)' : 'Laterales y lineas cubiertas', ok: lineIssues.length === 0 },
       { label: 'Platinum repartidos', ok: evaluation.platinumSpread <= 1 },
       { label: 'Jugadores lentos equilibrados', ok: evaluation.slowSpread <= 1 },
       { label: 'Irregulares repartidos', ok: evaluation.irregularSpread <= 1 },
@@ -3660,6 +3674,13 @@ export function SorteoLegacyPageIsland({ root }) {
     });
   }, []);
 
+  const proposedFormationFits = changes => {
+    if (!teams) return false;
+    const proposed = teams.map(team => ({ ...buildTeamAssignment(team, assignments), ...changes }));
+    const constraints = generationConstraints(teams, proposed);
+    return constraints.naturalPositions && constraints.goalkeeperRule && constraints.coverageViolations === 0;
+  };
+
   const applyFormation = (teamIndex, value) => {
     if (!teams?.[teamIndex]) return;
     const formationValue = FORMATION_PRESET_VALUES.has(value)
@@ -3681,6 +3702,10 @@ export function SorteoLegacyPageIsland({ root }) {
       ? applyPositionCountsToTeam(teams[teamIndex], counts, buildTeamAssignment(teams[teamIndex], assignments), lockedPlayerPositions)
       : applyFormationToTeam(teams[teamIndex], formationValue);
     if (!nextAssignments) return;
+    if (!proposedFormationFits(nextAssignments)) {
+      setError('La formacion debe cubrir todas las lineas usando posiciones naturales o secundarias; solo se adapta para cubrir faltantes reales.');
+      return;
+    }
     setAssignments((current) => ({ ...current, ...nextAssignments, ...lockedPlayerPositions }));
   };
 
@@ -3708,6 +3733,7 @@ export function SorteoLegacyPageIsland({ root }) {
       .filter((player) => currentAssignments[playerKey(player)] === line)
       .filter((player) => !lockedPlayerPositions[playerKey(player)])
       .filter(() => (teamLineCounts(team, currentAssignments)[line] || 0) > fieldLineMinimum(line, team.length))
+      .filter(player => { const fallback = bestNaturalPlayerPosition(player) === line ? 'MED' : bestNaturalPlayerPosition(player); return proposedFormationFits({[playerKey(player)]:fallback === 'ARQ' ? 'MED' : fallback}); })
       .sort((a, b) => adjustedPositionRatingForTeamSize(a, line, team.length) - adjustedPositionRatingForTeamSize(b, line, team.length))[0];
     if (candidate) {
       const fallback = bestNaturalPlayerPosition(candidate) === line ? 'MED' : bestNaturalPlayerPosition(candidate);
@@ -3741,6 +3767,7 @@ export function SorteoLegacyPageIsland({ root }) {
         .flatMap((player) => ['DEF', 'LAT']
           .filter((targetLine) => (counts[targetLine] || 0) < perPositionLimit)
           .map((targetLine) => ({ player, targetLine, rating: adjustedPositionRatingForTeamSize(player, targetLine, team.length) })))
+        .filter(candidate => proposedFormationFits({[playerKey(candidate.player)]:candidate.targetLine}))
         .sort((a, b) => b.rating - a.rating)[0];
     if (candidate) {
       pushUndo(teamIndex);
@@ -3756,6 +3783,7 @@ export function SorteoLegacyPageIsland({ root }) {
       .filter((player) => ['DEF', 'LAT'].includes(currentAssignments[playerKey(player)]))
       .filter((player) => !lockedPlayerPositions[playerKey(player)])
       .filter(() => (counts.DEF || 0) + (counts.LAT || 0) > fieldLineMinimum('DEF', team.length))
+      .filter(player => { const fallback = bestNaturalPlayerPosition(player); return proposedFormationFits({[playerKey(player)]:['ARQ','DEF','LAT'].includes(fallback) ? 'MED' : fallback}); })
       .sort((a, b) => {
         const assignedA = currentAssignments[playerKey(a)];
         const assignedB = currentAssignments[playerKey(b)];
@@ -3915,6 +3943,18 @@ export function SorteoLegacyPageIsland({ root }) {
           };
         }
       }
+    }
+    const proposedTeams = teams.map(team => team.slice());
+    if (sourceTeamIndex !== normalizedTargetTeamIndex && sourcePlayer && targetPlayer) {
+      proposedTeams[sourceTeamIndex] = proposedTeams[sourceTeamIndex].map(p => playerKey(p) === key ? targetPlayer : p);
+      proposedTeams[normalizedTargetTeamIndex] = proposedTeams[normalizedTargetTeamIndex].map(p => playerKey(p) === String(resolvedTargetPlayerKey) ? sourcePlayer : p);
+    }
+    const overrides = { ...assignments };
+    if (targetLine) overrides[key] = targetLine;
+    if (targetPlayer && FORMATION_LINES.includes(sourceLine)) overrides[String(resolvedTargetPlayerKey)] = sourceLine;
+    const proposedPositions = proposedTeams.map(team => buildTeamAssignment(team, overrides));
+    if (!generationConstraints(proposedTeams, proposedPositions).naturalPositions) {
+      return { ok: false, message: 'Solo se permite adaptar posiciones para cubrir faltantes reales de jugadores naturales o secundarios.' };
     }
     return { ok: true, message: '', targetKeyForAssignment, sourceLine, sourcePlayer, resolvedTargetPlayerKey };
   }, [assignments, findCrossTeamSwapTargetKey, lockedPlayerPositions, teams]);
@@ -4633,6 +4673,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   const applyTeamFormationVariant = (teamIndex, variant) => {
     if (!teams?.[teamIndex] || !variant?.assignments) return;
+    if (!proposedFormationFits(variant.assignments)) { setError('La variante requiere cambios de posicion que no corresponden a faltantes reales.'); return; }
     pushUndo(teamIndex);
     markDrawDirty(true);
     markFormationAsManual(teamIndex);

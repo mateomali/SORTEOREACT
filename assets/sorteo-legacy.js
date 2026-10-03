@@ -47,14 +47,7 @@ function pitchLineForPosition(position) {
 }
 
 function positionFitFactor(jugador, assignedPosition) {
-  const position = String(assignedPosition || '').toUpperCase();
-  if (!position) return 1;
-  const naturalPositions = getOrderedPlayerPositions(jugador);
-  const naturalIndex = naturalPositions.indexOf(position);
-  if (naturalIndex === 0) return 1;
-  if (naturalIndex === 1) return 0.95;
-  const naturalLines = naturalPositions.map(pitchLineForPosition);
-  return naturalLines.includes(pitchLineForPosition(position)) ? 0.90 : 0.90;
+  return globalThis.GoodfellasRating.fit(getOrderedPlayerPositions(jugador), String(assignedPosition || '').toUpperCase());
 }
 
 function pitchLineCountsFromLogical(logicalCounts = {}) {
@@ -73,6 +66,7 @@ function countPitchAssignmentLines(assignment) {
 
 function maxFieldPlayersPerLine(teamSize) {
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
+  if (Number(teamSize) < 8) return fieldPlayers;
   return fieldPlayers > 0 ? Math.max(1, Math.floor(fieldPlayers / 2)) : 0;
 }
 
@@ -90,6 +84,7 @@ function fieldLineMinimum(position, teamSize) {
   const line = String(position || '').toUpperCase();
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
   if (line === 'ARQ') return 1;
+  if (Number(teamSize) < 8) return pitchLineForPosition(line) === 'DEF' ? 2 : (['MED', 'DEL'].includes(line) ? 1 : 0);
   if (fieldPlayers === 4) return REQUIRED_FIELD_LINES.includes(line) ? 1 : 0;
   if (fieldPlayers < 5) return 0;
   if (line === 'DEF' || line === 'MED') return 2;
@@ -100,6 +95,7 @@ function fieldLineMinimum(position, teamSize) {
 function logicalLineMinimum(position, teamSize) {
   const line = String(position || '').toUpperCase();
   if (line === 'ARQ') return 1;
+  if (Number(teamSize) < 8) return ['MED', 'DEL'].includes(line) ? 1 : 0;
   if (!FIELD_LINES.includes(line)) return 0;
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
   if (line === 'LAT') return fieldPlayers >= 8 ? 2 : (fieldPlayers >= FIELD_LINES.length ? 1 : 0);
@@ -470,63 +466,20 @@ function teamTotalsSummary(equipo) {
 }
 
 function positionBaseRating(jugador, assignedPosition) {
-  const position = String(assignedPosition || '').toUpperCase();
-  if (position === 'ARQ') {
-    if (!getOrderedPlayerPositions(jugador).includes('ARQ')) {
-      return 2.0;
-    }
-    return (statValue(jugador, 'habilidad_arquero') * 0.42)
-      + (statValue(jugador, 'solidez') * 0.14)
-      + (statValue(jugador, 'ritmo_stat') * 0.10)
-      + (statValue(jugador, 'tecnica') * 0.10)
-      + (statValue(jugador, 'compromiso') * 0.14)
-      + (statValue(jugador, 'mentalidad') * 0.10);
-  }
-  if (position === 'DEF') {
-    return (statValue(jugador, 'solidez') * 0.28)
-      + (statValue(jugador, 'ritmo_stat') * 0.20)
-      + (statValue(jugador, 'tecnica') * 0.18)
-      + (statValue(jugador, 'compromiso') * 0.13)
-      + (statValue(jugador, 'mentalidad') * 0.13)
-      + (statValue(jugador, 'ataque') * 0.08);
-  }
-  if (position === 'LAT') {
-    return (statValue(jugador, 'ritmo_stat') * 0.24)
-      + (statValue(jugador, 'solidez') * 0.22)
-      + (statValue(jugador, 'tecnica') * 0.17)
-      + (statValue(jugador, 'compromiso') * 0.15)
-      + (statValue(jugador, 'ataque') * 0.12)
-      + (statValue(jugador, 'mentalidad') * 0.10);
-  }
-  if (position === 'DEL') {
-    return (statValue(jugador, 'ataque') * 0.31)
-      + (statValue(jugador, 'ritmo_stat') * 0.20)
-      + (statValue(jugador, 'tecnica') * 0.17)
-      + (statValue(jugador, 'compromiso') * 0.14)
-      + (statValue(jugador, 'mentalidad') * 0.10)
-      + (statValue(jugador, 'solidez') * 0.08);
-  }
-  if (position === 'MED') {
-    return (statValue(jugador, 'tecnica') * 0.24)
-      + (statValue(jugador, 'ritmo_stat') * 0.23)
-      + (statValue(jugador, 'compromiso') * 0.19)
-      + (statValue(jugador, 'mentalidad') * 0.13)
-      + (statValue(jugador, 'solidez') * 0.12)
-      + (statValue(jugador, 'ataque') * 0.09);
-  }
-  return Number(jugador.puntuacion || 0);
+  const fields = {goalkeeper_skill:'habilidad_arquero', defense_physical:'solidez', rhythm:'ritmo_stat', stamina:'resistencia', technique:'tecnica', pass_vision:'pase_vision', teamwork:'compromiso', mentality:'mentalidad', attack:'ataque'};
+  const stats = Object.fromEntries(Object.entries(fields).map(([field, legacy]) => [field, statValue(jugador, legacy)]));
+  return globalThis.GoodfellasRating.base(stats, assignedPosition);
 }
 
 function applyRegularityAdjustment(rating, jugador) {
-  const factor = 1 + ((statValue(jugador, 'regularidad') - 3.5) / 50);
-  return Math.max(1, Math.min(6, rating * factor));
+  return globalThis.GoodfellasRating.regularity(rating, {regularity: statValue(jugador, 'regularidad')});
 }
 
 function adjustedPositionRating(jugador, assignedPosition) {
   const position = String(assignedPosition || '').toUpperCase();
   if (!position) return Math.max(1, Math.min(6, Number(jugador.puntuacion || 0)));
   const baseRating = positionBaseRating(jugador, position);
-  return Math.max(1, Math.min(6, applyRegularityAdjustment(baseRating, jugador) * positionFitFactor(jugador, position)));
+  return Math.round(Math.max(1, Math.min(6, applyRegularityAdjustment(baseRating, jugador) * globalThis.GoodfellasRating.fit(getOrderedPlayerPositions(jugador), position))) * 10) / 10;
 }
 
 function positionPenaltyPercent(jugador, assignedPosition) {
@@ -544,21 +497,7 @@ function formatRating(value) {
 }
 
 function playerCardRating(value) {
-  const rating = Math.max(1, Math.min(6, Number(value || 0)));
-  const anchors = [
-    [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-    [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-    [5.2, 93], [5.3, 94], [6.0, 99],
-  ];
-  for (let i = 0; i < anchors.length - 1; i += 1) {
-    const [fromRating, fromOverall] = anchors[i];
-    const [toRating, toOverall] = anchors[i + 1];
-    if (rating <= toRating) {
-      const ratio = (rating - fromRating) / (toRating - fromRating);
-      return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-    }
-  }
-  return 99;
+  return globalThis.GoodfellasRating.card(value);
 }
 
 function playerCardRatingHtml(value, label = 'GEN') {
@@ -723,19 +662,25 @@ function prepareEmergencyGoalkeepers(players, numEquipos) {
     return { players, emergencyGoalkeepers: [] };
   }
 
-  const emergencyIds = new Set(
-    players
-      .filter(p => getPrimaryPlayerPosition(p) !== 'ARQ')
-      .slice()
-      .sort((a, b) => {
-        const secondaryA = hasSecondaryPlayerPosition(a, 'ARQ') ? 0 : 1;
-        const secondaryB = hasSecondaryPlayerPosition(b, 'ARQ') ? 0 : 1;
-        if (secondaryA !== secondaryB) return secondaryA - secondaryB;
-        return (getBestNaturalPlayerRating(a) - getBestNaturalPlayerRating(b)) || String(a.nombre).localeCompare(String(b.nombre));
-      })
-      .slice(0, missing)
-      .map(playerKey)
-  );
+  const candidates = players.filter(p => getPrimaryPlayerPosition(p) !== 'ARQ').slice()
+    .sort((a, b) => {
+      const secondaryA = hasSecondaryPlayerPosition(a, 'ARQ') ? 0 : 1;
+      const secondaryB = hasSecondaryPlayerPosition(b, 'ARQ') ? 0 : 1;
+      if (secondaryA !== secondaryB) return secondaryA - secondaryB;
+      return (getBestNaturalPlayerRating(a) - getBestNaturalPlayerRating(b)) || String(a.nombre).localeCompare(String(b.nombre));
+    });
+  const isDefender = player => getOrderedPlayerPositions(player).some(position => pitchLineForPosition(position) === 'DEF');
+  let defenders = candidates.filter(isDefender).length;
+  const smallTeams = players.length / Math.max(1, numEquipos) < 8;
+  const emergencyIds = new Set();
+  for (let index = 0; index < missing; index++) {
+    const available = candidates.filter(player => !emergencyIds.has(playerKey(player)));
+    const safe = smallTeams && defenders <= numEquipos * 2 ? available.filter(player => !isDefender(player)) : available;
+    const candidate = safe[0] || available[0];
+    if (!candidate) break;
+    emergencyIds.add(playerKey(candidate));
+    if (isDefender(candidate)) defenders--;
+  }
 
   const prepared = players.map(player => {
     if (!emergencyIds.has(playerKey(player))) {
@@ -774,6 +719,12 @@ function buildTeamPositionAssignment(equipo) {
     });
 
   const arqueroTitular = candidatosArq[0] || null;
+  if (equipo.length < 8) {
+    const asignacion = globalThis.GoodfellasFormation.assignSmall(equipo, arqueroTitular, getOrderedPlayerPositions, adjustedPositionRating);
+    const conteo = countAssignmentLines(asignacion);
+    return {asignacion, conteoFinal: conteo, arquerosAsignados: conteo.ARQ || 0, lineaMaximaValida: fieldLineCountsFitLimits(conteo,equipo.length)};
+  }
+
   const asignacion = new Map();
   const preferenciasPorJugador = new Map();
 
@@ -1200,7 +1151,7 @@ function explicarBloqueoSorteo(players, numEquipos, maxDiff) {
   const teamSize = players.length / numEquipos;
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
   if (teamSize < 5) {
-    return `Cada equipo tendria ${teamSize} jugadores. La formacion minima requiere 1 arquero y cobertura en defensa, medio y ataque; los defensores pueden ser DEF sin laterales obligatorios.`;
+    return `Cada equipo tendria ${teamSize} jugadores. La formacion minima requiere 1 arquero, 2 en defensa (DEF/LAT), 1 en medio y 1 en ataque.`;
   }
   const maxTeamSizeByFormation = 1 + (maxPerLine * 3);
   if (teamSize > maxTeamSizeByFormation) {
@@ -1213,6 +1164,11 @@ function explicarBloqueoSorteo(players, numEquipos, maxDiff) {
   const arquerosPuros = arqueros.filter(isPureGoalkeeper);
   if (arquerosPuros.length > numEquipos) {
     return `Hay ${arquerosPuros.length} arqueros puros para ${numEquipos} equipos. Como el arquero es una sola plaza, sobra al menos un arquero puro.`;
+  }
+  if (teamSize < 8) {
+    const defenders = players.filter(p => getPrimaryPlayerPosition(p) !== 'ARQ' && getOrderedPlayerPositions(p).some(position => pitchLineForPosition(position) === 'DEF')).length;
+    if (defenders < numEquipos * 2) return `Se necesitan al menos ${numEquipos * 2} jugadores para defensa (DEF/LAT): 2 por equipo.`;
+    return `No se encontro una combinacion equilibrada con 1 arquero, 2 en defensa, 1 en medio y 1 en ataque por equipo.`;
   }
   const missingLines = FIELD_LINES.filter(linea => players.filter(p => getOrderedPlayerPositions(p).includes(linea)).length < numEquipos);
   if (missingLines.length) {
@@ -1270,7 +1226,7 @@ async function generarEquipos() {
   const teamSize = selectedPlayers.length / numEquipos;
   const maxPerLine = maxFieldPlayersPerLine(teamSize);
   if (teamSize < 5) {
-    errorDiv.textContent = `Con ${teamSize} jugadores por equipo no se puede respetar la formacion minima: 1 arquero y cobertura en defensa, medio y ataque; los defensores pueden ser DEF sin laterales obligatorios.`;
+    errorDiv.textContent = `Con ${teamSize} jugadores por equipo no se puede respetar la formacion minima: 1 arquero, 2 en defensa (DEF/LAT), 1 en medio y 1 en ataque.`;
     errorDiv.classList.remove('hidden');
     return;
   }
@@ -1610,7 +1566,12 @@ function evaluarEquipos(equipos, teamSize, maxDiff, options = {}) {
     }
   }
 
-  const perfecto = hardOk
+  const positionValid = globalThis.GoodfellasFormation.validate(equipos.map(equipo => {
+    const assignment = buildTeamPositionAssignment(equipo).asignacion;
+    return equipo.map(player => ({positions:getOrderedPlayerPositions(player),assigned:assignment.get(player)}));
+  }), Object.fromEntries(REQUIRED_FIELD_LINES.map(line => [line,fieldLineMinimum(line,teamSize)])));
+  if (!positionValid) penalidad += 100000000;
+  const perfecto = positionValid && hardOk
     && diffPuntos <= maxDiff
     && diffLentos <= 1
     && diffIrregulares <= 1
@@ -1914,6 +1875,11 @@ function applyFlexibleFormationAssignments(resultado) {
 
 function validarEquiposDetalle(equipos, teamSize, maxDiff, { strictBalance = true, allowOutOfPosition = false } = {}) {
   let puntuaciones = [];
+  const positionValid = globalThis.GoodfellasFormation.validate(equipos.map(equipo => {
+    const assignment = buildPositionAssignment(equipo, {allowOutOfPosition}).asignacion;
+    return equipo.map(player => ({positions:getOrderedPlayerPositions(player),assigned:assignment.get(player)}));
+  }), Object.fromEntries(REQUIRED_FIELD_LINES.map(line => [line,fieldLineMinimum(line,teamSize)])));
+  if (!positionValid) return {ok:false,reason:'Solo se permite adaptar posiciones para cubrir faltantes reales de jugadores naturales o secundarios.'};
 
   for (let equipoIndex = 0; equipoIndex < equipos.length; equipoIndex++) {
     const equipo = equipos[equipoIndex];
@@ -2132,6 +2098,7 @@ function defaultFormationCounts(teamSize) {
 }
 
 function customLineMinimum(line, teamSize) {
+  if (Number(teamSize) < 8) return ['ARQ', 'MED', 'DEL'].includes(line) ? 1 : 0;
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
   let minimum = 0;
   if (fieldPlayers === 4) minimum = ['MED', 'DEL'].includes(line) ? 1 : 0;
@@ -2285,6 +2252,7 @@ function onTeamCustomFormationChange(teamIndex, line, value) {
   customFormations[teamIndex] = { ...counts };
   teamFormations[teamIndex] = 'custom';
   rebalanceManualAssignmentsForTeam(teamIndex, { ...counts }, previousAssignment);
+  if (!formationPositionsValid()) { undoTeamFormationChange(teamIndex); alert('La formacion debe cubrir todas las lineas y respetar las posiciones naturales o secundarias.'); return; }
   if (lastEquipos) mostrarEquipos(lastEquipos);
 }
 
@@ -2294,6 +2262,16 @@ function onTeamLineDelta(teamIndex, line, delta) {
   const current = currentFormationLineCounts(teamIndex);
   const nextValue = Number(current[line] || 0) + Number(delta || 0);
   onTeamCustomFormationChange(teamIndex, line, nextValue);
+}
+
+function formationPositionsValid(overrides = {}) {
+  if (!lastEquipos) return false;
+  const teams = lastEquipos.map((team, index) => {
+    const assignment = buildFormationAssignment(team,index);
+    return team.map(player => ({positions:getOrderedPlayerPositions(player),assigned:overrides[playerKey(player)] || assignment.get(player)}));
+  });
+  const coverage = teams.every(team => fieldLineCountsFitLimits(team.reduce((counts, p) => { counts[p.assigned] = (counts[p.assigned] || 0) + 1; return counts; }, {}),team.length));
+  return coverage && globalThis.GoodfellasFormation.validate(teams,Object.fromEntries(REQUIRED_FIELD_LINES.map(line=>[line,fieldLineMinimum(line,lastEquipos[0].length)])));
 }
 
 function onManualPositionChange(teamIndex, playerId, position) {
@@ -2306,6 +2284,7 @@ function onManualPositionChange(teamIndex, playerId, position) {
     const currentPosition = getPrimaryPosition(player, currentAssignment);
     const proposedAssignment = new Map(currentAssignment);
     proposedAssignment.set(player, nextPosition);
+    if (!formationPositionsValid({[playerKey(player)]:nextPosition})) { alert('Solo se permite adaptar posiciones para cubrir faltantes reales, sin dejar lineas vacias.'); return; }
     if (assignmentGoalkeeperCount(team, proposedAssignment) > 1) {
       alert('Cada equipo puede tener como maximo un arquero.');
       if (lastEquipos) mostrarEquipos(lastEquipos);
@@ -2434,6 +2413,7 @@ function onFormationPlayerDrop(sourceTeamIndex, sourcePlayerKey, targetTeamIndex
   teamFormations[targetTeamIndex] = 'custom';
   manualAssignments[playerKey(sourcePlayer)] = targetPosition;
   manualAssignments[playerKey(targetPlayer)] = sourcePosition;
+  if (!formationPositionsValid()) { undoTeamFormationChange(sourceTeamIndex); alert('Solo se permite adaptar posiciones para cubrir faltantes reales.'); return; }
   mostrarEquipos(lastEquipos);
 }
 

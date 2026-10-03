@@ -9,11 +9,7 @@ function readPayload(root) {
   }
 }
 
-const anchors = [
-  [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-  [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-  [5.2, 93], [5.3, 94], [6.0, 99],
-];
+
 
 function normalizeInternal(value, fallback = 3.0) {
   const numeric = Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -21,6 +17,7 @@ function normalizeInternal(value, fallback = 3.0) {
 }
 
 function internalFromOverall(value) {
+  const anchors = globalThis.GoodfellasRating.policy().anchors;
   const overall = Math.max(0, Math.min(99, Number(value) || 0));
   if (overall <= 35) return 1.0;
   for (let index = 0; index < anchors.length - 1; index += 1) {
@@ -35,16 +32,7 @@ function internalFromOverall(value) {
 }
 
 function overallFromInternal(value) {
-  const rating = normalizeInternal(value);
-  for (let index = 0; index < anchors.length - 1; index += 1) {
-    const [fromRating, fromOverall] = anchors[index];
-    const [toRating, toOverall] = anchors[index + 1];
-    if (rating <= toRating) {
-      const ratio = (rating - fromRating) / (toRating - fromRating);
-      return Math.round(fromOverall + ((toOverall - fromOverall) * ratio));
-    }
-  }
-  return 99;
+  return globalThis.GoodfellasRating.card(normalizeInternal(value));
 }
 
 function parsePlayerPositions(positions) {
@@ -62,31 +50,13 @@ function pitchLine(position) {
 }
 
 function positionFitFactor(playerPositions, position) {
-  const normalizedPosition = String(position || '').toUpperCase();
-  if (!normalizedPosition) return 1;
-  const naturalIndex = playerPositions.indexOf(normalizedPosition);
-  if (naturalIndex === 0) return 1;
-  if (naturalIndex === 1) return 0.95;
-  const naturalLines = playerPositions.map(pitchLine);
-  return naturalLines.includes(pitchLine(normalizedPosition)) ? 0.90 : 0.90;
+  return globalThis.GoodfellasRating.fit(playerPositions, position);
 }
 
 function recalculatePositionRating(rowStats, position, playerPositions, positionWeights) {
-  const normalizedPosition = String(position || 'MED').toUpperCase();
-  const weights = positionWeights[normalizedPosition] || positionWeights.MED || {};
-  let total = 0;
-  let usedWeight = 0;
-  Object.entries(rowStats || {}).forEach(([field, value]) => {
-    const weight = Number(weights[field] || 0);
-    if (weight <= 0) return;
-    total += internalFromOverall(value) * weight;
-    usedWeight += weight;
-  });
-  if (usedWeight <= 0) return null;
-  const regularity = rowStats.regularity !== undefined ? internalFromOverall(rowStats.regularity) : 3.5;
-  const adjusted = Math.max(1.0, Math.min(6.0, (total / usedWeight) * (1 + ((regularity - 3.5) / 50))));
-  const fitFactor = positionFitFactor(playerPositions, normalizedPosition);
-  return overallFromInternal(Math.round(adjusted * fitFactor * 10) / 10);
+  const stats = Object.fromEntries(Object.entries(rowStats || {}).map(([field, value]) => [field, internalFromOverall(value)]));
+  const role = String(position || 'MED').toUpperCase();
+  return globalThis.GoodfellasRating.card(globalThis.GoodfellasRating.position(stats, role, playerPositions, false, positionWeights));
 }
 
 function normalizeSearchText(value) {

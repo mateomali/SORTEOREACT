@@ -54,6 +54,7 @@ function draw_pitch_line_counts(array $logicalCounts): array
 function draw_main_field_line_limit(int $teamSize): int
 {
     $fieldPlayers = max(0, $teamSize - 1);
+    if ($teamSize < 8) return $fieldPlayers;
     return $fieldPlayers > 0 ? max(1, intdiv($fieldPlayers, 2)) : 0;
 }
 
@@ -68,6 +69,9 @@ function draw_pitch_line_minimum(string $position, int $teamSize): int
     $fieldPlayers = max(0, $teamSize - 1);
     if ($line === 'ARQ') {
         return 1;
+    }
+    if ($teamSize < 8) {
+        return $line === 'DEF' ? 2 : (in_array($line, ['MED', 'DEL'], true) ? 1 : 0);
     }
     if ($fieldPlayers === 4) {
         return in_array($line, player_required_lines(), true) ? 1 : 0;
@@ -93,6 +97,7 @@ function draw_logical_line_minimum(string $position, int $teamSize): int
     if ($position === 'ARQ') {
         return 1;
     }
+    if ($teamSize < 8) return in_array($position, ['MED', 'DEL'], true) ? 1 : 0;
     if (!in_array($position, player_field_lines(), true)) {
         return 0;
     }
@@ -118,6 +123,8 @@ function draw_line_limit(string $position, int $teamSize): int
 function draw_line_counts_fit_limits(array $lineCounts, int $teamSize): bool
 {
     $pitchCounts = draw_pitch_line_counts($lineCounts);
+    if (($pitchCounts['ARQ'] ?? 0) !== 1) return false;
+    if ($teamSize < 8) return ($pitchCounts['DEF'] ?? 0) >= 2 && ($pitchCounts['MED'] ?? 0) >= 1 && ($pitchCounts['DEL'] ?? 0) >= 1;
     foreach (player_required_lines() as $line) {
         $count = (int) ($pitchCounts[$line] ?? 0);
         if ($count < draw_pitch_line_minimum($line, $teamSize)) {
@@ -178,7 +185,19 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
         return strcmp((string) $a['name'], (string) $b['name']);
     });
 
-    $emergencyIds = array_flip(array_map(static fn(array $p): int => (int) $p['id'], array_slice($candidates, 0, $missing)));
+    $isDefender = static fn(array $p): bool => (bool) array_intersect(ordered_player_positions($p), ['DEF', 'LAT']);
+    $defenders = count(array_filter($candidates, $isDefender));
+    $smallTeams = count($players) / max(1, $numTeams) < 8;
+    $emergencyIds = [];
+    for ($index = 0; $index < $missing; $index++) {
+        $available = array_values(array_filter($candidates, static fn(array $p): bool => !isset($emergencyIds[(int) $p['id']])));
+        $safe = $smallTeams && $defenders <= $numTeams * 2
+            ? array_values(array_filter($available, static fn(array $p): bool => !$isDefender($p))) : $available;
+        $candidate = $safe[0] ?? $available[0] ?? null;
+        if ($candidate === null) break;
+        $emergencyIds[(int) $candidate['id']] = true;
+        if ($isDefender($candidate)) $defenders--;
+    }
     return array_map(static function (array $player) use ($emergencyIds): array {
         if (!isset($emergencyIds[(int) $player['id']])) {
             return $player;
@@ -192,6 +211,90 @@ function prepare_emergency_goalkeepers(array $players, int $numTeams): array
 }
 
 function build_team_position_assignment(array $team): array
+{
+    if (count($team) >= 8) return build_large_team_position_assignment($team);
+    usort($team, static fn(array $a, array $b): int => (int)$a['id'] <=> (int)$b['id']);
+    static $cache = [];
+    $cacheKey = md5(serialize($team));
+    if (isset($cache[$cacheKey])) return $cache[$cacheKey];
+    if (count($cache) > 4000) $cache = [];
+    $fieldLines = player_field_lines();
+    $teamSize = count($team);
+    $maxPerMainLine = draw_main_field_line_limit($teamSize);
+
+    $candidates = array_values(array_filter($team, static fn(array $p): bool => player_primary_position($p) === 'ARQ' || is_emergency_goalkeeper($p)));
+    usort($candidates, static function (array $a, array $b): int {
+        $emergencyA = is_emergency_goalkeeper($a) ? 1 : 0;
+        $emergencyB = is_emergency_goalkeeper($b) ? 1 : 0;
+        if ($emergencyA !== $emergencyB) {
+            return $emergencyA <=> $emergencyB;
+        }
+        $pureA = is_pure_goalkeeper($a) ? 0 : 1;
+        $pureB = is_pure_goalkeeper($b) ? 0 : 1;
+        if ($pureA !== $pureB) {
+            return $pureA <=> $pureB;
+        }
+        $ratingA = player_overall_rating($a);
+        $ratingB = player_overall_rating($b);
+        if ($ratingB !== $ratingA) {
+            return $ratingB <=> $ratingA;
+        }
+        return strcmp((string) $a['name'], (string) $b['name']);
+    });
+
+    $goalkeeperId = $candidates[0]['id'] ?? null;
+    foreach ([false, true] as $allowAdaptation) {
+    $states = [['assignment' => $goalkeeperId !== null ? [(int)$goalkeeperId => 'ARQ'] : [], 'counts' => array_fill_keys(player_formation_lines(), 0), 'adapted' => array_fill_keys(player_required_lines(), 0), 'changes' => 0, 'rating' => 0.0, 'adaptations' => 0]];
+    $states[0]['counts']['ARQ'] = $goalkeeperId !== null ? 1 : 0;
+    foreach ($team as $player) {
+        $id = (int)$player['id'];
+        if ($goalkeeperId !== null && $id === (int)$goalkeeperId) continue;
+        $natural = array_values(array_filter(draw_position_preferences($player, $teamSize), static fn(string $line): bool => $line !== 'ARQ'));
+        $naturalPitch = array_map('draw_pitch_line', $natural);
+        $options = array_values(array_unique(array_merge($natural, $allowAdaptation ? player_required_lines() : [])));
+        $next = [];
+        foreach ($states as $state) {
+            foreach ($options as $line) {
+                $candidate = $state;
+                $pitch = draw_pitch_line($line);
+                $adapted = !in_array($pitch, $naturalPitch, true);
+                $candidate['counts'][$line]++;
+                if ($candidate['counts'][$line] > draw_line_limit($line, $teamSize)) continue;
+                $candidate['adaptations'] += (int)$adapted;
+                $candidate['adapted'][$pitch] += (int)$adapted;
+                if ($candidate['adapted'][$pitch] && draw_pitch_line_counts($candidate['counts'])[$pitch] > draw_pitch_line_minimum($pitch, $teamSize)) continue;
+                $candidate['changes'] += (int)($line !== ($natural[0] ?? ''));
+                $candidate['rating'] += draw_player_position_rating($player, $line, $teamSize);
+                $candidate['assignment'][$id] = $line;
+                $key = implode(',', $candidate['counts']) . ':' . implode(',', $candidate['adapted']);
+                $rank = [$candidate['adaptations'], $candidate['changes'], -$candidate['rating']];
+                if (!isset($next[$key]) || $rank < [$next[$key]['adaptations'], $next[$key]['changes'], -$next[$key]['rating']]) $next[$key] = $candidate;
+            }
+        }
+        $states = array_values($next);
+    }
+    $best = null;
+    $bestRank = null;
+    foreach ($states as $state) {
+        $pitchCounts = draw_pitch_line_counts($state['counts']);
+        $violations = 0;
+        foreach (player_required_lines() as $line) {
+            $minimum = draw_pitch_line_minimum($line, $teamSize);
+            $violations += max(0, $minimum - $pitchCounts[$line]) + max(0, $pitchCounts[$line] - $maxPerMainLine);
+            if ($state['adapted'][$line] && $pitchCounts[$line] > $minimum) $violations += $state['adapted'][$line];
+        }
+        foreach (player_field_lines() as $line) $violations += max(0, draw_logical_line_minimum($line, $teamSize) - $state['counts'][$line]);
+        $rank = [$violations, $state['adaptations'], $state['changes'], -$state['rating']];
+        if ($bestRank === null || $rank < $bestRank) { $best = $state; $bestRank = $rank; }
+    }
+    if ($bestRank !== null && $bestRank[0] === 0) break;
+    }
+    $best ??= $states[0] ?? ['assignment' => [], 'counts' => array_fill_keys(player_formation_lines(), 0)];
+    return $cache[$cacheKey] = ['assignment' => $best['assignment'], 'goalkeepers' => $best['counts']['ARQ'], 'line_counts' => $best['counts'], 'line_limit_ok' => draw_line_counts_fit_limits($best['counts'], $teamSize)];
+}
+
+/** Only genuine roster shortages may require a player outside their declared pitch lines. */
+function build_large_team_position_assignment(array $team): array
 {
     $fieldLines = player_field_lines();
     $teamSize = count($team);
@@ -273,6 +376,7 @@ function build_team_position_assignment(array $team): array
                     continue;
                 }
                 $rating = draw_player_position_rating($player, $requiredLine, $teamSize);
+                if (in_array($requiredLine, array_map('draw_pitch_line', ordered_player_positions($player)), true)) $rating += 1000;
                 if ($candidate === null || $rating > $candidateRating) {
                     $candidate = $player;
                     $candidateRating = $rating;
@@ -439,8 +543,51 @@ function build_team_position_assignment(array $team): array
     ];
 }
 
+function draw_assignments_respect_positions(array $teams, array $assignments): bool
+{
+    if (!$teams) return false;
+    $size = count($teams[0]);
+    $lines = ['DEF', 'MED', 'DEL'];
+    $required = array_map(static fn(string $line): int => draw_pitch_line_minimum($line, $size) * count($teams), $lines);
+    $capacity = array_fill(0, 8, 0);
+    $adapted = [];
+    foreach ($teams as $index => $team) {
+        $counts = draw_pitch_line_counts(array_count_values(array_values($assignments[$index])));
+        foreach ($team as $player) {
+            $position = $assignments[$index][(int)$player['id']] ?? '';
+            if ($position === 'ARQ') continue;
+            $natural = array_unique(array_map('draw_pitch_line', ordered_player_positions($player)));
+            for ($mask = 1; $mask < 8; $mask++) {
+                foreach ($lines as $bit => $line) {
+                    if (($mask & (1 << $bit)) && in_array($line, $natural, true)) { $capacity[$mask]++; break; }
+                }
+            }
+            $pitch = draw_pitch_line($position);
+            if (!in_array($pitch, $natural, true)) {
+                if (!in_array($pitch, $lines, true) || ($counts[$pitch] ?? 0) > draw_pitch_line_minimum($pitch, $size)) return false;
+                $adapted[] = array_search($pitch, $lines, true);
+            }
+        }
+    }
+    $deficits = array_fill(0, 8, 0);
+    for ($mask = 1; $mask < 8; $mask++) {
+        $demand = 0;
+        foreach ($required as $bit => $count) if ($mask & (1 << $bit)) $demand += $count;
+        $deficits[$mask] = max(0, $demand - $capacity[$mask]);
+    }
+    if (count($adapted) > max($deficits)) return false;
+    foreach ($adapted as $bit) {
+        $allowed = false;
+        foreach ($deficits as $mask => $deficit) if ($deficit > 0 && ($mask & (1 << $bit))) $allowed = true;
+        if (!$allowed) return false;
+    }
+    return true;
+}
+
 function validate_teams(array $teams, int $teamSize, float $maxDiff): bool
 {
+    $assignments = array_map(static fn(array $team): array => build_team_position_assignment($team)['assignment'], $teams);
+    if (!draw_assignments_respect_positions($teams, $assignments)) return false;
     $scores = [];
     $slowCounts = [];
     $keeperCounts = array_map(static fn(array $team): int => count(array_filter($team, static fn(array $player): bool => player_primary_position($player) === 'ARQ' || is_emergency_goalkeeper($player))), $teams);
@@ -603,11 +750,7 @@ function draw_position_balance_penalty(array $teams): float
 function draw_player_card_overall(float $rating): int
 {
     $rating = max(1.0, min(6.0, $rating));
-    $anchors = [
-        [1.0, 35], [2.5, 54], [3.0, 64], [3.2, 69], [3.5, 74],
-        [3.8, 79], [4.0, 81], [4.4, 86], [4.5, 87], [5.0, 92],
-        [5.2, 93], [5.3, 94], [6.0, 99],
-    ];
+    $anchors = player_rating_policy()['anchors'];
     $last = count($anchors) - 1;
     for ($i = 0; $i < $last; $i++) {
         [$fromRating, $fromOverall] = $anchors[$i];
