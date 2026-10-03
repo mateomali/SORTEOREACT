@@ -2143,14 +2143,14 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
         </span>
       </span>
       <span
-        className="sorteo-compact-photo absolute left-[40%] right-[6%] top-[12%] z-[25] flex h-[48%] items-center justify-center overflow-hidden rounded-[40%_40%_34%_34%]"
+        className="sorteo-compact-photo absolute left-[40%] right-[6%] top-[10%] z-[25] flex h-[53%] items-center justify-center overflow-hidden rounded-[36%_36%_30%_30%]"
         data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
         <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-center' : 'object-contain object-center opacity-55'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
       </span>
       <PositionPenaltyBubble percent={positionPenalty} />
       <strong
-        className={`gf-player-name absolute left-[9%] right-[9%] top-[62%] bottom-[12%] z-30 flex items-center justify-center text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
+        className={`gf-player-name absolute left-[9%] right-[9%] top-[66%] bottom-[12%] z-30 flex items-center justify-center text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
         style={{ fontSize: player.nombre.length > 18 ? 'clamp(5px, 9cqw, 12px)' : 'clamp(7px, 13cqw, 14px)' }}
         data-sorteo-card-text="1"
       >
