@@ -783,7 +783,7 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
         const adaptedLines = state.adaptedLines.slice();
         if (isAdapted && index >= 0) adaptedLines[index]++;
         const rating = state.rating + adjustedPositionRatingForTeamSize(player, position, team.length);
-        const signature = counts.join(',') + ':' + adaptedLines.join(',');
+        const signature = counts.join(',') + (rules?.speedAdaptation ? '' : ':' + adaptedLines.join(','));
         const existing = next.get(signature);
         if (!existing || adaptations < existing.adaptations || (adaptations === existing.adaptations && (changes < existing.changes || (changes === existing.changes && rating > existing.rating)))) {
           next.set(signature, { counts, changes, adaptations, adaptedLines, rating, assignment: { ...state.assignment, [key]: position } });
@@ -798,7 +798,7 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
       + Math.max(0, (rules?.[REQUIRED_FIELD_LINES[index]]?.minimum ?? fieldLineMinimum(REQUIRED_FIELD_LINES[index], team.length)) - count)
       + Math.max(0, count - (rules?.[REQUIRED_FIELD_LINES[index]]?.maximum ?? maxFieldPlayersPerLine(team.length))), 0);
     const excessAdaptation = state.adaptedLines.reduce((sum, count, index) => sum + (count > 0 ? Math.max(0, state.counts[index] - (rules?.[REQUIRED_FIELD_LINES[index]]?.minimum || 1)) : 0), 0);
-    const invalid = violations + excessAdaptation;
+    const invalid = violations + (rules?.speedAdaptation ? 0 : excessAdaptation);
     if (!best || invalid < best.violations || (invalid === best.violations && (state.adaptations < best.adaptations || (state.adaptations === best.adaptations && (state.changes < best.changes || (state.changes === best.changes && state.rating > best.rating)))))) best = { ...state, violations: invalid };
   }
   const normalized = normalizeCompactDefenseAssignments(team, best?.assignment || {});
@@ -1121,9 +1121,13 @@ function rosterFormationRules(players, numTeams, teamSize) {
   const required = REQUIRED_FIELD_LINES.map(line => rules[line].minimum * numTeams);
   const deficits = unionCapacity.map((capacity, mask) => Math.max(0,
     required.reduce((sum, count, index) => sum + ((mask & (1 << index)) ? count : 0), 0) - capacity));
-  rules.adaptationBudget = Math.max(0, ...deficits);
+  // Permit field adaptations when natural-position coverage would prevent
+  // distributing slow players. The scorer still prefers natural assignments
+  // among teams with equally balanced pace.
+  rules.speedAdaptation = field.filter(isLowRhythmPlayer).length >= 2;
+  rules.adaptationBudget = rules.speedAdaptation ? field.length : Math.max(0, ...deficits);
   REQUIRED_FIELD_LINES.forEach((line, index) => {
-    rules[line].canAdapt = deficits.some((deficit, mask) => deficit > 0 && (mask & (1 << index)) !== 0);
+    rules[line].canAdapt = rules.speedAdaptation || deficits.some((deficit, mask) => deficit > 0 && (mask & (1 << index)) !== 0);
   });
   const entry = { numTeams, teamSize, players: new Set(players), rules };
   players.forEach(player => rosterFormationRuleCache.set(player, entry));
@@ -1148,7 +1152,7 @@ function generationConstraints(teams, assignments = null) {
     if (getOrderedPlayerPositions(player).map(pitchLineForPosition).includes(line)) return true;
     adaptationCount++;
     const lineCount = team.filter(p => pitchLineForPosition(assigned[index][playerKey(p)]) === line).length;
-    return rules[line]?.canAdapt === true && lineCount <= rules[line].minimum;
+    return rules[line]?.canAdapt === true && (rules.speedAdaptation || lineCount <= rules[line].minimum);
   }));
   naturalPositions = naturalPositions && adaptationCount <= rules.adaptationBudget;
   const shortage = {};
@@ -1173,7 +1177,13 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
   const assignments = teams.map((team) => buildTeamAssignment(team, assignmentOverrides));
   const totals = teams.map((team, index) => team.reduce((sum, player) => sum + adjustedPositionRating(player, assignments[index][playerKey(player)]), 0));
   const diff = Math.max(...totals) - Math.min(...totals);
-  const slowCounts = teams.map((team) => team.filter(isLowRhythmPlayer).length);
+  // Goalkeeper pace does not determine the mobility of the field players.
+  const slowCounts = teams.map((team, index) => team.filter(player => assignments[index][playerKey(player)] !== 'ARQ' && isLowRhythmPlayer(player)).length);
+  const paceExcess = Math.max(0, countSpread(slowCounts) - 1);
+  const speedBalance = countSpread(teams.map((team, index) => {
+    const field = team.filter(player => assignments[index][playerKey(player)] !== 'ARQ');
+    return field.length ? field.reduce((sum, player) => sum + statValue(player, 'ritmo_stat'), 0) / field.length : 0;
+  }));
   const slowSpread = Math.max(...slowCounts) - Math.min(...slowCounts);
   const irregularCounts = teams.map((team) => team.filter(isIrregularPlayer).length);
   const irregularSpread = Math.max(...irregularCounts) - Math.min(...irregularCounts);
@@ -1211,14 +1221,14 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
   const lineBalance = lineStrengthBalance(teams, assignmentOverrides, assignments);
   const hardConstraints = generationConstraints(teams, assignments);
   const positionalBalance = lineBalance.positionalBalance;
-  const secondaryCost = slowSpread * 60 + irregularSpread * 95 + tierBalancePenalty(teams, assignmentOverrides)
+  const secondaryCost = slowSpread * 600 + speedBalance * 300 + irregularSpread * 95 + tierBalancePenalty(teams, assignmentOverrides)
     + positionUsePenalty(teams, assignmentOverrides) + profileDistribution.penalty + statPenalty + historicalRepeatPenalty(teams, pairHistory)
     + lineBalance.eliteExcess * 120;
   const totalBalance = countSpread(totals.map((total, index) => teams[index].length ? total / teams[index].length : 0));
-  const totalCost = hardConstraints.violations * 1e9 + positionalBalance * 1e6 + lineBalance.qualityCost * 1000 + totalBalance * 100 + secondaryCost;
+  const totalCost = hardConstraints.violations * 1e15 + paceExcess * 1e12 + hardConstraints.adaptationCount * 1e10 + positionalBalance * 1e6 + lineBalance.qualityCost * 1000 + totalBalance * 100 + secondaryCost;
   return {
     valid: hardConstraints.valid, hardConstraints, hardViolations: hardConstraints.violations,
-    value: totalCost, totalCost, secondaryCost, positionalBalance, lineQualityCost: lineBalance.qualityCost,
+    value: totalCost, totalCost, paceExcess, speedBalance, adaptationCount: hardConstraints.adaptationCount, secondaryCost, positionalBalance, lineQualityCost: lineBalance.qualityCost,
     maxLineGap: lineBalance.maxLineGap, totalBalance, paceBalance: slowSpread,
     linePenalty, eliteExcess: lineBalance.eliteExcess, balanceScore: lineBalance.qualityCost,
     lineBalance, diff, slowSpread, irregularSpread, platinumSpread: supremeSpread,
@@ -1259,7 +1269,7 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
   const sums = teams.map(() => ({ DEF: 0, MED: 0, DEL: 0 }));
   const totals = teams.map(team => adjustedPositionRating(team[0], 'ARQ'));
   const tiers = teams.map(team => team.filter(isPlatinumPlayer).length);
-  const slows = teams.map(team => team.filter(isLowRhythmPlayer).length);
+  const slows = teams.map(() => 0);
   for (const player of remaining) {
     const position = getOrderedPlayerPositions(player).find(position => position !== 'ARQ');
     if (!position) return null;
@@ -1275,7 +1285,8 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
       counts[index][line] += 1; sums[index][line] += rating; totals[index] += rating;
       const positionalBalance = REQUIRED_FIELD_LINES.reduce((sum, field) => sum + countSpread(counts.map(c => c[field])) ** 2, 0);
       const gaps = REQUIRED_FIELD_LINES.map(field => countSpread(counts.map((c, i) => c[field] ? sums[i][field] / c[field] : 0)));
-      const evaluation = { hardViolations: 0, positionalBalance,
+      const projectedSlowSpread = countSpread(slows.map((count, i) => count + Number(i === index && isLowRhythmPlayer(player))));
+      const evaluation = { hardViolations: 0, paceExcess: Math.max(0, projectedSlowSpread - 1), positionalBalance,
         lineQualityCost: gaps.reduce((sum, gap) => sum + gap * gap, 0) + 2 * Math.max(...gaps) ** 2,
         totalBalance: countSpread(totals), secondaryCost: countSpread(slows.map((count, i) => count + Number(i === index && isLowRhythmPlayer(player)))) };
       counts[index][line] -= 1; sums[index][line] -= rating; totals[index] -= rating;
@@ -1291,7 +1302,7 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
 
 function isBetterDraw(evaluation, best) {
   if (!best) return true;
-  for (const field of ['hardViolations', 'positionalBalance', 'lineQualityCost', 'totalBalance', 'secondaryCost']) {
+  for (const field of ['hardViolations', 'paceExcess', 'adaptationCount', 'positionalBalance', 'lineQualityCost', 'totalBalance', 'secondaryCost']) {
     const left = Number(evaluation[field] ?? (field === 'totalBalance' ? evaluation.diff : field === 'secondaryCost' ? evaluation.value : 0));
     const right = Number(best[field] ?? (field === 'totalBalance' ? best.diff : field === 'secondaryCost' ? best.value : 0));
     if (Math.abs(left - right) > 1e-6) return left < right;
@@ -1301,7 +1312,8 @@ function isBetterDraw(evaluation, best) {
 
 // Diversity is allowed only inside this documented, small quality envelope.
 function drawsAreNear(evaluation, best) {
-  return evaluation.hardViolations === best.hardViolations && evaluation.positionalBalance === best.positionalBalance
+  return evaluation.hardViolations === best.hardViolations && evaluation.paceExcess === best.paceExcess
+    && evaluation.adaptationCount === best.adaptationCount && evaluation.positionalBalance === best.positionalBalance
     && evaluation.lineQualityCost <= best.lineQualityCost + 0.015
     && evaluation.maxLineGap <= best.maxLineGap + 0.05
     && evaluation.totalBalance <= best.totalBalance + 0.05
@@ -5471,16 +5483,7 @@ export function SorteoLegacyPageIsland({ root }) {
                       || teamFormationSelectValue(team, currentAssignments, teamFormations[teamIndex], isFormationEditor, isFormationEditor);
                     return (
                       <article key={teamIndex} className={`${isFormationEditor ? 'team-card team' : 'gf-team-column'} sorteo-team-card grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2`} data-team-index={teamIndex} data-sorteo-team-card="1">
-                        <div className="team-head grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                          <div className="min-w-0">
-                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black uppercase text-[#07130f]" data-team-title>
-                              <span className={`h-3.5 w-3.5 shrink-0 rounded-sm border border-black/20 ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
-                              {getTeamDisplayName(teamIndex)}
-                            </h3>
-                            <p className="m-0 text-xs font-semibold text-slate-500">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>
-                          </div>
-                          <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
-                        </div>
+
 
                         <div className="grid grid-cols-2 gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:gap-1.5 max-[760px]:p-1.5 md:grid-cols-2">
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
@@ -5573,6 +5576,16 @@ export function SorteoLegacyPageIsland({ root }) {
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
                         >
+                        <div className="gf-pitch-team-head grid gap-2 rounded-md border border-white/25 bg-[#063d2b]/95 p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                          <div className="min-w-0">
+                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black uppercase text-white" data-team-title>
+                              <span className={`h-3.5 w-3.5 shrink-0 rounded-sm border border-black/20 ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
+                              {getTeamDisplayName(teamIndex)}
+                            </h3>
+                            <p className="m-0 text-xs font-semibold text-white/75">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>
+                          </div>
+                          <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
+                        </div>
                           {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="pointer-events-none absolute left-2 right-12 top-2 z-30 rounded border border-white/70 bg-[#063d2b] px-2 py-1 text-center text-xs font-bold text-white" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
                           {!isFormationEditor ? <button
                             type="button"

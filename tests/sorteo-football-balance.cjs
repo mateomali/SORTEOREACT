@@ -97,6 +97,21 @@ async function generate(players, n, avoid = []) {
   report.push({scenario:'Cross-line cancellation',before:{DEF:context.badEval.lineBalance.details.DEF.gap,MED:context.badEval.lineBalance.details.MED.gap,total:context.badEval.totalBalance},
     after:{DEF:balanced.result.evaluation.lineBalance.details.DEF.gap,MED:balanced.result.evaluation.lineBalance.details.MED.gap,total:balanced.result.evaluation.totalBalance},ms:balanced.ms});
 
+  // Pace takes precedence over line strength and primary-position preference.
+  run(`
+    globalThis.paceBad = {...goodEval, paceExcess: 1, adaptationCount: 0, lineQualityCost: 0};
+    globalThis.paceGood = {...goodEval, paceExcess: 0, adaptationCount: 1, lineQualityCost: 100};
+  `);
+  assert.equal(run('isBetterDraw(paceGood,paceBad)'), true, 'Mix slow players before preserving natural positions');
+  const slowRoster = run("roster(3).map((p,i)=>({...p,ritmo_stat:i>=3 && i<9 ? 2 : 5}))");
+  const paceDraw = await generate(slowRoster,3);
+  assert.ok(paceDraw.result.evaluation.slowSpread <= 1, 'Spread six slow defenders across three teams');
+  for (const team of paceDraw.result.teams) {
+    context.team = team;
+    const counts = run('teamLineCounts(team,buildTeamAssignment(team))');
+    assert.ok(counts.DEF + counts.LAT >= 2 && counts.MED >= 1 && counts.DEL >= 1);
+  }
+
   const baseline = JSON.parse(fs.readFileSync('tests/fixtures/football-balance-baseline.json','utf8'));
   context.baseline = baseline;
   const comparisonPlayers = run('Object.entries(baseline.ratingsByPosition).flatMap(([line,values])=>values.map(value=>fixture(line,value)))');
