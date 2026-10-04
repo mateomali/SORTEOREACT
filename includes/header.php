@@ -53,6 +53,8 @@ if (is_admin()) {
 } elseif (is_directivo()) {
     $roleLabel = 'Directivo';
     $roleMenu = [
+        'crear_partido.php' => 'Crear fecha',
+        'editar_partidos.php' => 'Editar fechas',
         'junta_votaciones.php' => 'Votaciones',
         'mis_valoraciones.php' => 'Mis valoraciones',
         'logout.php' => 'Salir',

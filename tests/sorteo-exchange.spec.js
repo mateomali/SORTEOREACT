@@ -68,6 +68,8 @@ test('mobile courts stay side by side and touch dragging reaches the other team'
   await page.locator('#generateTeamsButton').click();
   const scroller = page.locator('[data-teams-scroller]');
   await expect(scroller).toBeVisible({ timeout: 60000 });
+  await page.locator('.gf-pitch-size-toggle').first().click();
+  await expect(scroller).toHaveAttribute('data-show-both', 'true');
   const geometry = await scroller.evaluate(node => ({ width: node.clientWidth, total: node.scrollWidth, tops: [...node.children].map(child => child.getBoundingClientRect().top), pageWidth: document.documentElement.scrollWidth }));
   expect(geometry.total).toBeLessThanOrEqual(geometry.width + 1);
   expect(geometry.tops[0]).toBe(geometry.tops[1]);

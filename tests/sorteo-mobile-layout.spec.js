@@ -19,8 +19,9 @@ test('mobile pitch keeps cards, ratings and projected laterals inside their rows
   const alternative = page.locator('[data-sorteo-team-card]').first().getByRole('button', { name: /Alternativa 2/ });
   if (await alternative.count()) await alternative.click();
 
-  for (const width of [320, 360, 390, 430, 760, 820, 1280, 1920]) {
+  for (const width of [320, 360, 390, 412, 430, 760, 820, 1280, 1920]) {
     await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), `page overflow at ${width}px`).toBeLessThanOrEqual(width);
     const problems = await pitches.evaluateAll((fields) => {
       const errors = [];
       const overlaps = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;

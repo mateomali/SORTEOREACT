@@ -17,23 +17,27 @@ async function openSorteo(page) {
 }
 
 async function downloadJpg(page, name) {
+  await page.locator('.gf-player-name-text').first().evaluate(node => { node.textContent = 'JUAN FRANCISCO DEL CAMPO'; });
   await page.evaluate(() => {
     window.exportContent = null;
     const observer = new MutationObserver(() => {
       const copy = document.querySelector('[data-export-formations]');
       if (!copy) return;
       window.exportContent = {
+        names: [...copy.querySelectorAll('.gf-player-name')].map(node => ({ text: node.textContent, fits: node.firstElementChild.scrollHeight <= node.clientHeight + 1 && node.firstElementChild.scrollWidth <= node.clientWidth + 1, clamp: getComputedStyle(node.firstElementChild).webkitLineClamp })),
         teams: copy.querySelectorAll('[data-sorteo-team-card]').length,
         comparison: copy.querySelector('[data-export-comparison]')?.textContent,
-        scores: [...copy.querySelectorAll('.team-head')].map(node => node.textContent),
+        scores: [...copy.querySelectorAll('.gf-premium-score strong')].map(node => node.textContent),
         backgrounds: [...copy.querySelectorAll('[data-export-pitch-background]')].map(node => node.style.backgroundImage),
-        sections: [...copy.querySelectorAll('[data-sorteo-team-card]')].map(card => [...card.children].map(node => node.matches('.team-head') ? 'title' : node.matches('.team-formation') ? 'pitch' : 'extra')),
+        sections: [...copy.querySelectorAll('.gf-premium-team')].map(panel => [...panel.children].map(node => node.matches('.team-head') ? 'title' : node.matches('.team-formation') ? 'pitch' : node.matches('[data-exportable-line-balance]') ? 'balance' : 'extra')),
+        markings: copy.querySelectorAll('.gf-premium-pitch-markings').length,
+        balanceValues: [...copy.querySelectorAll('[role=meter]')].map(node => Number(node.getAttribute('aria-valuenow'))),
         editingButtons: copy.querySelectorAll('button:not([data-sorteo-drag-player])').length,
         extras: copy.querySelectorAll('select, [data-team-bench], .sorteo-team-stats').length,
       };
-      observer.disconnect();
+
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
   });
   const downloadReady = page.waitForEvent('download');
   await page.locator('details').filter({ hasText: 'Exportar' }).first().locator('summary').click();
@@ -44,10 +48,14 @@ async function downloadJpg(page, name) {
   await download.saveAs(exportPath);
   const content = await page.evaluate(() => window.exportContent);
   expect(content.comparison).toContain('Comparación rápida');
+  expect(content.names.some(name => name.text.trim() === 'JUAN FRANCISCO DEL CAMPO')).toBe(true);
+  content.names.forEach(name => { expect(name.fits, name.text).toBe(true); expect(name.clamp).not.toBe('2'); });
   expect(content.comparison).toContain('General');
-  content.scores.forEach(score => expect(score).toMatch(/\d+\.\d pts/));
-  content.backgrounds.forEach(background => expect(background).toContain('formation-field.svg'));
-  expect(content).toMatchObject({ teams: 2, sections: [['title', 'pitch'], ['title', 'pitch']], editingButtons: 0, extras: 0 });
+  content.scores.forEach(score => expect(score).toMatch(/\d+\.\d/));
+  content.backgrounds.forEach(background => expect(background).toContain('linear-gradient'));
+  expect(content).toMatchObject({ teams: 2, sections: [['title', 'pitch', 'balance'], ['title', 'pitch', 'balance']], markings: 2, editingButtons: 0, extras: 0 });
+  expect(content.balanceValues).toHaveLength(6);
+  content.balanceValues.forEach(value => { expect(value).toBeGreaterThanOrEqual(0); expect(value).toBeLessThanOrEqual(100); });
   return fs.readFileSync(exportPath).toString('base64');
 }
 
@@ -73,11 +81,11 @@ async function analyseExport(page, base64) {
       for (let x = 0; x < canvas.width; x += 1) {
         const index = x * 4;
         const [r, g, b] = [pixels[index], pixels[index + 1], pixels[index + 2]];
-        if (g > r + 15 && g > b + 10 && g > 45 && g < 150) green += 1;
+        if (g > r + 10 && g > b + 3 && g > 20 && g < 150) green += 1;
         if (r > 235 && g > 235 && b > 235) white += 1;
         if (Math.abs(r - g) <= 3 && Math.abs(g - b) <= 3 && r > 200 && r < 210) {
           grayRun += 1;
-          if (grayRun >= 6) grayRuns += 1;
+          if (grayRun >= canvas.width * 0.75) grayRuns += 1;
         } else {
           grayRun = 0;
         }
@@ -126,8 +134,8 @@ test('la captura JPG en movil apila los equipos y conserva todo el texto', async
   expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.cardWidth * 0.9);
   expect(exportInfo.height).toBeGreaterThanOrEqual((geometry.cardHeights[0] + geometry.cardHeights[1]) * 0.9);
   // Las dos canchas aparecen enteras y separadas verticalmente.
-  expect(exportInfo.titleBands.length).toBeGreaterThanOrEqual(2);
-  expect(exportInfo.titleBands[1].start).toBeGreaterThan(exportInfo.titleBands[0].end);
+  expect(exportInfo.pitchBands.length).toBeGreaterThanOrEqual(2);
+  expect(exportInfo.pitchBands[1].start).toBeGreaterThan(exportInfo.pitchBands[0].end);
   // Sin marcas grises de borde (sombras que html2canvas dibujaba como marcos).
   expect(exportInfo.grayRuns).toBe(0);
 });
@@ -148,7 +156,7 @@ test('la captura JPG en escritorio apila solo nombres y canchas', async ({ page 
 
   expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.width - 2);
   // Tambien en escritorio se comparten las canchas una debajo de la otra.
-  expect(exportInfo.titleBands.length).toBeGreaterThanOrEqual(2);
+  expect(exportInfo.pitchBands.length).toBeGreaterThanOrEqual(2);
   expect(exportInfo.grayRuns).toBe(0);
 });
 
@@ -195,7 +203,7 @@ test.describe('captura con densidad 2x', () => {
     expect(exportInfo.width).toBeGreaterThanOrEqual(geometry.cardWidth * 2 * 0.95);
     expect(exportInfo.width).toBeLessThanOrEqual(geometry.cardWidth * 2 * 1.05);
     expect(exportInfo.height).toBeGreaterThanOrEqual((geometry.cardHeights[0] + geometry.cardHeights[1]) * 2 * 0.9);
-    expect(exportInfo.titleBands.length).toBeGreaterThanOrEqual(2);
+    expect(exportInfo.pitchBands.length).toBeGreaterThanOrEqual(2);
     expect(exportInfo.grayRuns).toBe(0);
   });
 });

@@ -7,7 +7,7 @@ require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/sorteo_multiple.php';
 require_once __DIR__ . '/lib/admin_config.php';
 
-require_admin();
+require_directivo_or_admin();
 
 if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'encuentros.php' && !defined('MATCH_ADMIN_VIEW')) {
     redirect('editar_partidos.php');
@@ -404,6 +404,10 @@ function save_imported_player(PDO $pdo): void
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
+    if (!is_admin() && !in_array($action, ['save_match', 'update_match_court', 'import_players_list', 'clear_import_players_list', 'use_import_existing_player'], true)) {
+        http_response_code(403);
+        exit('Accion reservada al administrador.');
+    }
 
     if ($action === 'import_players_list') {
         $text = trim((string) ($_POST['import_players_text'] ?? ''));

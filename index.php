@@ -1515,7 +1515,7 @@ require __DIR__ . '/includes/header.php';
         <strong>Estadisticas</strong>
         <small>Ranking de jugadores, goles, promedios, capitanes y rendimiento acumulado.</small>
       </a>
-      <a class="home-section-card" href="<?= is_admin() ? 'editar_partidos.php' : 'login.php' ?>">
+      <a class="home-section-card" href="<?= (is_admin() || is_directivo()) ? 'editar_partidos.php' : 'login.php' ?>">
         <span class="home-section-visual">
           <img src="assets/home/home-admin.png" alt="Panel visual de administracion de fechas y sorteos" loading="lazy" width="1672" height="941">
         </span>

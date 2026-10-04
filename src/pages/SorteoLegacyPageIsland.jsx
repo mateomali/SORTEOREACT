@@ -2102,7 +2102,7 @@ export function restorePlayerExchanges(teams, assignments, exchanges, playerId) 
   return { teams: nextTeams, assignments: nextAssignments, exchanges: exchanges.filter((_, index) => !undone.has(index)) };
 }
 
-function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole = '', draggableProps = {}, onOpen, onDoubleOpen }) {
+function CompactPlayerCard({ player, assignedPosition, teamSize = null, topPlayerRank = null, laneRole = '', draggableProps = {}, onOpen, onDoubleOpen }) {
   const { dragging = false, selected = false, locked = false, swapTarget = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
   const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);
@@ -2173,13 +2173,13 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
       <span className="sorteo-compact-rating absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-px rounded bg-black/45 p-[3%]">
         <strong
           className={`block font-black leading-none ${palette.text} ${textShadow}`}
-          style={{ fontSize: 'clamp(5px, 25cqw, 26px)' }}
+          style={{ fontSize: 'clamp(5px, 22cqw, 26px)' }}
           data-sorteo-card-text="1"
         >
           {playerCardRating(adjusted)}
         </strong>
         <span className={`flex items-center gap-[2px] font-black uppercase leading-none ${textShadow}`}>
-          <span style={{ fontSize: 'clamp(3px, 12cqw, 12px)', color: 'var(--sorteo-card-position)' }} data-sorteo-card-position="1">{assignedPosition}</span>
+          <span style={{ fontSize: 'clamp(3px, 10cqw, 12px)', color: 'var(--sorteo-card-position)' }} data-sorteo-card-position="1">{assignedPosition}</span>
           <span className="block aspect-square" style={{ width: 'clamp(2px, 6cqw, 7px)', height: 'clamp(2px, 6cqw, 7px)' }}><Arrow form={playerRegularityForm(player)} /></span>
         </span>
       </span>
@@ -2188,6 +2188,30 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, laneRole
         data-player-photo-frame={player.has_custom_photo ? '1' : undefined}
       >
         <img className={`h-full w-full ${player.has_custom_photo ? 'object-cover object-center' : 'object-contain object-center opacity-55'}`} src={player.photo_path} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.has_custom_photo ? '1' : undefined} />
+      </span>
+      <span className="gf-player-status-icons">
+      {topPlayerRank !== null ? (
+        <span
+          data-team-top-player={topPlayerRank + 1}
+          role="img"
+          aria-label={`${['Primero', 'Segundo', 'Tercero'][topPlayerRank]} del equipo por puntuacion`}
+          title={`${['Oro', 'Plata', 'Bronce'][topPlayerRank]}: ${topPlayerRank + 1} del equipo por puntuacion`}
+          className="gf-player-rank-star"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" style={{ display: 'block', width: '100%', height: 'auto' }}>
+            <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z" fill={['#f5c542', '#d7dee5', '#cd8b52'][topPlayerRank]} stroke="#352a1c" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+        </span>
+      ) : null}
+        {player.availability_percent < 100 ? (
+          <span className="gf-player-injury-icon" data-player-injured="true" role="img" aria-label={`Lesionado: estado ${player.availability_percent}%`} title={`Estado fisico: ${player.availability_percent}%`}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="8" y="1" width="8" height="22" rx="3" transform="rotate(45 12 12)" fill="#f5dfc1" stroke="#633b28" strokeWidth="1.4" />
+              <path d="m8 10 6 6m-4-8 6 6" stroke="#b88c61" strokeWidth="1.5" />
+              <path d="M17 2v6m-3-3h6" stroke="#f36868" strokeWidth="2.4" strokeLinecap="round" />
+            </svg>
+          </span>
+        ) : null}
       </span>
       <PositionPenaltyBubble percent={positionPenalty} />
       <strong
@@ -2909,6 +2933,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [generationStage, setGenerationStage] = useState('');
   const [generationProgress, setGenerationProgress] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [goalkeeperTab, setGoalkeeperTab] = useState('goalkeepers');
   const [formModal, setFormModal] = useState(null);
   const [preview, setPreview] = useState(null);
   const [exchangeFilter, setExchangeFilter] = useState('same');
@@ -2950,7 +2975,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const teamsFocusRef = useRef(null);
   const teamsScrollerRef = useRef(null);
   const [visibleTeamIndex, setVisibleTeamIndex] = useState(0);
-  const [showBothTeams, setShowBothTeams] = useState(true);
+  const [showBothTeams, setShowBothTeams] = useState(false);
   const edgeScrollStepRef = useRef(null);
   const pointerDragRef = useRef({
     active: false,
@@ -3095,8 +3120,8 @@ export function SorteoLegacyPageIsland({ root }) {
   }, [players, sortDirection, sortKey]);
   const goalkeeperOptions = useMemo(() => {
     const selectedKeys = new Set(selectedPlayers.map(playerKey));
-    return sortedPlayers.filter((player) => selectedKeys.has(playerKey(player)));
-  }, [selectedPlayers, sortedPlayers]);
+    return sortedPlayers.filter((player) => selectedKeys.has(playerKey(player)) && (goalkeeperTab === 'all' || getOrderedPlayerPositions(player).slice(0, 2).includes('ARQ')));
+  }, [selectedPlayers, sortedPlayers, goalkeeperTab]);
 
   const generateButtonLabel = nextGenerationIsRedraw ? `Rehacer sorteo (${redrawsRemaining} restantes)` : 'Generar equipos';
   const generateDisabled = generating || !drawReadiness.ready || (nextGenerationIsRedraw && (!payload.allowRedraw || redrawsRemaining <= 0));
@@ -4785,6 +4810,7 @@ export function SorteoLegacyPageIsland({ root }) {
       copy.querySelectorAll('[data-html2canvas-ignore="true"]').forEach((node) => node.remove());
       const host = document.createElement('div');
       host.setAttribute('aria-hidden', 'true');
+      host.className = 'sorteo-react-page';
       host.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none;';
       copy.style.width = `${exportWidth}px`;
       copy.style.height = 'auto';
@@ -4796,11 +4822,13 @@ export function SorteoLegacyPageIsland({ root }) {
       const exportCards = Array.from(copy.querySelectorAll('[data-sorteo-team-card]'));
       exportCards.forEach((card, teamIndex) => {
         const title = card.querySelector('[data-team-title]');
-        const heading = card.querySelector('.team-head');
+        const heading = card.querySelector('.gf-pitch-team-head');
+        const panel = card.querySelector('.gf-premium-team');
+        const balance = card.querySelector('[data-exportable-line-balance]');
         const pitch = card.querySelector('.team-formation');
-        if (!title || !pitch) throw new Error('No se encontró la cancha del equipo.');
-        title.replaceChildren(document.createTextNode(title.textContent.trim()));
-        Object.assign(title.style, { display: 'block', width: 'auto', height: 'auto', margin: '0', lineHeight: '1.3', whiteSpace: 'normal', overflow: 'visible' });
+        if (!title || !pitch || !heading) throw new Error('No se encontró la cancha del equipo.');
+        heading.classList.add('team-head');
+        Object.assign(title.style, { height: 'auto', margin: '0', whiteSpace: 'normal', overflow: 'visible' });
         // Remove editing controls, retaining player cards and position labels.
         pitch.querySelectorAll('button:not([data-sorteo-drag-player]), .line-label small, [data-sorteo-drop-marker]').forEach(node => node.remove());
         // Ancestor selectors no longer match in the detached export host. Make
@@ -4812,9 +4840,12 @@ export function SorteoLegacyPageIsland({ root }) {
         for (const property of fieldStyle) field.style.setProperty(property, fieldStyle.getPropertyValue(property));
         field.style.setProperty('content', 'normal');
         pitch.prepend(field);
-        Object.assign(heading.style, { width: '100%', height: 'auto', gridTemplateColumns: 'minmax(0, 1fr) auto' });
+        Object.assign(heading.style, { height: 'auto', gridTemplateColumns: 'minmax(0, 1fr) auto' });
         heading.lastElementChild.style.whiteSpace = 'nowrap';
-        card.replaceChildren(heading, pitch);
+        if (panel && balance) {
+          panel.replaceChildren(heading, pitch, balance);
+          card.replaceChildren(panel);
+        } else card.replaceChildren(heading, pitch);
         Object.assign(card.style, { width: '100%', minWidth: '0', height: 'auto', gridTemplateRows: 'none', gridTemplateColumns: 'minmax(0, 1fr)', gap: '12px' });
       });
       copy.replaceChildren(...exportCards);
@@ -4852,6 +4883,18 @@ export function SorteoLegacyPageIsland({ root }) {
       let jpg;
       try {
         await waitForPaint();
+        // The on-screen two-line clamp must not truncate shared player names.
+        copy.querySelectorAll('.gf-player-name').forEach((name) => {
+          const text = name.querySelector('.gf-player-name-text');
+          if (!text) return;
+          Object.assign(text.style, { display: 'block', webkitLineClamp: 'unset', maxHeight: 'none', overflow: 'visible', width: '100%', fontSize: 'inherit', lineHeight: 'inherit', flexShrink: '0' });
+          Object.assign(name.style, { overflow: 'visible', whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: '1.1' });
+          let fontSize = parseFloat(window.getComputedStyle(name).fontSize);
+          while (fontSize > 1 && (text.scrollHeight > name.clientHeight || text.scrollWidth > name.clientWidth)) {
+            fontSize -= 0.25;
+            name.style.fontSize = `${fontSize}px`;
+          }
+        });
         const height = Math.ceil(copy.getBoundingClientRect().height);
         // Keep high resolution while bounding memory for long multi-team exports.
         const pixelRatio = Math.min(2, Math.max(1, window.devicePixelRatio || 1), 8192 / Math.max(exportWidth, height));
@@ -5051,7 +5094,18 @@ export function SorteoLegacyPageIsland({ root }) {
         const pitchLine = pitchLineForPosition(assigned);
         (linePlayers[pitchLine] || linePlayers.MED).push(player);
       });
+      const lineStrengths = Object.fromEntries(['DEF', 'MED', 'DEL'].map((line) => {
+        const pool = linePlayers[line];
+        const total = pool.reduce((sum, player) => sum + adjustedPositionRatingForTeamSize(player, teamAssignmentsForIndex[playerKey(player)], team.length), 0);
+        return [line, pool.length ? total / pool.length : 0];
+      }));
+      const topPlayerRanks = new Map(team.slice().sort((a, b) => {
+        const rating = (player) => adjustedPositionRatingForTeamSize(player, teamAssignmentsForIndex[playerKey(player)] || getPrimaryPlayerPosition(player), team.length);
+        return rating(b) - rating(a) || playerKey(a).localeCompare(playerKey(b));
+      }).slice(0, 3).map((player, rank) => [playerKey(player), rank]));
       return {
+        lineStrengths,
+        topPlayerRanks,
         color: getTeamColor(teamIndex),
         assignments: teamAssignmentsForIndex,
         linePlayers,
@@ -5348,7 +5402,12 @@ export function SorteoLegacyPageIsland({ root }) {
                       Hay mas arqueros elegidos que equipos. Se reservara uno por equipo; los polivalentes restantes conservaran una posicion de campo permitida.
                     </p>
                   ) : null}
-                  <div className="grid max-h-44 gap-1.5 overflow-auto sm:grid-cols-2 xl:grid-cols-3">
+                  <div role="tablist" aria-label="Jugadores disponibles como arquero" className="flex gap-2 border-b border-[#d7e6df]">
+                    {[['goalkeepers', 'Arqueros'], ['all', 'Todos los jugadores']].map(([value, label]) => (
+                      <button key={value} type="button" role="tab" aria-selected={goalkeeperTab === value} aria-controls="goalkeeper-options" id={`goalkeeper-tab-${value}`} className={`${quietButtonClass} ${goalkeeperTab === value ? 'border-[#063d2b] text-[#063d2b]' : ''}`} onClick={() => setGoalkeeperTab(value)}>{label}</button>
+                    ))}
+                  </div>
+                  <div id="goalkeeper-options" role="tabpanel" aria-labelledby={`goalkeeper-tab-${goalkeeperTab}`} className="grid max-h-44 gap-1.5 overflow-auto sm:grid-cols-2 xl:grid-cols-3">
                     {goalkeeperOptions.length ? goalkeeperOptions.map((player) => {
                       const key = playerKey(player);
                       const checked = manualGoalkeepers[key] === true;
@@ -5376,7 +5435,7 @@ export function SorteoLegacyPageIsland({ root }) {
                       );
                     }) : (
                       <p className="m-0 rounded-md border border-[#d7e6df] bg-white px-2 py-2 text-xs font-bold text-[#526b62]">
-                        Selecciona jugadores para definir arqueros.
+                        {goalkeeperTab === 'goalkeepers' ? 'No hay convocados con arquero como posicion primaria o secundaria. Puedes elegir un reemplazo en Todos los jugadores.' : 'Selecciona jugadores para definir arqueros.'}
                       </p>
                     )}
                   </div>
@@ -5478,6 +5537,7 @@ export function SorteoLegacyPageIsland({ root }) {
                     const currentAssignments = view.assignments || teamAssignments(teamIndex);
                     const linePlayers = view.linePlayers || Object.fromEntries(PITCH_LINES.map((line) => [line, []]));
                     const summary = view.summary || teamTotalsSummary(team, assignments);
+                    const topPlayerRanks = view.topPlayerRanks || new Map();
                     const formationOptions = view.formationOptions || [];
                     const formationSelectValue = view.formationSelectValue
                       || teamFormationSelectValue(team, currentAssignments, teamFormations[teamIndex], isFormationEditor, isFormationEditor);
@@ -5569,26 +5629,14 @@ export function SorteoLegacyPageIsland({ root }) {
                           <span className="text-center text-xs font-semibold text-[#526b62]">Cancha {teamIndex + 1} de {teams.length} · Arrastrá al otro equipo para intercambiar</span>
                         </div>
                         ) : null}
-                        <div className="gf-pitch-panel">
-                        <div className="gf-pitch-team-head grid gap-2 rounded-md border border-white/25 bg-[#063d2b]/95 p-2 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                          <div className="min-w-0">
-                            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-black uppercase text-white" data-team-title>
-                              <span className={`h-3.5 w-3.5 shrink-0 rounded-sm border border-black/20 ${color.accent}`} style={{ backgroundColor: color.accentHex }} aria-hidden="true" />
-                              {getTeamDisplayName(teamIndex)}
-                            </h3>
-                            <p className="m-0 text-xs font-semibold text-white/75">{team.length} jugadores | {team.filter(isLowRhythmPlayer).length} lentos</p>
+                        <div className="gf-pitch-panel gf-premium-team" style={{ '--gf-team-accent': teamColorAccentHex(teamIndex) }}>
+                        <div className="gf-pitch-team-head gf-premium-head">
+                          <div className="gf-premium-identity">
+                            <h3 data-team-title><span className="gf-premium-team-dot" aria-hidden="true" />{getTeamDisplayName(teamIndex)}</h3>
+                            <p>{team.length} jugadores · {team.filter(isLowRhythmPlayer).length} lentos</p>
                           </div>
-                          <span className={`inline-grid min-h-9 place-items-center rounded-md border px-3 text-sm font-black ${color.tag}`}>{summary.adjusted.toFixed(1)} pts</span>
-                        </div>
-                        <div
-                          className="team-formation gf-formation text-white"
-                          style={{ borderColor: hexToRgba(teamColorAccentHex(teamIndex), 0.55), '--gf-line-capacity': Math.max(4, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
-                          data-sorteo-drop-team={teamIndex}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={(event) => handleDrop(event, teamIndex, null)}
-                        >
-
-                          {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="pointer-events-none absolute left-2 right-12 top-2 z-30 rounded border border-white/70 bg-[#063d2b] px-2 py-1 text-center text-xs font-bold text-white" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
+                          <span className="gf-premium-score"><strong>{summary.adjusted.toFixed(1)}</strong><small>pts</small></span>
+                          <div className="gf-premium-actions" data-html2canvas-ignore="true">
                           {!isFormationEditor ? <button
                             type="button"
                             className="gf-pitch-size-toggle"
@@ -5611,6 +5659,23 @@ export function SorteoLegacyPageIsland({ root }) {
                           <button className="formation-undo-button absolute right-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-md border border-white/35 bg-[#063d2b]/90 text-white shadow-sm transition-colors hover:bg-[#05291d] disabled:cursor-not-allowed disabled:opacity-40 max-[760px]:right-1.5 max-[760px]:top-1.5 max-[760px]:h-8 max-[760px]:w-8" type="button" disabled={!(undoStacks[String(teamIndex)] || []).length} onClick={() => undoTeam(teamIndex)} aria-label="Deshacer ultimo cambio" title="Deshacer ultimo cambio">
                             <Icon name="undo" />
                           </button>
+                          </div>
+                        </div>
+                        <div
+                          className="team-formation gf-formation gf-premium-pitch text-white"
+                          style={{ '--gf-line-capacity': Math.max(3, ...PITCH_LINES.map((role) => (linePlayers[role] || []).length)) }}
+                          data-sorteo-drop-team={teamIndex}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={(event) => handleDrop(event, teamIndex, null)}
+                        >
+
+                          {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="pointer-events-none absolute left-2 right-12 top-2 z-30 rounded border border-white/70 bg-[#063d2b] px-2 py-1 text-center text-xs font-bold text-white" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
+                          <div className="gf-premium-pitch-markings" aria-hidden="true">
+                            <i className="gf-premium-midline" /><i className="gf-premium-circle" /><i className="gf-premium-center" />
+                            <i className="gf-premium-area gf-premium-area-top" /><i className="gf-premium-area gf-premium-area-bottom" />
+                            <i className="gf-premium-six gf-premium-six-top" /><i className="gf-premium-six gf-premium-six-bottom" />
+                            <i className="gf-premium-goal gf-premium-goal-top" /><i className="gf-premium-goal gf-premium-goal-bottom" />
+                          </div>
                           {PITCH_LINES.map((line) => {
                             const lineList = line === 'DEF'
                               ? defenseLinePlayers(linePlayers.DEF || [], currentAssignments)
@@ -5652,7 +5717,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                 ? 'border-lime-200/70 bg-lime-200/15 ring-2 ring-lime-200/70'
                                 : 'opacity-45');
                             const lineGridClass = '';
-                            const lineModeClass = 'gf-formation-row';
+                            const lineModeClass = 'gf-formation-row gf-premium-line';
                             const linePlayersClass = 'line-players gf-line-players';
                             const lineStyle = { '--gf-player-count': Math.max(1, lineList.length) };
                             return (
@@ -5660,6 +5725,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                 key={line}
                                 className={`formation-line ${hasProjectedLaterals ? 'is-projected-defense' : ''} ${isFormationEditor ? '' : (pitchLineToneClasses[line] || '')} ${lineModeClass} grid min-h-0 items-center border-b border-white/15 transition-colors duration-150 last:border-b-0 ${lineDropClass} ${lineGridClass}`}
                                 style={lineStyle}
+                                data-drop-state={isDraggingPlayer ? (lineCanAcceptDrop ? 'valid' : 'invalid') : undefined}
                                 data-sorteo-drop-line={line}
                                 data-team-index={teamIndex}
                                 onDragOver={(event) => {
@@ -5669,15 +5735,15 @@ export function SorteoLegacyPageIsland({ root }) {
                                 }}
                                 onDrop={(event) => handleDrop(event, teamIndex, line)}
                               >
-                                <div className="line-label grid justify-items-center gap-1 text-center text-[10px] font-black uppercase text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,.48)] max-[760px]:gap-0.5 max-[760px]:text-[9px]">
-                                  <span className={`leading-none px-1 py-0.5 [text-shadow:none] ${pitchLineLabelClasses[line] || ''}`}>{label}</span>
-                                  <small className="rounded bg-emerald-950/45 px-1 text-[9px] font-extrabold leading-tight text-white/75 max-[760px]:text-[8px]">{count}/{max}</small>
-                                  {canTuneLine ? (
-                                    <span className="grid gap-1 max-[760px]:gap-0.5">
-                                      <button className="inline-flex !h-7 !min-h-0 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-950 !p-0 text-sm font-black leading-none text-white shadow-sm transition hover:bg-emerald-900 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-xs" type="button" onClick={() => pitchLineDelta(teamIndex, line, -1)} aria-label={`Quitar jugador de ${label}`} title={`Quitar jugador de ${label}`}>−</button>
+                                {canTuneLine ? (
+                                  <details className="line-label gf-premium-line-control" data-html2canvas-ignore="true">
+                                    <summary aria-label={`Ajustar linea ${label}`}><span>{label}</span><small>{count}/{max}</small></summary>
+                                    <span className="gf-premium-line-buttons">
+                                      <button type="button" onClick={() => pitchLineDelta(teamIndex, line, -1)} aria-label={`Quitar jugador de ${label}`} title={`Quitar jugador de ${label}`}>−</button>
+                                      <button type="button" onClick={() => pitchLineDelta(teamIndex, line, 1)} aria-label={`Agregar jugador a ${label}`} title={`Agregar jugador a ${label}`}>+</button>
                                     </span>
-                                  ) : null}
-                                </div>
+                                  </details>
+                                ) : <div className="line-label gf-premium-line-control" data-html2canvas-ignore="true"><span>{label}</span><small>{count}/{max}</small></div>}
                                 <div
                                   className={linePlayersClass}
                                   data-sorteo-drop-line={line}
@@ -5742,6 +5808,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                       >
                                         <CompactPlayerCard
                                           player={player}
+                                          topPlayerRank={topPlayerRanks.get(key) ?? null}
                                           assignedPosition={assigned}
                                           teamSize={team.length}
                                           laneRole={assigned === 'LAT' ? 'lateral' : ''}
@@ -5816,15 +5883,24 @@ export function SorteoLegacyPageIsland({ root }) {
                                     );
                                   })}
                                 </div>
-                                {canTuneLine ? (
-                                  <div className="gf-line-add grid justify-items-center gap-1 max-[760px]:gap-0.5">
-                                    <button className="inline-flex !h-7 !min-h-0 w-7 items-center justify-center rounded-md border border-lime-200 bg-lime-200 !p-0 text-sm font-black leading-none text-[#07130f] shadow-sm transition hover:bg-lime-300 max-[760px]:!h-5 max-[760px]:w-5 max-[760px]:text-xs" type="button" onClick={() => pitchLineDelta(teamIndex, line, 1)} aria-label={`Agregar jugador a ${label}`} title={`Agregar jugador a ${label}`}>+</button>
-                                  </div>
-                                ) : null}
                               </div>
                             );
                           })}
                         </div>
+                        <section className="gf-premium-balance" data-exportable-line-balance="true" aria-label={`Balance por linea de ${getTeamDisplayName(teamIndex)}`}>
+                          <h4><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 12h3v6H2zm6-5h3v11H8zm6-5h3v16h-3z" fill="currentColor" /></svg>Balance por línea</h4>
+                          {[['DEF', 'Defensa'], ['MED', 'Mediocampo'], ['DEL', 'Delantera']].map(([line, label]) => {
+                            const internalValue = view.lineStrengths?.[line] || 0;
+                            const value = internalValue > 0 ? playerCardRating(internalValue) : 0;
+                            return <div key={line} className="gf-premium-balance-row" data-balance-line={line}>
+                              <span>{label}</span>
+                              <div className="gf-premium-balance-bar" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
+                                <span style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+                              </div>
+                              <strong>{value}<small>/100</small></strong>
+                            </div>;
+                          })}
+                        </section>
                         </div>
 
                         {isFormationEditor ? (

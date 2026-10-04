@@ -21,6 +21,11 @@ for(const width of [1440,390]) test(`line +/- redistributes players and undo res
   const snapshot=()=>cards.evaluateAll(cards=>Object.fromEntries(cards.map(card=>[card.dataset.playerKey,card.dataset.assignedPosition])));
   const before=await snapshot();
   const counts=async()=>Object.values(await snapshot()).reduce((counts,role)=>{counts[role==='LAT'?'DEF':role]++;return counts;},{ARQ:0,DEF:0,MED:0,DEL:0});
+  await team.locator('summary[aria-label="Ajustar linea DEF/LAT"]').click();
+  const control = team.locator('details').filter({has: page.locator('summary[aria-label="Ajustar linea DEF/LAT"]')});
+  const geometry = await control.evaluate(node => ({label: node.querySelector('summary').getBoundingClientRect().toJSON(), buttons: [...node.querySelectorAll('button')].map(button => button.getBoundingClientRect().toJSON())}));
+  geometry.buttons.forEach(button => expect(button.top).toBeGreaterThanOrEqual(geometry.label.bottom));
+  expect(geometry.buttons[0].top).toBe(geometry.buttons[1].top);
   await team.getByRole('button',{name:'Agregar jugador a DEF/LAT',exact:true}).click();
   await expect.poll(counts).toEqual({ARQ:1,DEF:3,MED:1,DEL:2});
   expect((await snapshot())['4']).toBe('DEF');
@@ -28,8 +33,16 @@ for(const width of [1440,390]) test(`line +/- redistributes players and undo res
   await team.getByRole('button',{name:'Deshacer ultimo cambio',exact:true}).click();
   await expect.poll(snapshot).toEqual(before);
   // Lowering attack must move the secondary-position player into midfield.
+  await team.locator('summary[aria-label="Ajustar linea DEL"]').click();
   await team.getByRole('button',{name:'Quitar jugador de DEL',exact:true}).click();
   await expect.poll(counts).toEqual({ARQ:1,DEF:2,MED:2,DEL:2});
+  await team.getByRole('button',{name:'Deshacer ultimo cambio',exact:true}).click();
+  await expect.poll(snapshot).toEqual(before);
+  // Formation controls outside the premium panel still update its assignments.
+  const formation = team.locator('select').nth(1);
+  await formation.selectOption('2-0-2-2');
+  await expect.poll(counts).toEqual({ARQ:1,DEF:2,MED:2,DEL:2});
+  await expect(team.locator('[data-exportable-line-balance] [role=meter]')).toHaveCount(3);
   await team.getByRole('button',{name:'Deshacer ultimo cambio',exact:true}).click();
   await expect.poll(snapshot).toEqual(before);
   // Removing a minimum defender must explain the restriction and keep every card.
