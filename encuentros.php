@@ -1520,24 +1520,23 @@ ob_start();
         </details>
       <?php endif; ?>
 
-      <div
-        data-react-root
-        data-react-island="participant_controls"
-        data-limit="<?= h((string) $targetSelection) ?>"
-      ></div>
-
-      <div class="grid grid-cols-1 items-start gap-3 pb-24 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
-      <section class="min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16">
+      <div class="participant-workspace grid grid-cols-1 items-start gap-3 pb-24 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,.8fr)]">
+      <section class="participant-add-task min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16" aria-labelledby="participant-add-title">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20">
           <div>
-            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-[#07130f]">Disponibles</span>
-            <h4 class="m-0 text-base font-extrabold text-lime-50">Lista de jugadores activos</h4>
+            <h4 id="participant-add-title" class="m-0 text-base font-extrabold text-lime-50">Buscar y agregar jugadores</h4>
+            <p class="m-0 mt-1 text-sm">Lista de jugadores activos · Disponibles</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <span class="rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><?= h((string) count($activePlayers)) ?> activos</span>
             <span class="rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong> jugadores elegidos</span>
           </div>
         </div>
+        <div
+          data-react-root
+          data-react-island="participant_controls"
+          data-limit="<?= h((string) $targetSelection) ?>"
+        ></div>
         <div class="grid max-h-[34rem] gap-1.5 overflow-auto rounded-xl border border-lime-200/28 bg-emerald-950/74 p-2" data-participant-list tabindex="0" aria-label="Lista de jugadores disponibles">
           <?php foreach ($activePlayers as $p): ?>
             <?php
@@ -1569,11 +1568,11 @@ ob_start();
         <p class="hidden text-sm text-emerald-100/82" data-participant-empty>No hay jugadores que coincidan con la búsqueda.</p>
       </section>
 
-      <section class="min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16 lg:sticky lg:top-3 max-[760px]:hidden">
+      <section class="participant-review-task min-w-0 rounded-2xl border-2 border-lime-200/38 bg-emerald-950/88 p-3 text-lime-50 shadow-lg shadow-emerald-950/16 lg:sticky lg:top-3 max-[760px]:hidden" aria-labelledby="participant-review-title">
         <div class="mb-2 flex items-start justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20">
           <div>
-            <span class="mb-1 inline-flex rounded-full border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-[10px] font-extrabold uppercase text-[#07130f]">Convocados</span>
-            <h4 class="m-0 text-base font-extrabold text-lime-50">Seleccionados para esta fecha</h4>
+            <h4 id="participant-review-title" class="m-0 text-base font-extrabold text-lime-50">Revisar convocados</h4>
+            <p class="m-0 mt-1 text-sm">Convocados · Seleccionados para esta fecha</p>
           </div>
           <span class="inline-flex shrink-0 rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><strong data-selection-count="participants">0</strong>/<strong data-selection-max="participants"><?= $targetSelection ?></strong></span>
         </div>

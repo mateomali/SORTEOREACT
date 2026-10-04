@@ -24999,6 +24999,18 @@ body.page-finalizar-partido :is(.finish-match-score, .finish-scorer-row) input:f
 .page-finalizar-partido .match-scorers label.finish-scorer-row input { max-width: 100% !important; }
 
 /* Task-based match creation */
+.participant-workspace .participant-add-task,
+.participant-workspace .participant-review-task { border-radius: 8px; box-shadow: none !important; }
+.participant-workspace .participant-add-task { border: 2px solid #729b87 !important; background: #fff !important; }
+.participant-workspace .participant-review-task { border: 1px solid #d7ded9 !important; background: #f6f7f5 !important; }
+.participant-workspace :is(.participant-add-task,.participant-review-task) > div:first-child { border: 0 !important; background: transparent !important; box-shadow: none !important; padding: 0 0 12px; }
+.participant-workspace .participant-add-task h4 { font-size: 20px; }
+.participant-workspace .participant-review-task h4 { font-size: 16px; }
+.participant-workspace .participant-search-toolbar { margin-bottom: 12px; position: static; grid-template-columns: minmax(0,1fr); box-shadow: none !important; }
+.participant-workspace .participant-search-toolbar > div:last-child { justify-content: flex-start; }
+.participant-workspace .participant-scope { display: flex; flex-wrap: wrap; gap: 6px; }
+.participant-workspace .participant-scope button { min-height: 40px; border: 1px solid #adc8bb; border-radius: 6px; padding: 8px 12px; background: #fff; color: #063d2b; }
+.participant-workspace .participant-scope button[aria-pressed="true"] { background: #063d2b; color: #fff; -webkit-text-fill-color: #fff; }
 [data-match-wizard] [hidden] { display: none !important; }
 .match-steps { display: flex; gap: 8px; border-bottom: 1px solid #b7c4bf; padding-bottom: 12px; scroll-margin-top: 16px; }
 .match-steps button, .participant-view-filters button { min-height: 44px; padding: 8px 12px; border: 1px solid #b7c4bf; border-radius: 6px; background: #fff; color: #244438; font-size: 14px; font-weight: 700; }

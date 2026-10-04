@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 function normalize(value) {
   return String(value || '')
@@ -26,6 +26,7 @@ export function ParticipantControlsIsland({ root }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const [visible, setVisible] = useState(0);
+  const previousSelection = useRef(participantCheckboxes().filter((checkbox) => checkbox.checked).length);
 
   const helper = useMemo(() => {
     const remaining = Math.max(0, limit - selected);
@@ -35,7 +36,12 @@ export function ParticipantControlsIsland({ root }) {
   }, [limit, selected]);
 
   const syncSelected = () => {
-    setSelected(participantCheckboxes().filter((checkbox) => checkbox.checked).length);
+    const count = participantCheckboxes().filter((checkbox) => checkbox.checked).length;
+    if (count > previousSelection.current) {
+      setQuery('');
+    }
+    previousSelection.current = count;
+    setSelected(count);
     const form = root.closest('form');
     if (form?.elements.num_teams && form?.elements.players_per_team) setLimit(Number(form.elements.num_teams.value) * Number(form.elements.players_per_team.value));
   };
@@ -93,7 +99,12 @@ export function ParticipantControlsIsland({ root }) {
     };
     const onClick = (event) => {
       if (event.target?.closest?.('[data-participant-toggle], [data-remove-participant], [data-remove-import-participant], [data-remove-player-row]')) {
-        window.setTimeout(syncSelected, 0);
+        const checkbox = event.target.closest('[data-player-row]')?.querySelector('input[name="participants[]"]');
+        const added = event.target.closest('[data-participant-toggle]') && checkbox?.checked;
+        window.setTimeout(() => {
+          syncSelected();
+          if (added) root.querySelector('input[type="search"]')?.focus({ preventScroll: true });
+        }, 0);
       }
     };
 
