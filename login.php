@@ -236,6 +236,8 @@ foreach (db()->query('SELECT player_id FROM site_users WHERE player_id IS NOT NU
 $registerPlayers = array_values(array_filter(repo_all_players(true), static fn(array $player): bool => !isset($claimedPlayerIds[(int) $player['id']])));
 $loginIslandPayload = [
     'next' => $next,
+    'action' => (string) ($_POST['role'] ?? 'user_login'),
+    'username' => ($_POST['role'] ?? '') === 'user_login' ? trim((string) ($_POST['username'] ?? '')) : '',
     'pendingUsername' => $pendingUsername,
     'registerPlayers' => array_map(
         static fn(array $player): array => [

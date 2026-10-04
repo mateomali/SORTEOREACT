@@ -60,14 +60,14 @@ function Toggle({ name, label, defaultChecked = false }) {
   );
 }
 
-function CreateUserForm({ roleLabels, players }) {
+function CreateUserForm({ roleLabels, players, selectedPlayerId, defaultRole = 'jugador' }) {
   return (
-    <section className={panelClass}>
+    <section className={panelClass} id="crear-usuario">
       <div className="mb-3">
         <h3 className="mb-1 text-lg font-black text-lime-50">Alta de usuario</h3>
         <p className={mutedText}>Crea una cuenta, vincula el jugador correspondiente y deja clave provisoria para primer ingreso.</p>
       </div>
-      <form method="post" className="grid gap-3">
+      <form action="usuarios.php" method="post" className="grid gap-3">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="grid gap-1.5">
             <span className={labelClass}>Usuario</span>
@@ -79,13 +79,13 @@ function CreateUserForm({ roleLabels, players }) {
           </label>
           <label className="grid gap-1.5">
             <span className={labelClass}>Rol</span>
-            <select className={inputClass} name="user_role" required defaultValue="jugador">
+            <select className={inputClass} name="user_role" required defaultValue={defaultRole}>
               <RoleOptions roleLabels={roleLabels} />
             </select>
           </label>
           <label className="grid gap-1.5">
             <span className={labelClass}>Jugador vinculado</span>
-            <select className={inputClass} name="player_id" defaultValue="">
+            <select className={inputClass} name="player_id" defaultValue={selectedPlayerId || ''}>
               <PlayerOptions players={players} />
             </select>
           </label>
@@ -109,7 +109,7 @@ function CreateUserForm({ roleLabels, players }) {
 function UserCard({ user, roleLabels, players, currentUserId }) {
   const linkedPlayerId = Number(user.player_id || 0);
   return (
-    <form method="post" className="grid gap-3 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-3">
+    <form action="usuarios.php" method="post" id={`usuario-${user.id}`} className="grid gap-3 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-3">
       <input type="hidden" name="id" value={user.id} />
       <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-lime-100 text-lg font-black text-[#07130f]" aria-hidden="true">
@@ -171,7 +171,7 @@ function UsersList({ users, roleLabels, players, currentUserId }) {
     <section className={panelClass}>
       <div className="mb-3">
         <h3 className="mb-1 text-lg font-black text-lime-50">Cuentas del sitio</h3>
-        <p className={mutedText}>Una cuenta puede estar vinculada a un jugador y tener rol usuario, jugador, directivo o admin.</p>
+        <p className={mutedText}>Una cuenta puede estar vinculada a un jugador y tener rol usuario, jugador, directivo o admin. Un directivo conserva su perfil y funciones de jugador con permisos adicionales.</p>
       </div>
       {!users.length ? (
         <p className={mutedText}>Todavia no hay cuentas creadas.</p>
@@ -186,21 +186,27 @@ function UsersList({ users, roleLabels, players, currentUserId }) {
   );
 }
 
-export function UsuariosPageIsland({ root }) {
-  const payload = readPayload(root);
+export function UsuariosPageIsland({ root, payloadOverride, embedded = false, roleFilter = null, defaultRole = 'jugador' }) {
+  const payload = payloadOverride || readPayload(root);
   const summary = payload.summary || {};
-  const users = Array.isArray(payload.users) ? payload.users : [];
+  const users = (Array.isArray(payload.users) ? payload.users : []).filter((user) => !roleFilter || user.role === roleFilter);
   const players = Array.isArray(payload.players) ? payload.players : [];
   const roleLabels = payload.roleLabels || {};
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4" onSubmitCapture={embedded ? (event) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'return_personas';
+      input.value = roleFilter === 'directivo' ? 'directivos' : 'jugadores';
+      event.target.appendChild(input);
+    } : undefined}>
       <section className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-lime-200/60 bg-emerald-950 px-4 py-3 text-lime-50 shadow-sm shadow-emerald-950/15">
         <div>
-          <h1 className="m-0 text-lime-50">Usuarios</h1>
+          {embedded ? <h2 className="m-0 text-lime-50">Cuentas y permisos</h2> : <h1 className="m-0 text-lime-50">Usuarios</h1>}
           <p className="m-0 mt-1 text-sm font-semibold text-emerald-100/80">Asigna roles y permisos a las cuentas registradas.</p>
         </div>
-        <a className={mutedButton} href="editar_partidos.php">Volver</a>
+        <a className={mutedButton} href="personas.php">Volver a Personas</a>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -210,7 +216,7 @@ export function UsuariosPageIsland({ root }) {
         <SummaryCard label="Habilitados voto" value={summary.canVote || 0} />
       </section>
 
-      <CreateUserForm roleLabels={roleLabels} players={players} />
+      <CreateUserForm roleLabels={roleLabels} players={players} selectedPlayerId={payload.selectedPlayerId} defaultRole={defaultRole} />
       <UsersList users={users} roleLabels={roleLabels} players={players} currentUserId={payload.currentUserId} />
     </div>
   );

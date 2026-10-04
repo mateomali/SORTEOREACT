@@ -2662,7 +2662,7 @@
     formData.append('match_id', rawFormData.get('match_id') || '');
     formData.append('round_robin_legs', rawFormData.has('round_robin_legs') ? '2' : '1');
     rawFormData.forEach((value, key) => {
-      if (key.startsWith('round_robin[')) {
+      if (key.startsWith('round_robin[') || key.startsWith('goals[') || key.startsWith('awards[')) {
         formData.append(key, value);
       }
     });

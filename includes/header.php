@@ -53,6 +53,7 @@ if (is_admin()) {
 } elseif (is_directivo()) {
     $roleLabel = 'Directivo';
     $roleMenu = [
+        'perfil.php' => 'Mi perfil',
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
         'junta_votaciones.php' => 'Votaciones',
@@ -69,6 +70,7 @@ if (is_admin()) {
 } elseif (current_user_id() > 0) {
     $roleLabel = 'Usuario';
     $roleMenu = [
+        'perfil.php' => 'Mi perfil',
         'logout.php' => 'Salir',
     ];
 } elseif (!empty($_SESSION['guest_vote_invite_id'])) {
@@ -82,6 +84,8 @@ if (is_admin()) {
         'login.php' => 'Ingresar',
     ];
 }
+$profileMenuLabel = $roleMenu['perfil.php'] ?? null;
+unset($roleMenu['perfil.php']);
 if (is_admin()) {
     $roleMenuGroups = [
         'Fechas' => [
@@ -90,13 +94,12 @@ if (is_admin()) {
             'historial.php' => $publicMenu['historial.php'] ?? 'Historial',
         ],
         'Jugadores' => [
-            'jugadores2.php' => $publicMenu['jugadores2.php'] ?? 'Jugadores',
+            'jugadores2.php' => 'Jugadores',
             'jugadores2.php?create=1#crear-jugador' => 'Crear jugador',
             'estadisticas.php' => $publicMenu['estadisticas.php'] ?? 'Estadisticas',
         ],
         'Personas' => [
-            'usuarios.php' => $roleMenu['usuarios.php'] ?? 'Usuarios',
-            'directivos.php' => $roleMenu['directivos.php'] ?? 'Directivos',
+            'personas.php' => 'Personas',
         ],
         'Gestion' => [
             'configuracion.php' => $roleMenu['configuracion.php'] ?? 'ConfiguraciÃ³n',
@@ -120,7 +123,7 @@ if (is_admin()) {
 } else {
     $publicMenuGroups = [
         'Jugadores' => [
-            'jugadores2.php' => $publicMenu['jugadores2.php'] ?? 'Jugadores',
+            'jugadores2.php' => 'Jugadores',
             'estadisticas.php' => $publicMenu['estadisticas.php'] ?? 'Estadisticas',
         ],
         'Fechas' => [
@@ -135,6 +138,9 @@ if (is_admin()) {
             $roleLabel !== '' ? $roleLabel : 'Cuenta' => $roleMenu,
         ];
     }
+}
+if ($profileMenuLabel !== null) {
+    $publicMenu['perfil.php'] = $profileMenuLabel;
 }
 $showRoleShortcut = false;
 $roleShortcutHref = is_player_user() ? 'perfil.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : (current_user_id() > 0 ? 'logout.php' : 'login.php'));

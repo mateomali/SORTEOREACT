@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/awards.php';
+require_once __DIR__ . '/lib/match_goals.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/directivos.php';
 require_once __DIR__ . '/lib/sorteo_multiple.php';
@@ -125,6 +126,13 @@ function render_home_player_card_regularity(array $player): string
 {
     [$form, $label] = home_player_card_regularity_form($player);
     return '<span class="formation-card-regularity is-' . h($form) . '" title="' . h($label) . '" aria-label="' . h($label) . '"></span>';
+}
+
+function render_home_player_card_injury(array $player): string
+{
+    $percent = max(0, min(100, (int) ($player['availability_percent'] ?? 100)));
+    if ($percent >= 100) return '';
+    return '<span class="gf-player-injury-icon" data-player-injured="true" role="img" aria-label="Lesionado: estado ' . $percent . '%" title="Estado fisico: ' . $percent . '%"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8v6h6v8h-6v6H8v-6H2V8h6Z" fill="#e02020" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" /></svg></span>';
 }
 
 function home_position_base_rating(array $player, string $position): float
@@ -319,21 +327,8 @@ $roundRobinResults = $selectedMatchId > 0 && count($matchTeams) > 2 ? public_rou
 $teamGoals = [];
 $matchAwards = [];
 $matchAverageRating = null;
-$awardDefinitions = award_definitions();
-$awardDescriptions = [
-    'player_of_match' => 'Jugador de la fecha.',
-    'goal_of_week' => 'Mejor gol de la fecha.',
-    'lyrical' => 'Jugada fantastica o recurso tecnico destacado.',
-    'wall' => 'Mejor defensor de la fecha.',
-    'capocannoniere' => 'Goleador destacado de la fecha.',
-    'terminator' => 'Jugador mas bruto o jugada mas fuerte.',
-    'tractor' => 'Jugador mas aguerrido e intenso.',
-    'guinda' => 'Mejor pase o asistencia.',
-    'putita' => 'Jugador no comprometido o problematico.',
-    'ghost' => 'Jugador que erro mucho o participo poco.',
-    'keeper' => 'Mejor arquero de la fecha.',
-    'goodfellas' => 'Mejor actitud y buen compañero.',
-];
+$awardDefinitions = award_definitions(true);
+$awardDescriptions = award_descriptions();
 $savedMatchAwards = $selectedMatchId > 0 ? repo_match_awards($selectedMatchId) : [];
 $playerAwardIcons = [];
 foreach ($savedMatchAwards as $awardCode => $awardRow) {
@@ -851,7 +846,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     $participants = repo_match_participants($matchId);
     $isFinalized = (string) $match['status'] === 'finalizado';
     $ratedPlayers = array_values(array_filter($participants, static fn(array $p): bool => $p['rating'] !== null));
-    $showResultFormation = $isFinalized && $ratedPlayers !== [];
+    $showResultFormation = $isFinalized;
     $resultParticipants = $participants;
     usort($resultParticipants, static function (array $a, array $b): int {
         $ratingA = $a['rating'] !== null ? (float) $a['rating'] : -1.0;
@@ -1039,17 +1034,14 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           <span class="formation-card-photo<?= h($formationPhotoClass) ?>" aria-hidden="true"><img src="<?= h($formationPhotoPath) ?>" alt=""></span>
                           <strong class="formation-player-name"><?= h((string) $player['name']) ?></strong>
                           <span class="formation-player-meta formation-player-position formation-card-position" title="Posicion asignada"><?= h($assignedLine) ?></span>
-                          <?= render_home_player_card_regularity($player) ?>
+                          <?= render_home_player_card_injury($player) ?>
                           <?php if ($showResultFormation): ?>
                             <span class="formation-player-match-rating" title="Nota del partido"><?= h($formationRating) ?></span>
-                            <?php if ($formationGoals > 0 || $formationAwards): ?>
+                            <?php if ($formationGoals > 0): ?>
+                              <span class="formation-scorer-badge" role="img" aria-label="<?= h((string) $player['name']) ?>: <?= $formationGoals ?> <?= $formationGoals === 1 ? 'gol' : 'goles' ?>" title="<?= $formationGoals ?> <?= $formationGoals === 1 ? 'gol' : 'goles' ?>"><span aria-hidden="true">&#9917; x<?= $formationGoals ?></span></span>
+                            <?php endif; ?>
+                            <?php if ($formationAwards): ?>
                               <span class="formation-result-badges">
-                                <?php if ($formationGoals > 0): ?>
-                                  <span class="formation-goals-badge"><?= h((string) $formationGoals) ?> <?= $formationGoals === 1 ? 'gol' : 'goles' ?></span>
-                                <?php endif; ?>
-                                <?php if ($formationGoals > 0 && $formationAwards): ?>
-                                  <span class="formation-detail-separator">-</span>
-                                <?php endif; ?>
                                 <?php if ($formationAwards): ?>
                                   <span class="formation-award-icons">
                                     <?php foreach ($formationAwards as $awardIcon): ?>
@@ -1127,6 +1119,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
             <?php endforeach; ?>
           </div>
 
+          <?php match_render_scorers($participants, $teamLabels); ?>
           <?php if ($matchAwards): ?>
             <h4 class="match-awards-title">Premios</h4>
             <div class="grid cols-3 match-awards">
@@ -1160,6 +1153,27 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     return (string) ob_get_clean();
 }
 
+$pendingDirectiveMatch = null;
+if (!$showHistoryPage && is_directivo() && current_directivo_id() > 0) {
+    $lastFinalizedMatch = db()->query(
+        "SELECT * FROM matches WHERE status = 'finalizado' ORDER BY match_date DESC, id DESC LIMIT 1"
+    )->fetch();
+    if ($lastFinalizedMatch && directive_voting_is_open($lastFinalizedMatch)) {
+        $votingParticipants = array_filter(
+            repo_match_participants((int) $lastFinalizedMatch['id']),
+            static fn(array $player): bool => $player['team_number'] !== null
+        );
+        if ($votingParticipants && !directive_member_completed_match(
+            (int) $lastFinalizedMatch['id'],
+            current_directivo_id(),
+            count($votingParticipants),
+            match_valuation_mode($lastFinalizedMatch)
+        )) {
+            $pendingDirectiveMatch = $lastFinalizedMatch;
+        }
+    }
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -1177,6 +1191,29 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </div>
 </section>
+
+<?php if ($pendingDirectiveMatch): ?>
+  <?php
+    $pendingMode = match_valuation_mode($pendingDirectiveMatch);
+    $pendingAction = match_valuation_includes_ratings($pendingMode)
+        ? (match_valuation_includes_awards($pendingMode) ? 'Cargar puntajes y premios' : 'Cargar puntajes')
+        : 'Asignar premios';
+    $pendingTitle = trim((string) ($pendingDirectiveMatch['title'] ?? '')) ?: 'Fecha #' . (int) $pendingDirectiveMatch['id'];
+  ?>
+  <section class="home-directivo-valuation" id="home-directivo-valoracion" aria-labelledby="home-directivo-valoracion-title">
+    <div class="home-directivo-valuation-copy">
+      <h2 id="home-directivo-valoracion-title"><?= $pendingMode === 'both' ? 'Puntajes y premios pendientes' : ($pendingMode === 'ratings' ? 'Puntajes pendientes' : 'Premios pendientes') ?></h2>
+      <p class="home-directivo-valuation-match"><strong><?= h($pendingTitle) ?></strong><span><?= h(date('d/m/Y', strtotime((string) $pendingDirectiveMatch['match_date']))) ?></span></p>
+      <p class="home-directivo-valuation-help"><?= $pendingMode === 'both' ? 'Elegí los premios y puntuá a los jugadores.' : ($pendingMode === 'ratings' ? 'Puntuá a los jugadores de esta fecha.' : 'Elegí un jugador para cada premio.') ?></p>
+    </div>
+    <div class="home-directivo-valuation-action">
+      <a class="btn btn-primary" href="junta_votaciones.php?match_id=<?= (int) $pendingDirectiveMatch['id'] ?>"><?= h($pendingAction) ?></a>
+      <p>Enviá tu valoración antes del <time datetime="<?= h(date('c', directive_voting_deadline($pendingDirectiveMatch))) ?>"><?= h(date('d/m H:i', directive_voting_deadline($pendingDirectiveMatch))) ?></time></p>
+    </div>
+  </section>
+<?php endif; ?>
+
+
 
 <?php if (!$showHistoryPage && $matches): ?>
   <?php

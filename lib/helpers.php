@@ -151,7 +151,7 @@ function current_player_id(): int
 
 function is_player_user(): bool
 {
-    return current_role() === 'jugador' && current_player_id() > 0;
+    return in_array(current_role(), ['jugador', 'directivo'], true) && current_player_id() > 0;
 }
 
 function current_role(): string

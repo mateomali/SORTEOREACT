@@ -218,13 +218,31 @@ function rental_court_next_datetime(array $court, ?DateTimeImmutable $from = nul
     $from ??= new DateTimeImmutable('now');
     $targetWeekday = max(1, min(7, (int) ($court['weekday'] ?? 1)));
     $time = substr((string) ($court['time_value'] ?? '21:00:00'), 0, 5);
-    $candidate = DateTimeImmutable::createFromFormat('Y-m-d H:i', $from->format('Y-m-d') . ' ' . $time) ?: $from;
+    $candidate = DateTimeImmutable::createFromFormat('Y-m-d H:i', $from->format('Y-m-d') . ' ' . $time, $from->getTimezone()) ?: $from;
     $currentWeekday = (int) $candidate->format('N');
     $days = ($targetWeekday - $currentWeekday + 7) % 7;
     if ($days === 0 && $candidate <= $from) {
         $days = 7;
     }
     return $candidate->modify('+' . $days . ' days');
+}
+
+function rental_court_next_available(array $courts, ?DateTimeImmutable $from = null): ?array
+{
+    $from ??= new DateTimeImmutable('now');
+    $nextCourt = null;
+    $nextDate = null;
+    foreach ($courts as $court) {
+        if (isset($court['active']) && !(int) $court['active']) {
+            continue;
+        }
+        $candidate = rental_court_next_datetime($court, $from);
+        if ($nextDate === null || $candidate < $nextDate) {
+            $nextCourt = $court;
+            $nextDate = $candidate;
+        }
+    }
+    return $nextCourt;
 }
 
 function rental_weekday_label(int $weekday): string

@@ -13,14 +13,49 @@ ensure_control_schema();
 ensure_multiple_draw_schema();
 ensure_match_awards_schema();
 ensure_admin_config_schema();
-require_player_user();
+if (current_user_id() <= 0) {
+    flash('error', 'Ingresá con tu cuenta para ver tu perfil.');
+    redirect('login.php?next=perfil.php');
+}
 
-$playerId = current_player_id();
 $currentUserId = current_user_id();
-$player = repo_player_by_id($playerId);
-if (!$player) {
-    flash('error', 'Tu cuenta ya no esta vinculada a un jugador valido.');
+$accountStmt = db()->prepare('SELECT id, username, role, player_id FROM site_users WHERE id = :id AND active = 1 LIMIT 1');
+$accountStmt->execute(['id' => $currentUserId]);
+$profileAccount = $accountStmt->fetch();
+if (!$profileAccount) {
     redirect('logout.php');
+}
+$playerId = (int) ($profileAccount['player_id'] ?? 0);
+$player = $playerId > 0 ? repo_player_by_id($playerId) : null;
+if (!$player) {
+    $title = 'Mi perfil | ' . APP_NAME;
+    $activePage = 'perfil.php';
+    require __DIR__ . '/includes/header.php';
+    ?>
+    <section class="card">
+      <h1>Mi perfil</h1>
+      <p>Usuario: <?= h((string) $profileAccount['username']) ?></p>
+      <p>Tu cuenta todavía no tiene un jugador vinculado. Pedile a un administrador que la vincule desde Usuarios para ver tus partidos, premios y estadísticas y cambiar tu foto.</p>
+      <a class="btn btn-muted" href="index.php">Volver al inicio</a>
+    </section>
+    <?php
+    require __DIR__ . '/includes/footer.php';
+    exit;
+}
+
+$_SESSION['profile_photo_token'] = $_SESSION['profile_photo_token'] ?? bin2hex(random_bytes(32));
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (!hash_equals((string) $_SESSION['profile_photo_token'], (string) ($_POST['profile_photo_token'] ?? ''))) {
+            throw new RuntimeException('La sesión del formulario venció. Volvé a intentarlo.');
+        }
+        require_once __DIR__ . '/lib/profile_photo.php';
+        profile_update_own_photo($playerId, $_FILES['photo'] ?? []);
+        flash('success', 'Tu foto se actualizó.');
+    } catch (RuntimeException $e) {
+        flash('error', $e->getMessage());
+    }
+    redirect('perfil.php#mi-foto');
 }
 
 $profileRankingCourtId = 0;
@@ -806,7 +841,7 @@ foreach ($detailStmt->fetchAll() as $detailRow) {
     }
 }
 
-$awardDefinitions = award_definitions();
+$awardDefinitions = award_definitions(true);
 $awardDescriptions = award_descriptions();
 $monthlyAwardDefinition = monthly_player_award_definition();
 $playerMonthlyAwards = monthly_player_awards_for_player($playerId);
@@ -942,14 +977,27 @@ ob_start();
   <a class="btn btn-muted" href="estadisticas.php">Ver mis stats</a>
 </section>
 
+<section class="card mb-3" id="mi-foto">
+  <h2>Mi foto</h2>
+  <form method="post" enctype="multipart/form-data" class="grid gap-3">
+    <input type="hidden" name="profile_photo_token" value="<?= h((string) $_SESSION['profile_photo_token']) ?>">
+    <img src="<?= h(player_photo_path($player)) ?>" alt="Foto de <?= h((string) $player['name']) ?>" class="h-24 w-24 rounded-lg object-cover" style="object-position: <?= h(player_photo_object_position($player)) ?>">
+    <label class="grid gap-2" for="profilePhoto">Cambiar foto
+      <input id="profilePhoto" type="file" name="photo" accept="image/jpeg,image/png,image/webp" required class="w-full min-w-0 text-sm">
+    </label>
+    <p class="small-muted">JPG, PNG o WEBP. Máximo 3 MB. Esta foto también aparece en tu ficha de jugador.</p>
+    <button class="btn btn-primary" type="submit">Guardar foto</button>
+  </form>
+</section>
+
 <section class="grid cols-3 profile-identity-grid mb-3">
   <article class="stat-box">
     <div class="label">Rol</div>
-    <div class="value">Jugador</div>
+    <div class="value"><?= h(ucfirst((string) $profileAccount['role'])) ?></div>
   </article>
   <article class="stat-box">
     <div class="label">Usuario</div>
-    <div class="value"><?= h((string) ($_SESSION['username'] ?? '')) ?></div>
+    <div class="value"><?= h((string) $profileAccount['username']) ?></div>
   </article>
   <article class="stat-box">
     <div class="label">Jugador</div>

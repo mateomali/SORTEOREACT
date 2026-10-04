@@ -101,6 +101,7 @@ function junta_summary_payload(array $summary, int $selectedMatchId): array
         'label' => junta_match_label($match),
         'date' => date('d/m/Y H:i', strtotime((string) $match['match_date'])),
         'deadline' => junta_format_datetime($summary['deadline']),
+        'remainingSeconds' => $summary['deadline'] !== null ? max(0, $summary['deadline'] - time()) : null,
         'submitted' => (int) ($summary['status']['submitted'] ?? 0),
         'eligible' => (int) ($summary['status']['eligible'] ?? 0),
         'selected' => $selectedMatchId === $matchId,
@@ -226,14 +227,15 @@ foreach ($matches as $match) {
     }
 }
 
+$voteView = ($_GET['view'] ?? '') === 'history' ? 'history' : 'latest';
 $selectedMatchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
-if ($selectedMatchId <= 0 && $openVoteMatches) {
+if ($voteView === 'latest' && $selectedMatchId <= 0 && $openVoteMatches) {
     $selectedMatchId = (int) $openVoteMatches[0]['match']['id'];
 }
-if ($selectedMatchId <= 0 && $historyVoteMatches) {
+if ($voteView === 'latest' && $selectedMatchId <= 0 && $historyVoteMatches) {
     $selectedMatchId = (int) $historyVoteMatches[0]['match']['id'];
 }
-if ($selectedMatchId <= 0 && $matches) {
+if ($voteView === 'latest' && $selectedMatchId <= 0 && $matches) {
     $selectedMatchId = (int) $matches[0]['id'];
 }
 $selectedMatch = $selectedMatchId > 0 ? repo_match_by_id($selectedMatchId) : null;
@@ -275,6 +277,15 @@ $myRatingVotes = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member
 $myAwardVotes = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_award_votes((int) $selectedMatch['id'], $currentVoteMemberId) : [];
 $myVoteComplete = ($currentVoteMemberId > 0 && $selectedMatch) ? directive_member_completed_match((int) $selectedMatch['id'], $currentVoteMemberId, $participantCount, $selectedValuationMode) : false;
 $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : [];
+// Retired awards remain visible in published results when they were awarded.
+if ($publication) {
+    foreach (award_definitions(true) as $code => $definition) {
+        if (isset($savedAwards[$code])) {
+            $awardDefinitions[$code] = $definition;
+        }
+    }
+}
+$awardDescriptions = award_descriptions();
 $shouldReturnHomeAfterVote = (string) ($_GET['vote_saved'] ?? '') === '1';
 
 $voteParticipants = array_values(array_filter(
@@ -307,6 +318,7 @@ foreach ($awardDefinitions as $code => $award) {
         'code' => (string) $code,
         'label' => (string) $award['label'],
         'icon' => (string) $award['icon'],
+        'description' => (string) ($awardDescriptions[$code] ?? ''),
         'listId' => $code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers',
         'value' => junta_award_value($myAwardVotes, (string) $code),
         'winner' => $winner ? (string) $winner['name'] : '-',
@@ -372,6 +384,7 @@ if ($selectedMatch) {
 }
 
 $juntaIslandPayload = [
+    'view' => $voteView,
     'isAdmin' => is_admin(),
     'isDirectivo' => is_directivo(),
     'hasMatches' => count($matches) > 0,

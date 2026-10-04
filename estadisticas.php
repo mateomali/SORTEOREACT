@@ -15,21 +15,8 @@ ensure_control_schema();
 ensure_match_awards_schema();
 ensure_admin_config_schema();
 directive_publish_due_results();
-$awardDefinitions = award_definitions();
-$awardDescriptions = [
-    'player_of_match' => 'Jugador de la fecha.',
-    'goal_of_week' => 'Mejor gol de la fecha.',
-    'lyrical' => 'Jugada fantástica o recurso técnico destacado.',
-    'wall' => 'Mejor defensor de la fecha.',
-    'capocannoniere' => 'Goleador destacado de la fecha.',
-    'terminator' => 'Jugador más bruto o jugada más fuerte.',
-    'tractor' => 'Jugador más aguerrido e intenso.',
-    'guinda' => 'Mejor pase o asistencia.',
-    'putita' => 'Jugador no comprometido o problemático.',
-    'ghost' => 'Jugador que erró mucho o participó poco.',
-    'keeper' => 'Mejor arquero de la fecha.',
-    'goodfellas' => 'Mejor actitud y buen compañero.',
-];
+$awardDefinitions = award_definitions(true);
+$awardDescriptions = award_descriptions();
 $awardLegendDefinitions = $awardDefinitions + ['monthly_player' => monthly_player_award_definition()];
 $awardLegendDescriptions = $awardDescriptions + ['monthly_player' => monthly_player_award_description()];
 

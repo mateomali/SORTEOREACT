@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 function readPayload(root) {
   const raw = root.dataset.payload || root.querySelector('script[type="application/json"]')?.textContent || '{}';
@@ -19,37 +19,53 @@ const mutedButton = 'inline-flex min-h-10 items-center justify-center rounded-lg
 const warningButton = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-amber-300/75 bg-amber-300 px-3.5 py-2 text-sm font-extrabold text-amber-950 transition hover:bg-amber-200';
 
 function VoteCard({ match }) {
+  const [remaining, setRemaining] = useState(match.remainingSeconds ?? null);
+  useEffect(() => {
+    if (match.remainingSeconds == null) return undefined;
+    const end = Date.now() + match.remainingSeconds * 1000;
+    const update = () => setRemaining(Math.max(0, Math.ceil((end - Date.now()) / 1000)));
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [match.remainingSeconds]);
+  const days = Math.floor((remaining || 0) / 86400);
+  const clock = [Math.floor((remaining || 0) % 86400 / 3600), Math.floor((remaining || 0) % 3600 / 60), (remaining || 0) % 60].map((part) => String(part).padStart(2, '0')).join(':');
   return (
     <a
-      className={`grid gap-2 rounded-xl border p-3 text-lime-50 no-underline transition hover:bg-emerald-900/60 ${match.selected ? 'border-lime-200 bg-emerald-900/80' : 'border-lime-200/25 bg-emerald-900/45'}`}
+      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-lime-50 no-underline transition hover:bg-emerald-900/60 md:grid-cols-[minmax(0,1fr)_auto_auto] md:gap-x-6 md:py-3 ${match.selected ? 'border-lime-200 bg-emerald-900/80' : 'border-lime-200/25 bg-emerald-900/45'}`}
       href={`junta_votaciones.php?match_id=${match.id}`}
     >
-      <h3 className="m-0 text-base font-black text-lime-50">{match.label}</h3>
-      <p className="m-0 text-xs font-semibold text-emerald-100/75">{match.date}</p>
-      <div className="flex flex-wrap gap-2">
-        <span className={chipClass}>{match.submitted}/{match.eligible} votos</span>
-        <span className={chipClass}>Abierta</span>
-        {match.valuationModeLabel ? <span className={chipClass}>{match.valuationModeLabel}</span> : null}
+      <div className="min-w-0">
+        <h3 className="m-0 break-words text-sm font-black text-lime-50 md:text-base">{match.label}</h3>
+        <p className="m-0 text-xs font-semibold text-emerald-100/75">{match.date}</p>
       </div>
-      <small className="text-xs font-semibold text-emerald-100/75">Cierre: {match.deadline}</small>
+      <div className="col-span-2 row-start-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-lime-100 md:col-span-1 md:col-start-2 md:row-start-1">
+        <span>{match.submitted}/{match.eligible} votos</span>
+        <span>{remaining === 0 ? 'Plazo terminado' : 'Abierta'}</span>
+        {match.valuationModeLabel ? <span>{match.valuationModeLabel}</span> : null}
+      </div>
+      <div className="col-start-2 row-start-1 text-right md:col-start-3">
+        <span className="block text-[11px] font-semibold text-emerald-100/75">Tiempo restante</span>
+        <strong className="block whitespace-nowrap text-sm tabular-nums text-lime-50 md:text-base">{remaining === null ? 'Sin plazo' : remaining === 0 ? 'Finalizado' : `${days ? `${days}d ` : ''}${clock}`}</strong>
+      </div>
     </a>
   );
 }
 
 function OpenVotes({ matches }) {
   return (
-    <section className={panelClass}>
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+    <section className={`${panelClass} max-md:p-3`}>
+      <div className="mb-2 flex items-start justify-between gap-2">
         <div>
-          <h3 className="mb-1 text-lg font-black text-lime-50">Votaciones abiertas</h3>
-          <p className={mutedText}>Fechas con votacion activa y tiempo disponible.</p>
+          <h3 className="m-0 text-base font-black text-lime-50">Votaciones abiertas</h3>
+          <p className={`${mutedText} m-0 text-xs`}>Fechas con votacion activa y tiempo disponible.</p>
         </div>
         <span className={chipClass}>{matches.length} abiertas</span>
       </div>
       {!matches.length ? (
         <p className={mutedText}>No hay votaciones abiertas en este momento.</p>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2">
           {matches.map((match) => <VoteCard key={match.id} match={match} />)}
         </div>
       )}
@@ -59,7 +75,7 @@ function OpenVotes({ matches }) {
 
 function HistoryVotes({ matches }) {
   return (
-    <details className={panelClass}>
+    <details className={panelClass} open>
       <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-lime-50 [&::-webkit-details-marker]:hidden">
         <span>Historial de votaciones</span>
         <small className="text-xs font-black text-lime-100">{matches.length} fechas</small>
@@ -72,7 +88,7 @@ function HistoryVotes({ matches }) {
             <a
               key={match.id}
               className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-lime-50 no-underline hover:bg-emerald-900/55 ${match.selected ? 'border-lime-200 bg-emerald-900/75' : 'border-lime-200/20 bg-emerald-900/35'}`}
-              href={`junta_votaciones.php?match_id=${match.id}`}
+              href={`junta_votaciones.php?view=history&match_id=${match.id}`}
             >
               <span className="min-w-0">
                 <strong className="block truncate text-sm">{match.label}</strong>
@@ -248,6 +264,39 @@ function PublishedResults({ match }) {
   );
 }
 
+function AwardField({ award, players }) {
+  const [value, setValue] = useState(award.value || '');
+  const hasSelectedPlayer = players.some((player) => player.awardValue === value);
+  return (
+    <div className="grid gap-1.5 rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
+      <label className="flex items-center gap-2 text-sm font-black text-lime-50" htmlFor={`award-${award.code}`}>
+        <span title={award.label}>{award.icon}</span>
+        <span>{award.label}</span>
+      </label>
+      <p id={`award-description-${award.code}`} className={`${mutedText} m-0`}>{award.description}</p>
+      <input
+        id={`award-${award.code}`}
+        className={inputClass}
+        type="text"
+        list={award.listId}
+        name={`awards[${award.code}]`}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        aria-describedby={`award-description-${award.code}`}
+        placeholder="Buscar jugador"
+      />
+      {hasSelectedPlayer ? <button
+        className={`${mutedButton} justify-self-start`}
+        type="button"
+        aria-label={`Quitar selección de ${award.label}`}
+        onClick={() => setValue('')}
+      >
+        Quitar selección
+      </button> : null}
+    </div>
+  );
+}
+
 function VoteForm({ match }) {
   if (match.publication || match.currentVoteMemberId <= 0 || !match.isOpen) return null;
   const playerOptions = match.participants || [];
@@ -261,7 +310,7 @@ function VoteForm({ match }) {
   return (
     <form
       method="post"
-      className="grid gap-4"
+      className="grid min-w-0 gap-4"
       data-junta-vote-submit="1"
       data-vote-ratings={showRatings ? '1' : '0'}
       data-vote-awards={showAwards ? '1' : '0'}
@@ -278,7 +327,7 @@ function VoteForm({ match }) {
       <p className={`${mutedText} m-0`}>{match.valuationModeDescription}</p>
 
       {showRatings ? (
-        <details className={panelClass} open>
+        <details className={`${panelClass} min-w-0`} open>
           <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-lime-50 [&::-webkit-details-marker]:hidden">
             <span>Puntajes</span>
             <small className="text-xs font-black text-lime-100">Promedio final por junta</small>
@@ -317,21 +366,7 @@ function VoteForm({ match }) {
           <p className={`${mutedText} mt-3`}>{awardsTieBreak}</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {match.awards.map((award) => (
-              <div key={award.code} className="grid gap-1.5 rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
-                <label className="flex items-center gap-2 text-sm font-black text-lime-50" htmlFor={`award-${award.code}`}>
-                  <span title={award.label}>{award.icon}</span>
-                  <span>{award.label}</span>
-                </label>
-                <input
-                  id={`award-${award.code}`}
-                  className={inputClass}
-                  type="text"
-                  list={award.listId}
-                  name={`awards[${award.code}]`}
-                  defaultValue={award.value}
-                  placeholder="Buscar jugador"
-                />
-              </div>
+              <AwardField key={`${match.id}-${award.code}`} award={award} players={award.listId === 'matchAwardGoalkeepers' ? goalkeeperOptions : playerOptions} />
             ))}
           </div>
         </details>
@@ -358,6 +393,8 @@ export function JuntaVotacionesPageIsland({ root }) {
   const openVoteMatches = Array.isArray(payload.openVoteMatches) ? payload.openVoteMatches : [];
   const historyVoteMatches = Array.isArray(payload.historyVoteMatches) ? payload.historyVoteMatches : [];
   const selectedMatch = payload.selectedMatch || null;
+  const historyView = payload.view === 'history';
+  const latestMatch = openVoteMatches[0] || historyVoteMatches[0];
 
   return (
     <div className="grid gap-4">
@@ -375,8 +412,23 @@ export function JuntaVotacionesPageIsland({ root }) {
         </section>
       ) : (
         <>
-          <OpenVotes matches={openVoteMatches} />
-          <HistoryVotes matches={historyVoteMatches} />
+          <nav className="flex gap-2" aria-label="Secciones de votaciones">
+            <a className={historyView ? mutedButton : primaryButton} aria-current={!historyView ? 'page' : undefined} href="junta_votaciones.php">Última votación</a>
+            <a className={historyView ? primaryButton : mutedButton} aria-current={historyView ? 'page' : undefined} href="junta_votaciones.php?view=history">Historial de votaciones</a>
+          </nav>
+          {historyView ? <HistoryVotes matches={historyVoteMatches} /> : (
+            <section className={`${panelClass} max-md:p-3`}>
+              <label className="mb-2 grid gap-1 text-xs font-bold" htmlFor="vote-match-select">
+                Fecha para valorar
+                <select id="vote-match-select" className={inputClass} value={selectedMatch?.id || ''} onChange={(event) => { window.location.href = `junta_votaciones.php?match_id=${event.target.value}`; }}>
+                  {!selectedMatch ? <option value="">Elegir fecha</option> : null}
+                  {openVoteMatches.map((match, index) => <option key={match.id} value={match.id}>{match.label} · {match.date}{index === 0 ? ' · Última abierta' : ''}</option>)}
+                  {selectedMatch && !openVoteMatches.some((match) => match.id === selectedMatch.id) ? <option value={selectedMatch.id}>{selectedMatch.label} · Cerrada</option> : null}
+                </select>
+              </label>
+              {openVoteMatches.find((match) => match.id === selectedMatch?.id) ? <VoteCard match={openVoteMatches.find((match) => match.id === selectedMatch.id)} /> : latestMatch && !selectedMatch ? <VoteCard match={latestMatch} /> : null}
+            </section>
+          )}
           {selectedMatch ? (
             <>
               <StatusPanel match={selectedMatch} />

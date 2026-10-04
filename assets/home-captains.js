@@ -89,6 +89,12 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       </span>
     `;
 
+    const playerCardInjuryHtml = (player) => {
+      const raw = Number(player.availability_percent ?? 100);
+      const percent = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : 100;
+      return percent < 100 ? `<span class="gf-player-injury-icon" data-player-injured="true" role="img" aria-label="Lesionado: estado ${percent}%" title="Estado fisico: ${percent}%"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8v6h6v8h-6v6H8v-6H2V8h6Z" fill="#e02020" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" /></svg></span>` : '';
+    };
+
     const teamTotalSkill = (players) => players.reduce((total, player) => {
       const position = player.assigned_position || player.primary_position || 'MED';
       return total + adjustedPositionRating(player, position);
@@ -177,7 +183,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
                 ${playerCardPhotoHtml(player)}
                 <strong class="formation-player-name">${escapeHtml(player.name)}</strong>
                 <span class="formation-player-meta formation-player-position formation-card-position">${escapeHtml(assignedPosition)}</span>
-                ${playerCardRegularityHtml(player)}
+                ${playerCardInjuryHtml(player)}
               </div>
             `;
           }).join('')

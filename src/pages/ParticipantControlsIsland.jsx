@@ -21,7 +21,8 @@ function notifySelectionChanged() {
 }
 
 export function ParticipantControlsIsland({ root }) {
-  const limit = Number(root.dataset.limit || 0);
+  const [limit, setLimit] = useState(Number(root.dataset.limit || 0));
+  const [scope, setScope] = useState('all');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const [visible, setVisible] = useState(0);
@@ -35,6 +36,8 @@ export function ParticipantControlsIsland({ root }) {
 
   const syncSelected = () => {
     setSelected(participantCheckboxes().filter((checkbox) => checkbox.checked).length);
+    const form = root.closest('form');
+    if (form?.elements.num_teams && form?.elements.players_per_team) setLimit(Number(form.elements.num_teams.value) * Number(form.elements.players_per_team.value));
   };
 
   const focusResults = () => {
@@ -61,7 +64,9 @@ export function ParticipantControlsIsland({ root }) {
     rows.forEach((row) => {
       const haystack = normalize(row.dataset.search || '');
       const removed = row.getAttribute('data-removed') === '1';
-      const matches = !removed && (normalizedQuery === '' || haystack.includes(normalizedQuery));
+      const checked = row.querySelector('input[name="participants[]"]')?.checked;
+      const matchesScope = scope === 'all' || (scope === 'selected' ? checked : !checked);
+      const matches = !removed && matchesScope && (normalizedQuery === '' || haystack.includes(normalizedQuery));
       row.classList.toggle('hidden', !matches);
       if (matches) {
         nextVisible += 1;
@@ -73,7 +78,12 @@ export function ParticipantControlsIsland({ root }) {
       empty.classList.toggle('hidden', nextVisible !== 0);
     }
     setVisible(nextVisible);
-  }, [query]);
+  }, [query, scope, selected]);
+
+  useEffect(() => {
+    const list = document.querySelector('[data-participant-list]');
+    if (list) list.scrollTop = 0;
+  }, [query, scope]);
 
   useEffect(() => {
     const onChange = (event) => {
@@ -82,16 +92,25 @@ export function ParticipantControlsIsland({ root }) {
       }
     };
     const onClick = (event) => {
-      if (event.target?.closest?.('[data-participant-toggle], [data-remove-participant], [data-remove-import-participant]')) {
+      if (event.target?.closest?.('[data-participant-toggle], [data-remove-participant], [data-remove-import-participant], [data-remove-player-row]')) {
         window.setTimeout(syncSelected, 0);
       }
     };
 
+    const configurationChanged = () => {
+      const form = root.closest('form');
+      setLimit(Number(form?.querySelector('[data-num-teams]')?.value || 2) * Number(form?.querySelector('[data-players-per-team]')?.value || 9));
+      syncSelected();
+    };
+    document.addEventListener('goodfellas:configuration-changed', configurationChanged);
+    document.addEventListener('goodfellas:participants-changed', syncSelected);
     document.addEventListener('change', onChange);
     document.addEventListener('click', onClick);
     syncSelected();
 
     return () => {
+      document.removeEventListener('goodfellas:configuration-changed', configurationChanged);
+      document.removeEventListener('goodfellas:participants-changed', syncSelected);
       document.removeEventListener('change', onChange);
       document.removeEventListener('click', onClick);
     };
@@ -104,13 +123,13 @@ export function ParticipantControlsIsland({ root }) {
       return row && row.getAttribute('data-removed') !== '1' && !row.classList.contains('hidden');
     });
 
-    checkboxes.forEach((checkbox) => {
-      checkbox.checked = false;
-    });
     if (checked) {
-      pool.slice(0, limit || pool.length).forEach((checkbox) => {
-        checkbox.checked = true;
+      let count = checkboxes.filter(checkbox => checkbox.checked).length;
+      pool.forEach(checkbox => {
+        if (!checkbox.checked && count < (limit || pool.length)) { checkbox.checked = true; count += 1; }
       });
+    } else {
+      pool.forEach(checkbox => { checkbox.checked = false; });
     }
     notifySelectionChanged();
     syncSelected();
@@ -136,7 +155,7 @@ export function ParticipantControlsIsland({ root }) {
   };
 
   return (
-    <div className="grid items-end gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 p-3 text-lime-50 shadow-md shadow-emerald-950/20 md:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="participant-task-controls participant-search-toolbar grid items-end gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 p-3 text-lime-50 shadow-md shadow-emerald-950/20 md:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <label className="mb-1.5 block text-sm font-black text-lime-100" htmlFor="participantSearchReact">Buscar jugador</label>
         <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
@@ -168,6 +187,11 @@ export function ParticipantControlsIsland({ root }) {
             </svg>
           </button>
         </div>
+      </div>
+      <div className="participant-scope" role="group" aria-label="Filtrar jugadores">
+        {[['all', 'Todos'], ['available', 'Disponibles'], ['selected', 'Convocados']].map(([value, label]) => (
+          <button type="button" key={value} aria-pressed={scope === value} onClick={() => setScope(value)}>{label}</button>
+        ))}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2 max-[760px]:items-stretch">
         <label className="mb-0 inline-flex min-h-11 items-center gap-2 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-sm font-bold text-lime-50 shadow-sm">

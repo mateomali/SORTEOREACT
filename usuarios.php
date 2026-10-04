@@ -23,7 +23,7 @@ function site_user_by_id(int $id): ?array
     return $row ?: null;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (empty($personasDataOnly) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     try {
         if ($action === 'create_user') {
@@ -192,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Throwable $e) {
         flash('error', $e->getMessage());
     }
-    redirect('usuarios.php');
+    redirect(($_POST['return_personas'] ?? '') === 'directivos' ? 'personas.php?tab=directivos' : (($_POST['return_personas'] ?? '') === 'jugadores' ? 'personas.php?tab=jugadores' : 'usuarios.php'));
 }
 
 $users = db()->query(
@@ -227,6 +227,7 @@ $userPayloadPlayers = array_map(
     $players
 );
 $usuariosIslandPayload = [
+    'selectedPlayerId' => max(0, (int) ($_GET['player_id'] ?? 0)),
     'summary' => [
         'total' => count($users),
         'active' => $activeCount,
@@ -253,6 +254,10 @@ $usuariosIslandPayload = [
         $users
     ),
 ];
+
+if (!empty($personasDataOnly)) {
+    return $usuariosIslandPayload;
+}
 
 $title = 'Usuarios | ' . APP_NAME;
 $activePage = 'usuarios.php';

@@ -824,6 +824,15 @@ foreach ($activeRentalCourts as $court) {
         'playersPerTeam' => max(1, min(12, (int) ((int) $court['total_players'] / 2))),
     ];
 }
+if (!$editing && $showCreateSection && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $defaultCourt = rental_court_next_available($activeRentalCourts);
+    if ($defaultCourt !== null) {
+        $form['rental_court_id'] = (int) $defaultCourt['id'];
+        $form['match_date'] = rental_court_next_datetime($defaultCourt)->format('Y-m-d H:i');
+        $form['num_teams'] = 2;
+        $form['players_per_team'] = max(1, min(12, (int) ((int) $defaultCourt['total_players'] / 2)));
+    }
+}
 $targetSelection = (int) $form['num_teams'] * (int) $form['players_per_team'];
 $nextMatchId = $matches
     ? (max(array_map(static fn(array $match): int => (int) $match['id'], $matches)) + 1)
@@ -967,7 +976,7 @@ function admin_render_match_scoreboard(array $match, array $teams, array $captai
     if (!$teams) {
         return '';
     }
-    if (!repo_match_has_saved_result($match, $teams)) {
+    if ((string) ($match['status'] ?? '') !== 'finalizado' || !repo_match_has_saved_result($match, $teams)) {
         return '';
     }
 
@@ -1005,7 +1014,7 @@ function admin_render_match_scoreboard(array $match, array $teams, array $captai
 
 function admin_match_scoreboard_payload(array $match, array $teams, array $captainNames): array
 {
-    if (!$teams || !repo_match_has_saved_result($match, $teams)) {
+    if (!$teams || (string) ($match['status'] ?? '') !== 'finalizado' || !repo_match_has_saved_result($match, $teams)) {
         return [];
     }
 
@@ -1233,7 +1242,7 @@ ob_start();
 <details class="<?= $showCreateSection && !$showEditSection ? 'crear-partido-drawer relative mb-4 min-h-0 overflow-hidden rounded-2xl border border-lime-200/38 bg-emerald-950/88 p-0 shadow-xl shadow-emerald-950/24' : 'encounter-drawer ' . ($form['id'] ? 'is-editing' : 'is-new') ?>" <?= ($form['id'] || !$showEditSection) ? 'open' : '' ?>>
   <summary class="<?= $showCreateSection && !$showEditSection ? 'flex cursor-pointer list-none items-center justify-between gap-3 border-b border-lime-200/25 bg-emerald-950 px-4 py-3 text-lime-50 [&::-webkit-details-marker]:hidden' : 'encounter-drawer-tab' ?>">
     <span class="<?= $showCreateSection && !$showEditSection ? 'text-sm font-black uppercase tracking-wide text-lime-50' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'CREAR NUEVA FECHA' ?></span>
-    <small class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-xs font-extrabold uppercase leading-none text-[#07130f] shadow-sm shadow-emerald-950/10' : '' ?>"><?= $targetSelection ?> convocados requeridos</small>
+    <small class="<?= $showCreateSection && !$showEditSection ? 'rounded-full border border-lime-200/45 bg-lime-100 px-3 py-1 text-xs font-extrabold uppercase leading-none text-[#07130f] shadow-sm shadow-emerald-950/10' : '' ?>"><span data-match-cup-total><?= $targetSelection ?></span> convocados requeridos</small>
   </summary>
   <section class="<?= $showCreateSection && !$showEditSection ? 'bg-emerald-950/72 p-4 text-lime-50 max-[760px]:p-3' : 'card encounter-drawer-body' ?>">
   <div class="<?= $showCreateSection && !$showEditSection ? 'mb-4 grid items-start gap-3 border-b border-lime-200/20 pb-4 md:grid-cols-[minmax(0,1fr)_auto] max-[760px]:grid-cols-1 max-[760px]:gap-2 max-[760px]:pb-3' : '' ?>">
@@ -1242,9 +1251,9 @@ ob_start();
       <h3 class="<?= $showCreateSection && !$showEditSection ? 'm-0 text-2xl font-extrabold leading-tight text-lime-50 max-[760px]:text-xl' : '' ?>"><?= $form['id'] ? 'Editar fecha' : 'Crear nueva fecha' ?></h3>
     </div>
     <div class="<?= $showCreateSection && !$showEditSection ? 'flex flex-wrap gap-2 md:justify-end max-[760px]:grid max-[760px]:grid-cols-3 max-[760px]:gap-1.5' : '' ?>" aria-label="Resumen de cupos">
-      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong class="text-base text-lime-100"><?= h((string) $targetSelection) ?></strong> cupos</span>
-      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong class="text-base text-lime-100"><?= h((string) min(4, max(2, (int) $form['num_teams']))) ?></strong> equipos</span>
-      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong class="text-base text-lime-100"><?= h((string) $form['players_per_team']) ?></strong> por equipo</span>
+      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong data-match-cup-total class="text-base text-lime-100"><?= h((string) $targetSelection) ?></strong> cupos</span>
+      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong data-match-team-total class="text-base text-lime-100"><?= h((string) min(4, max(2, (int) $form['num_teams']))) ?></strong> equipos</span>
+      <span class="<?= $showCreateSection && !$showEditSection ? 'inline-flex min-h-10 items-center gap-1 rounded-xl border border-lime-200/35 bg-emerald-950 px-3 py-2 text-xs font-extrabold text-lime-100 max-[760px]:min-h-9 max-[760px]:justify-center max-[760px]:px-2 max-[760px]:py-1.5 max-[760px]:text-center max-[760px]:text-[10px] max-[760px]:leading-tight' : '' ?>"><strong data-match-per-team class="text-base text-lime-100"><?= h((string) $form['players_per_team']) ?></strong> por equipo</span>
     </div>
   </div>
 
@@ -1268,7 +1277,7 @@ ob_start();
     <?php endforeach; ?>
   <?php endif; ?>
 
-  <form method="post" class="<?= $showCreateSection && !$showEditSection ? 'grid gap-4' : '' ?>">
+  <form method="post" <?= $showCreateSection && !$showEditSection ? 'data-match-wizard' : '' ?> class="<?= $showCreateSection && !$showEditSection ? 'grid gap-4' : '' ?>">
     <input type="hidden" name="action" value="save_match">
     <input type="hidden" name="id" value="<?= (int) $form['id'] ?>">
     <input type="hidden" name="allow_redraw" value="<?= (int) $form['allow_redraw'] ?>">
@@ -1277,6 +1286,14 @@ ob_start();
     <input type="hidden" name="multi_draw_lock_minutes" value="<?= (int) $form['multi_draw_lock_minutes'] ?>">
     <script type="application/json" data-rental-court-options><?= json_encode($courtFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 
+    <?php if ($showCreateSection && !$showEditSection): ?>
+      <nav class="match-steps" aria-label="Pasos de carga">
+        <button type="button" data-wizard-go="1" aria-current="step">1. Configuración</button>
+        <button type="button" data-wizard-go="2">2. Jugadores convocados</button>
+      </nav>
+    <?php endif; ?>
+    <section data-match-configuration data-wizard-panel="1" aria-label="Configuración de la fecha">
+      <h2 tabindex="-1">Configuración de la fecha</h2>
     <div class="<?= $showCreateSection && !$showEditSection ? 'grid grid-cols-1 gap-3 md:grid-cols-2' : 'form-grid' ?>">
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Título (opcional)</label>
@@ -1325,6 +1342,14 @@ ob_start();
       </div>
     </div>
 
+    <?php if ($showCreateSection && !$showEditSection): ?>
+      <div class="match-step-actions"><button type="button" class="btn" data-match-next data-wizard-go="2">Continuar a jugadores</button></div>
+    <?php endif; ?>
+    </section>
+    <section data-match-players data-wizard-panel="2" aria-label="Selección de jugadores">
+    <?php if ($showCreateSection && !$showEditSection): ?>
+      <div class="match-configuration-review"><p data-wizard-summary></p><button type="button" class="btn" data-match-back data-wizard-go="1">Editar configuración</button></div>
+    <?php endif; ?>
     <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 grid gap-3 rounded-2xl border border-lime-200/28 bg-emerald-900/28 p-3 shadow-inner shadow-emerald-950/15' : 'form-row' ?>">
       <div class="<?= $showCreateSection && !$showEditSection ? 'flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lime-200/30 bg-emerald-950 px-3 py-2.5 text-lime-50 shadow-md shadow-emerald-950/20' : 'participant-head' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'm-0 text-base font-black text-lime-50' : '' ?>">Jugadores convocados</label>
@@ -1513,7 +1538,7 @@ ob_start();
             <span class="rounded-full border border-lime-200/35 bg-emerald-950 px-3 py-1.5 text-xs font-extrabold text-lime-100"><strong data-selection-count="participants">0</strong> / <strong data-selection-max="participants"><?= $targetSelection ?></strong> jugadores elegidos</span>
           </div>
         </div>
-        <div class="grid max-h-[34rem] gap-1.5 overflow-auto rounded-xl border border-lime-200/28 bg-emerald-950/74 p-2" data-participant-list>
+        <div class="grid max-h-[34rem] gap-1.5 overflow-auto rounded-xl border border-lime-200/28 bg-emerald-950/74 p-2" data-participant-list tabindex="0" aria-label="Lista de jugadores disponibles">
           <?php foreach ($activePlayers as $p): ?>
             <?php
               $pid = (int) $p['id'];
@@ -1561,7 +1586,7 @@ ob_start();
         <summary class="grid cursor-pointer list-none items-center gap-2 px-3 py-3 [grid-template-columns:minmax(0,1fr)_auto_auto_auto] [&::-webkit-details-marker]:hidden">
           <span class="text-sm font-extrabold">CONVOCADOS</span>
           <strong class="rounded-full bg-emerald-950/95 px-3 py-1 text-sm font-extrabold text-lime-50"><span data-selection-count="participants">0</span> / <span data-selection-max="participants"><?= $targetSelection ?></span></strong>
-          <button class="m-0 inline-flex min-h-8 w-auto items-center justify-center rounded-full bg-lime-100/15 px-3 py-1 text-[11px] font-extrabold text-emerald-100/70 disabled:cursor-not-allowed disabled:opacity-70" type="submit" data-mobile-submit disabled>
+          <button class="m-0 inline-flex min-h-8 w-auto items-center justify-center rounded-full bg-lime-100/15 px-3 py-1 text-[11px] font-extrabold text-emerald-100/70 disabled:cursor-not-allowed disabled:opacity-70" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>" data-mobile-submit disabled>
             CONTINUAR
           </button>
         </summary>
@@ -1570,12 +1595,13 @@ ob_start();
       </details>
     </div>
 
-    <div class="sticky bottom-3 z-30 mt-0 flex flex-wrap gap-2 rounded-2xl border border-lime-200/35 bg-emerald-950/92 p-2 shadow-2xl shadow-emerald-950/25 max-[760px]:fixed max-[760px]:inset-x-3 max-[760px]:grid max-[760px]:grid-cols-1">
+    <div data-match-save class="sticky bottom-3 z-30 mt-0 flex flex-wrap gap-2 rounded-2xl border border-lime-200/35 bg-emerald-950/92 p-2 shadow-2xl shadow-emerald-950/25 max-[760px]:fixed max-[760px]:inset-x-3 max-[760px]:grid max-[760px]:grid-cols-1">
       <button class="create-match-submit inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-lime-200/75 bg-lime-100 px-3.5 py-2.5 text-sm font-extrabold text-[#07130f] shadow-lg shadow-lime-950/25 transition hover:bg-lime-200" type="submit" data-confirm="<?= $form['id'] ? 'Guardar cambios de esta fecha?' : 'Crear esta fecha con los jugadores convocados?' ?>"><?= $form['id'] ? 'Guardar cambios' : 'Crear fecha' ?></button>
       <?php if ($form['id']): ?>
         <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-lime-200/35 bg-emerald-950 px-3.5 py-2.5 text-sm font-extrabold text-lime-50 no-underline transition hover:border-lime-200/65 hover:bg-lime-100/12 hover:text-lime-100" href="<?= h($matchListPage) ?>">Cancelar</a>
       <?php endif; ?>
     </div>
+    </section>
   </form>
   </section>
 </details>

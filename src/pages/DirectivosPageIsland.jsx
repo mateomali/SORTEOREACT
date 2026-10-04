@@ -34,7 +34,7 @@ function CreateDirectivoForm() {
         <h3 className="mb-1 text-lg font-black text-lime-50">Nuevo directivo</h3>
         <p className={smallMutedClass}>Se crea con clave inicial 1234. Al primer ingreso queda obligado a elegir su clave privada.</p>
       </div>
-      <form method="post" className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+      <form action="directivos.php" method="post" className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
         <input type="hidden" name="action" value="create_directivo" />
         <label className="grid gap-1.5">
           <span className={labelClass}>Nombre</span>
@@ -70,7 +70,7 @@ function VoteInviteMatch({ match }) {
       </div>
 
       {availablePlayers.length ? (
-        <form method="post" className="mb-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <form action="directivos.php" method="post" className="mb-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
           <input type="hidden" name="action" value="create_vote_invite" />
           <input type="hidden" name="match_id" value={match.id} />
           <label className="grid gap-1.5">
@@ -141,7 +141,7 @@ function MemberCard({ member }) {
   const deleteConfirm = `Eliminar directivo ${member.name}? Tambien se eliminaran sus votos cargados.`;
 
   return (
-    <form method="post" className="grid gap-3 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-3">
+    <form action="directivos.php" method="post" className="grid gap-3 rounded-xl border border-lime-200/25 bg-emerald-900/45 p-3">
       <input type="hidden" name="id" value={member.id} />
       <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-lime-100 text-lg font-black text-[#07130f]" aria-hidden="true">
@@ -207,22 +207,28 @@ function MembersSection({ members }) {
   );
 }
 
-export function DirectivosPageIsland({ root }) {
-  const payload = readPayload(root);
+export function DirectivosPageIsland({ root, payloadOverride, embedded = false, roleFilter = null }) {
+  const payload = payloadOverride || readPayload(root);
   const summary = payload.summary || {};
   const members = Array.isArray(payload.members) ? payload.members : [];
   const voteInviteMatches = Array.isArray(payload.voteInviteMatches) ? payload.voteInviteMatches : [];
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4" onSubmitCapture={embedded ? (event) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'return_personas';
+      input.value = roleFilter || 'directivos';
+      event.target.appendChild(input);
+    } : undefined}>
       <section className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-lime-200/60 bg-emerald-950 px-4 py-3 text-lime-50 shadow-sm shadow-emerald-950/15">
         <div>
-          <h1 className="m-0 text-lime-50">Directivos</h1>
+          {embedded ? <h2 className="m-0 text-lime-50">Votaciones y junta</h2> : <h1 className="m-0 text-lime-50">Directivos</h1>}
           <p className="m-0 mt-1 text-sm font-semibold text-emerald-100/80">
             Habilita quienes pueden votar puntajes y premios despues de cada fecha finalizada.
           </p>
         </div>
-        <a className={mutedButtonClass} href="editar_partidos.php">Volver</a>
+        <a className={mutedButtonClass} href="personas.php?rol=directivos">Volver a Personas</a>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">

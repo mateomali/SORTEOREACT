@@ -3,39 +3,54 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 
-function award_definitions(): array
+function award_definitions(bool $includeLegacy = false): array
 {
-    return [
+    $definitions = [
         'player_of_match' => ['label' => 'Man of the Match', 'icon' => '🏆', 'type' => 'good'],
-        'goal_of_week' => ['label' => 'Gol de la fecha', 'icon' => '🤯', 'type' => 'good'],
+        'goal_of_week' => ['label' => 'Gol de la fecha', 'icon' => '⚽', 'type' => 'good'],
         'lyrical' => ['label' => 'Lírico', 'icon' => '🧙🏼‍♂️', 'type' => 'good'],
-        'wall' => ['label' => 'El muro', 'icon' => '🚧', 'type' => 'good'],
-        'capocannoniere' => ['label' => 'Capocannoniere', 'icon' => '💣', 'type' => 'good'],
-        'terminator' => ['label' => 'Terminator', 'icon' => '👊', 'type' => 'bad'],
-        'tractor' => ['label' => 'Tractor', 'icon' => '🚜', 'type' => 'good'],
-        'guinda' => ['label' => 'La guinda', 'icon' => '🎯', 'type' => 'good'],
-        'putita' => ['label' => 'La putita', 'icon' => '🏳️‍🌈', 'type' => 'bad'],
-        'ghost' => ['label' => 'El fantasma', 'icon' => '👻', 'type' => 'bad'],
-        'keeper' => ['label' => 'Portero imbatible', 'icon' => '🥅', 'type' => 'good'],
+        'pelusa' => ['label' => 'Pelusa', 'icon' => '🔟', 'type' => 'good'],
+        'bochini' => ['label' => 'Bochini', 'icon' => '👴🏼', 'type' => 'good'],
+        'masterful_pass' => ['label' => 'Pase magistral', 'icon' => '🎯', 'type' => 'good'],
+        'marshal' => ['label' => 'El Mariscal', 'icon' => '🪓', 'type' => 'good'],
+        'wall' => ['label' => 'El muro', 'icon' => '🪖', 'type' => 'good'],
+        'tractor' => ['label' => 'El tractor', 'icon' => '🚜', 'type' => 'good'],
+        'capocannoniere' => ['label' => 'Capocannoniere', 'icon' => '🇮🇹', 'type' => 'good'],
+        'keeper' => ['label' => 'Golero imbatible', 'icon' => '🥅', 'type' => 'good'],
+        'terminator' => ['label' => 'Terminator', 'icon' => '🦾', 'type' => 'bad'],
+        'guinda' => ['label' => 'La guinda', 'icon' => '🏈', 'type' => 'good'],
+        'golosa' => ['label' => 'La golosa', 'icon' => '🏳️‍🌈', 'type' => 'bad'],
+        'putita' => ['label' => 'La putita', 'icon' => '💋', 'type' => 'bad'],
+        'chenemigo' => ['label' => 'Chenemigo', 'icon' => '💩', 'type' => 'bad'],
         'goodfellas' => ['label' => 'Goodfellas', 'icon' => '🧉', 'type' => 'good'],
     ];
+    if ($includeLegacy) {
+        $definitions['ghost'] = ['label' => 'El fantasma', 'icon' => '👻', 'type' => 'bad'];
+    }
+    return $definitions;
 }
 
 function award_descriptions(): array
 {
     return [
-        'player_of_match' => 'Jugador de la fecha.',
-        'goal_of_week' => 'Mejor gol de la fecha.',
-        'lyrical' => 'Jugada fantastica o recurso tecnico destacado.',
-        'wall' => 'Mejor defensor de la fecha.',
-        'capocannoniere' => 'Goleador destacado de la fecha.',
-        'terminator' => 'Jugador mas bruto o jugada mas fuerte.',
-        'tractor' => 'Jugador mas aguerrido e intenso.',
-        'guinda' => 'Mejor pase o asistencia.',
-        'putita' => 'Jugador no comprometido o problematico.',
+        'player_of_match' => 'Jugador del partido.',
+        'goal_of_week' => 'Mejor gol.',
+        'lyrical' => 'Jugada de fantasía.',
+        'pelusa' => 'Segundo mejor jugador, mejor jugador del equipo perdedor.',
+        'bochini' => 'Jugador con alto IQ, pensante.',
+        'masterful_pass' => 'Jugador con pases magistrales.',
+        'marshal' => 'Mejor defensor.',
+        'wall' => 'Jugador imposible de pasar.',
+        'capocannoniere' => 'Goleador del partido.',
+        'terminator' => 'Jugador más sucio o que cometió un foul fuerte.',
+        'tractor' => 'Jugador con más empuje, ida y vuelta.',
+        'guinda' => 'Mejor asistencia.',
+        'golosa' => 'Jugador más individualista.',
+        'putita' => 'Jugador llorón o mal perdedor.',
+        'chenemigo' => 'Jugador con conducta antideportiva.',
         'ghost' => 'Jugador que erro mucho o participo poco.',
-        'keeper' => 'Mejor arquero de la fecha.',
-        'goodfellas' => 'Mejor actitud y buen companero.',
+        'keeper' => 'Mejor arquero.',
+        'goodfellas' => 'Buen jugador, acción solidaria.',
     ];
 }
 

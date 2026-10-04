@@ -760,7 +760,9 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
   // feasible secondary-position combination. States merge equivalent count vectors.
   const fixed = team.filter(isFixedGoalkeeper);
   const rules = team.length ? rosterFormationRuleCache.get(team[0])?.rules : null;
-  const keeper = fixed[0] || team.filter(canPlayGoalkeeper).sort((a, b) => goalkeeperSortValue(a) - goalkeeperSortValue(b))[0];
+  const keeper = team.find(player => assignmentOverrides[playerKey(player)] === 'ARQ')
+    || fixed.find(player => !assignmentOverrides[playerKey(player)])
+    || team.filter(player => canPlayGoalkeeper(player) && !assignmentOverrides[playerKey(player)]).sort((a, b) => goalkeeperSortValue(a) - goalkeeperSortValue(b))[0];
   let states = new Map([['0,0,0', { counts: [0, 0, 0], changes: 0, adaptations: 0, rating: 0, adaptedLines: [0, 0, 0], assignment: keeper ? { [playerKey(keeper)]: 'ARQ' } : {} }]]);
   for (const player of team.slice().sort((a, b) => playerKey(a).localeCompare(playerKey(b)))) {
     if (player === keeper) continue;
@@ -1639,7 +1641,7 @@ function applyPositionCountsToTeam(team, counts, baseAssignments = {}, lockedPla
     }
     return picked.length === count;
   };
-  const fixedGoalkeepers = team.filter((player) => isFixedGoalkeeper(player) || lockedPlayerPositions[playerKey(player)] === 'ARQ');
+  const fixedGoalkeepers = team.filter((player) => baseAssignments[playerKey(player)] === 'ARQ' || lockedPlayerPositions[playerKey(player)] === 'ARQ');
   fixedGoalkeepers.forEach((player) => {
     const index = available.findIndex((candidate) => playerKey(candidate) === playerKey(player));
     if (index >= 0) available.splice(index, 1);
@@ -1828,6 +1830,47 @@ function formationCountsFromValue(team, value) {
   return { ARQ: 1, ...parsedCounts, ...defenseCounts };
 }
 
+function highestScoringFormation(team, currentAssignments = {}, lockedPositions = {}) {
+  if (!team?.length) return null;
+  const base = buildTeamAssignment(team, currentAssignments);
+  const keeper = team.find(player => base[playerKey(player)] === 'ARQ');
+  if (!keeper || (lockedPositions[playerKey(keeper)] && lockedPositions[playerKey(keeper)] !== 'ARQ')) return null;
+  let best = null;
+  const formations = getFormationCandidates(team.length).flatMap(candidate => {
+    const defenseTotal = candidate.DEF + candidate.LAT;
+    return Array.from({ length: defenseTotal + 1 }, (_, lateralCount) => ({
+      ...candidate, DEF: defenseTotal - lateralCount, LAT: lateralCount,
+    })).filter(counts => fieldLineCountsFitLimits({ ARQ: 1, ...counts }, team.length));
+  });
+  for (const formation of formations) {
+    const limits = FIELD_LINES.map(line => formation[line]);
+    let states = new Map([['0,0,0,0', { counts: [0, 0, 0, 0], total: adjustedPositionRatingForTeamSize(keeper, 'ARQ', team.length), assignments: { [playerKey(keeper)]: 'ARQ' } }]]);
+    for (const player of team) {
+      if (player === keeper) continue;
+      const key = playerKey(player);
+      const positions = lockedPositions[key] ? [lockedPositions[key]] : FIELD_LINES;
+      const next = new Map();
+      for (const state of states.values()) for (const position of positions) {
+        const index = FIELD_LINES.indexOf(position);
+        if (index < 0 || state.counts[index] >= limits[index]) continue;
+        const counts = state.counts.slice();
+        counts[index]++;
+        const total = state.total + adjustedPositionRatingForTeamSize(player, position, team.length);
+        const signature = counts.join(',');
+        if (!next.has(signature) || total > next.get(signature).total) {
+          next.set(signature, { counts, total, assignments: { ...state.assignments, [key]: position } });
+        }
+      }
+      states = next;
+    }
+    const candidate = states.get(limits.join(','));
+    if (!candidate) continue;
+    if (!fieldLineCountsFitLimits(teamLineCounts(team, candidate.assignments), team.length)) continue;
+    if (!best || candidate.total > best.total) best = { ...formation, ...candidate, value: 'highest-score' };
+  }
+  return best;
+}
+
 function getScoredFormationOptions(team, currentAssignments = {}, lockedPlayerPositions = {}) {
   if (!team?.length) return [];
   const base = buildTeamAssignment(team, currentAssignments);
@@ -1858,7 +1901,7 @@ function formationDisplayValue(option) {
 function formationOptionLabel(option) {
   const total = Number(option?.total);
   const value = formationDisplayValue(option);
-  const suffix = option?.recommended ? ' - Recomendada' : '';
+  const suffix = option?.value === 'highest-score' ? ' - Mayor puntaje' : option?.recommended ? ' - Recomendada' : '';
   return Number.isFinite(total) ? `${value} - ${total.toFixed(1)} pts${suffix}` : value;
 }
 
@@ -1891,6 +1934,7 @@ function formationValueFromCounts(counts = {}) {
 }
 
 function teamFormationSelectValue(team, currentAssignments, selectedValue, inferCurrent = false, usePresets = false) {
+  if (selectedValue === 'highest-score') return selectedValue;
   if (selectedValue && FORMATION_PRESET_VALUES.has(selectedValue)) {
     return usePresets ? selectedValue : (formationValueForPreset(team.length, selectedValue) || 'auto');
   }
@@ -2209,9 +2253,7 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, topPlaye
         {player.availability_percent < 100 ? (
           <span className="gf-player-injury-icon" data-player-injured="true" role="img" aria-label={`Lesionado: estado ${player.availability_percent}%`} title={`Estado fisico: ${player.availability_percent}%`}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="8" y="1" width="8" height="22" rx="3" transform="rotate(45 12 12)" fill="#f5dfc1" stroke="#633b28" strokeWidth="1.4" />
-              <path d="m8 10 6 6m-4-8 6 6" stroke="#b88c61" strokeWidth="1.5" />
-              <path d="M17 2v6m-3-3h6" stroke="#f36868" strokeWidth="2.4" strokeLinecap="round" />
+              <path d="M8 2h8v6h6v8h-6v6H8v-6H2V8h6Z" fill="#e02020" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
             </svg>
           </span>
         ) : null}
@@ -3758,8 +3800,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const proposedFormationFits = changes => {
     if (!teams) return false;
     const proposed = teams.map(team => ({ ...buildTeamAssignment(team, assignments), ...changes }));
-    const constraints = generationConstraints(teams, proposed);
-    return constraints.goalkeeperRule && proposed.every((positions, index) => fieldLineCountsFitLimits(teamLineCounts(teams[index], positions), teams[index].length));
+    return proposed.every((positions, index) => fieldLineCountsFitLimits(teamLineCounts(teams[index], positions), teams[index].length));
   };
 
   const applyFormation = (teamIndex, value) => {
@@ -3779,7 +3820,9 @@ export function SorteoLegacyPageIsland({ root }) {
     if (value === 'custom') return;
     if (!formationValue) return;
     const counts = formationCountsFromValue(teams[teamIndex], formationValue);
-    const nextAssignments = counts
+    const nextAssignments = value === 'highest-score'
+      ? highestScoringFormation(teams[teamIndex], assignments, lockedPlayerPositions)?.assignments
+      : counts
       ? applyPositionCountsToTeam(teams[teamIndex], counts, buildTeamAssignment(teams[teamIndex], assignments), lockedPlayerPositions)
       : applyFormationToTeam(teams[teamIndex], formationValue);
     if (!nextAssignments) return;
@@ -3848,7 +3891,7 @@ export function SorteoLegacyPageIsland({ root }) {
     const candidates = targetTeam
       .filter((player) => {
         const key = playerKey(player);
-        return key !== sourcePlayerKey && !lockedPlayerPositions[key] && !isFixedGoalkeeper(player);
+        return key !== sourcePlayerKey && !lockedPlayerPositions[key];
       })
       .map((player) => {
         const key = playerKey(player);
@@ -3888,15 +3931,9 @@ export function SorteoLegacyPageIsland({ root }) {
     if (lockedPlayerPositions[key]) {
       return { ok: false, message: `${sourcePlayer?.nombre || 'El jugador'} tiene la posicion bloqueada.` };
     }
-    if (sourcePlayer && isFixedGoalkeeper(sourcePlayer) && targetLine && targetLine !== 'ARQ') {
-      return { ok: false, message: `${sourcePlayer.nombre} esta fijado como arquero y no puede cambiar de posicion.` };
-    }
     const targetPlayer = resolvedTargetPlayerKey ? teams[normalizedTargetTeamIndex]?.find((player) => playerKey(player) === String(resolvedTargetPlayerKey)) : null;
     if (resolvedTargetPlayerKey && lockedPlayerPositions[String(resolvedTargetPlayerKey)]) {
       return { ok: false, message: `${targetPlayer?.nombre || 'El jugador destino'} tiene la posicion bloqueada.` };
-    }
-    if (targetPlayer && isFixedGoalkeeper(targetPlayer)) {
-      return { ok: false, message: `${targetPlayer.nombre} esta fijado como arquero y no puede moverse por intercambio.` };
     }
     if (resolvedTargetPlayerKey && String(resolvedTargetPlayerKey) === key) {
       return { ok: false, message: 'Es el mismo jugador. Soltalo entre cartas o sobre otro jugador.' };
@@ -3991,7 +4028,7 @@ export function SorteoLegacyPageIsland({ root }) {
         }
       }
       if (targetLine && FORMATION_LINES.includes(targetLine) && Number.isFinite(targetInsertIndex)) {
-        const nextAssignments = { ...assignments, [key]: sourcePlayer && isFixedGoalkeeper(sourcePlayer) ? 'ARQ' : targetLine };
+        const nextAssignments = { ...assignments, [key]: targetLine };
         const targetPitchLine = pitchLineForPosition(targetLine);
         const orderedLinePlayers = targetPitchLine === 'DEF'
           ? defenseLinePlayers(
@@ -4051,7 +4088,7 @@ export function SorteoLegacyPageIsland({ root }) {
     if ((targetLine && FORMATION_LINES.includes(targetLine)) || targetKeyForAssignment) {
       setAssignments((current) => {
         const next = { ...current };
-        if (targetLine && FORMATION_LINES.includes(targetLine)) next[key] = sourcePlayer && isFixedGoalkeeper(sourcePlayer) ? 'ARQ' : targetLine;
+        if (targetLine && FORMATION_LINES.includes(targetLine)) next[key] = targetLine;
         if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) next[targetKeyForAssignment] = sourceLine;
         return next;
       });
@@ -4168,11 +4205,6 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const handleDragStart = (event, teamIndex, player, assignedPosition) => {
-    if (isFixedGoalkeeper(player)) {
-      event.preventDefault();
-      setError(`${player.nombre} esta fijado como arquero y no puede cambiar de posicion.`);
-      return;
-    }
     const source = { teamIndex, playerKey: playerKey(player), assignedPosition };
     const payload = JSON.stringify(source);
     event.dataTransfer.effectAllowed = 'move';
@@ -4671,7 +4703,7 @@ export function SorteoLegacyPageIsland({ root }) {
                     const incomingRating = playerCardRating(adjustedPositionRatingForTeamSize(player, sourcePosition, sourceTeam.length));
                     const delta = incomingRating - sourceRating;
                     const difference = `${delta > 0 ? '+' : ''}${delta} pts`;
-                    const reason = isFixedGoalkeeper(player) ? 'Arquero fijo' : lockedPlayerPositions[key] ? 'Bloqueado' : !validation.ok ? 'No disponible' : '';
+                    const reason = lockedPlayerPositions[key] ? 'Bloqueado' : !validation.ok ? 'No disponible' : '';
                     return (
                       <button key={key} data-exchange-player={key} data-exchange-position={position} data-exchange-delta={delta} type="button" className="grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded border border-[#c4d8ce] bg-white px-2 py-1 text-left text-xs hover:bg-[#e7f2eb] disabled:cursor-not-allowed disabled:opacity-55" disabled={!validation.ok} title={validation.message || `${player.nombre} en ${sourcePosition}: ${incomingRating} pts; ${sourcePlayer.nombre}: ${sourceRating} pts. Diferencia: ${difference}.`} onClick={() => { movePlayer(source, targetTeamIndex, position, key); setPreview(null); }}>
                         <span className="min-w-0 truncate font-bold">{player.nombre}</span>
@@ -4709,7 +4741,7 @@ export function SorteoLegacyPageIsland({ root }) {
     window.clearTimeout(pendingCardExchangeRef.current);
     pendingCardExchangeRef.current = null;
     lastCardTapRef.current = mobile && event?.detail !== 0 ? { key, time: now } : null;
-    if (mobileMoveSource && Number(mobileMoveSource.teamIndex) !== teamIndex) {
+    if (mobileMoveSource && mobileMoveSource.playerKey !== key) {
       // Wait briefly so a double tap on the destination opens its profile without swapping.
       if (mobile && event?.detail !== 0) {
         pendingCardExchangeRef.current = window.setTimeout(() => {
@@ -4720,7 +4752,7 @@ export function SorteoLegacyPageIsland({ root }) {
       } else movePlayer(mobileMoveSource, teamIndex, assignedPosition, key);
       return;
     }
-    if (mobile && !isFixedGoalkeeper(player) && !lockedPlayerPositions[key]) {
+    if (mobile && !lockedPlayerPositions[key]) {
       setMobileMoveSource({ teamIndex, playerKey: key, playerName: player.nombre, assignedPosition });
       setPreview(null);
       return;
@@ -5118,6 +5150,7 @@ export function SorteoLegacyPageIsland({ root }) {
         lineCounts: teamLineCounts(team, teamAssignmentsForIndex),
         summary: teamTotalsSummary(team, assignments),
         formationOptions: getScoredFormationOptions(team, teamAssignmentsForIndex, lockedPlayerPositions),
+        highestScoringFormation: highestScoringFormation(team, teamAssignmentsForIndex, lockedPlayerPositions),
         formationSelectValue: teamFormationSelectValue(team, teamAssignmentsForIndex, teamFormations[teamIndex], isFormationEditor, isFormationEditor),
       };
     });
@@ -5611,6 +5644,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
                             Formación
                             <select className={inputClass} value={formationSelectValue} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
+                              {view.highestScoringFormation ? <option value="highest-score">{formationOptionLabel(view.highestScoringFormation)}</option> : null}
                               {isFormationEditor ? (
                                 FORMATION_PRESETS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)
                               ) : (

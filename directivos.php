@@ -7,7 +7,7 @@ require_once __DIR__ . '/lib/directivos.php';
 require_admin();
 ensure_directivos_schema();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (empty($personasDataOnly) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     $redirectTo = 'directivos.php';
     try {
@@ -76,6 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (Throwable $e) {
         flash('error', $e->getMessage());
+    }
+    if (in_array($_POST['return_personas'] ?? '', ['jugadores', 'directivos'], true)) {
+        $redirectTo = 'personas.php?tab=' . $_POST['return_personas'] . ($action === 'create_vote_invite' ? '#invitar-votantes' : '');
     }
     redirect($redirectTo);
 }
@@ -160,6 +163,10 @@ $directivosIslandPayload = [
         $voteInviteMatches
     ),
 ];
+
+if (!empty($personasDataOnly)) {
+    return $directivosIslandPayload;
+}
 
 $title = 'Directivos | ' . APP_NAME;
 $activePage = 'directivos.php';

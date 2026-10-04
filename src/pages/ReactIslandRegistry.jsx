@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const registry = {
+  personas_page: () => import('./PersonasPageIsland.jsx').then((module) => module.PersonasPageIsland),
   backup_page: () => import('./BackupPageIsland.jsx').then((module) => module.BackupPageIsland),
   card_design_previews_page: () => import('./CardDesignPreviewsPageIsland.jsx').then((module) => module.CardDesignPreviewsPageIsland),
   capitanes_page: () => import('./CaptainsPageIsland.jsx').then((module) => module.CaptainsPageIsland),

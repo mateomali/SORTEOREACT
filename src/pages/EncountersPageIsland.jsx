@@ -1,3 +1,4 @@
+import { bindMatchWizard } from './matchWizard';
 import React, { useEffect, useMemo, useState } from 'react';
 
 function readPayload(root) {
@@ -18,7 +19,7 @@ const undoAction = 'inline-flex min-h-9 items-center justify-center rounded-md b
 const dangerAction = 'inline-flex min-h-9 w-10 items-center justify-center rounded-md border border-red-200 bg-red-50 px-0 py-2 text-sm font-black text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-45';
 const disabledAction = 'inline-flex min-h-9 items-center justify-center rounded-md border border-[#d9dfdc] bg-[#f1f3f2] px-3 py-2 text-sm font-black text-[#8b9490]';
 const panelClass = 'rounded-lg border border-[#d7ded9] bg-white p-3';
-const filterPanelClass = 'rounded-lg border border-[#adc8bb] bg-[#e8f3ee] p-2 shadow-sm sm:p-3';
+const filterPanelClass = 'rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-4 sm:p-5';
 const inputClass = 'min-h-9 w-full rounded-md border border-[#b7c4bf] bg-white px-2.5 py-1.5 text-sm font-semibold text-[#07130f] outline-none focus:border-[#063d2b] focus:ring-2 focus:ring-[#d8f999] sm:min-h-10 sm:px-3 sm:py-2';
 const searchInputClass = 'min-h-9 w-full rounded-md border !border-[#063d2b] !bg-white px-2.5 py-1.5 text-sm font-black !text-[#07130f] outline-none placeholder:!text-[#526b62] focus:!border-[#063d2b] focus:ring-2 focus:ring-[#d8f999]/80 sm:min-h-10 sm:px-3 sm:py-2';
 const sectionLabelClass = 'block text-[11px] font-black leading-none text-[#52615b]';
@@ -63,7 +64,7 @@ function StatusBadge({ children, tone = 'neutral' }) {
     court: 'text-[#476057]',
   };
   return (
-    <span className={`inline-flex items-center text-[11px] font-black leading-tight ${styles[tone] || styles.neutral}`}>
+    <span className={`inline-flex items-center text-xs font-semibold leading-snug ${styles[tone] || styles.neutral}`}>
       {children}
     </span>
   );
@@ -76,7 +77,7 @@ function Scoreboard({ teams = [] }) {
 
   if (teams.length !== 2) {
     return (
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-[#cbd7d1] pb-1 text-[11px] font-black text-[#0c6b49]">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-[#adc8bb] bg-[#f0f7f3] p-3 text-xs font-black text-[#0c6b49]">
         {teams.map((team, index) => (
           <React.Fragment key={`${team.label}-${index}`}>
             {index > 0 ? <span className="text-[#8a9690]">vs</span> : null}
@@ -91,16 +92,16 @@ function Scoreboard({ teams = [] }) {
   }
 
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 border-b border-[#cbd7d1] pb-1 text-[11px] font-black text-[#0c6b49]">
-      <span className="inline-flex min-w-0 items-center gap-1 truncate px-1">
-        <span className="truncate">{teams[0].label}</span>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-xs font-semibold text-[#0c6b49]">
+      <span className="inline-flex min-w-0 items-center gap-1">
+        <span className="break-words">{teams[0].label}</span>
         <ShirtMark color={teams[0].color} />
       </span>
-      <strong className="px-1.5 text-sm font-black text-[#07130f]">
+      <strong className="px-2 text-2xl font-black text-[#063d2b]">
         {teams[0].goals} - {teams[1].goals}
       </strong>
-      <span className="inline-flex min-w-0 items-center justify-end gap-1 truncate px-1 text-right">
-        <span className="truncate">{teams[1].label}</span>
+      <span className="inline-flex min-w-0 items-center justify-end gap-1 text-right">
+        <span className="break-words">{teams[1].label}</span>
         <ShirtMark color={teams[1].color} />
       </span>
     </div>
@@ -163,7 +164,7 @@ function ActionSection({ label, children, tone = 'neutral', contentClassName = '
 function StatusSection({ match }) {
   const statusTone = match.isFinalized ? 'done' : (match.canFinalize ? 'ready' : 'warning');
   return (
-    <div className="grid gap-1.5 rounded-md border border-[#d7ded9] bg-[#f8faf9] p-2">
+    <div className="grid gap-3 rounded-md border border-[#d7e6df] bg-white p-3">
       <span className={sectionLabelClass}>Estado</span>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <StatusBadge tone={statusTone}>{match.statusLabel}</StatusBadge>
@@ -243,7 +244,7 @@ function MobileMatchHeader({ match, eyebrow }) {
           {match.isExpired ? <StatusBadge tone="warning">Fecha vencida</StatusBadge> : null}
           <span className="text-xs font-black text-[#047857]">{match.dateShort || match.dateLabel}</span>
         </div>
-        <h3 className="m-0 truncate text-base font-black leading-tight text-[#07130f]">{match.title}</h3>
+        <h3 className="m-0 break-words text-lg font-bold leading-snug text-[#07130f]">{match.title}</h3>
         <span className="mt-0.5 block text-xs font-semibold text-[#526b62]">{match.participantsCount}/{match.expectedPlayers} convocados</span>
       </div>
       <DeleteForm match={match} />
@@ -254,14 +255,22 @@ function MobileMatchHeader({ match, eyebrow }) {
 function MobileMatchSummary({ match }) {
   const statusTone = match.isFinalized ? 'done' : (match.canFinalize ? 'ready' : 'warning');
   return (
-    <div className="grid gap-1.5 rounded-md border border-[#d7ded9] bg-[#f8faf9] p-2">
-      <Scoreboard teams={match.scoreboard} />
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+    <div className="encounter-task-information">
+      {match.status === 'finalizado' && match.isFinalized && match.scoreboard?.length > 0 ? (
+        <div className="encounter-task-result">
+          <h4>Resultado del partido</h4>
+          <Scoreboard teams={match.scoreboard} />
+        </div>
+      ) : null}
+      <div className="encounter-task-status">
+        <h4>Estado y cancha</h4>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
         <StatusBadge tone={statusTone}>{match.statusLabel}</StatusBadge>
         <StatusBadge tone="court">Cancha: {match.courtLabel}</StatusBadge>
         {match.missingAwards ? <StatusBadge tone="warning">Sin premios</StatusBadge> : null}
         {match.missingRating ? <StatusBadge tone="warning">Sin puntaje</StatusBadge> : null}
         {!match.isScheduled ? <StatusBadge tone={match.teamsPublished ? 'ready' : 'warning'}>{match.teamsPublishedLabel}</StatusBadge> : null}
+        </div>
       </div>
     </div>
   );
@@ -277,7 +286,9 @@ function MobileActionLink({ className, href, children, ariaLabel, title }) {
 
 function MobileMatchActions({ match }) {
   return (
-    <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-5">
+    <div className="encounter-task-actions">
+      <h4>Acciones de la fecha</h4>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {match.isScheduled ? (
         <>
           <MobileActionLink className={mutedAction} href={match.links.edit} ariaLabel="Editar fecha" title="Editar">
@@ -320,6 +331,7 @@ function MobileMatchActions({ match }) {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
@@ -343,10 +355,10 @@ function MatchCard({ match }) {
     <article
       id={`partido-admin-${match.id}`}
       tabIndex={match.isFocused ? 0 : -1}
-      className={`grid gap-2 rounded-lg border-y border-r border-l-4 p-3 outline-none lg:px-3 lg:py-2.5 ${cardTone} ${sideBorderTone}`}
+      className={`grid gap-4 rounded-lg border-y border-r border-l-4 p-4 outline-none lg:p-5 ${cardTone} ${sideBorderTone}`}
       data-focus-match={match.isFocused ? '1' : '0'}
     >
-      <div className="grid gap-2 lg:grid-cols-[minmax(210px,.7fr)_minmax(300px,1fr)_minmax(470px,1.45fr)] lg:items-center">
+      <div className="grid gap-4 xl:grid-cols-[minmax(180px,.7fr)_minmax(240px,1fr)_minmax(390px,1.45fr)] xl:items-center">
         <MobileMatchHeader match={match} />
         <MobileMatchSummary match={match} />
         <MobileMatchActions match={match} />
@@ -451,7 +463,7 @@ function EditEncountersPage({ payload, root }) {
   }, [query, status, scope]);
 
   return (
-    <section className="mx-auto grid w-full max-w-[1360px] gap-3 px-3 py-2 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5">
+    <section className="mx-auto grid w-full max-w-[1360px] gap-6 px-3 py-4 text-[#07130f] sm:px-5 lg:py-6">
       <header className="flex flex-wrap items-end justify-between gap-3 border-b border-[#d7ded9] pb-3">
         <div className="grid gap-0.5">
           <h1 className="m-0 text-xl font-black leading-tight text-[#07130f] sm:text-2xl">{payload.heading || 'Editar fechas'}</h1>
@@ -470,8 +482,8 @@ function EditEncountersPage({ payload, root }) {
       </section>
 
       {latest ? (
-        <section className="rounded-lg border border-l-4 border-y-[#9fc8b5] border-r-[#9fc8b5] border-l-[#063d2b] bg-[#f7fbf9] p-3">
-          <div className="grid gap-2 lg:grid-cols-[minmax(210px,.7fr)_minmax(300px,1fr)_minmax(470px,1.45fr)] lg:items-center">
+        <section className="rounded-lg border border-l-4 border-y-[#9fc8b5] border-r-[#9fc8b5] border-l-[#063d2b] bg-[#f0f7f3] p-4 sm:p-6">
+          <div className="grid gap-4 xl:grid-cols-[minmax(180px,.7fr)_minmax(240px,1fr)_minmax(390px,1.45fr)] xl:items-center">
             <MobileMatchHeader match={latest} eyebrow={latest.isNext ? 'Próxima fecha' : (latest.isExpired ? 'Pendiente más reciente' : 'Fecha más reciente')} />
             <MobileMatchSummary match={latest} />
             <MobileMatchActions match={latest} />
@@ -496,7 +508,8 @@ function EditEncountersPage({ payload, root }) {
         </section>
       ) : null}
 
-      <section className={filterPanelClass}>
+      <section className={`encounter-task-filters ${filterPanelClass}`}>
+        <h2>Buscar y filtrar fechas</h2>
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto] lg:items-end lg:gap-3">
           <label className="col-span-2 grid gap-1 text-xs font-black text-[#315247] sm:text-sm lg:col-span-1">
             Buscar fecha
@@ -525,7 +538,8 @@ function EditEncountersPage({ payload, root }) {
         </div>
       </section>
 
-      <section className="grid gap-2" aria-label="Historial de fechas">
+      <section className="grid gap-4" aria-label="Historial de fechas">
+        <h2 className="m-0 border-b border-[#d7e6df] pb-3 text-lg font-bold text-[#063d2b]">Historial de fechas</h2>
         {visibleMatches.length ? visibleMatches.map((match) => <MatchCard key={match.id} match={match} />) : (
           <div className={panelClass}>
             <p className="m-0 text-sm font-semibold text-[#526b62]">No hay fechas que coincidan con la búsqueda.</p>
@@ -541,6 +555,7 @@ function EditEncountersPage({ payload, root }) {
 function LegacyEncountersPage({ root, html }) {
   useEffect(() => {
     window.goodfellasHydrateDynamicContent?.(root);
+    return bindMatchWizard(root);
   }, [root, html]);
 
   return (

@@ -868,3 +868,31 @@
     });
   }, true);
 })();
+
+
+(() => {
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('a[href="#valoraciones"]')) return;
+    const valuations = document.getElementById('valoraciones');
+    if (valuations?.tagName === 'DETAILS') valuations.open = true;
+  });
+  const update = (team) => {
+    const score = team.closest('form')?.querySelector(`[data-finish-team-goals][data-team-number="${team.dataset.finishGoalsTeam}"]`);
+    const progress = team.querySelector('[data-finish-goals-progress]');
+    if (!score || !progress) return;
+    const expected = Number(score.value || 0);
+    const loaded = Array.from(team.querySelectorAll('[data-finish-player-goals]'))
+      .reduce((total, input) => total + Number(input.value || 0), 0);
+    const difference = expected - loaded;
+    const detail = difference === 0 ? 'Completo' : difference > 0
+      ? `Faltan ${difference} goles` : `Sobran ${Math.abs(difference)} goles`;
+    progress.textContent = `${loaded} de ${expected} goles asignados. ${detail}.`;
+    progress.dataset.complete = String(difference === 0);
+  };
+  document.querySelectorAll('[data-finish-goals-team]').forEach(update);
+  document.addEventListener('input', (event) => {
+    if (!event.target.matches('[data-finish-team-goals], [data-finish-player-goals]')) return;
+    const team = event.target.closest('[data-finish-goals-team]') || event.target.closest('form')?.querySelector(`[data-finish-goals-team="${event.target.dataset.teamNumber}"]`);
+    if (team) update(team);
+  });
+})();

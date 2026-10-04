@@ -609,6 +609,7 @@ function captain_state(int $matchId, string $accessToken = ''): array
             'photo_zoom' => player_photo_zoom($p),
             'skill' => player_overall_rating($p),
             'base_skill' => (float) $p['skill'],
+            'availability_percent' => (int) ($p['availability_percent'] ?? 100),
             'technique' => player_effective_stat($p, 'technique'),
             'rhythm' => player_effective_stat($p, 'rhythm'),
             'defense_physical' => player_effective_stat($p, 'defense_physical'),

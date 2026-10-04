@@ -9,6 +9,10 @@ require_once __DIR__ . '/schema.php';
 
 function ensure_directivos_schema(): void
 {
+    static $done = false;
+    if ($done) {
+        return;
+    }
     ensure_control_schema();
     $pdo = db();
     $pdo->exec(
@@ -25,20 +29,14 @@ function ensure_directivos_schema(): void
             UNIQUE KEY uniq_directive_member_name (name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
-    try {
+    if (!schema_column_exists($pdo, 'directive_members', 'site_user_id')) {
         $pdo->exec("ALTER TABLE directive_members ADD COLUMN site_user_id INT UNSIGNED NULL AFTER id");
-    } catch (Throwable) {
-        // Column already exists.
     }
-    try {
+    if (!schema_index_exists($pdo, 'directive_members', 'uniq_directive_member_site_user')) {
         $pdo->exec("ALTER TABLE directive_members ADD UNIQUE KEY uniq_directive_member_site_user (site_user_id)");
-    } catch (Throwable) {
-        // Index already exists.
     }
-    try {
+    if (!schema_column_exists($pdo, 'directive_members', 'password_needs_setup')) {
         $pdo->exec("ALTER TABLE directive_members ADD COLUMN password_needs_setup TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash");
-    } catch (Throwable) {
-        // Column already exists.
     }
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS match_director_rating_votes (
@@ -98,10 +96,8 @@ function ensure_directivos_schema(): void
             CONSTRAINT fk_director_publication_match FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
-    try {
+    if (!str_contains(schema_column_type($pdo, 'match_director_publications', 'reason'), "'admin'")) {
         $pdo->exec("ALTER TABLE match_director_publications MODIFY reason ENUM('all_voted', 'deadline', 'admin') NOT NULL");
-    } catch (Throwable) {
-        // Older or non-MySQL local engines may not need this migration.
     }
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS match_director_vote_invites (
@@ -155,6 +151,7 @@ function ensure_directivos_schema(): void
         $pdo->exec('ALTER TABLE director_player_stat_votes ADD COLUMN pass_vision TINYINT UNSIGNED NULL AFTER technique');
     }
     ensure_default_directive_site_users();
+    $done = true;
 }
 
 function default_directive_user_names(): array
