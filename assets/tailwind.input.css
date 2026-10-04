@@ -24813,3 +24813,30 @@ html body.page-sorteo-legacy main.content .sorteo-react-page .gf-premium-team .g
 @container (max-width: 230px) {
   .sorteo-react-page .gf-premium-team .gf-premium-pitch .gf-premium-line:has(.gf-premium-line-control[open]) { min-height: 216px; }
 }
+
+/* Reference proportions override the older mobile line-button dimensions. */
+html body.page-sorteo-legacy main.content .sorteo-react-page .gf-premium-team .gf-premium-pitch .gf-premium-line-control {
+  padding-inline: 4px; border-radius: 5px;
+}
+html body.page-sorteo-legacy main.content .sorteo-react-page .gf-premium-team .gf-premium-line-control summary {
+  min-height: 24px; gap: 5px;
+}
+html body.page-sorteo-legacy main.content .sorteo-react-page .gf-premium-team .gf-premium-line-buttons {
+  grid-template-columns: repeat(2, 30px); gap: 4px; margin: 0 0 3px;
+}
+html body.page-sorteo-legacy main.content .sorteo-react-page .gf-premium-team .gf-premium-line-control button {
+  width: 30px !important; height: 34px !important; min-height: 34px !important;
+  padding: 0 !important; border-radius: 8px !important; font-size: 15px; line-height: 1;
+  display: grid; place-items: center;
+}
+
+/* Pitch reading aids; retain existing controls and status indicators. */
+.sorteo-react-page .gf-pitch-strength-toggle { display:flex; align-items:center; gap:8px; font-size:13px; color:#063d2b; }
+.sorteo-react-page .gf-pitch-swap-preview { margin:0; padding:8px; border:1px solid #d7e6df; background:#f8fbfa; color:#063d2b; font-size:13px; }
+.sorteo-react-page .gf-pitch-direction { position:absolute; right:10px; bottom:4px; z-index:2; font-size:10px; color:#fff; pointer-events:none; }
+.sorteo-react-page .gf-premium-line { position:relative; }
+.sorteo-react-page .gf-premium-line[data-selected-line='true'] { outline:2px solid #d9f99d; outline-offset:-2px; }
+.sorteo-react-page .gf-player-card[data-pitch-selected='true'] { outline:2px solid #d9f99d; outline-offset:3px; }
+.sorteo-react-page .gf-pitch-line-strength { position:absolute; right:6px; bottom:4px; z-index:2; padding:2px 4px; background:#063d2b; color:#fff; font-size:11px; pointer-events:none; }
+.sorteo-react-page .gf-pitch-line-strength span { font-size:9px; }
+.sorteo-react-page .gf-pitch-adapted { position:absolute; left:7%; bottom:2%; z-index:35; padding:1px 3px; border:1px solid #fbbf24; background:#063d2b; color:#fbbf24; font-size:9px; line-height:1.2; }

@@ -982,7 +982,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
             </div>
             <?= render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $teamTacticLabel) ?>
             <?php $formationPitchClass = $showResultFormation ? 'is-result-formation' : 'is-base-formation'; ?>
-            <div class="team-formation <?= h($formationPitchClass) ?>" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
+            <div class="team-formation gf-current-pitch <?= h($formationPitchClass) ?>" style="--gf-line-capacity: <?= max(3, count($displayLines['DEF'] ?? []) + count($displayLines['LAT'] ?? []), count($displayLines['MED'] ?? []), count($displayLines['DEL'] ?? [])) ?>" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
+              <span class="gf-pitch-direction">Ataque ?</span><div class="gf-premium-pitch-markings" aria-hidden="true"><i class="gf-premium-midline"></i><i class="gf-premium-circle"></i><i class="gf-premium-center"></i><i class="gf-premium-area gf-premium-area-top"></i><i class="gf-premium-area gf-premium-area-bottom"></i><i class="gf-premium-six gf-premium-six-top"></i><i class="gf-premium-six gf-premium-six-bottom"></i><i class="gf-premium-goal gf-premium-goal-top"></i><i class="gf-premium-goal gf-premium-goal-bottom"></i></div>
               <?php foreach (player_pitch_lines() as $line): ?>
                 <?php
                   $linePlayers = $line === 'DEF'
@@ -992,7 +993,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                 ?>
                 <div class="formation-line<?= $line === 'DEF' && !empty($displayLines['LAT']) ? ' is-projected-defense' : '' ?>">
                   <div class="line-label"><?= h($lineLabel) ?></div>
-                  <div class="line-players">
+                  <div class="line-players" style="--gf-player-count: <?= max(1, count($linePlayers)) ?>" data-player-count="<?= count($linePlayers) ?>">
                     <?php if (empty($linePlayers)): ?>
                       <span class="formation-player empty-slot">-</span>
                     <?php else: ?>

@@ -186,7 +186,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
         return `
           <div class="formation-line${position === 'DEF' && linePlayers.some((player) => (player.assigned_position || player.primary_position || 'MED') === 'LAT') ? ' is-projected-defense' : ''}">
             <div class="line-label">${position === 'DEF' && linePlayers.some((player) => (player.assigned_position || player.primary_position || 'MED') === 'LAT') ? 'DEF/LAT' : position}</div>
-            <div class="line-players">${playerHtml}</div>
+            <div class="line-players" style="--gf-player-count: ${Math.max(1, linePlayers.length)}" data-player-count="${linePlayers.length}">${playerHtml}</div>
           </div>
         `;
       }).join('');
@@ -208,7 +208,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             <div class="formation-total-title" data-formation-total-title><span>Base</span><strong>${totalSkill.toFixed(1)} pts</strong></div>
             <div class="formation-total-title formation-tactic-title"><span>TACTICA</span><strong data-formation-tactic>${teamTacticLabel(players)}</strong></div>
           </div>
-          <div class="team-formation is-base-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="${teamNumber}">${renderFormation(players, teamNumber)}</div>
+          <div class="team-formation gf-current-pitch is-base-formation" data-static-team-formation data-static-formation-locked="1" data-team-number="${teamNumber}"><span class="gf-pitch-direction">Ataque ?</span><div class="gf-premium-pitch-markings" aria-hidden="true"><i class="gf-premium-midline"></i><i class="gf-premium-circle"></i><i class="gf-premium-center"></i><i class="gf-premium-area gf-premium-area-top"></i><i class="gf-premium-area gf-premium-area-bottom"></i><i class="gf-premium-six gf-premium-six-top"></i><i class="gf-premium-six gf-premium-six-bottom"></i><i class="gf-premium-goal gf-premium-goal-top"></i><i class="gf-premium-goal gf-premium-goal-bottom"></i></div>${renderFormation(players, teamNumber)}</div>
           ${renderTeamCharacteristics(players)}
         </article>
       `;
