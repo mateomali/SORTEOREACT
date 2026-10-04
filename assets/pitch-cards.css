@@ -149,30 +149,64 @@
 
 html body .content .team-formation.gf-current-pitch { position:relative !important; container-type:inline-size !important; isolation:isolate !important; --gf-pitch-ink:rgba(116,255,229,.30) !important; }
 .gf-current-pitch .gf-pitch-direction { position:absolute !important; right:10px !important; bottom:4px !important; z-index:2 !important; color:#fff !important; font-size:10px !important; pointer-events:none !important; }
-html body.page-index .content .team-formation.gf-current-pitch > .formation-line { position:relative !important; display:grid !important; grid-template-columns:minmax(0,1fr) !important; align-items:stretch !important; min-height:clamp(150px, calc(100cqw / var(--gf-line-capacity, 3) + 48px), 200px) !important; padding:42px 6px 10px !important; margin:0 !important; border:0 !important; gap:0 !important; background:transparent !important; z-index:1 !important; box-shadow:none !important; }
-html body.page-index .content .gf-current-pitch .formation-line + .formation-line::before { content:none !important; }
-html body.page-index .content .gf-current-pitch .line-label { position:absolute !important; left:4px !important; top:4px !important; width:auto !important; min-width:0 !important; min-height:26px !important; padding:0 6px !important; display:flex !important; align-items:center !important; border:1px solid rgba(120,255,220,.22) !important; border-radius:7px !important; background:rgba(0,16,18,.78) !important; color:#bfe8df !important; font-size:10px !important; text-shadow:none !important; }
-html body.page-index .content .gf-current-pitch .line-players { display:grid !important; grid-template-columns:repeat(var(--gf-player-count, 1),minmax(0,1fr)) !important; align-items:center !important; justify-items:center !important; align-content:center !important; gap:6px !important; height:100% !important; min-width:0 !important; padding:0 !important; overflow:visible !important; background:transparent !important; }
-html body.page-index .content .gf-current-pitch .formation-player { zoom:1 !important; width:min(100%,126px) !important; min-width:0 !important; max-width:100% !important; margin:0 !important; }
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch > .formation-line { position:relative !important; display:grid !important; grid-template-columns:minmax(0,1fr) !important; align-items:stretch !important; min-height:clamp(125px, calc(100cqw / var(--gf-line-capacity, 3) + 48px), 180px) !important; padding:42px 6px 10px !important; margin:0 !important; border:0 !important; gap:0 !important; background:transparent !important; z-index:1 !important; box-shadow:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-line + .formation-line::before { content:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-label { position:absolute !important; left:4px !important; top:4px !important; width:auto !important; min-width:0 !important; min-height:26px !important; padding:0 6px !important; display:flex !important; align-items:center !important; border:1px solid rgba(120,255,220,.22) !important; border-radius:7px !important; background:rgba(0,16,18,.78) !important; color:#bfe8df !important; font-size:10px !important; text-shadow:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players { display:grid !important; grid-template-columns:repeat(var(--gf-player-count, 1),minmax(0,1fr)) !important; align-items:center !important; justify-items:center !important; align-content:center !important; gap:6px !important; height:100% !important; min-width:0 !important; padding:0 !important; overflow:visible !important; background:transparent !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-player { zoom:1 !important; width:min(100%,126px) !important; min-width:0 !important; max-width:100% !important; margin:0 !important; }
 @media (max-width:760px) {
- html body.page-index .content .gf-current-pitch .line-players:is([data-player-count='3'],[data-player-count='4'],[data-player-count='5']) { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:12px 6px !important; }
- html body.page-index .content .gf-current-pitch .line-players:is([data-player-count='3'],[data-player-count='5']) > :last-child { grid-column:1 / -1 !important; }
+ html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players:is([data-player-count='3'],[data-player-count='4'],[data-player-count='5']) { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:12px 6px !important; }
+ html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players:is([data-player-count='3'],[data-player-count='5']) > :last-child { grid-column:1 / -1 !important; }
 }
 
-html body.page-index .content .team-formation.gf-current-pitch::after { content:none !important; }
-html body.page-index .content .gf-current-pitch .formation-line::after { content:none !important; }
-html body.page-index .content .gf-current-pitch .line-players { grid-column:1 / -1 !important; width:100% !important; flex-wrap:wrap !important; }
-html body.page-index .content .gf-current-pitch .formation-player:not(.empty-slot) { height:auto !important; aspect-ratio:1000 / 940 !important; justify-self:center !important; }
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch::after { content:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-line::after { content:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players { grid-column:1 / -1 !important; width:100% !important; flex-wrap:wrap !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-player:not(.empty-slot) { height:auto !important; aspect-ratio:1000 / 940 !important; justify-self:center !important; }
 
-html body.page-index .content .team-formation.gf-current-pitch {
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch {
  background:radial-gradient(ellipse at 50% 48%,rgba(19,121,91,.22),transparent 65%),repeating-linear-gradient(90deg,rgba(116,255,229,.015) 0 1px,transparent 1px 24px),linear-gradient(135deg,#042820,#06382d 50%,#031713) !important;
  border:0 !important; border-radius:0 !important; padding:12px 10px !important; height:auto !important; aspect-ratio:auto !important; gap:0 !important;
 }
-html body.page-index .content .team-formation.gf-current-pitch::before {
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch::before {
  content:'' !important; inset:12px 10px !important; border:0 !important; border-radius:0 !important;
  background:repeating-linear-gradient(0deg,transparent 0 24.9%,rgba(80,170,146,.035) 25% 49.9%,transparent 50% 74.9%,rgba(80,170,146,.035) 75% 100%) !important;
 }
 
-html body.page-index .content .gf-current-pitch .line-players { border:0 !important; box-shadow:none !important; border-radius:0 !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players { border:0 !important; box-shadow:none !important; border-radius:0 !important; }
+
+/* Match the React court geometry without letting legacy compact-card selectors
+   constrain the cards to 86px or a fixed height. Keep result overlays intact. */
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-sin-stat.formation-card-compacta {
+  width: min(100%, 126px, calc((100cqw - 40px) / var(--gf-line-capacity, 3))) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  aspect-ratio: 1000 / 980 !important;
+  background-size: 100% 100% !important;
+  zoom: 1 !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-player-match-rating {
+  top: 84.8% !important;
+  bottom: auto !important;
+  height: 6.8% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players {
+  gap: clamp(6px, 2cqw, 14px) !important;
+}
+@media (max-width: 760px) {
+  html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players:is([data-player-count='3'], [data-player-count='4'], [data-player-count='5']) {
+    gap: 12px 6px !important;
+  }
+}
+@container (max-width: 230px) {
+  html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch > .formation-line {
+    min-height: 180px !important;
+  }
+}
 
 }
