@@ -2019,6 +2019,7 @@ function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
   const tier = playerCardTier(adjusted);
   const palette = cardPalettes[tier] || cardPalettes.bronze;
   const positions = getOrderedPlayerPositions(player);
+  const outOfPosition = !positions.includes(assignedPosition);
   const isLongName = player.nombre.length > 12;
   const isLateral = String(assignedPosition || '').toUpperCase() === 'LAT';
   const fullCardText = palette.text;
@@ -4445,7 +4446,7 @@ export function SorteoLegacyPageIsland({ root }) {
   edgeScrollStepRef.current = (elapsed) => {
     const scroller = teamsScrollerRef.current;
     const dragPoint = dragPointRef.current;
-    if (!isFormationEditor || !scroller || !dragPoint || !pointerDragRef.current.active || !window.matchMedia('(max-width: 760px)').matches) return;
+    if (!scroller || !dragPoint || !pointerDragRef.current.active || !window.matchMedia('(max-width: 760px)').matches) return;
     const rect = scroller.getBoundingClientRect();
     if (dragPoint.y < Math.max(0, rect.top) || dragPoint.y > Math.min(window.innerHeight - 88, rect.bottom)) return;
     const left = Math.max(0, rect.left);
@@ -4652,7 +4653,9 @@ export function SorteoLegacyPageIsland({ root }) {
           {teams.map((team, targetTeamIndex) => {
             if (targetTeamIndex === Number(source.teamIndex)) return null;
             const targetAssignments = buildTeamAssignment(team, assignments);
-            const candidates = team.filter(player => exchangeFilter === 'all' || targetAssignments[playerKey(player)] === sourcePosition);
+            const candidates = team.filter(player => exchangeFilter === 'all'
+              || targetAssignments[playerKey(player)] === sourcePosition
+              || getOrderedPlayerPositions(player).includes(sourcePosition));
             return (
               <fieldset key={targetTeamIndex} className="min-w-0 rounded-md border border-[#c4d8ce] bg-[#f5faf7] p-2" style={{ borderLeft: `4px solid ${getTeamColor(targetTeamIndex).accentHex}` }}>
                 <legend className="flex items-center gap-2 px-1 text-xs font-black uppercase" data-exchange-team-title>
@@ -4672,7 +4675,7 @@ export function SorteoLegacyPageIsland({ root }) {
                     return (
                       <button key={key} data-exchange-player={key} data-exchange-position={position} data-exchange-delta={delta} type="button" className="grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded border border-[#c4d8ce] bg-white px-2 py-1 text-left text-xs hover:bg-[#e7f2eb] disabled:cursor-not-allowed disabled:opacity-55" disabled={!validation.ok} title={validation.message || `${player.nombre} en ${sourcePosition}: ${incomingRating} pts; ${sourcePlayer.nombre}: ${sourceRating} pts. Diferencia: ${difference}.`} onClick={() => { movePlayer(source, targetTeamIndex, position, key); setPreview(null); }}>
                         <span className="min-w-0 truncate font-bold">{player.nombre}</span>
-                        <span className="whitespace-nowrap text-[11px] text-[#526b62]">{reason || position}</span>
+                        <span className="whitespace-nowrap text-[11px] text-[#526b62]">{reason || Array.from(new Set([position, ...getOrderedPlayerPositions(player)])).join('/')}</span>
                         <span className={`whitespace-nowrap font-black tabular-nums ${delta < 0 ? 'text-[#a23b24]' : delta > 0 ? 'text-[#12633c]' : 'text-[#526b62]'}`}>{difference}</span>
                       </button>
                     );
@@ -5569,7 +5572,12 @@ export function SorteoLegacyPageIsland({ root }) {
                 ) : (
                   <>
                   {mobileMoveSource ? <p className="gf-selection-status" role="status">{mobileMoveSource.playerName} seleccionado — elegí un jugador del otro equipo. <button type="button" className={quietButtonClass} onClick={() => setMobileMoveSource(null)}>Cancelar</button> <a href="#gf-tap-tools">Más acciones</a></p> : null}
-                  <p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado para arrastrar o tocá un jugador y después su destino.</p>
+                  <div className="flex flex-wrap gap-2 min-[761px]:hidden" role="group" aria-label="Elegir cancha" data-html2canvas-ignore="true">
+                    {teams.map((_, index) => (
+                      <button key={index} type="button" className={visibleTeamIndex === index ? secondaryButtonClass : quietButtonClass} aria-pressed={visibleTeamIndex === index} onClick={() => scrollToTeam(index)}>{getTeamDisplayName(index)}</button>
+                    ))}
+                  </div>
+                  <p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado y llevá la tarjeta al borde para avanzar a la otra cancha; soltala sobre el jugador destino. También podés tocar un jugador y después su destino.</p>
                   </>
                 )}
                 <div ref={teamsScrollerRef} data-teams-scroller="1" data-show-both={!isFormationEditor && showBothTeams ? 'true' : 'false'} data-dragging={dragState ? 'true' : 'false'} className="sorteo-teams-scroller grid gap-4 xl:grid-cols-2" onScroll={event => {
@@ -6399,8 +6407,8 @@ export function SorteoLegacyPageIsland({ root }) {
       ) : null}
 
       {dragState && teams ? <div className="pointer-events-none fixed inset-x-0 top-1/2 z-[110] flex justify-between min-[761px]:hidden" aria-hidden="true">
-        {visibleTeamIndex > 0 ? <span className="rounded-r border border-white bg-[#075bb5] px-2 py-3 text-xs font-bold text-white">←<br />Otra cancha</span> : <span />}
-        {visibleTeamIndex < teams.length - 1 ? <span className="rounded-l border border-white bg-[#075bb5] px-2 py-3 text-right text-xs font-bold text-white">→<br />Otra cancha</span> : <span />}
+        {visibleTeamIndex > 0 ? <span className="max-w-28 rounded-r border border-white bg-[#063d2b] px-2 py-3 text-xs font-bold text-white">←<br />{getTeamDisplayName(visibleTeamIndex - 1)}</span> : <span />}
+        {visibleTeamIndex < teams.length - 1 ? <span className="max-w-28 rounded-l border border-white bg-[#063d2b] px-2 py-3 text-right text-xs font-bold text-white">→<br />{getTeamDisplayName(visibleTeamIndex + 1)}</span> : <span />}
       </div> : null}
       {dragState && teams ? (
         <div

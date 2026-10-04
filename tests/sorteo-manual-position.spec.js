@@ -35,8 +35,10 @@ for(const width of [1440,390]) test(`manual positions and compact exchange filte
   await expect(source.locator('.sorteo-position-penalty')).toContainText('-10%');
   await page.locator('[data-sorteo-team-card]').first().getByRole('button',{name:'Deshacer ultimo cambio',exact:true}).click();
   await expect(source).toHaveAttribute('data-assigned-position','DEL');
-  await source.click();
+  if(width===1440) await source.dblclick();
+  else await source.click();
   if(width===390) await page.getByRole('region',{name:'Mover o intercambiar jugador'}).getByRole('button',{name:'Ficha',exact:true}).click();
+  expect(errors).toEqual([]);
   const dialog=page.getByRole('dialog');
   const options=dialog.locator('[data-exchange-options]');
   const candidates=options.locator('[data-exchange-player]');

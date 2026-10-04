@@ -187,6 +187,48 @@ html body:is(.page-index, .page-historial) main.content .public-teams .team-form
   aspect-ratio: 1000 / 980 !important;
   background-size: 100% 100% !important;
   zoom: 1 !important;
+  container-type: inline-size;
+  overflow: visible !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-card-photo {
+  left: 40% !important;
+  right: 6% !important;
+  top: 10% !important;
+  width: auto !important;
+  height: 53% !important;
+  aspect-ratio: auto !important;
+  align-items: center !important;
+  border: 0 !important;
+  border-radius: 36% 36% 30% 30% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-card-photo img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  object-position: center !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-card-photo.is-custom img {
+  object-fit: cover !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-player-name {
+  left: 9% !important;
+  right: 9% !important;
+  top: 66% !important;
+  bottom: 16% !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  font-size: clamp(7px, 11cqw, 14px) !important;
+  line-height: 1 !important;
 }
 html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-player-match-rating {
   top: 84.8% !important;
