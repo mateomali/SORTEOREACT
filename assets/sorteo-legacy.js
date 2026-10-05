@@ -66,7 +66,7 @@ function countPitchAssignmentLines(assignment) {
 
 function maxFieldPlayersPerLine(teamSize) {
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
-  if (Number(teamSize) < 8) return fieldPlayers;
+  if (Number(teamSize) < 10) return fieldPlayers;
   return fieldPlayers > 0 ? Math.max(1, Math.floor(fieldPlayers / 2)) : 0;
 }
 

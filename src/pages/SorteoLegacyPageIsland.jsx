@@ -563,7 +563,7 @@ function shuffle(items) {
 
 function maxFieldPlayersPerLine(teamSize) {
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
-  if (Number(teamSize) < 8) return fieldPlayers;
+  if (Number(teamSize) < 10) return fieldPlayers;
   return fieldPlayers > 0 ? Math.max(1, Math.floor(fieldPlayers / 2)) : 0;
 }
 
@@ -1032,6 +1032,15 @@ function lineStrengthPenalty(teams, assignmentOverrides = {}) {
   return { penalty: balance.qualityCost, spread: balance.maxLineGap };
 }
 
+function lineStrengthSummary(players, assignments = {}, teamSize = players.length) {
+  const total = players.reduce((sum, player) => sum + adjustedPositionRatingForTeamSize(
+    player, assignments[playerKey(player)] || getPrimaryPlayerPosition(player), teamSize,
+  ), 0);
+  const count = players.length;
+  const average = count ? total / count : 0;
+  return { total, count, average, quality: count ? playerCardRating(average) : 0 };
+}
+
 function profileDistributionPenalty(teams) {
   if (!teams.length) return { penalty: 0, spread: 0 };
   let penalty = 0;
@@ -1068,8 +1077,10 @@ function lineStrengthBalance(teams, assignmentOverrides = {}, cachedAssignments 
     const averages = sums.map((sum, index) => counts[index] ? sum / counts[index] : 0);
     const floors = ratings.map(values => values.length ? Math.min(...values) : 0);
     const peaks = ratings.map(values => values.length ? Math.max(...values) : 0);
-    // Compare means, not raw sums: 3/2/2 defenders is a legitimate odd roster.
-    const gap = countSpread(averages);
+    // Strength is additive. A weaker teammate still adds capacity; individual
+    // quality remains a separate diagnostic. Count balance handles odd rosters.
+    const gap = countSpread(sums);
+    const averageGap = countSpread(averages);
     const floorGap = countSpread(floors);
     const peakGap = countSpread(peaks);
     const countGap = countSpread(counts);
@@ -1083,7 +1094,7 @@ function lineStrengthBalance(teams, assignmentOverrides = {}, cachedAssignments 
     const cutoff = ranked.length ? bestNaturalPlayerRating(ranked[Math.min(teams.length, ranked.length) - 1]) : Infinity;
     const eliteCounts = naturalPools.map(pool => pool.filter(player => bestNaturalPlayerRating(player) >= cutoff - 1e-6).length);
     eliteExcess += Math.max(0, countSpread(eliteCounts) - 1);
-    details[line] = { counts, sums, averages, floors, peaks, gap, countGap, floorGap, peakGap, eliteCounts,
+    details[line] = { counts, sums, averages, floors, peaks, gap, averageGap, countGap, floorGap, peakGap, eliteCounts,
       naturalTotals: naturalPools.map(pool => pool.reduce((sum, p) => sum + adjustedPositionRating(p, getPrimaryPlayerPosition(p)), 0)),
       naturalAverages: naturalPools.map(pool => pool.length ? pool.reduce((sum, p) => sum + adjustedPositionRating(p, getPrimaryPlayerPosition(p)), 0) / pool.length : 0), assignedTotals: sums };
   });
@@ -1236,9 +1247,9 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
     lineBalance, diff, slowSpread, irregularSpread, platinumSpread: supremeSpread,
     lineStrengthSpread: lineBalance.maxLineGap, profileDistributionSpread: profileDistribution.spread, totals,
     teamMetrics: teams.map((team, index) => ({
-      goalkeeperStrength: lineBalance.details.ARQ.averages[index], defenseStrength: lineBalance.details.DEF.averages[index],
-      midfieldStrength: lineBalance.details.MED.averages[index], attackStrength: lineBalance.details.DEL.averages[index],
-      totalStrength: team.length ? totals[index] / team.length : 0, slowCount: slowCounts[index],
+      goalkeeperStrength: lineBalance.details.ARQ.sums[index], defenseStrength: lineBalance.details.DEF.sums[index],
+      midfieldStrength: lineBalance.details.MED.sums[index], attackStrength: lineBalance.details.DEL.sums[index],
+      totalStrength: totals[index], averageQuality: team.length ? totals[index] / team.length : 0, slowCount: slowCounts[index],
     })),
   };
 }
@@ -1286,7 +1297,7 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
       if (platinum && tiers[index] > minTier) continue;
       counts[index][line] += 1; sums[index][line] += rating; totals[index] += rating;
       const positionalBalance = REQUIRED_FIELD_LINES.reduce((sum, field) => sum + countSpread(counts.map(c => c[field])) ** 2, 0);
-      const gaps = REQUIRED_FIELD_LINES.map(field => countSpread(counts.map((c, i) => c[field] ? sums[i][field] / c[field] : 0)));
+      const gaps = REQUIRED_FIELD_LINES.map(field => countSpread(sums.map(summary => summary[field])));
       const projectedSlowSpread = countSpread(slows.map((count, i) => count + Number(i === index && isLowRhythmPlayer(player))));
       const evaluation = { hardViolations: 0, paceExcess: Math.max(0, projectedSlowSpread - 1), positionalBalance,
         lineQualityCost: gaps.reduce((sum, gap) => sum + gap * gap, 0) + 2 * Math.max(...gaps) ** 2,
@@ -2208,12 +2219,12 @@ function CompactPlayerCard({ player, assignedPosition, teamSize = null, topPlaye
         <span className="absolute right-[5%] top-[4%] z-40 grid h-4 w-4 place-items-center rounded-full border border-[#07130f]/45 bg-amber-200 text-[9px] font-black text-[#07130f]" aria-hidden="true">L</span>
       ) : null}
       {swapTarget ? (
-        <span className="absolute inset-0 z-50 grid place-items-center bg-[#063d2b]/80 text-lime-100 ring-4 ring-inset ring-lime-200" aria-hidden="true">
+        <span className="gf-swap-target absolute inset-0 z-50 grid place-items-center" aria-hidden="true">
           <span className="grid place-items-center gap-1">
-            <span className="grid h-10 w-10 place-items-center rounded-full border-2 border-lime-100 bg-emerald-950 shadow-lg shadow-emerald-950/60 max-[760px]:h-8 max-[760px]:w-8">
+            <span className="gf-swap-icon grid h-10 w-10 place-items-center max-[760px]:h-8 max-[760px]:w-8">
               <Icon name="swap" className="h-5 w-5 max-[760px]:h-4 max-[760px]:w-4" />
             </span>
-            <span className="rounded-md bg-emerald-950/95 px-2 py-1 text-[11px] font-black uppercase leading-tight text-lime-50 max-[760px]:text-[10px]">Intercambiar</span>
+            <span className="gf-swap-label">Intercambiar</span>
           </span>
         </span>
       ) : null}
@@ -2934,6 +2945,40 @@ function Message({ id, tone, children }) {
   );
 }
 
+function TeamStrengthComparison({ views, teamName, revision }) {
+  const values = views.map(view => ({ ...view.lineStrengths, TOTAL: view.lineStrengthTotal }));
+  const signature = JSON.stringify(values);
+  const [snapshot, setSnapshot] = useState(() => ({ signature, revision, values, previous: null }));
+  if (snapshot.signature !== signature || snapshot.revision !== revision) {
+    setSnapshot({ signature, revision, values, previous: snapshot.values.length === values.length ? snapshot.values : null });
+  }
+  const lineScale = Math.max(6, Math.ceil(Math.max(0, ...values.flatMap(value => PITCH_LINES.map(line => value[line]))) / 6) * 6);
+  const totalScale = Math.max(6, Math.ceil(Math.max(0, ...values.map(value => value.TOTAL)) / 6) * 6);
+  return <details className="gf-strength-comparison" data-exportable-line-balance="true" aria-label="Comparacion de fuerza de los equipos">
+    <summary>Comparación de equipos <span>Diferencia total {(Math.max(...values.map(value => value.TOTAL)) - Math.min(...values.map(value => value.TOTAL))).toFixed(1)} pts</span></summary>
+    <p>Puntajes ajustados a posición. Cambios respecto del último movimiento.</p>
+    {[['ARQ', 'Arquero'], ['DEF', 'Defensa'], ['MED', 'Mediocampo'], ['DEL', 'Delantera'], ['TOTAL', 'Total del equipo']].map(([line, label]) => {
+      const scores = values.map(value => value[line]);
+      const gap = Math.max(...scores) - Math.min(...scores);
+      const scale = line === 'TOTAL' ? totalScale : lineScale;
+      return <div className="gf-comparison-group" key={line} data-comparison-line={line}>
+        <h4>{label}<span>Diferencia {gap.toFixed(1)} pts</span></h4>
+        {views.map((view, index) => {
+          const value = values[index][line];
+          const delta = snapshot.previous ? value - snapshot.previous[index][line] : 0;
+          const detail = view.lineStrengthDetails[line];
+          return <div className="gf-comparison-row" key={index} data-comparison-team={index}>
+            <span className="gf-comparison-name">{teamName(index)}{detail ? <small>{detail.count} {detail.count === 1 ? 'jugador' : 'jugadores'} · Media {detail.quality}/100</small> : null}</span>
+            <div className="gf-comparison-track" role="meter" aria-label={`${label} de ${teamName(index)}`} aria-valuemin={0} aria-valuemax={scale} aria-valuenow={value} aria-valuetext={`${value.toFixed(1)} puntos`}><span style={{ width: `${value / scale * 100}%`, backgroundColor: view.color.accentHex }} /></div>
+            <strong>{value.toFixed(1)}<small> pts</small></strong>
+            <span className="gf-comparison-delta" data-direction={Math.abs(delta) < 0.05 ? 'same' : delta > 0 ? 'up' : 'down'} aria-label={`Cambio ${delta.toFixed(1)} puntos`}>{Math.abs(delta) >= 0.05 ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)}` : '—'}</span>
+          </div>;
+        })}
+      </div>;
+    })}
+  </details>;
+}
+
 export function SorteoLegacyPageIsland({ root }) {
   const payload = useMemo(() => parsePayload(root), [root]);
   const lockedMatch = payload.matchId > 0;
@@ -2971,6 +3016,7 @@ export function SorteoLegacyPageIsland({ root }) {
   ));
   const [teamFormations, setTeamFormations] = useState({});
   const [undoStacks, setUndoStacks] = useState({});
+  const [comparisonGeneration, setComparisonGeneration] = useState(0);
   const [playerExchanges, setPlayerExchanges] = useState([]);
   const [error, setError] = useState(payload.loadError);
   const [success, setSuccess] = useState('');
@@ -3058,6 +3104,7 @@ export function SorteoLegacyPageIsland({ root }) {
     const ghost = dragGhostRef.current;
     if (ghost) {
       ghost.style.transform = `translate3d(${Math.round(clientX + 16)}px, ${Math.round(clientY - 8)}px, 0)`;
+      ghost.style.setProperty('--gf-drag-left', `${Math.round(clientX + 16)}px`);
     }
   }, []);
 
@@ -3440,11 +3487,12 @@ export function SorteoLegacyPageIsland({ root }) {
       setTeams(result.teams);
       setBenches({});
       setLockedPlayerPositions({});
-      const generatedAssignments = Object.assign({}, ...result.teams.map(team => buildTeamAssignment(team)));
+      const generatedAssignments = Object.assign({}, ...result.teams.map(team => highestScoringFormation(team)?.assignments || buildTeamAssignment(team)));
       applyDefaultFormationVariants(result.teams, generatedAssignments, {}, true);
       if (window.GOODFELLAS_DRAW_DEBUG === true) console.debug('GOODFELLAS draw', result.evaluation);
-      setTeamFormations({});
+      setTeamFormations(Object.fromEntries(result.teams.map((_, index) => [index, 'highest-score'])));
       setUndoStacks({});
+      setComparisonGeneration(value => value + 1);
       setPlayerExchanges([]);
       setAnalysisVisible(false);
       setManualComparisonBefore(null);
@@ -3924,7 +3972,7 @@ export function SorteoLegacyPageIsland({ root }) {
     if (!Number.isFinite(normalizedTargetTeamIndex) || !teams[normalizedTargetTeamIndex]) return { ok: false, message: 'No se encontro el equipo destino.' };
     const resolvedTargetPlayerKey = targetPlayerKey || null;
     if (sourceTeamIndex !== normalizedTargetTeamIndex && !resolvedTargetPlayerKey) {
-      return { ok: false, message: 'Para cambiar de equipo, solta sobre un jugador disponible para intercambiar.' };
+      return { ok: false, message: 'Solt? sobre un jugador para intercambiar.' };
     }
     const sourcePlayer = teams[sourceTeamIndex]?.find((player) => playerKey(player) === key);
     if (!sourcePlayer) return { ok: false, message: 'No se encontro el jugador que estas moviendo.' };
@@ -3950,7 +3998,10 @@ export function SorteoLegacyPageIsland({ root }) {
         const proposedTargetTeam = sourceTeamIndex === normalizedTargetTeamIndex
           ? teams[normalizedTargetTeamIndex]
           : teams[normalizedTargetTeamIndex].map((player) => (playerKey(player) === String(resolvedTargetPlayerKey) ? sourcePlayer : player));
-        const proposedTargetAssignments = buildTeamAssignment(proposedTargetTeam, assignments);
+        // Validate the places being exchanged without automatically rearranging
+        // either formation around the incoming player's natural positions.
+        const proposedTargetAssignments = buildTeamAssignment(teams[normalizedTargetTeamIndex], assignments);
+        delete proposedTargetAssignments[String(resolvedTargetPlayerKey)];
         proposedTargetAssignments[key] = targetLine;
         if (targetKeyForAssignment && FORMATION_LINES.includes(sourceLine)) {
           proposedTargetAssignments[targetKeyForAssignment] = sourceLine;
@@ -3964,7 +4015,8 @@ export function SorteoLegacyPageIsland({ root }) {
         let proposedSourceTeamSize = 0;
         if (sourceTeamIndex !== normalizedTargetTeamIndex) {
           const proposedSourceTeam = teams[sourceTeamIndex].map((player) => (playerKey(player) === key ? targetPlayer : player));
-          const proposedSourceAssignments = buildTeamAssignment(proposedSourceTeam, assignments);
+          const proposedSourceAssignments = buildTeamAssignment(teams[sourceTeamIndex], assignments);
+          delete proposedSourceAssignments[key];
           if (FORMATION_LINES.includes(sourceLine)) {
             proposedSourceAssignments[targetKeyForAssignment] = sourceLine;
           }
@@ -4757,6 +4809,15 @@ export function SorteoLegacyPageIsland({ root }) {
       setPreview(null);
       return;
     }
+    if (!mobile && event?.detail !== 0) {
+      // Wait for a possible double click before mounting the dialog. Otherwise
+      // its lock button can receive the second click at the card's coordinates.
+      pendingCardExchangeRef.current = window.setTimeout(() => {
+        pendingCardExchangeRef.current = null;
+        openPlayerProfile(teamIndex, player, assignedPosition);
+      }, 350);
+      return;
+    }
     openPlayerProfile(teamIndex, player, assignedPosition);
   };
 
@@ -5132,17 +5193,18 @@ export function SorteoLegacyPageIsland({ root }) {
         const pitchLine = pitchLineForPosition(assigned);
         (linePlayers[pitchLine] || linePlayers.MED).push(player);
       });
-      const lineStrengths = Object.fromEntries(['DEF', 'MED', 'DEL'].map((line) => {
-        const pool = linePlayers[line];
-        const total = pool.reduce((sum, player) => sum + adjustedPositionRatingForTeamSize(player, teamAssignmentsForIndex[playerKey(player)], team.length), 0);
-        return [line, pool.length ? total / pool.length : 0];
-      }));
+      const lineStrengthDetails = Object.fromEntries(PITCH_LINES.map((line) => [
+        line, lineStrengthSummary(linePlayers[line], teamAssignmentsForIndex, team.length),
+      ]));
+      const lineStrengths = Object.fromEntries(Object.entries(lineStrengthDetails).map(([line, summary]) => [line, summary.total]));
       const topPlayerRanks = new Map(team.slice().sort((a, b) => {
         const rating = (player) => adjustedPositionRatingForTeamSize(player, teamAssignmentsForIndex[playerKey(player)] || getPrimaryPlayerPosition(player), team.length);
         return rating(b) - rating(a) || playerKey(a).localeCompare(playerKey(b));
       }).slice(0, 3).map((player, rank) => [playerKey(player), rank]));
       return {
         lineStrengths,
+        lineStrengthTotal: Object.values(lineStrengthDetails).reduce((sum, line) => sum + line.total, 0),
+        lineStrengthDetails,
         topPlayerRanks,
         color: getTeamColor(teamIndex),
         assignments: teamAssignmentsForIndex,
@@ -5757,8 +5819,7 @@ export function SorteoLegacyPageIsland({ root }) {
                           onDrop={(event) => handleDrop(event, teamIndex, null)}
                         >
 
-                          {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="pointer-events-none absolute left-2 right-12 top-2 z-30 rounded border border-white/70 bg-[#063d2b] px-2 py-1 text-center text-xs font-bold text-white" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
-                          <span className="gf-pitch-direction">Ataque ?</span>
+                          {dragState && Number(dragState.teamIndex) !== teamIndex ? <span className="gf-exchange-guide pointer-events-none absolute left-2 right-12 top-2 z-30" data-html2canvas-ignore="true">Soltá sobre un jugador para intercambiar ↔</span> : null}
                           <div className="gf-premium-pitch-markings" aria-hidden="true">
                             <i className="gf-premium-midline" /><i className="gf-premium-circle" /><i className="gf-premium-center" />
                             <i className="gf-premium-area gf-premium-area-top" /><i className="gf-premium-area gf-premium-area-bottom" />
@@ -5804,7 +5865,7 @@ export function SorteoLegacyPageIsland({ root }) {
                               ? ''
                               : (lineCanAcceptDrop
                                 ? 'border-lime-200/70 bg-lime-200/15 ring-2 ring-lime-200/70'
-                                : 'opacity-45');
+                                : 'gf-drop-restricted');
                             const lineGridClass = '';
                             const lineModeClass = 'gf-formation-row gf-premium-line';
                             const linePlayersClass = 'line-players gf-line-players';
@@ -5834,7 +5895,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                     </span>
                                   </details>
                                 ) : <div className="line-label gf-premium-line-control" data-html2canvas-ignore="true"><span>{label}</span><small>{count}/{max}</small></div>}
-                                {showLineStrength && line !== 'ARQ' ? <span className="gf-pitch-line-strength" aria-label={`Fuerza de ${label}: ${view.lineStrengths[line].toFixed(1)} puntos de promedio`}>{view.lineStrengths[line].toFixed(1)} <span>prom.</span></span> : null}
+                                {showLineStrength && line !== 'ARQ' ? <span className="gf-pitch-line-strength" aria-label={`Fuerza acumulada de ${label}: ${view.lineStrengths[line].toFixed(1)} puntos, ${view.lineStrengthDetails[line].count} jugadores`}>{view.lineStrengths[line].toFixed(1)} <span>pts</span></span> : null}
                                 <div
                                   className={linePlayersClass}
                                   data-sorteo-drop-line={line}
@@ -5867,7 +5928,7 @@ export function SorteoLegacyPageIsland({ root }) {
                                   onDrop={(event) => handleDrop(event, teamIndex, line)}
                                 >
                                   {isDraggingPlayer && !lineCanAcceptDrop ? (
-                                    <span className="pointer-events-none absolute inset-x-2 top-1 z-40 rounded-md border border-red-200 bg-red-100 px-2 py-1 text-center text-[10px] font-black leading-tight text-red-900 shadow-sm max-[760px]:text-[9px]" aria-hidden="true">
+                                    <span className="gf-drop-feedback pointer-events-none absolute inset-x-2 top-1 z-40" aria-hidden="true">
                                       {lineBlockMessage}
                                     </span>
                                   ) : null}
@@ -5978,20 +6039,7 @@ export function SorteoLegacyPageIsland({ root }) {
                             );
                           })}
                         </div>
-                        <section className="gf-premium-balance" data-exportable-line-balance="true" aria-label={`Balance por linea de ${getTeamDisplayName(teamIndex)}`}>
-                          <h4><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 12h3v6H2zm6-5h3v11H8zm6-5h3v16h-3z" fill="currentColor" /></svg>Balance por línea</h4>
-                          {[['DEF', 'Defensa'], ['MED', 'Mediocampo'], ['DEL', 'Delantera']].map(([line, label]) => {
-                            const internalValue = view.lineStrengths?.[line] || 0;
-                            const value = internalValue > 0 ? playerCardRating(internalValue) : 0;
-                            return <div key={line} className="gf-premium-balance-row" data-balance-line={line}>
-                              <span>{label}</span>
-                              <div className="gf-premium-balance-bar" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
-                                <span style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
-                              </div>
-                              <strong>{value}<small>/100</small></strong>
-                            </div>;
-                          })}
-                        </section>
+
                         </div>
 
                         {isFormationEditor ? (
@@ -6036,30 +6084,12 @@ export function SorteoLegacyPageIsland({ root }) {
                               ))}
                           </div>
                         </div>
-                        ) : <details className="gf-team-metrics"><summary>Estadísticas del equipo</summary>
-                        <div className="sorteo-team-stats grid gap-2 rounded-md border border-[#d7e6df] bg-white p-2 text-xs font-extrabold text-[#07130f] max-[760px]:gap-1 max-[760px]:p-1.5">
-                          <div className="flex flex-wrap gap-1.5 max-[760px]:gap-1">
-                            {(summary.arquero > 0 ? [['Arquero', summary.arquero]] : [['Ataque', summary.ataque]])
-                              .concat([
-                                ['Solidez', summary.solidez],
-                                ['Velocidad', summary.ritmo],
-                                ['Ida y vuelta', summary.resistencia],
-                                ['Pase/Vision', summary.pase_vision],
-                                ['Tecnica', summary.tecnica],
-                                ['Equipo', summary.compromiso],
-                                ['Mentalidad', summary.mentalidad],
-                                ['Regularidad', summary.regularidad],
-                              ])
-                              .map(([label, value]) => (
-                                <span key={label} className="rounded-md border border-[#d7e6df] bg-white px-2 py-1 max-[760px]:px-1.5 max-[760px]:py-0.5 max-[760px]:text-[10px]">{label} {Number(value).toFixed(1)}</span>
-                              ))}
-                          </div>
-                        </div>
-                        </details>}
+                        ) : null}
                       </article>
                     );
                   })}
                 </div>
+                <TeamStrengthComparison key={comparisonGeneration} views={teamViews} teamName={getTeamDisplayName} revision={manualActionCount} />
               </>
             ) : (
               <div className="grid min-h-64 place-items-center rounded-lg border border-dashed border-[#adc8bb] bg-white p-8 text-center text-sm font-semibold text-slate-500">
@@ -6069,14 +6099,13 @@ export function SorteoLegacyPageIsland({ root }) {
           </div>
 
           {!isFormationEditor && teams && drawAnalysis ? (
-            <section className="gf-quick-analysis" aria-label="Análisis rápido">
-              <div className="gf-heading-row"><h2>Análisis del sorteo</h2><strong>Diferencia {drawAnalysis.diff.toFixed(1)}</strong></div>
-              <p>{actionAnalysis?.balance} · {actionAnalysis?.risk}</p>
+            <details className="gf-quick-analysis gf-analysis-compact" aria-label="Análisis de equipos">
+              <summary>Análisis de equipos <span>{drawAnalysis.ruleChecks.filter(rule => !rule.ok).length ? `${drawAnalysis.ruleChecks.filter(rule => !rule.ok).length} aspectos para revisar` : 'Sin alertas'}</span></summary>
+              <p>{actionAnalysis?.balance}</p>
+              <ul>{drawAnalysis.ruleChecks.filter(rule => !rule.ok).map(rule => <li key={rule.label}>{rule.label}</li>)}</ul>
               <ul>{drawAnalysis.comparisons.slice(0, 3).map(item => <li key={item.field}>{item.label}: {item.highTeam} +{item.diff.toFixed(1)}</li>)}</ul>
-              {drawAnalysis.ruleChecks.some(rule => !rule.ok) ? <p>{drawAnalysis.ruleChecks.filter(rule => !rule.ok).length} aspectos para revisar: {drawAnalysis.ruleChecks.filter(rule => !rule.ok).map(rule => rule.label).join(' · ')}</p> : <p>✓ Sin alertas en las reglas del sorteo.</p>}
-              <table className="gf-quick-comparison"><caption>Comparación rápida</caption><thead><tr><th>Métrica</th>{drawAnalysis.summaries.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{[['ataque', 'Ataque'], ['tecnica', 'Técnica'], ['ritmo', 'Velocidad']].map(([field, label]) => <tr key={field}><th>{label}</th>{drawAnalysis.summaries.map(item => <td key={item.name}>{item.statValues[field].toFixed(1)}</td>)}</tr>)}</tbody></table>
-              <button className={quietButtonClass} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>{analysisVisible ? 'Ocultar análisis completo' : 'Ver análisis completo / comparación completa'}</button>
-            </section>
+              {drawAnalysis.summaries.filter(item => item.adaptedPlayers.length).map(item => <p key={item.name}>{item.name}: fuera de posición natural: {item.adaptedPlayers.join(', ')}.</p>)}
+            </details>
           ) : null}
 
           <div id="download-controls" data-save-state={displayedSaveState} className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
@@ -6143,7 +6172,7 @@ export function SorteoLegacyPageIsland({ root }) {
             </div>
           ) : null}
 
-          {teams && analysisVisible && drawAnalysis ? (
+          {teams && isFormationEditor && analysisVisible && drawAnalysis ? (
             <section className="sorteo-analysis-panel grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-4" data-sorteo-analysis="1" aria-label="Analisis de equipos">
               <div className="grid gap-2 border-b border-[#d7e6df] pb-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div>
@@ -6329,9 +6358,17 @@ export function SorteoLegacyPageIsland({ root }) {
               ) : null}
             </section>
           ) : null}
-          {teams && !isFormationEditor && lockedMatch ? (
+          {teams && !isFormationEditor ? (
             <div className="gf-sticky-save" data-sorteo-mobile-actions="1" aria-label="Guardar y continuar">
-              <span role="status">{saveStateLabel}</span>
+              <span className="gf-mobile-save-status" role="status">{saveStateLabel}</span>
+              <details className="gf-mobile-export">
+                <summary className={quietButtonClass}><Icon name="download" />Exportar</summary>
+                <div className="gf-mobile-export-menu">
+                  <button className={quietButtonClass} type="button" disabled={exporting} onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); downloadTeamsJpg(); }}>{exporting ? 'Generando JPG...' : 'Exportar JPG'}</button>
+                  <button className={quietButtonClass} type="button" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); copyTeams(); }}>Copiar equipos</button>
+                  <button className={quietButtonClass} type="button" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); downloadTeamsText(); }}>Descargar texto</button>
+                </div>
+              </details>
               {formationsReady && formationsUrl ? <button className={primaryButtonClass} type="button" onClick={() => navigate(formationsUrl)}>Formaciones →</button> : <button className={primaryButtonClass} type="button" disabled={savingDraw} onClick={saveDraw}>{savingDraw ? 'Guardando…' : 'Guardar'}</button>}
             </div>
           ) : null}
@@ -6455,19 +6492,19 @@ export function SorteoLegacyPageIsland({ root }) {
           <div className="absolute -left-10 -top-6 h-16 w-16 rounded-full border border-lime-200/50" />
           <div className="relative transition-transform duration-100" style={{ width: '100%' }}>
             {currentDragBlockMessage ? (
-              <div className="absolute -right-2 -top-2 z-20 w-44 border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-black leading-tight text-red-900 shadow-sm">
+              <div className="gf-drag-feedback gf-drag-feedback-blocked absolute left-1/2 bottom-full z-20 mb-2">
                 {currentDragBlockMessage}
               </div>
             ) : currentDragDelta ? (
-              <div className={`absolute -right-2 -top-2 z-20 grid min-w-14 justify-items-center border px-2 py-1 text-[11px] font-black leading-tight shadow-sm ${currentDragDeltaClass}`}>
+              <div className={`gf-drag-feedback absolute left-1/2 bottom-full z-20 mb-2 grid justify-items-center ${currentDragDeltaClass}`}>
                 <span>{currentDragDeltaText}</span>
-                <span className="text-[9px] font-extrabold opacity-75">{`${currentDragDelta.from} -> ${currentDragDelta.to} ${currentDragDelta.line}`}</span>
+                <span className="gf-drag-rating-detail">{`${currentDragDelta.from} -> ${currentDragDelta.to} ${currentDragDelta.line}`}</span>
               </div>
             ) : null}
             <div className="overflow-hidden rounded-lg ring-2 ring-lime-200 shadow-[0_18px_34px_rgba(2,14,9,.6),0_0_0_2px_rgba(217,249,157,.5)]">
               <CompactPlayerCard player={dragState.player} assignedPosition={dragState.assignedPosition} teamSize={teams?.[dragState.teamIndex]?.length || playersPerTeam} />
             </div>
-            <span className="block w-full text-center text-[11px] font-black uppercase leading-tight text-lime-100 [text-shadow:0_1px_2px_rgba(0,0,0,.8)]">Soltar para mover</span>
+            <span className="gf-drag-caption block w-full text-center">Soltar para mover</span>
           </div>
         </div>
       ) : null}

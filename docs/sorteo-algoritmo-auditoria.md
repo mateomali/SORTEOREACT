@@ -69,14 +69,15 @@ Las formaciones manuales siguen siendo acciones explícitas del usuario.
 4. **Fuerza.** ARQ, DEF (incluye LAT), MED y DEL usan `adjustedPositionRating`:
    atributos ponderados por posición, disponibilidad, regularidad y ajuste
    histórico, en escala 1–6. Cada línea expone cantidad, suma, promedio, mínimo
-   y máximo. El indicador de fuerza comparable es el promedio; las cantidades
+   y máximo. El indicador de fuerza comparable es la suma de puntajes ajustados;
+   el promedio describe por separado la calidad individual. Las cantidades
    se comparan primero y las sumas permanecen disponibles. Total también conserva
    suma original (`diff`) y promedio (`totalBalance`). No se redondea el fitness.
 5. **Desigualdad.** `max - min` sobre todos los equipos, no solo el primer par.
    `positionalBalance` suma cuadrados de diferencias de cantidades.
 6. **Prioridades y pesos.** `isBetterDraw` compara lexicográficamente:
    violaciones duras → distribución → calidad por líneas → total → secundarios.
-   Calidad = suma por línea de `(peso/260) * (gapPromedio² +
+   Balance de fuerza = suma por línea de `(peso/260) * (gapSuma² +
    0.15*(gapMínimo² + gapMáximo²)) + 2*maxLineGap²`.
    Pesos ARQ/DEF/MED/DEL = 240/280/240/260. TOTAL está en el nivel siguiente:
    ninguna mejora del total compensa una calidad de líneas inferior. `totalCost`

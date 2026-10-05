@@ -54,7 +54,7 @@ function draw_pitch_line_counts(array $logicalCounts): array
 function draw_main_field_line_limit(int $teamSize): int
 {
     $fieldPlayers = max(0, $teamSize - 1);
-    if ($teamSize < 8) return $fieldPlayers;
+    if ($teamSize < 10) return $fieldPlayers;
     return $fieldPlayers > 0 ? max(1, intdiv($fieldPlayers, 2)) : 0;
 }
 
@@ -92,7 +92,7 @@ function draw_line_counts_fit_limits(array $lineCounts, int $teamSize): bool
 {
     $pitchCounts = draw_pitch_line_counts($lineCounts);
     if (($pitchCounts['ARQ'] ?? 0) !== 1) return false;
-    if ($teamSize < 8) return ($pitchCounts['DEF'] ?? 0) >= 2 && ($pitchCounts['MED'] ?? 0) >= 1 && ($pitchCounts['DEL'] ?? 0) >= 1;
+    if ($teamSize < 10) return ($pitchCounts['DEF'] ?? 0) >= 2 && ($pitchCounts['MED'] ?? 0) >= 1 && ($pitchCounts['DEL'] ?? 0) >= 1;
     foreach (player_required_lines() as $line) {
         $count = (int) ($pitchCounts[$line] ?? 0);
         if ($count < draw_pitch_line_minimum($line, $teamSize)) {

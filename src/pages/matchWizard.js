@@ -53,7 +53,8 @@ export function bindMatchWizard(root) {
     form.querySelector('[data-wizard-summary]').textContent = `${court.selectedOptions[0]?.textContent} · ${date.value.replace('T', ' ')} · ${teams.value} equipos de ${players.value}`;
     if (focus) {
       const target = next === 1 ? panels[0].querySelector('h2') : form.querySelector('#participantSearchReact');
-      (target || panels[next - 1]).scrollIntoView({ block: 'start' });
+      const section = next === 2 ? form.querySelector('.participant-add-task') : panels[0];
+      (section || target || panels[next - 1]).scrollIntoView({ block: 'start' });
       target?.focus({ preventScroll: true });
     }
   };

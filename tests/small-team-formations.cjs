@@ -42,7 +42,7 @@ for (const fixture of cases) {
   assert.equal(vm.runInContext('fieldLineCountsFitLimits(counts,size)', legacyContext), fixture.valid);
 }
 assert.equal(run('fieldLineMinimum("MED",8)'), 1);
-assert.equal(run('maxFieldPlayersPerLine(8)'), 3);
+assert.equal(run('maxFieldPlayersPerLine(8)'), 7);
 run(`let fixtureId = 0;
 function player(role) {
   return normalizePlayer({id:++fixtureId,positions:role,skill:3.5,technique:3.5,pass_vision:3.5,
