@@ -25,5 +25,8 @@ for(const mode of ['formation_editor','draw']) test(`highest scoring formation o
   await expect(card('1')).toHaveAttribute('data-assigned-position','ARQ');
   await page.locator('[data-sorteo-team-card]').first().getByRole('button',{name:'Deshacer ultimo cambio',exact:true}).click();
   await expect(select).not.toHaveValue('highest-score');
+  await select.selectOption('balanced-teams');
+  for (const team of await page.locator('[data-sorteo-team-card]').all()) await expect(team.locator('select').filter({has:page.locator('option[value="balanced-teams"]')})).toHaveValue('balanced-teams');
+  await expect(card('1')).toHaveAttribute('data-assigned-position','ARQ');
   expect(errors).toEqual([]);
 });

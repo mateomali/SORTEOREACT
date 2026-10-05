@@ -25202,3 +25202,5 @@ html body .sorteo-react-page .gf-drag-feedback {
   .sorteo-react-page .gf-mobile-export-menu { position: absolute; bottom: calc(100% + 12px); left: 0; width: min(280px, calc(100vw - 24px)); display: grid; gap: 6px; padding: 8px; background: white; border: 1px solid #adc8bb; border-radius: 8px; }
   .sorteo-react-page .gf-mobile-export-menu button { width: 100%; justify-content: flex-start; }
 }
+
+@media (max-width: 760px) { .sorteo-react-page .gf-desktop-draw-actions { display: none; } }

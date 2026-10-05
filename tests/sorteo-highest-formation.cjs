@@ -34,3 +34,49 @@ for (const locks of [{}, {'2':'MED'}]) {
 }
 assert.equal(run('teamFormationSelectValue(team, {}, "highest-score", true, true)'), 'highest-score');
 console.log('PASS: highest formation matches exhaustive search, preserves goalkeeper and locks');
+
+context.second = context.team.map((p, index) => ({...p, id: index + 21}));
+context.teams = [context.team, context.second];
+const base = run('Object.assign({}, ...teams.map(team => buildTeamAssignment(team)))');
+context.base = base;
+const balanced = run('mostBalancedFormations(teams, base)');
+assert.ok(balanced);
+assert.ok(balanced.diff < 1e-8, 'Identical rosters must reach equal totals');
+context.balanced = balanced;
+assert.ok(run('teams.every(team => fieldLineCountsFitLimits(teamLineCounts(team, balanced.assignments), team.length))'));
+assert.ok(run('teams.every(team => assignmentPositionUseStats(team, balanced.assignments).outOfPositionCount <= assignmentPositionUseStats(team, base).outOfPositionCount)'));
+context.lock = {'2': base['2'], '22': base['22']};
+const locked = run('mostBalancedFormations(teams, base, lock)');
+assert.equal(locked.assignments['2'], base['2']);
+assert.equal(locked.assignments['22'], base['22']);
+context.third = context.team.map((p, index) => ({...p, id: index + 41}));
+const three = run('mostBalancedFormations([...teams, third])');
+assert.ok(three);
+assert.ok(three.diff < 1e-8);
+assert.equal(run('teamFormationSelectValue(team, {}, "balanced-teams")'), 'balanced-teams');
+console.log('PASS: joint formations balance identical 2/3-team draws, preserve rules and locks, and avoid extra adaptations');
+
+assert.ok(run('isBetterDraw({hardViolations:0,diff:0.2,lineQualityCost:10}, {hardViolations:0,diff:2.4,lineQualityCost:0})'), 'Total gap must take priority over line quality');
+assert.equal(run('selectTopDraw([{teams, evaluation:{hardViolations:0,diff:0}}], {teams, evaluation:{hardViolations:0,diff:0}}, new Set([drawSignature(teams)]))'), null, 'Never return a forbidden roster partition');
+console.log('PASS: total gap priority and no fallback to an already used draw');
+
+assert.ok(run('isBetterDraw({hardViolations:0,enduranceGap:0.1,diff:2.5}, {hardViolations:0,enduranceGap:1.5,diff:0})'), 'Ida y vuelta must take priority over total points');
+assert.equal(run('isBetterDraw({hardViolations:1,enduranceGap:0,diff:0}, {hardViolations:0,enduranceGap:2,diff:3})'), false, 'Mandatory rules take priority over endurance');
+assert.equal(run('drawsAreNear({hardViolations:0,enduranceGap:1,diff:0}, {hardViolations:0,enduranceGap:0,diff:0})'), false, 'Random selection must not worsen endurance');
+run(`globalThis.enduranceRoster = Array.from({length:10}, (_,index) => normalizePlayer({
+  id:index+101, positions:index<2?'ARQ':'DEF/MED/DEL', skill:3.5, stamina:[3,3,6,5,4,3,2,1,5,2][index], regularity:3.5
+},index));`);
+(async () => {
+  const result = await run('generateBalancedTeams(enduranceRoster, 2, 2, {}, {})');
+  assert.ok(result);
+  const oracle = run(`(() => { let minimum=Infinity;
+    for(let mask=1; mask<1024; mask+=2) {
+      const teams=[enduranceRoster.filter((p,i)=>mask&(1<<i)),enduranceRoster.filter((p,i)=>!(mask&(1<<i)))];
+      if(teams[0].length!==5 || !teamsFitFormationRules(teams,5)) continue;
+      minimum=Math.min(minimum,enduranceBalance(teams).enduranceGap);
+    }
+    return minimum;
+  })()`);
+  assert.ok(Math.abs(result.evaluation.enduranceGap-oracle)<1e-6, 'Generated draw must achieve the exhaustive minimum ida y vuelta gap');
+  console.log('PASS: ida y vuelta is first balance priority and matches exhaustive roster oracle');
+})().catch(error => {console.error(error);process.exitCode=1;});

@@ -16,7 +16,19 @@ test('newly generated teams allow drag and detail exchanges', async ({ page }) =
   await page.locator('#generateTeamsButton').click();
   const cards = team => page.locator(`[data-sorteo-drag-player][data-team-index="${team}"]:not([data-assigned-position="ARQ"])`);
   await expect(cards(0).first()).toBeVisible({ timeout: 60000 });
-  for (const team of await page.locator('[data-sorteo-team-card]').all()) await expect(team.locator('select').filter({has:page.locator('option[value="highest-score"]')})).toHaveValue('highest-score');
+  for (const team of await page.locator('[data-sorteo-team-card]').all()) await expect(team.locator('select').filter({has:page.locator('option[value="highest-score"]')})).toHaveValue('balanced-teams');
+  const signature = () => page.locator('[data-sorteo-team-card]').evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('[data-sorteo-drag-player]')].map(player => player.dataset.playerKey).sort().join(',')).sort().join('|'));
+  const seen = new Set([await signature()]);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.locator('#generateTeamsButton').click();
+    await expect(page.locator('#generateTeamsButton')).toBeEnabled({timeout:60000});
+    const next = await signature();
+    expect(seen.has(next)).toBe(false);
+    seen.add(next);
+    const totals = await page.locator('.gf-premium-score strong').allTextContents();
+    const points = totals.map(Number);
+    expect(Math.max(...points) - Math.min(...points)).toBeLessThanOrEqual(2);
+  }
   const source = cards(0).first(), target = cards(1).first();
   const key = await source.getAttribute('data-player-key');
   const targetKey = await target.getAttribute('data-player-key');

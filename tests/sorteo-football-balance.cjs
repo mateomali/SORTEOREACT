@@ -74,7 +74,7 @@ async function generate(players, n, avoid = []) {
     if (again.result.topSolutions > 1) assert.notEqual(run('drawSignature')(again.result.teams), previous);
   }
   const uneven = await generate(run('roster(3,[7,5,6])'),3);
-  for (const line of ['DEF','MED','DEL']) assert.equal(uneven.result.evaluation.lineBalance.details[line].countGap, line === 'DEL' ? 0 : 1);
+  assert.ok(uneven.result.evaluation.diff <= 2, 'Uneven natural-position counts must prioritize the total gap over equal line headcounts');
   report.push({scenario:'7 DEF / 5 MED / 6 DEL',ms:uneven.ms,counts:Object.fromEntries(Object.entries(uneven.result.evaluation.lineBalance.details).map(([k,v])=>[k,v.counts]))});
 
   run(`
@@ -118,8 +118,7 @@ async function generate(players, n, avoid = []) {
   context.comparisonPlayers = comparisonPlayers;
   const before = run('scoreTeams(baseline.previousTeamsByIndex.map(indices=>indices.map(index=>comparisonPlayers[index])),{}, {})');
   const after = await generate(comparisonPlayers,2);
-  assert.ok(after.result.evaluation.lineBalance.details.MED.gap < before.lineBalance.details.MED.gap - 0.3);
-  assert.ok(after.result.evaluation.lineBalance.details.DEL.gap < 1e-6);
+  assert.ok(after.result.evaluation.diff <= before.diff + 1e-6, 'Total-gap priority must improve or preserve the previous draw total gap');
   report.push({scenario:'Previous algorithm vs new algorithm; unequal keepers',
     before:{gaps:baseline.previousGaps,totalAverageGap:before.totalBalance},
     after:{gaps:Object.fromEntries(Object.entries(after.result.evaluation.lineBalance.details).map(([k,v])=>[k,v.gap])),totalAverageGap:after.result.evaluation.totalBalance},ms:after.ms});

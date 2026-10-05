@@ -187,3 +187,19 @@ por toque espera brevemente el segundo toque, de modo que abrir una ficha no
 intercambie jugadores por accidente. Cancelar también cancela esa espera.
 Los grupos de equipos en el selector usan nombre en mayúsculas y negrita,
 indicador de color junto al nombre y borde lateral del color del equipo.
+
+
+## Actualización: prioridad de diferencia total y rehacer sin repeticiones
+
+La política actual reemplaza las prioridades y tolerancias descritas arriba:
+- Validez, diferencia total absoluta, velocidad, adaptaciones, fuerza por línea, cantidades y criterios secundarios.
+- Se excluyen las firmas utilizadas antes de seleccionar; no existe fallback al mismo reparto.
+- Para dos equipos de hasta 20 jugadores se enumeran los repartos. Para otros casos se usan 600–1600 construcciones y 32 finalistas con mejoras por intercambio.
+- Se conservan hasta 64 candidatos y se evalúan sus formaciones conjuntas antes de elegir. El puntaje reportado corresponde a las posiciones visibles.
+- La variedad se elige entre resultados con la misma diferencia total y calidad por línea que el mejor candidato refinado. Si existe uno dentro de 2 puntos, la selección no excede ese umbral.
+- Si no se encuentra una alternativa válida nueva, se conserva la pantalla y se informa. Si el mejor candidato encontrado supera 2 puntos, se informa explícitamente; no se garantiza optimalidad global de las formaciones ni de la búsqueda acotada.
+
+
+### Prioridad de ida y vuelta
+
+La prioridad actual es validez obligatoria, diferencia de suma de resistencia (ida y vuelta), varianza de esas sumas entre equipos, diferencia total de puntaje y luego los criterios secundarios. La resistencia incluye todos los jugadores y usa los valores normalizados con disponibilidad. Se aplica en construcción, búsqueda por swaps, candidatos exactos y selección final. La selección aleatoria no puede empeorar este equilibrio. Cambiar posiciones manteniendo jugadores y arquero no altera la suma de resistencia del equipo; por eso la optimización conjunta de formaciones conserva ese balance y optimiza el puntaje después.
