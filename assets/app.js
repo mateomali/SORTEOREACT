@@ -158,6 +158,25 @@
   };
 
   document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-proposal-details-toggle]');
+    if (!button) return;
+    const option = button.closest('.multi-draw-option');
+    if (!option) return;
+    const open = option.classList.toggle('is-mobile-details-open');
+    button.setAttribute('aria-expanded', String(open));
+    button.textContent = open ? 'Ocultar equipos completos' : 'Ver todos los equipos';
+    const list = option.querySelector('[data-multi-draw-list-view]');
+    const pitch = option.querySelector('[data-multi-draw-pitch-view]');
+    if (list && pitch) {
+      list.hidden = false;
+      pitch.hidden = true;
+      const label = option.querySelector('[data-multi-draw-pitch-label]');
+      if (label) label.textContent = 'Ver en cancha';
+      option.classList.remove('lg:col-span-full');
+    }
+  });
+
+  document.addEventListener('click', (event) => {
     const link = event.target.closest('.proposal-jump-nav a[href^="#proposal-option-"]');
     if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     const target = document.getElementById(link.getAttribute('href').slice(1));

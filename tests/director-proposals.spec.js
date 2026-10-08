@@ -3,6 +3,63 @@ const { execFileSync } = require('node:child_process');
 const base = process.env.BASE_URL || 'http://127.0.0.1:8000';
 const fixturePath = 'tests/director-proposals-fixture.php';
 
+test('resumen movil identifica equipo y permite votar sin abrir detalles', async ({ browser }) => {
+  const fixture = JSON.parse(execFileSync('php', [fixturePath, 'create'], { encoding: 'utf8' }));
+  const contexts = [];
+  try {
+    for (const index of [0, 1]) {
+      const context = await browser.newContext(); contexts.push(context);
+      await context.addCookies([{ name: 'PHPSESSID', value: fixture.sessions[index], url: base }]);
+      const page = await context.newPage();
+      await page.goto(`${base}/crear_propuesta.php?match_id=${fixture.matchId}`);
+      await page.getByRole('button', { name: 'Por sorteo', exact: true }).click();
+      const payload = JSON.parse(await page.locator('[data-react-island="sorteo_legacy_page"]').getAttribute('data-payload'));
+      const teams = fixture.teams.map(team => ({ ...team, players: team.players.map(player => ({ ...payload.players.find(p => Number(p.id) === player.id), ...player })) }));
+      const saved = await context.request.post(`${base}/guardar_sorteo.php`, { data: { proposal_mode: true, proposal_csrf: payload.proposalCsrf, match_id: fixture.matchId, num_teams: 2, teams } });
+      expect(await saved.json()).toMatchObject({ ok: true });
+    }
+    execFileSync('php', [fixturePath, 'activate', JSON.stringify(fixture)]);
+    for (const index of [0, 2]) {
+      execFileSync('php', [fixturePath, 'link', JSON.stringify(fixture), String(index)]);
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 } }); contexts.push(context);
+      await context.addCookies([{ name: 'PHPSESSID', value: fixture.sessions[index], url: base }]);
+      const page = await context.newPage();
+      await page.goto(`${base}/propuestas_equipos.php?match_id=${fixture.matchId}`);
+      const options = page.locator('.multi-draw-option');
+      await expect(options).toHaveCount(2);
+      for (const width of [320, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        await expect(options.first().locator('.proposal-summary-own')).toContainText('ROSA');
+        await expect(options.first().locator('.proposal-summary-companions')).toContainText('Tus compañeros');
+        await expect(options.first().locator('[data-multi-draw-list-view]')).toBeHidden();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      }
+      if (index === 0) {
+        await expect(page.getByRole('button', { name: 'Votar esta propuesta', exact: true })).toHaveCount(0);
+      } else {
+        await page.screenshot({ path: 'outputs/propuestas-mobile-summary-390.png', fullPage: true });
+        await page.getByRole('button', { name: 'Votar esta propuesta', exact: true }).first().click();
+        await expect(page.getByRole('button', { name: 'Tu voto actual', exact: true })).toBeVisible();
+        await page.goto(`${base}/index.php`);
+        await expect(page.locator('.proposal-inline-vote')).toHaveCount(2);
+        await expect(page.locator('.home-upcoming-section .home-multi-draw-card')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Próximo partido', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Explorar', exact: true })).toBeVisible();
+        await page.screenshot({ path: 'outputs/home-user-hierarchy-390.png', fullPage: true });
+      }
+      await options.first().locator('[data-proposal-details-toggle]').click();
+      await options.last().locator('[data-proposal-details-toggle]').click();
+      await expect(options.first().locator('[data-multi-draw-list-view]')).toBeVisible();
+      await expect(options.last().locator('[data-multi-draw-list-view]')).toBeVisible();
+      await options.first().locator('[data-multi-draw-pitch-toggle]').click();
+      await expect(options.first().locator('[data-multi-draw-pitch-view]')).toBeVisible();
+    }
+  } finally {
+    for (const context of contexts) await context.close().catch(() => {});
+    execFileSync('php', [fixturePath, 'cleanup', JSON.stringify(fixture)], { encoding: 'utf8' });
+  }
+});
+
 // Supply a deterministic prepared lineup so the test exercises the real save
 // button and HTTP persistence without depending on random draw generation.
 async function preparedEditor(page, fixture) {
@@ -69,6 +126,7 @@ test('directivos publican y usuarios comunes comparan y cambian su voto', async 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: 'outputs/propuestas-directivos-390.png', fullPage: true });
     await expect(page.locator('.director-proposals')).not.toContainText('Propuesta de');
+    for (const toggle of await page.locator('[data-multi-draw-pitch-toggle]').all()) await toggle.click();
     for (const width of [390, 768, 1440]) {
       await page.setViewportSize({ width, height: 950 });
       const rows = await page.locator('.director-proposal-pitch .line-players[data-player-count="2"]').evaluateAll(lines => lines.map(line => {

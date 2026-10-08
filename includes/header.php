@@ -269,5 +269,5 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
       <?php foreach ($flashMessages as $msg): ?>
         <div class="flash flash-<?= h($msg['type']) ?>"><?= h($msg['message']) ?></div>
       <?php endforeach; ?>
-      <?php if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'index.php' && function_exists('director_proposal_latest_match')) require __DIR__ . '/proposal_notice.php'; ?>
+      <?php if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'index.php' && is_directivo() && function_exists('director_proposal_latest_match')) require __DIR__ . '/proposal_notice.php'; ?>
       <script src="assets/proposal-countdown.js?v=<?= h((string) md5_file(__DIR__ . '/../assets/proposal-countdown.js')) ?>" defer data-server-time="<?= time() ?>"></script>

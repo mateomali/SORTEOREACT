@@ -498,7 +498,7 @@ function multiple_draw_render_pitch_view(array $option, bool $visible = false): 
     return $html;
 }
 
-function multiple_draw_render_option(array $option, bool $selected = false, bool $showPitchByDefault = false, bool $isWinner = false): string
+function multiple_draw_render_option(array $option, bool $selected = false, bool $showPitchByDefault = false, bool $isWinner = false, int $voteMatchId = 0): string
 {
     $currentPlayerId = current_player_id();
     $selectedClasses = $selected
@@ -508,6 +508,31 @@ function multiple_draw_render_option(array $option, bool $selected = false, bool
     $toggleLabel = $showPitchByDefault ? 'Ver lista' : 'Ver en cancha';
     $html = '<article id="proposal-option-' . (int) $option['id'] . '" class="multi-draw-option' . $selectedClasses . $pitchClass . '">';
     if (!empty($option['author_user_id'])) $html .= '<h3 class="proposal-option-heading" style="color: #fff !important; -webkit-text-fill-color: #fff !important;">Propuesta ' . (int) $option['option_number'] . ($isWinner ? ' — Ganadora' : '') . '</h3>';
+    if ($selected) $html .= '<p class="proposal-selected-label" role="status">✓ Tu voto actual</p>';
+    if (!empty($option['author_user_id'])) {
+        $html .= '<div class="proposal-mobile-summary"><p class="proposal-summary-votes">' . (int) ($option['vote_count'] ?? 0) . ' votos' . ($selected ? ' · Tu voto actual' : '') . '</p>';
+        $ownTeam = null;
+        $ownPlayer = null;
+        foreach (($option['teams'] ?? []) as $summaryTeam) {
+            foreach (($summaryTeam['players'] ?? []) as $summaryPlayer) {
+                if ($currentPlayerId > 0 && (int) ($summaryPlayer['id'] ?? 0) === $currentPlayerId) {
+                    $ownTeam = $summaryTeam;
+                    $ownPlayer = $summaryPlayer;
+                    break 2;
+                }
+            }
+        }
+        if ($ownTeam) {
+            $kit = (string) ($ownTeam['color_name'] ?? '');
+            $html .= '<p class="proposal-summary-own"><span class="proposal-summary-swatch" data-kit="' . h(strtoupper($kit)) . '" aria-hidden="true"></span><strong>Vos: ' . h((string) ($ownTeam['team_name'] ?? 'Equipo')) . ($kit !== '' ? ' · ' . h($kit) : '') . ' · ' . h((string) ($ownPlayer['assigned_position'] ?? 'MED')) . (!empty($ownPlayer['is_substitute']) ? ' · Suplente' : '') . '</strong></p>';
+            $companions = array_values(array_filter($ownTeam['players'], static fn(array $p): bool => (int) ($p['id'] ?? 0) !== $currentPlayerId));
+            usort($companions, static fn(array $a, array $b): int => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')));
+            $html .= '<p class="proposal-summary-companions"><strong>Tus compañeros:</strong> ' . h(implode(' · ', array_map(static fn(array $p): string => (string) ($p['name'] ?? 'Jugador'), $companions))) . '</p>';
+        } else {
+            $html .= '<p>' . ($currentPlayerId > 0 ? 'No estás convocado en esta fecha.' : (current_user_id() > 0 ? 'Tu cuenta no tiene un jugador vinculado.' : 'Ingresá para identificar tu equipo.')) . '</p>';
+        }
+        $html .= '<button type="button" class="btn proposal-mobile-details-toggle" data-proposal-details-toggle aria-expanded="false">Ver todos los equipos</button></div>';
+    }
     $html .= '<button class="multi-draw-option-toggle" type="button" data-multi-draw-pitch-toggle><span class="multi-draw-option-copy"><strong class="multi-draw-option-title"><span data-multi-draw-pitch-label>' . h($toggleLabel) . '</span>: Opcion ' . h((string) $option['option_number']) . '</strong><small class="multi-draw-option-meta">Diferencia ' . h(number_format((float) $option['total_diff'], 1)) . '</small></span><span class="multi-draw-vote-pill">' . h((string) (int) ($option['vote_count'] ?? 0)) . ' votos</span></button>';
     $html .= '<div class="multi-draw-teams" data-multi-draw-list-view' . ($showPitchByDefault ? ' hidden' : '') . '>';
     foreach (($option['teams'] ?? []) as $team) {
@@ -549,6 +574,9 @@ function multiple_draw_render_option(array $option, bool $selected = false, bool
     }
     $html .= '</div>';
     $html .= multiple_draw_render_pitch_view($option, $showPitchByDefault);
+    if ($voteMatchId > 0 && !empty($option['author_user_id'])) {
+        $html .= '<form method="post" action="propuestas_equipos.php" class="proposal-inline-vote"><input type="hidden" name="csrf" value="' . h(director_proposal_csrf()) . '"><input type="hidden" name="match_id" value="' . $voteMatchId . '"><input type="hidden" name="option_id" value="' . (int) $option['id'] . '"><button class="btn" name="action" value="vote" type="submit">' . ($selected ? 'Tu voto actual' : 'Votar esta propuesta') . '</button></form>';
+    }
     $html .= '</article>';
     return $html;
 }

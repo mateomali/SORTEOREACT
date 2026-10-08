@@ -1182,10 +1182,10 @@ if (!$showHistoryPage && is_directivo()) {
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="page-head">
+<section class="page-head <?= $showHistoryPage ? "" : "home-dashboard-head" ?>">
   <div>
-    <h1><?= $showHistoryPage ? 'Historial de fechas' : 'GOODFELLAS' ?></h1>
-    <p class="small-muted"><?= $showHistoryPage ? 'Consulta fechas por dia, capitan o resultado.' : 'Gestion de fechas, equipos, jugadores y rendimiento del grupo.' ?></p>
+    <h1><?= $showHistoryPage ? 'Historial de fechas' : 'Inicio' ?></h1>
+    <p class="small-muted"><?= $showHistoryPage ? 'Consulta fechas por dia, capitan o resultado.' : 'GOODFELLAS · ' . h((string) ($_SESSION['player_name'] ?? $_SESSION['username'] ?? 'Fútbol entre amigos')) ?></p>
   </div>
   <div class="home-page-actions">
     <?php if (!$showHistoryPage): ?>
@@ -1287,6 +1287,8 @@ require __DIR__ . '/includes/header.php';
     $headerMultiDrawDeadline = multiple_draw_deadline($headerMatch);
     $headerMultiDrawParticipantCount = count(multiple_draw_participant_ids((int) $headerMatch['id']));
   ?>
+  <section class="home-dashboard-section home-upcoming-section" aria-labelledby="home-upcoming-title">
+    <h2 id="home-upcoming-title"><?= $headerHasSavedResult ? "Último partido" : "Próximo partido" ?></h2>
   <section class="card home-next-card <?= $headerHasSavedResult ? 'home-next-card-with-result' : ($headerHasCaptains ? 'home-next-card-with-captain' : '') ?>">
     <div class="home-next-main">
       <span class="home-kicker"><?= $headerHasSavedResult ? 'Datos de la ultima fecha jugada' : 'Proxima fecha' ?></span>
@@ -1338,45 +1340,15 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </section>
 
-  <?php if (
-      !$showHistoryPage
-      && $latestFinalizedMatch
-      && (int) $latestFinalizedMatch['id'] !== (int) $headerMatch['id']
-  ): ?>
-    <?php
-      $latestResultTeams = repo_match_teams((int) $latestFinalizedMatch['id']);
-      $latestResultLabels = $latestResultTeams ? repo_match_team_labels($latestFinalizedMatch, $latestResultTeams) : [];
-      $latestResultGoals = [];
-      foreach ($latestResultTeams as $team) {
-          $latestResultGoals[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
-      }
-      ksort($latestResultGoals);
-    ?>
-    <section class="card home-next-card home-next-card-with-result">
-      <div class="home-next-main">
-        <span class="home-kicker">Ultima fecha jugada</span>
-        <h2><?= h((string) ($latestFinalizedMatch['title'] ?: ('Fecha #' . $latestFinalizedMatch['id']))) ?></h2>
-        <p class="small-muted">
-          Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $latestFinalizedMatch['match_date']))) ?>
-          | <?= h(match_status_label((string) $latestFinalizedMatch['status'])) ?>
-        </p>
-      </div>
-      <div class="home-result-line">
-        <span>Resultado final</span>
-        <?= render_match_scoreboard($latestResultGoals, $latestResultLabels) ?>
-      </div>
-      <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $latestFinalizedMatch['id'] ?>" aria-label="Ver detalles de la ultima fecha">
-        <span>Detalles</span>
-      </a>
-    </section>
-  <?php endif; ?>
-
   <?php if ($headerShowMultiDrawVote): ?>
     <section class="card home-multi-draw-card">
       <div class="section-toolbar home-multi-draw-head">
         <div>
           <span class="home-kicker"><?= $headerDirectorProposals && time() < director_proposal_voting_start($headerMatch) ? 'Preparacion de propuestas' : ($headerDirectorProposals && !multiple_draw_is_open($headerMatch) ? 'Pendiente del administrador' : 'Votacion abierta') ?></span>
-          <h3>Elegir sorteo de la fecha</h3>
+          <h3><?= $headerDirectorProposals ? (multiple_draw_is_open($headerMatch) ? 'Votación de equipos habilitada' : 'Propuestas del próximo partido') : 'Elegir sorteo de la fecha' ?></h3>
+          <?php if ($headerDirectorProposals && multiple_draw_is_open($headerMatch)): ?>
+            <p class="home-vote-deadline">Tiempo restante: <strong data-proposal-countdown="<?= multiple_draw_deadline($headerMatch) ?>">Calculando…</strong></p>
+          <?php endif; ?>
           <p class="small-muted">
             <?= h((string) count($headerMultiDrawOptions)) ?> variantes publicadas.
             <?php if ($headerDirectorProposals): ?>
@@ -1387,6 +1359,7 @@ require __DIR__ . '/includes/header.php';
           </p>
         </div>
         <?php if ($headerMultiDrawCanVote): ?>
+          <?php if ($headerDirectorProposals): ?><a class="btn btn-muted" href="propuestas_equipos.php?match_id=<?= (int) $headerMatch['id'] ?>">Ver propuestas y votación</a><?php endif; ?>
           <a class="btn btn-primary" href="votar_sorteo.php?match_id=<?= (int) $headerMatch['id'] ?>">
             <?= $headerMultiDrawSelectedOptionId > 0 ? 'Cambiar mi voto' : 'Votar ahora' ?>
           </a>
@@ -1407,13 +1380,11 @@ require __DIR__ . '/includes/header.php';
 
       <div class="home-multi-draw-options grid gap-3 lg:grid-cols-3">
         <?php foreach ($headerMultiDrawOptions as $option): ?>
-          <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id'], false) ?>
+          <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id'], false, false, $headerDirectorProposals && $headerMultiDrawCanVote ? (int) $headerMatch['id'] : 0) ?>
         <?php endforeach; ?>
       </div>
     </section>
-  <?php endif; ?>
-<?php endif; ?>
-
+  <?php else: require __DIR__ . "/includes/proposal_notice.php"; endif; ?>
 <?php if (!$showHistoryPage && !empty($headerShowCaptainLive) && !empty($headerMatch)): ?>
   <section class="card home-captain-live" data-public-captain-live data-match-id="<?= (int) $headerMatch['id'] ?>">
     <div class="home-captain-live-head">
@@ -1434,6 +1405,43 @@ require __DIR__ . '/includes/header.php';
       </article>
     </div>
   </section>
+<?php endif; ?>
+
+  </section>
+  <?php if (
+      !$showHistoryPage
+      && $latestFinalizedMatch
+      && (int) $latestFinalizedMatch['id'] !== (int) $headerMatch['id']
+  ): ?>
+    <?php
+      $latestResultTeams = repo_match_teams((int) $latestFinalizedMatch['id']);
+      $latestResultLabels = $latestResultTeams ? repo_match_team_labels($latestFinalizedMatch, $latestResultTeams) : [];
+      $latestResultGoals = [];
+      foreach ($latestResultTeams as $team) {
+          $latestResultGoals[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
+      }
+      ksort($latestResultGoals);
+    ?>
+    <section class="home-dashboard-section home-last-section" aria-labelledby="home-last-title"><h2 id="home-last-title">Último partido</h2>
+    <div class="card home-next-card home-next-card-with-result">
+      <div class="home-next-main">
+        <span class="home-kicker">Ultima fecha jugada</span>
+        <h2><?= h((string) ($latestFinalizedMatch['title'] ?: ('Fecha #' . $latestFinalizedMatch['id']))) ?></h2>
+        <p class="small-muted">
+          Fecha: <?= h(date('d/m/Y H:i', strtotime((string) $latestFinalizedMatch['match_date']))) ?>
+          | <?= h(match_status_label((string) $latestFinalizedMatch['status'])) ?>
+        </p>
+      </div>
+      <div class="home-result-line">
+        <span>Resultado final</span>
+        <?= render_match_scoreboard($latestResultGoals, $latestResultLabels) ?>
+      </div>
+      <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $latestFinalizedMatch['id'] ?>" aria-label="Ver detalles de la ultima fecha">
+        <span>Detalles</span>
+      </a>
+    </div></section>
+  <?php endif; ?>
+
 <?php endif; ?>
 
 <section class="home-layout <?= $showHistoryPage ? '' : 'home-layout-single' ?>">
@@ -1562,7 +1570,8 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <?php if (!$showHistoryPage): ?>
-  <section class="home-welcome">
+  <section class="home-welcome home-dashboard-section" aria-labelledby="home-explore-title">
+    <h2 id="home-explore-title">Explorar</h2>
     <div class="home-section-grid" aria-label="Secciones principales">
       <a class="home-section-card" href="jugadores2.php">
         <span class="home-section-visual">

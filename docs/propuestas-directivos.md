@@ -45,7 +45,11 @@ En **Editar mi formacion**, **Borrar todo y volver a empezar** elimina unicament
 
 ## Control del próximo partido
 
+El Inicio general se organiza en encabezado compacto, Próximo partido (con votación, cuenta regresiva y propuestas), Último partido y Explorar. El aviso de votación se integra en la sección correspondiente y los resultados anteriores quedan después de la elección. Se conservan descarga de la app, detalles de fecha, consulta de propuestas, votos, capitanes y accesos generales. El Inicio del directivo mantiene su flujo propio.
+
 En Inicio, tanto jugadores como directivos ven las propuestas como alineaciones compactas. **Ver en cancha** despliega la formación de esa propuesta y **Volver a vista lista** permite compactarla otra vez. Se conservan los votos, la diferencia de puntaje y el indicador de ganadora.
+
+En móvil, Inicio y Propuestas muestran primero un resumen personalizado: equipo y color de camiseta, posición, condición de suplente si corresponde y compañeros. Las listas completas se abren con **Ver todos los equipos**, sin cerrar otras propuestas. La cancha sigue disponible por separado y el usuario puede votar sin abrir detalles. Los directivos mantienen acceso de consulta sin voto. Una cuenta sin jugador vinculado y un jugador no convocado reciben mensajes distintos.
 
 El menú se llama **Propuestas próximo partido**. Al entrar sin un enlace a una fecha específica, muestra únicamente la última fecha presentada que aún no finalizó y cuyo partido no pasó. Las fechas anteriores conservan sus datos y enlaces individuales.
 

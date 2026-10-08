@@ -4,6 +4,19 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__ . '/../lib/director_proposals.php';
 ensure_director_proposals_schema();
 $pdo = db();
+if (($argv[1] ?? '') === 'link') {
+    $data = json_decode((string) ($argv[2] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+    $index = (int) ($argv[3] ?? 2);
+    $match = repo_match_by_id((int) $data['matchId']);
+    if (!$match || $match['title'] !== $data['prefix']) throw new RuntimeException('Fixture invalido.');
+    $playerId = (int) $data['teams'][0]['players'][$index === 0 ? 1 : 0]['id'];
+    $pdo->prepare('UPDATE site_users SET player_id = ? WHERE id = ?')->execute([$playerId, $data['users'][$index]]);
+    session_write_close();
+    session_id($data['sessions'][$index]); session_start();
+    $_SESSION['player_id'] = $playerId;
+    session_write_close();
+    exit;
+}
 if (in_array($argv[1] ?? '', ['partial', 'complete'], true)) {
     $data = json_decode((string) ($argv[2] ?? ''), true, 512, JSON_THROW_ON_ERROR);
     $match = repo_match_by_id((int) $data['matchId']);
