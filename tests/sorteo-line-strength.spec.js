@@ -56,4 +56,29 @@ for (const numTeams of [2, 3]) for (const width of [1440, 390, 320]) test(`weake
   await expect(row.locator('.gf-comparison-delta')).toHaveAttribute('data-direction', 'down');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await comparison.screenshot({ path: `outputs/team-comparison-${numTeams}-${width}.png` });
+  if (width === 390) {
+    await page.evaluate(() => {
+      window.exportGeometry=null;
+      const observer=new MutationObserver(() => {
+        const copy=document.querySelector('[data-export-formations]');
+        if (!copy) return;
+        const rect=node=>{const r=node.getBoundingClientRect(); return {left:r.left,top:r.top,right:r.right,bottom:r.bottom};};
+        window.exportGeometry={cards:[...copy.querySelectorAll('[data-sorteo-team-card]')].map(rect), comparison:rect(copy.querySelector('[data-export-comparison]'))};
+        observer.disconnect();
+      });
+      observer.observe(document.body,{childList:true,subtree:true});
+    });
+    const actions=page.locator('.gf-sticky-save');
+    await actions.locator('summary').click();
+    const downloaded=page.waitForEvent('download');
+    await actions.getByRole('button',{name:'Exportar JPG',exact:true}).click();
+    const download=await downloaded;
+    await download.saveAs(`outputs/export-two-columns-${numTeams}.jpg`);
+    const geometry=await page.evaluate(()=>window.exportGeometry);
+    expect(Math.abs(geometry.cards[0].top-geometry.cards[1].top)).toBeLessThan(2);
+    expect(geometry.cards[1].left).toBeGreaterThan(geometry.cards[0].right);
+    if (numTeams>2) expect(geometry.cards[2].top).toBeGreaterThan(geometry.cards[0].bottom);
+    expect(geometry.comparison.top).toBeGreaterThanOrEqual(Math.max(...geometry.cards.map(card=>card.bottom)));
+  }
+
 });

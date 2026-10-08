@@ -4,7 +4,7 @@ export function bindMatchWizard(root) {
   const panels = [...form.querySelectorAll('[data-wizard-panel]')];
   const buttons = [...form.querySelectorAll('[data-wizard-go]')];
   const draftKey = 'goodfellas:match-import-configuration';
-  const fields = ['title', 'rental_court_id', 'match_date', 'num_teams', 'players_per_team', 'valuation_mode'];
+  const fields = ['title', 'rental_court_id', 'match_date', 'num_teams', 'players_per_team', 'valuation_mode', ...Array.from({ length: 4 }, (_, i) => `team_kits[${i}]`)];
   try {
     const draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
     sessionStorage.removeItem(draftKey);
@@ -18,6 +18,11 @@ export function bindMatchWizard(root) {
   } catch { /* Continue with the server defaults when storage is unavailable. */ }
   const syncSummary = () => {
     const teams = form.querySelector('[name="num_teams"]');
+    form.querySelectorAll('[data-team-kit-row]').forEach(row => {
+      const enabled = Number(row.dataset.teamKitRow) < Number(teams.value);
+      row.hidden = !enabled;
+      row.querySelector('select').disabled = !enabled;
+    });
     const players = form.querySelector('[name="players_per_team"]');
     root.querySelectorAll('[data-match-cup-total]').forEach(node => { node.textContent = String(Number(teams.value) * Number(players.value)); });
     root.querySelectorAll('[data-match-team-total]').forEach(node => { node.textContent = teams.value; });
@@ -26,6 +31,7 @@ export function bindMatchWizard(root) {
   const configurationChange = event => {
     if (event.target.matches('[name="num_teams"], [name="players_per_team"], [name="rental_court_id"]')) syncSummary();
   };
+  syncSummary();
   let step = 1;
   const validConfiguration = () => {
     for (const input of panels[0].querySelectorAll('input, select')) {

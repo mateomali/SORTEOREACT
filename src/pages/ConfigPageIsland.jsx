@@ -56,6 +56,18 @@ function SettingsForm({ settings, positionWeights, positionWeightLabels }) {
         <small className={helpTextClass}>Minutos antes del partido.</small>
       </label>
 
+      <label className={labelPanelClass}>
+        <span>Inicio de votacion de propuestas</span>
+        <input className={inputClass} type="number" name="director_proposal_start_hours" min="0.25" max="168" step="0.25" defaultValue={settings.director_proposal_start_hours ?? 24} />
+        <small className={helpTextClass}>Horas antes del partido. Por defecto: 24. Desde ese momento las propuestas quedan bloqueadas.</small>
+      </label>
+
+      <label className={labelPanelClass}>
+        <span>Votaci?n de propuestas de directivos</span>
+        <input className={inputClass} type="number" name="director_proposal_lock_hours" min="0" max="168" step="0.25" defaultValue={settings.director_proposal_lock_hours ?? 2} />
+        <small className={helpTextClass}>Horas antes del partido. Por defecto: 2. Se aplica al abrir nuevas votaciones.</small>
+      </label>
+
       <div className={`${labelPanelClass} gap-3`}>
         <div>
           <span className={labelTextClass}>Pesos por posicion</span>

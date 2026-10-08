@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
-require_once __DIR__ . '/lib/sorteo_multiple.php';
+require_once __DIR__ . '/lib/director_proposals.php';
 require_once __DIR__ . '/lib/admin_config.php';
 
 require_directivo_or_admin();
@@ -15,7 +15,7 @@ if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'encuentros.php' && !
 
 $pdo = db();
 ensure_control_schema();
-ensure_multiple_draw_schema();
+ensure_director_proposals_schema();
 ensure_admin_config_schema();
 $adminSettings = admin_config_settings();
 $activeRentalCourts = rental_courts(true);
@@ -44,7 +44,7 @@ function clear_match_draw_data(PDO $pdo, int $matchId): void
     )->execute(['mid' => $matchId]);
     $pdo->prepare(
         'UPDATE matches
-         SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, result_saved_at = NULL, teams_published_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL
+         SET status = "programado", draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, result_saved_at = NULL, teams_published_at = NULL, formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR), redraw_count = 0, multi_draw_winner_option_id = NULL, director_proposals_enabled = 0, director_proposals_revealed_at = NULL, director_vote_opened_at = NULL, director_vote_closes_at = NULL
          WHERE id = :mid'
     )->execute(['mid' => $matchId]);
 }
@@ -404,7 +404,7 @@ function save_imported_player(PDO $pdo): void
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
-    if (!is_admin() && !in_array($action, ['save_match', 'update_match_court', 'import_players_list', 'clear_import_players_list', 'use_import_existing_player'], true)) {
+    if (!is_admin()) {
         http_response_code(403);
         exit('Accion reservada al administrador.');
     }
@@ -465,6 +465,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($matchFormPage);
     }
 
+    if (is_directivo() && in_array($action, ['delete_match', 'undo_draw', 'update_match_court'], true)) {
+        $protected = repo_match_by_id((int) ($_POST['id'] ?? 0));
+        if ($protected && !empty($protected['director_proposals_enabled']) && time() >= director_proposal_voting_start($protected)) {
+            flash('error', 'La votacion ya comenzo. El directivo no puede alterar las propuestas ni reiniciar esta fecha.');
+            redirect($matchListPage);
+        }
+    }
     if ($action === 'delete_match') {
         $id = (int) ($_POST['id'] ?? 0);
         if ($id > 0) {
@@ -573,10 +580,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $participants = array_values(array_unique(array_filter($participants, static fn(int $id): bool => $id > 0)));
 
         if ($selectedCourt) {
-            $matchDate = rental_court_next_datetime($selectedCourt)->format('Y-m-d\TH:i');
-            $numTeams = 2;
-            $playersPerTeam = max(1, min(12, (int) ((int) $selectedCourt['total_players'] / 2)));
+            // Court settings are form defaults; save the configuration chosen by the admin.
             $titleTxt = $titleTxt === '' ? (string) $selectedCourt['court_key'] . ' - ' . (string) $selectedCourt['place'] : $titleTxt;
+        }
+        try {
+            $kitMatch = $id > 0 ? (repo_match_by_id($id) ?: ['num_teams' => $numTeams]) : ['num_teams' => $numTeams];
+            $teamKits = match_validate_team_kits($_POST['team_kits'] ?? match_team_kits($kitMatch), $numTeams);
+        } catch (Throwable $e) {
+            flash('error', $e->getMessage()); redirect($id ? $matchFormPage . '?edit=' . $id : $matchFormPage);
         }
         $targetPlayers = $numTeams * $playersPerTeam;
 
@@ -604,6 +615,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', 'La fecha a editar no existe.');
                 redirect($matchListPage);
             }
+            if (is_directivo() && !empty($existing['director_proposals_enabled']) && time() >= director_proposal_voting_start($existing)) {
+                flash('error', 'La fecha tiene propuestas bloqueadas por el inicio de la votacion. Solo el administrador puede modificarla.');
+                redirect($matchListPage);
+            }
             if ($existing['status'] === 'finalizado') {
                 flash('error', 'No se puede editar una fecha finalizada.');
                 redirect($matchListPage);
@@ -613,7 +628,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $stmt = $pdo->prepare(
                 'UPDATE matches
-                 SET title = :title, rental_court_id = :rental_court_id, match_date = :match_date, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, multi_draw_count = :multi_draw_count, multi_draw_lock_minutes = :multi_draw_lock_minutes, valuation_mode = :valuation_mode, notes = :notes, status = :status,
+                 SET title = :title, rental_court_id = :rental_court_id, match_date = :match_date, num_teams = :num_teams, team_kits_json = :team_kits_json, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, multi_draw_count = :multi_draw_count, multi_draw_lock_minutes = :multi_draw_lock_minutes, valuation_mode = :valuation_mode, notes = :notes, status = :status,
                      draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, teams_published_at = NULL, formation_edit_deadline = :formation_edit_deadline
                  WHERE id = :id'
             );
@@ -624,6 +639,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'rental_court_id' => $selectedCourt ? (int) $selectedCourt['id'] : null,
                 'match_date' => $savedMatchDate,
                 'num_teams' => $numTeams,
+                'team_kits_json' => json_encode($teamKits, JSON_THROW_ON_ERROR),
                 'players_per_team' => $playersPerTeam,
                 'max_diff' => $maxDiff,
                 'allow_redraw' => $allowRedraw,
@@ -642,8 +658,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Fecha actualizada.');
         } else {
             $stmt = $pdo->prepare(
-                'INSERT INTO matches (title, rental_court_id, match_date, num_teams, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, multi_draw_count, multi_draw_lock_minutes, valuation_mode, status, draw_mode, formation_edit_deadline, notes)
-                 VALUES (:title, :rental_court_id, :match_date, :num_teams, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :multi_draw_count, :multi_draw_lock_minutes, :valuation_mode, :status, :draw_mode, :formation_edit_deadline, :notes)'
+                'INSERT INTO matches (title, rental_court_id, match_date, num_teams, team_kits_json, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, multi_draw_count, multi_draw_lock_minutes, valuation_mode, status, draw_mode, formation_edit_deadline, notes)
+                 VALUES (:title, :rental_court_id, :match_date, :num_teams, :team_kits_json, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :multi_draw_count, :multi_draw_lock_minutes, :valuation_mode, :status, :draw_mode, :formation_edit_deadline, :notes)'
             );
             $savedMatchDate = date('Y-m-d H:00:00', strtotime($matchDate));
             $stmt->execute([
@@ -651,6 +667,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'rental_court_id' => $selectedCourt ? (int) $selectedCourt['id'] : null,
                 'match_date' => $savedMatchDate,
                 'num_teams' => $numTeams,
+                'team_kits_json' => json_encode($teamKits, JSON_THROW_ON_ERROR),
                 'players_per_team' => $playersPerTeam,
                 'max_diff' => $maxDiff,
                 'allow_redraw' => $allowRedraw,
@@ -1098,6 +1115,10 @@ function admin_match_list_item_payload(
 
     return [
         'id' => $matchId,
+        'isDirector' => is_directivo(),
+        'canCreateProposal' => is_directivo() && director_proposal_can_create($match),
+        'canEditOwnProposal' => is_directivo() && director_proposal_can_edit($match),
+        'hasOwnProposal' => is_directivo() && director_proposal_for_user($matchId) !== null,
         'title' => $title,
         'dateLabel' => date('d/m/Y H:i', strtotime((string) $match['match_date'])),
         'dateShort' => date('d/m/Y H:00', strtotime((string) $match['match_date'])),
@@ -1127,6 +1148,9 @@ function admin_match_list_item_payload(
         'scoreboard' => admin_match_scoreboard_payload($match, $historyTeams, $historyCaptainNames),
         'searchText' => mb_strtolower($searchText, 'UTF-8'),
         'links' => [
+            'createProposal' => 'crear_propuesta.php?match_id=' . $matchId,
+            'proposalFormations' => director_proposal_can_edit($match) ? 'sorteo_legacy_csv.php?match_id=' . $matchId . '&proposal=1&edit_proposal=1' : 'propuestas_equipos.php?match_id=' . $matchId,
+            'proposals' => 'propuestas_equipos.php?match_id=' . $matchId,
             'edit' => $matchFormPage . '?edit=' . $matchId,
             'draw' => 'sorteo_legacy_csv.php?match_id=' . $matchId,
             'captains' => 'capitanes.php?match_id=' . $matchId,
@@ -1164,11 +1188,12 @@ foreach ($matches as $matchIndex => $matchRow) {
         $matchFormPage
     );
 }
-$pageHeading = $showCreateSection && !$showEditSection ? 'Crear fecha' : 'Editar fechas';
+$pageHeading = is_directivo() ? 'Fechas' : ($showCreateSection && !$showEditSection ? 'Crear fecha' : 'Editar fechas');
 $pageDescription = $showCreateSection && !$showEditSection
     ? 'Carga una nueva fecha, define cupos y selecciona los jugadores convocados.'
     : 'Administra fechas cargadas, acciones disponibles, sorteo, capitanes y resultados.';
 $encuentrosReactPayload = [
+    'canCreateDate' => is_admin(),
     'mode' => $showEditSection && !$showCreateSection ? 'edit' : 'legacy',
     'heading' => $pageHeading,
     'description' => $pageDescription,
@@ -1320,6 +1345,21 @@ ob_start();
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams data-rental-court-field-input>
         <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
+      <fieldset class="form-row" data-team-kits>
+        <legend>Camisetas de los equipos</legend>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <?php $formKits = match_team_kits($form); foreach (range(0, 3) as $kitIndex): ?>
+            <label data-team-kit-row="<?= $kitIndex ?>" <?= $kitIndex >= (int) $form['num_teams'] ? 'hidden' : '' ?>>
+              Equipo <?= $kitIndex + 1 ?>
+              <select name="team_kits[<?= $kitIndex ?>]" <?= $kitIndex >= (int) $form['num_teams'] ? 'disabled' : '' ?>>
+                <?php foreach (match_team_kit_options() as $kitValue => $kitLabel): ?>
+                  <option value="<?= h($kitValue) ?>" <?= selected_attr(($formKits[$kitIndex] ?? array_keys(match_team_kit_options())[$kitIndex]) === $kitValue) ?>><?= h($kitLabel) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </fieldset>
       <div class="<?= $showCreateSection && !$showEditSection ? 'mb-0 rounded-xl border border-lime-200/28 bg-emerald-900/42 p-3 shadow-sm shadow-emerald-950/15' : 'form-row' ?>">
         <label class="<?= $showCreateSection && !$showEditSection ? 'mb-1.5 block text-xs font-black uppercase tracking-wide text-lime-100/85' : '' ?>">Jugadores por equipo</label>
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="players_per_team" min="1" max="12" value="<?= h((string) $form['players_per_team']) ?>" required data-players-per-team data-rental-court-field-input>
@@ -1820,7 +1860,7 @@ ob_start();
               <?php endif; ?>
             <?php endif; ?>
 
-            <?php if ($canFinalize): ?>
+            <?php if ($canFinalize && repo_match_teams_are_public($m)): ?>
               <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="<?= h($finishUrl) ?>">Finalizar</a>
             <?php elseif ($isFinalized): ?>
               <?php if ($needsValuations): ?>
@@ -1866,7 +1906,7 @@ ob_start();
                 </form>
               <?php endif; ?>
 
-              <?php if ($canFinalize): ?>
+              <?php if ($canFinalize && repo_match_teams_are_public($m)): ?>
                 <a class="btn btn-primary icon-finish" style="<?= h($encounterPrimaryActionStyle) ?>" data-short="" href="<?= h($finishUrl) ?>">Finalizar fecha</a>
               <?php elseif ($isFinalized): ?>
                 <?php if ($needsValuations): ?>

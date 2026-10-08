@@ -196,12 +196,18 @@ function MatchActions({ match, compact = false }) {
   const singleActionGrid = 'grid min-w-0 content-center gap-1.5 justify-items-stretch';
   return (
     <div className={`grid min-w-0 items-stretch gap-2 ${compact ? 'sm:grid-cols-[minmax(190px,1fr)_118px_56px]' : 'lg:grid-cols-[minmax(190px,1fr)_118px_56px]'}`}>
-      {match.isScheduled ? (
+      {match.isDirector && !match.isFinalized ? (
+        <ActionSection label="Mi propuesta" tone="primary" contentClassName={teamActionsGrid}>
+          {match.hasOwnProposal ? <a className={`${formationAction} w-full px-2`} href={match.links.proposalFormations}>{match.canEditOwnProposal ? 'Editar mi formación' : 'Ver mi formación'}</a> : match.canCreateProposal ? <a className={`${primaryAction} w-full px-2`} href={match.links.createProposal}>Crear mi propuesta</a> : <span className={`${disabledAction} w-full px-2`}>Propuesta no disponible</span>}
+          <a className={`${mutedAction} col-span-2 w-full px-2`} href={match.links.proposals}>Propuestas y votos</a>
+        </ActionSection>
+      ) : match.isScheduled ? (
         <ActionSection label="Preparación" tone="warning" contentClassName={teamActionsGrid}>
           <a className={`${mutedAction} w-full px-0`} href={match.links.edit} aria-label="Editar fecha" title="Editar"><Icon name="edit" /></a>
           <a className={`${warningAction} w-full px-2`} href={match.links.draw}><Icon name="dice" /> <span className="ml-1.5">Sortear</span></a>
           <a className={`${primaryAction} w-full px-2`} href={match.links.captains}>Capitanes</a>
           <a className={`${mutedAction} w-full px-2`} href={match.links.manual}>Manual</a>
+          <a className={`${primaryAction} col-span-2 w-full px-2`} href={match.links.proposals}>Propuestas y votos</a>
         </ActionSection>
       ) : (
         <ActionSection label="Equipos" tone={match.canFinalize ? 'primary' : 'neutral'} contentClassName={teamActionsGrid}>
@@ -215,7 +221,7 @@ function MatchActions({ match, compact = false }) {
       )}
 
       <ActionSection label={followUpLabel} tone={match.canFinalize || match.needsValuations ? 'primary' : 'neutral'} contentClassName={singleActionGrid}>
-        {match.canFinalize ? (
+        {match.canFinalize && match.teamsPublished ? (
           <a className={`${primaryAction} w-full px-2`} href={match.links.finish}>Finalizar</a>
         ) : match.isFinalized ? (
           <>
@@ -289,7 +295,12 @@ function MobileMatchActions({ match }) {
     <div className="encounter-task-actions">
       <h4>Acciones de la fecha</h4>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      {match.isScheduled ? (
+      {match.isDirector && !match.isFinalized ? (
+        <>
+          {match.hasOwnProposal ? <MobileActionLink className={formationAction} href={match.links.proposalFormations}>{match.canEditOwnProposal ? 'Editar mi formación' : 'Ver mi formación'}</MobileActionLink> : match.canCreateProposal ? <MobileActionLink className={primaryAction} href={match.links.createProposal}>Crear mi propuesta</MobileActionLink> : <span className={disabledAction}>Propuesta no disponible</span>}
+          <MobileActionLink className={mutedAction} href={match.links.proposals}>Propuestas y votos</MobileActionLink>
+        </>
+      ) : match.isScheduled ? (
         <>
           <MobileActionLink className={mutedAction} href={match.links.edit} ariaLabel="Editar fecha" title="Editar">
             <Icon name="edit" />
@@ -301,6 +312,7 @@ function MobileMatchActions({ match }) {
           </MobileActionLink>
           <MobileActionLink className={primaryAction} href={match.links.captains}>Capitanes</MobileActionLink>
           <MobileActionLink className={mutedAction} href={match.links.manual}>Manual</MobileActionLink>
+          <MobileActionLink className={primaryAction} href={match.links.proposals}>Propuestas y votos</MobileActionLink>
           <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs lg:col-span-1`}>Finalizar</span>
         </>
       ) : (
@@ -319,7 +331,7 @@ function MobileMatchActions({ match }) {
                 <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs lg:col-span-1`}>Publicada</span>
               )}
               <UndoForm match={match} className={`${undoAction} min-h-9 w-full px-2 py-1.5 text-xs`} />
-              <MobileActionLink className={primaryAction} href={match.links.finish}>Finalizar</MobileActionLink>
+              {match.teamsPublished ? <MobileActionLink className={primaryAction} href={match.links.finish}>Finalizar</MobileActionLink> : <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs`} aria-disabled="true" title="Primero publica la fecha">Finalizar</span>}
             </>
           ) : match.isFinalized ? (
             <>
@@ -469,7 +481,7 @@ function EditEncountersPage({ payload, root }) {
           <h1 className="m-0 text-xl font-black leading-tight text-[#07130f] sm:text-2xl">{payload.heading || 'Editar fechas'}</h1>
           <p className="m-0 text-xs font-semibold leading-snug text-[#526b62] sm:text-sm">{payload.description || 'Administra fechas cargadas, acciones disponibles y resultados.'}</p>
         </div>
-        <a className={`${primaryAction} min-w-32`} href="crear_partido.php">Crear fecha</a>
+        {payload.canCreateDate ? <a className={`${primaryAction} min-w-32`} href="crear_partido.php">Crear fecha</a> : null}
       </header>
 
       <section className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6 sm:gap-2" aria-label="Resumen de fechas">

@@ -48,6 +48,8 @@ function admin_config_seed_defaults(): void
     $defaults = [
         'allow_redraw_default' => '1',
         'redraw_limit_default' => '3',
+        'director_proposal_start_minutes' => '1440',
+        'director_proposal_lock_minutes' => '120',
         'multi_draw_count_default' => '3',
         'multi_draw_lock_minutes_default' => '60',
         'position_stat_weights' => admin_config_default_position_weights_json(),
@@ -94,6 +96,8 @@ function admin_config_settings(): array
     $settings = [
         'allow_redraw_default' => '1',
         'redraw_limit_default' => '3',
+        'director_proposal_start_minutes' => '1440',
+        'director_proposal_lock_minutes' => '120',
         'multi_draw_count_default' => '3',
         'multi_draw_lock_minutes_default' => '60',
         'position_stat_weights' => admin_config_default_position_weights_json(),
@@ -129,10 +133,20 @@ function admin_config_position_weights(array $settings): array
 function admin_config_save_settings(array $input): void
 {
     ensure_admin_config_schema();
+    $currentSettings = admin_config_settings();
+    $startHours = filter_var($input['director_proposal_start_hours'] ?? ((float) $currentSettings['director_proposal_start_minutes'] / 60), FILTER_VALIDATE_FLOAT);
+    $closeHours = filter_var($input['director_proposal_lock_hours'] ?? ((float) $currentSettings['director_proposal_lock_minutes'] / 60), FILTER_VALIDATE_FLOAT);
+    if ($startHours === false || $closeHours === false || $startHours <= $closeHours || $startHours > 168 || $closeHours < 0 || round($startHours * 60) <= round($closeHours * 60)) throw new RuntimeException('El inicio debe ser anterior al cierre, entre 0 y 168 horas antes del partido.');
+    admin_config_set_default('director_proposal_start_minutes', (string) round($startHours * 60));
     admin_config_set_default('allow_redraw_default', isset($input['allow_redraw_default']) ? '1' : '0');
     admin_config_set_default('redraw_limit_default', (string) max(0, min(20, (int) ($input['redraw_limit_default'] ?? 3))));
     admin_config_set_default('multi_draw_count_default', (string) max(1, min(10, (int) ($input['multi_draw_count_default'] ?? 3))));
     admin_config_set_default('multi_draw_lock_minutes_default', (string) max(0, min(1440, (int) ($input['multi_draw_lock_minutes_default'] ?? 60))));
+    if (isset($input['director_proposal_lock_hours'])) {
+        $hours = filter_var($input['director_proposal_lock_hours'], FILTER_VALIDATE_FLOAT);
+        if ($hours === false || $hours < 0 || $hours > 168) throw new RuntimeException('El cierre debe estar entre 0 y 168 horas antes del partido.');
+        admin_config_set_default('director_proposal_lock_minutes', (string) round($hours * 60));
+    }
     $weightsInput = is_array($input['position_weights'] ?? null) ? $input['position_weights'] : [];
     $normalizedWeights = player_normalize_position_stat_weights($weightsInput);
     admin_config_set_default('position_stat_weights', json_encode($normalizedWeights, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}');

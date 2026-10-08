@@ -151,6 +151,8 @@ function parsePayload(root) {
     const parsed = JSON.parse(root.dataset.payload || '{}');
     return {
       mode: String(parsed.mode || 'sorteo'),
+      proposalMode: parsed.proposalMode === true,
+      proposalCsrf: String(parsed.proposalCsrf || ''),
       matchId: Number(parsed.matchId || 0),
       match: parsed.match || null,
       players: Array.isArray(parsed.players) ? parsed.players : [],
@@ -171,6 +173,8 @@ function parsePayload(root) {
   } catch {
     return {
       mode: 'sorteo',
+      proposalMode: false,
+      proposalCsrf: '',
       matchId: 0,
       match: null,
       players: [],
@@ -822,24 +826,8 @@ function teamLineCounts(team, assignments) {
 }
 
 function normalizeDefenseLaneAssignments(team, assignments = {}) {
-  if (team.length < 8) return { ...assignments };
-  const defensePlayers = team.filter((player) => {
-    const assigned = String(assignments[playerKey(player)] || getPrimaryPlayerPosition(player)).toUpperCase();
-    return pitchLineForPosition(assigned) === 'DEF';
-  });
-  if (!defensePlayers.length) return assignments;
-  const next = { ...assignments };
-  const orderedDefense = defenseLinePlayers(defensePlayers, assignments);
-  orderedDefense.forEach((player, index) => {
-    const key = playerKey(player);
-    if (orderedDefense.length <= 2) {
-      next[key] = 'DEF';
-      return;
-    }
-    const isEdge = index === 0 || index === orderedDefense.length - 1;
-    next[key] = isEdge ? 'LAT' : 'DEF';
-  });
-  return next;
+  // Pitch lanes describe placement, not a change to the player's actual role.
+  return { ...assignments };
 }
 
 function normalizeCompactDefenseAssignments(team, assignments = {}) {
@@ -1134,13 +1122,12 @@ function rosterFormationRules(players, numTeams, teamSize) {
   const required = REQUIRED_FIELD_LINES.map(line => rules[line].minimum * numTeams);
   const deficits = unionCapacity.map((capacity, mask) => Math.max(0,
     required.reduce((sum, count, index) => sum + ((mask & (1 << index)) ? count : 0), 0) - capacity));
-  // Permit field adaptations when natural-position coverage would prevent
-  // distributing slow players. The scorer still prefers natural assignments
-  // among teams with equally balanced pace.
-  rules.speedAdaptation = field.filter(isLowRhythmPlayer).length >= 2;
-  rules.adaptationBudget = rules.speedAdaptation ? field.length : Math.max(0, ...deficits);
+  // Automatic relocation is allowed only for a proven roster coverage shortage.
+  // Slow players or better scores never authorize inventing positions.
+  rules.speedAdaptation = false;
+  rules.adaptationBudget = Math.max(0, ...deficits);
   REQUIRED_FIELD_LINES.forEach((line, index) => {
-    rules[line].canAdapt = rules.speedAdaptation || deficits.some((deficit, mask) => deficit > 0 && (mask & (1 << index)) !== 0);
+    rules[line].canAdapt = deficits.some((deficit, mask) => deficit > 0 && (mask & (1 << index)) !== 0);
   });
   const entry = { numTeams, teamSize, players: new Set(players), rules };
   players.forEach(player => rosterFormationRuleCache.set(player, entry));
@@ -1162,7 +1149,7 @@ function generationConstraints(teams, assignments = null) {
     const position = assigned[index][playerKey(player)];
     if (position === 'ARQ') return canPlayGoalkeeper(player);
     const line = pitchLineForPosition(position);
-    if (getOrderedPlayerPositions(player).map(pitchLineForPosition).includes(line)) return true;
+    if (getOrderedPlayerPositions(player).includes(position)) return true;
     adaptationCount++;
     const lineCount = team.filter(p => pitchLineForPosition(assigned[index][playerKey(p)]) === line).length;
     return rules[line]?.canAdapt === true && (rules.speedAdaptation || lineCount <= rules[line].minimum);
@@ -1277,8 +1264,9 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
   // Incomplete rosters have no meaningful formation or validity score. Use the
   // same structural/line/total priorities on incremental natural-line summaries,
   // and evaluate full fitness only after every player has been assigned.
-  const remaining = shuffle(remainingPool).map(player => ({ player, order: bestNaturalPlayerRating(player) + Math.random() * 0.35 }))
-    .sort((a, b) => Number(isPlatinumPlayer(b.player)) - Number(isPlatinumPlayer(a.player)) || b.order - a.order).map(item => item.player);
+  // Distribute slow players before fast players can fill the available slots.
+  const remaining = orderPlayersByEndurance(remainingPool)
+    .sort((a, b) => Number(isLowRhythmPlayer(b)) - Number(isLowRhythmPlayer(a)));
   const counts = teams.map(() => ({ DEF: 0, MED: 0, DEL: 0 }));
   const sums = teams.map(() => ({ DEF: 0, MED: 0, DEL: 0 }));
   const totals = teams.map(team => adjustedPositionRating(team[0], 'ARQ'));
@@ -1315,16 +1303,34 @@ function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) 
   return teams.every((team) => team.length === teamSize) ? teams : null;
 }
 
+function orderPlayersByEndurance(players) {
+  return shuffle(players).sort((a, b) => statValue(b, 'resistencia') - statValue(a, 'resistencia')
+    || Number(isPlatinumPlayer(b)) - Number(isPlatinumPlayer(a)) || bestNaturalPlayerRating(b) - bestNaturalPlayerRating(a));
+}
+
 function enduranceBalance(teams) {
-  const totals = teams.map(team => team.reduce((sum, player) => sum + statValue(player, 'resistencia'), 0));
+  const field = teams.map(team => team.filter(player => !isFixedGoalkeeper(player)));
+  const levels = [...new Set(field.flat().map(player => statValue(player, 'resistencia')))].sort((a,b) => b-a);
+  const enduranceTierGaps = levels.slice(0,-1).map(level => countSpread(field.map(team => team.filter(player => statValue(player, 'resistencia') >= level).length)));
+  const fastCounts = field.map(team => team.filter(player => statValue(player, 'resistencia') === levels[0]).length);
+  const totals = field.map(team => team.reduce((sum, player) => sum + statValue(player, 'resistencia'), 0));
   const mean = totals.length ? totals.reduce((sum, value) => sum + value, 0) / totals.length : 0;
-  return { enduranceGap: totals.length ? countSpread(totals) : 0,
+  return { enduranceTierGaps, fastCountSpread: fastCounts.length ? countSpread(fastCounts) : 0, fastCounts, enduranceGap: totals.length ? countSpread(totals) : 0,
     enduranceVariance: totals.reduce((sum, value) => sum + (value - mean) ** 2, 0), enduranceTotals: totals };
 }
 
 function isBetterDraw(evaluation, best) {
   if (!best) return true;
-  for (const field of ['hardViolations', 'enduranceGap', 'enduranceVariance', 'diff', 'paceExcess', 'adaptationCount', 'lineQualityCost', 'positionalBalance', 'secondaryCost']) {
+  const hardDifference = Number(evaluation.hardViolations || 0) - Number(best.hardViolations || 0);
+  if (hardDifference) return hardDifference < 0;
+  // Pace is the first balancing priority, ahead of endurance and total rating.
+  const paceDifference = Number(evaluation.paceExcess || 0) - Number(best.paceExcess || 0);
+  if (paceDifference) return paceDifference < 0;
+  for (let index=0; index<Math.max(evaluation.enduranceTierGaps?.length || 0,best.enduranceTierGaps?.length || 0); index++) {
+    const difference=Number(evaluation.enduranceTierGaps?.[index] || 0)-Number(best.enduranceTierGaps?.[index] || 0);
+    if (difference) return difference<0;
+  }
+  for (const field of ['hardViolations', 'fastCountSpread', 'enduranceGap', 'enduranceVariance', 'diff', 'paceExcess', 'adaptationCount', 'lineQualityCost', 'positionalBalance', 'secondaryCost']) {
     const left = Number(evaluation[field] ?? (field === 'totalBalance' ? evaluation.diff : field === 'secondaryCost' ? evaluation.value : 0));
     const right = Number(best[field] ?? (field === 'totalBalance' ? best.diff : field === 'secondaryCost' ? best.value : 0));
     if (Math.abs(left - right) > 1e-6) return left < right;
@@ -1335,6 +1341,8 @@ function isBetterDraw(evaluation, best) {
 // Diversity is allowed only inside this documented, small quality envelope.
 function drawsAreNear(evaluation, best) {
   return evaluation.hardViolations === best.hardViolations
+    && JSON.stringify(evaluation.enduranceTierGaps || []) === JSON.stringify(best.enduranceTierGaps || [])
+    && Number(evaluation.fastCountSpread || 0) === Number(best.fastCountSpread || 0)
     && Math.abs(Number(evaluation.enduranceGap || 0) - Number(best.enduranceGap || 0)) <= 1e-6
     && Math.abs(Number(evaluation.enduranceVariance || 0) - Number(best.enduranceVariance || 0)) <= 1e-6
     && evaluation.paceExcess === best.paceExcess
@@ -1362,13 +1370,14 @@ function collectTopDraw(pool, item) {
 async function refineDrawFormations(pool, pairHistory, weights, avoidSignatures, options) {
   const refined = [];
   for (const item of pool) {
-    if (avoidSignatures.has(drawSignature(item.teams))) continue;
+    if (avoidSignatures.has(drawSignature(item.teams)) || item.evaluation.paceExcess > 0) continue;
     await options.yieldToUi?.();
     const base = Object.assign({}, ...item.teams.map(team => buildTeamAssignment(team)));
     const formation = mostBalancedFormations(item.teams, base);
     if (!formation) continue;
     const evaluation = scoreTeams(item.teams, pairHistory, formation.assignments, weights);
-    const validRefinement = evaluation.valid && evaluation.adaptationCount <= item.evaluation.adaptationCount;
+    const validRefinement = evaluation.valid && evaluation.paceExcess === 0
+      && evaluation.adaptationCount <= item.evaluation.adaptationCount;
     refined.push(validRefinement
       ? { teams: item.teams, evaluation, assignments: formation.assignments }
       : { ...item, assignments: base });
@@ -4966,7 +4975,10 @@ export function SorteoLegacyPageIsland({ root }) {
       const target = teamsContainerRef.current;
       await waitForExportReadiness(target);
       const cards = Array.from(target.querySelectorAll('[data-sorteo-team-card]'));
-      const exportWidth = Math.ceil(cards[0]?.getBoundingClientRect().width || target.getBoundingClientRect().width);
+      const exportPitchHeight = Math.max(...cards.map(card => card.querySelector('.team-formation').getBoundingClientRect().height));
+      const exportHeadingHeight = Math.ceil(cards[0].querySelector('.gf-pitch-team-head').getBoundingClientRect().height);
+      const exportCardWidth = Math.ceil(cards[0]?.getBoundingClientRect().width || target.getBoundingClientRect().width);
+      const exportWidth = exportCardWidth * Math.min(2, cards.length) + (cards.length > 1 ? 16 : 0);
       // Freeze the browser's computed styles before moving the copy: ancestor
       // selectors, responsive typography and card/photo proportions stay intact.
       const copy = target.cloneNode(true);
@@ -4993,7 +5005,7 @@ export function SorteoLegacyPageIsland({ root }) {
       copy.style.minHeight = '0';
       copy.style.margin = '0';
       // Keep the team score alongside its name in the shared image.
-      // Stack all teams, on desktop as well as mobile, without changing the UI.
+      // Two pitches per row, with the comparison spanning the final row.
       const exportCards = Array.from(copy.querySelectorAll('[data-sorteo-team-card]'));
       exportCards.forEach((card, teamIndex) => {
         const title = card.querySelector('[data-team-title]');
@@ -5014,8 +5026,13 @@ export function SorteoLegacyPageIsland({ root }) {
         field.setAttribute('data-export-pitch-background', '1');
         for (const property of fieldStyle) field.style.setProperty(property, fieldStyle.getPropertyValue(property));
         field.style.setProperty('content', 'normal');
+        field.style.setProperty('height', '100%');
+        field.style.setProperty('width', '100%');
         pitch.prepend(field);
-        Object.assign(heading.style, { height: 'auto', gridTemplateColumns: 'minmax(0, 1fr) auto' });
+        Object.assign(heading.style, { height: `${exportHeadingHeight}px`, minHeight: '0', gridTemplateColumns: 'minmax(0, 1fr) auto' });
+        Object.assign(pitch.style, { height: `${exportPitchHeight}px`, minHeight: '0', maxHeight: 'none', gridTemplateRows: 'repeat(4, minmax(0, 1fr))' });
+        pitch.querySelectorAll('.formation-line').forEach(line => Object.assign(line.style, { height: 'auto', minHeight: '0', maxHeight: 'none' }));
+        heading.querySelectorAll('.gf-premium-score strong, .gf-premium-score small').forEach(score => score.style.setProperty('color', '#063d2b', 'important'));
         heading.lastElementChild.style.whiteSpace = 'nowrap';
         if (panel && balance) {
           panel.replaceChildren(heading, pitch, balance);
@@ -5043,16 +5060,16 @@ export function SorteoLegacyPageIsland({ root }) {
         addRow(comparison.createTHead(), ['Métrica', ...drawAnalysis.summaries.map(item => item.name)]);
         const body = comparison.createTBody();
         addRow(body, ['General', ...drawAnalysis.summaries.map(item => `${item.total.toFixed(1)} pts`)]);
-        [['ataque', 'Ataque'], ['tecnica', 'Técnica'], ['ritmo', 'Velocidad']].forEach(([field, label]) => {
+        [['resistencia', 'Ida y vuelta'], ['ataque', 'Ataque'], ['tecnica', 'Técnica'], ['ritmo', 'Velocidad']].forEach(([field, label]) => {
           addRow(body, [label, ...drawAnalysis.summaries.map(item => item.statValues[field].toFixed(1))]);
         });
         const comparisonHeader = document.createElement('div');
-        comparisonHeader.style.cssText = 'display:block;width:100%;padding-bottom:12px;';
+        comparisonHeader.style.cssText = 'display:block;width:100%;padding-top:12px;grid-column:1 / -1;';
         comparisonHeader.appendChild(comparison);
-        copy.prepend(comparisonHeader);
+        copy.appendChild(comparisonHeader);
       }
       copy.setAttribute('data-export-formations', '1');
-      Object.assign(copy.style, { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'none', gridAutoRows: 'max-content', gap: '16px', overflow: 'visible' });
+      Object.assign(copy.style, { display: 'grid', gridTemplateColumns: `repeat(${Math.min(2, cards.length)}, minmax(0, 1fr))`, gridTemplateRows: 'none', gridAutoRows: 'max-content', gap: '16px', overflow: 'visible' });
       host.appendChild(copy);
       document.body.appendChild(host);
       let jpg;
@@ -5136,6 +5153,8 @@ export function SorteoLegacyPageIsland({ root }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          proposal_mode: Boolean(payload.proposalMode),
+          proposal_csrf: payload.proposalCsrf || '',
           match_id: payload.matchId,
           num_teams: numTeams,
           redraw_increment: redrawsUsedThisSession,
@@ -5166,6 +5185,7 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const saveFormations = async () => {
+    if (payload.proposalMode) return saveDraw();
     if (savingDraw) return;
     const submittedSnapshot = lineupSnapshot;
     if (!payload.matchId) {
@@ -5398,6 +5418,14 @@ export function SorteoLegacyPageIsland({ root }) {
           ) : null}
         </div>
 
+        {payload.proposalMode && isFormationEditor ? (
+          <form method="post" action="reiniciar_propuesta.php" onSubmit={(event) => { if (!window.confirm('Borrar toda tu propuesta y volver a elegir sorteo o armado manual?')) event.preventDefault(); }}>
+            <input type="hidden" name="match_id" value={payload.matchId} />
+            <input type="hidden" name="proposal_csrf" value={payload.proposalCsrf} />
+            <button className={secondaryButtonClass} type="submit">Borrar todo y volver a empezar</button>
+          </form>
+        ) : null}
+
         {isFormationEditor ? (
         <header className="grid gap-3 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div className="min-w-0">
@@ -5455,7 +5483,7 @@ export function SorteoLegacyPageIsland({ root }) {
       </div>
 
       <div className={`grid gap-4 ${isFormationEditor ? '' : 'gf-workflow-body'}`}>
-        {!isFormationEditor ? (
+        {!isFormationEditor && !payload.proposalMode ? (
         <aside className={`grid content-start gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm gf-player-preparation`}>
           <div className="flex items-center justify-between gap-3 border-b border-[#d7e6df] pb-3">
             <div>
@@ -5714,10 +5742,10 @@ export function SorteoLegacyPageIsland({ root }) {
             <Message id="success" tone="success">{success}</Message>
           </div>
           ) : (
-            <div className="grid gap-2 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm">
-              <Message id="error" tone="error">{error}</Message>
-              <Message id="success" tone="success">{success}</Message>
-            </div>
+            <>
+              {error ? <Message id="error" tone="error">{error}</Message> : null}
+              {success ? <Message id="success" tone="success">{success}</Message> : null}
+            </>
           )}
 
           <div id="equipos-generados" ref={teamsContainerRef} className="grid gap-4 lg:col-span-2 lg:row-start-2">
@@ -5770,7 +5798,8 @@ export function SorteoLegacyPageIsland({ root }) {
                       <article key={teamIndex} className={`${isFormationEditor ? 'team-card team' : 'gf-team-column'} sorteo-team-card grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2`} data-team-index={teamIndex} data-sorteo-team-card="1">
 
 
-                        <div className="grid grid-cols-2 gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:gap-1.5 max-[760px]:p-1.5 md:grid-cols-2">
+                        <div className={`grid ${payload.proposalMode ? 'grid-cols-1' : 'grid-cols-2'} gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:gap-1.5 max-[760px]:p-1.5`}>
+                          {!payload.proposalMode ? (
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
                             Camiseta
                             <select className={inputClass} value={color.name} onChange={(event) => setTeamColor(teamIndex, event.target.value)}>
@@ -5779,6 +5808,7 @@ export function SorteoLegacyPageIsland({ root }) {
                               ))}
                             </select>
                           </label>
+                          ) : null}
                           <label className="grid gap-1 text-xs font-extrabold text-slate-600">
                             Formación
                             <select className={inputClass} value={formationSelectValue} onChange={(event) => applyFormation(teamIndex, event.target.value)}>
@@ -6213,7 +6243,7 @@ export function SorteoLegacyPageIsland({ root }) {
               {lockedMatch ? (
                 formationsReady && !isFormationEditor && formationsUrl ? <button className={primaryButtonClass} type="button" onClick={() => navigate(formationsUrl)}>Configurar formaciones →</button> :
                 <button className={primaryButtonClass} type="button" onClick={isFormationEditor ? saveFormations : saveDraw} disabled={savingDraw}>
-                  <Icon name="save" />{savingDraw ? 'Guardando…' : isFormationEditor ? 'Guardar formaciones' : 'Guardar equipos y continuar'}
+                  <Icon name="save" />{savingDraw ? 'Guardando…' : payload.proposalMode ? 'Guardar mi propuesta' : isFormationEditor ? 'Guardar formaciones' : 'Guardar equipos y continuar'}
                 </button>
               ) : null}
             </div>

@@ -5,7 +5,17 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
 
-require_admin();
+require_once __DIR__ . '/lib/director_proposals.php';
+$proposalMode = ($_GET['proposal'] ?? '') === '1';
+if ($proposalMode) {
+    require_directivo_or_admin();
+    if (!is_directivo()) redirect('editar_partidos.php');
+    ensure_director_proposals_schema();
+    $proposalMatch = repo_match_by_id((int) ($_GET['match_id'] ?? 0));
+    if (!$proposalMatch || !director_proposal_can_edit($proposalMatch) || empty($proposalMatch['director_proposals_enabled'])) {
+        flash('error', 'La propuesta esta bloqueada porque la votacion ya comenzo.'); redirect('editar_partidos.php');
+    }
+} else { require_admin(); }
 ensure_control_schema();
 
 $matchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
@@ -35,6 +45,9 @@ $title = 'Equipos manuales | ' . APP_NAME;
 $activePage = 'editar_partidos.php';
 $backUrl = 'editar_partidos.php' . ($selectedMatch ? '#partido-admin-' . (int) $selectedMatch['id'] : '');
 $manualTeamsConfig = $selectedMatch ? [
+    'teamColors' => $proposalMode ? match_team_kits($selectedMatch) : [],
+    'proposalMode' => $proposalMode,
+    'proposalCsrf' => $proposalMode ? director_proposal_csrf() : '',
     'matchId' => (int) $selectedMatch['id'],
     'numTeams' => (int) $numTeams,
     'playersPerTeam' => (int) $playersPerTeam,

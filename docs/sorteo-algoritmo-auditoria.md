@@ -203,3 +203,29 @@ La política actual reemplaza las prioridades y tolerancias descritas arriba:
 ### Prioridad de ida y vuelta
 
 La prioridad actual es validez obligatoria, diferencia de suma de resistencia (ida y vuelta), varianza de esas sumas entre equipos, diferencia total de puntaje y luego los criterios secundarios. La resistencia incluye todos los jugadores y usa los valores normalizados con disponibilidad. Se aplica en construcción, búsqueda por swaps, candidatos exactos y selección final. La selección aleatoria no puede empeorar este equilibrio. Cambiar posiciones manteniendo jugadores y arquero no altera la suma de resistencia del equipo; por eso la optimización conjunta de formaciones conserva ese balance y optimiza el puntaje después.
+
+
+### Auditoría de posiciones naturales
+
+Las reasignaciones automáticas fuera de las posiciones declaradas se permiten solo cuando la capacidad conjunta del plantel prueba una falta real para cubrir los mínimos por línea. La cantidad de jugadores lentos no autoriza adaptaciones ni aumenta su presupuesto. La normalización visual de defensa conserva DEF/LAT originales; no convierte defensores en laterales para dibujar extremos. La validación automática comprueba el rol declarado exacto. Las posiciones manuales siguen disponibles como decisión explícita. Ida y vuelta mantiene la primera prioridad de equilibrio entre repartos válidos.
+
+
+### Reparto obligatorio de jugadores rápidos por ida y vuelta
+
+Se considera rápido al jugador de campo con resistencia normalizada mayor a 3 (escala 1–6). Primero se reparte la cantidad de rápidos, con diferencia máxima de uno entre equipos; un candidato final que exceda esa diferencia se descarta. Sigue la diferencia y varianza de suma de resistencia de jugadores de campo, luego puntaje general y las demás características. Dos rápidos y dos equipos implican reparto 1/1; tres implican 1/2. El arquero reservado no cuenta para la movilidad de campo. No se inventan posiciones para cumplir esta regla: se mantienen las restricciones de cobertura y adaptaciones excepcionales.
+
+
+### Reparto por niveles relativos de ida y vuelta
+
+La distribución no depende de un umbral fijo de estrellas: la construcción ordena jugadores por resistencia descendente y la selección prioriza el reparto de los niveles presentes en el plantel, del mayor al menor. Se compara la cantidad acumulada de jugadores por encima de cada nivel antes de las sumas y el puntaje general. Por ejemplo, si los mejores seleccionados tienen 3 estrellas y el resto 2, dos jugadores de 3 deben repartirse 1/1 entre dos equipos. El grupo de mayor resistencia debe tener diferencia de cantidad no mayor a uno. Se conservan las reglas obligatorias, exclusión de repartos usados y posiciones declaradas.
+
+## Correccion de prioridad de ritmo (2026-10-05)
+
+El comparador prioriza ahora el exceso de lentos antes de resistencia y diferencia
+ de puntos, despues de las restricciones de jugadores, arqueros y posiciones.
+El constructor distribuye primero los jugadores de ritmo <= 3. La seleccion final
+rechaza repartos con mas de un lento de diferencia entre equipos, y las variantes
+ de formacion conservan ese equilibrio. El conteo del algoritmo corresponde a
+jugadores de campo; los arqueros asignados siguen excluidos.
+Pruebas de regresion: 8, 9 y 10 lentos en tres equipos, con resistencia deliberadamente
+opuesta al ritmo y sorteos repetidos; nueve lentos deben resultar en 3 / 3 / 3.

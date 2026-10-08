@@ -41,6 +41,7 @@ $roleLabel = '';
 if (is_admin()) {
     $roleLabel = 'Admin';
     $roleMenu = [
+        'propuestas_equipos.php' => 'Propuestas próximo partido',
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
         'configuracion.php' => 'Configuración',
@@ -53,9 +54,9 @@ if (is_admin()) {
 } elseif (is_directivo()) {
     $roleLabel = 'Directivo';
     $roleMenu = [
+        'propuestas_equipos.php' => 'Propuestas próximo partido',
         'perfil.php' => 'Mi perfil',
-        'crear_partido.php' => 'Crear fecha',
-        'editar_partidos.php' => 'Editar fechas',
+        'editar_partidos.php' => 'Fechas',
         'junta_votaciones.php' => 'Votaciones',
         'mis_valoraciones.php' => 'Mis valoraciones',
         'logout.php' => 'Salir',
@@ -63,6 +64,7 @@ if (is_admin()) {
 } elseif (is_player_user()) {
     $roleLabel = 'Jugador';
     $roleMenu = [
+        'propuestas_equipos.php' => 'Propuestas próximo partido',
         'perfil.php' => 'Mi perfil',
         'estadisticas.php' => 'Mis stats',
         'logout.php' => 'Salir',
@@ -70,17 +72,20 @@ if (is_admin()) {
 } elseif (current_user_id() > 0) {
     $roleLabel = 'Usuario';
     $roleMenu = [
+        'propuestas_equipos.php' => 'Propuestas próximo partido',
         'perfil.php' => 'Mi perfil',
         'logout.php' => 'Salir',
     ];
 } elseif (!empty($_SESSION['guest_vote_invite_id'])) {
     $roleLabel = 'Invitado';
     $roleMenu = [
+        'propuestas_equipos.php' => 'Propuestas próximo partido',
         'junta_votaciones.php' => 'Votacion',
         'logout.php' => 'Salir',
     ];
 } else {
     $roleMenu = [
+        'propuestas_equipos.php' => 'Propuestas próximo partido',
         'login.php' => 'Ingresar',
     ];
 }
@@ -264,3 +269,5 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
       <?php foreach ($flashMessages as $msg): ?>
         <div class="flash flash-<?= h($msg['type']) ?>"><?= h($msg['message']) ?></div>
       <?php endforeach; ?>
+      <?php if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'index.php' && function_exists('director_proposal_latest_match')) require __DIR__ . '/proposal_notice.php'; ?>
+      <script src="assets/proposal-countdown.js?v=<?= h((string) md5_file(__DIR__ . '/../assets/proposal-countdown.js')) ?>" defer data-server-time="<?= time() ?>"></script>

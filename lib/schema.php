@@ -257,6 +257,7 @@ function ensure_control_schema(): array
         ['matches', 'created_at', 'created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'],
         ['matches', 'updated_at', 'updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'],
         ['matches', 'draw_mode', "draw_mode ENUM('none', 'random', 'captains', 'manual') NOT NULL DEFAULT 'none' AFTER status"],
+        ['matches', 'team_kits_json', 'team_kits_json JSON NULL AFTER num_teams'],
         ['matches', 'draw_started_at', 'draw_started_at DATETIME NULL AFTER draw_mode'],
         ['matches', 'draw_completed_at', 'draw_completed_at DATETIME NULL AFTER draw_started_at'],
         ['matches', 'draw_audit_snapshot', 'draw_audit_snapshot JSON NULL AFTER draw_completed_at'],

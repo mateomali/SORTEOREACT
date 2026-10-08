@@ -902,13 +902,17 @@ if ($nextMatch) {
         if ($candidateOptions) {
             $canVoteCandidate = multiple_draw_user_can_vote($candidate);
             $nextMatchVotePill = $canVoteCandidate ? 'Vota ahora!' : 'Votacion finalizada';
+            if (!empty($candidate['director_proposals_enabled'])) {
+                $canVoteCandidate = multiple_draw_is_open($candidate) && in_array(current_role(), ['usuario', 'jugador'], true);
+                $nextMatchVotePill = $canVoteCandidate ? 'Vota ahora!' : (time() < director_proposal_voting_start($candidate) ? 'Preparacion de propuestas' : (multiple_draw_is_open($candidate) ? 'Votacion abierta' : (empty($candidate['multi_draw_winner_option_id']) ? 'Pendiente del administrador' : 'Votacion finalizada')));
+            }
             $nextMatchVotePillClass = $canVoteCandidate ? 'is-open' : 'is-closed';
         }
         if ((string) ($candidate['status'] ?? '') === 'sorteado' && repo_match_teams_are_public($candidate)) {
             $nextMatchFormationsHtml = profile_render_next_match_formations($candidate, $playerId);
         }
         $nextMatchDetailHtml = profile_render_match_detail_content($candidate, $playerId);
-        if (multiple_draw_user_can_vote($candidate)) {
+        if (multiple_draw_user_can_vote($candidate) || (!empty($candidate['director_proposals_enabled']) && multiple_draw_is_open($candidate) && in_array(current_role(), ['usuario', 'jugador'], true))) {
             if ($candidateOptions) {
                 $multiDrawMatch = $candidate;
                 $multiDrawOptionCount = count($candidateOptions);

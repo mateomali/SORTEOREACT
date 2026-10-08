@@ -80,3 +80,39 @@ run(`globalThis.enduranceRoster = Array.from({length:10}, (_,index) => normalize
   assert.ok(Math.abs(result.evaluation.enduranceGap-oracle)<1e-6, 'Generated draw must achieve the exhaustive minimum ida y vuelta gap');
   console.log('PASS: ida y vuelta is first balance priority and matches exhaustive roster oracle');
 })().catch(error => {console.error(error);process.exitCode=1;});
+
+run(`globalThis.naturalRoster = Array.from({length:14}, (_,index) => normalizePlayer({id:index+501,
+  positions:['ARQ','DEF','DEF','MED','MED','DEL','DEL'][index%7], rhythm:2, stamina:3.5, skill:3.5},index));
+  globalThis.naturalRules = rosterFormationRules(naturalRoster,2,7);`);
+assert.equal(run('naturalRules.adaptationBudget'),0,'Slow players must not authorize automatic relocation');
+assert.equal(run('naturalRules.speedAdaptation'),false);
+assert.ok(run('REQUIRED_FIELD_LINES.every(line => !naturalRules[line].canAdapt)'));
+run(`globalThis.naturalTeams = [naturalRoster.slice(0,7),naturalRoster.slice(7)];
+  globalThis.naturalAssignments = naturalTeams.map(team => buildTeamAssignment(team));
+  naturalAssignments[0]['502']='MED';`);
+assert.equal(run('generationConstraints(naturalTeams,naturalAssignments).naturalPositions'),false,'An invented role is invalid when the roster has natural coverage');
+console.log('PASS: automatic out-of-position moves require a proven coverage shortage');
+
+assert.ok(run('isBetterDraw({hardViolations:0,fastCountSpread:0,enduranceGap:2,diff:3}, {hardViolations:0,fastCountSpread:2,enduranceGap:0,diff:0})'), 'Fast player count takes priority over summed ratings and total score');
+run(`globalThis.twoFastRoster = Array.from({length:10}, (_,index) => normalizePlayer({id:index+701,
+  positions:index<2?'ARQ':'DEF/MED/DEL', stamina:index===2||index===3?6:2, skill:3.5, regularity:3.5},index));`);
+(async () => {
+  const even = await run('generateBalancedTeams(twoFastRoster,2,2,{}, {})');
+  assert.ok(even);
+  assert.deepEqual(Array.from(even.evaluation.fastCounts),[1,1],'Two fast field players must be split one per side');
+  run(`twoFastRoster[4].resistencia=6;`);
+  const odd = await run('generateBalancedTeams(twoFastRoster,2,2,{}, {})');
+  assert.ok(odd);
+  assert.deepEqual(Array.from(odd.evaluation.fastCounts).sort(),[1,2],'An odd fast count must differ by at most one');
+  console.log('PASS: two fast players split 1/1; three fast players split 1/2');
+})().catch(error=>{console.error(error);process.exitCode=1;});
+
+run(`globalThis.lowStars = Array.from({length:10}, (_,index) => normalizePlayer({id:index+901,
+  positions:index<2?'ARQ':'DEF/MED/DEL', stamina:index===2||index===3?3:2, skill:3.5,regularity:3.5},index));`);
+assert.deepEqual(Array.from(run('orderPlayersByEndurance(lowStars).map(p=>statValue(p,"resistencia"))')), [3,3,2,2,2,2,2,2,2,2]);
+(async () => {
+ const draw=await run('generateBalancedTeams(lowStars,2,2,{}, {})');
+ assert.ok(draw);
+ assert.deepEqual(Array.from(draw.evaluation.fastCounts),[1,1], 'Two 3-star players split equally even when everyone else has 2 stars');
+ console.log('PASS: descending ida y vuelta order and adaptive 3/2-star distribution');
+})().catch(error=>{console.error(error);process.exitCode=1;});

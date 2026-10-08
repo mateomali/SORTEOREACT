@@ -148,6 +148,25 @@
     });
   };
 
+  const scrollProposalTarget = (target) => {
+    const heading = target.querySelector('.proposal-option-heading') || target;
+    const jumpNav = document.querySelector('.proposal-jump-nav');
+    const offset = (jumpNav?.getBoundingClientRect().height || 0) + 24;
+    heading.setAttribute('tabindex', '-1');
+    heading.focus({ preventScroll: true });
+    window.scrollTo({ top: Math.max(0, window.scrollY + heading.getBoundingClientRect().top - offset), behavior: 'instant' });
+  };
+
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('.proposal-jump-nav a[href^="#proposal-option-"]');
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const target = document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    event.preventDefault();
+    window.history.replaceState(window.history.state, '', link.getAttribute('href'));
+    scrollProposalTarget(target);
+  });
+
   const focusHashTarget = () => {
     if (!window.location.hash) return;
     let targetId = window.location.hash.slice(1);
@@ -158,6 +177,10 @@
     }
     const target = document.getElementById(targetId);
     if (!target) return;
+    if (targetId.startsWith('proposal-option-')) {
+      scrollProposalTarget(target);
+      return;
+    }
     if (!target.hasAttribute('tabindex')) {
       target.setAttribute('tabindex', '-1');
     }
@@ -2477,9 +2500,8 @@
     };
     select.dataset.rentalCourtBound = '1';
     select.addEventListener('change', applySelectedCourt);
-    if (String(select.value) !== '0') {
-      applySelectedCourt();
-    }
+    // Initial values already come from the server or restored draft. Only a
+    // deliberate court change should apply its defaults again.
   };
 
   const updateRoundRobinLegRows = (form) => {
@@ -3008,7 +3030,7 @@
       { name: 'CAMISADO', className: 'manual-team-camisado' },
       { name: 'DESCAMISADO', className: 'manual-team-descamisado' },
     ];
-    const selectedTeamColors = Array.from({ length: numTeams }, (_, index) => teamColors[index % teamColors.length].name);
+    const selectedTeamColors = Array.from({ length: numTeams }, (_, index) => config.teamColors?.[index] || teamColors[index % teamColors.length].name);
     const assignments = new Map(players.map((player) => [String(player.id), {
       team: '',
       position: String(player.positions || 'MED').split('/').map((p) => p.trim().toUpperCase()).find((p) => positions.includes(p)) || 'MED',
@@ -3676,6 +3698,7 @@
     };
 
     const renderColorToolbar = () => {
+      if (config.proposalMode) { if (colorToolbar) colorToolbar.hidden = true; return; }
       if (!colorToolbar) return;
       colorToolbar.innerHTML = `
         <div class="manual-team-color-toolbar-head">
@@ -3957,12 +3980,13 @@
       saveButton.disabled = true;
       saveButton.classList.add('is-loading');
       try {
-        const response = await fetch('guardar_sorteo.php', {
+        const response = await fetch(config.proposalMode ? 'preparar_propuesta.php' : 'guardar_sorteo.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             match_id: Number(config.matchId),
             num_teams: numTeams,
+            proposal_csrf: config.proposalCsrf || '',
             draw_mode: 'manual',
             teams,
           }),
@@ -3972,7 +3996,7 @@
           throw new Error(payload.message || 'No se pudieron guardar los equipos.');
         }
         showToast(payload.message || 'Equipos guardados.', 'success');
-        partialNavigate(`finalizar_partido.php?match_id=${Number(config.matchId)}`, { source: saveButton });
+        partialNavigate(payload.next_url || `finalizar_partido.php?match_id=${Number(config.matchId)}`, { source: saveButton });
       } catch (error) {
         showToast(error.message || 'No se pudieron guardar los equipos.', 'error');
         saveButton.disabled = false;

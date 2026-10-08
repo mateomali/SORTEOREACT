@@ -9,6 +9,8 @@ require_once __DIR__ . '/schema.php';
 
 function ensure_multiple_draw_schema(): void
 {
+    static $ready = false;
+    if ($ready) return;
     ensure_auth_schema();
     ensure_control_schema();
     $pdo = db();
@@ -62,10 +64,35 @@ function ensure_multiple_draw_schema(): void
               ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+    $pdo = db();
+    if (!schema_column_exists($pdo, 'matches', 'director_proposals_enabled')) {
+        $pdo->exec('ALTER TABLE matches ADD COLUMN director_proposals_enabled TINYINT(1) NOT NULL DEFAULT 0');
+    }
+    if (!schema_column_exists($pdo, 'matches', 'director_vote_start_minutes')) {
+        $pdo->exec('ALTER TABLE matches ADD COLUMN director_vote_start_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 1440');
+    }
+    if (!schema_column_exists($pdo, 'matches', 'director_proposals_revealed_at')) {
+        $pdo->exec('ALTER TABLE matches ADD COLUMN director_proposals_revealed_at DATETIME NULL');
+    }
+    if (!schema_column_exists($pdo, 'match_draw_options', 'author_user_id')) {
+        $pdo->exec('ALTER TABLE match_draw_options ADD COLUMN author_user_id INT UNSIGNED NULL, ADD UNIQUE KEY uniq_draw_author (match_id, author_user_id)');
+    }
+    $pdo->exec('CREATE TABLE IF NOT EXISTS director_proposal_votes (
+        match_id INT UNSIGNED NOT NULL, user_id INT UNSIGNED NOT NULL, option_id INT UNSIGNED NOT NULL,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (match_id, user_id), INDEX idx_director_option (option_id),
+        FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+        FOREIGN KEY (option_id) REFERENCES match_draw_options(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    $ready = true;
 }
 
 function multiple_draw_deadline(array $match): int
 {
+    if (!empty($match['director_proposals_enabled']) && !empty($match['director_vote_closes_at'])) {
+        return strtotime((string) $match['director_vote_closes_at']);
+    }
     $matchTime = strtotime((string) ($match['match_date'] ?? ''));
     if ($matchTime === false) {
         return time();
@@ -74,10 +101,18 @@ function multiple_draw_deadline(array $match): int
     return $matchTime - ($minutes * 60);
 }
 
+function director_proposal_voting_start(array $match): int
+{
+    if (!empty($match['director_vote_opened_at'])) return strtotime((string) $match['director_vote_opened_at']);
+    $matchTime = strtotime((string) ($match['match_date'] ?? ''));
+    return $matchTime === false ? time() : $matchTime - max(0, (int) ($match['director_vote_start_minutes'] ?? 1440)) * 60;
+}
+
 function multiple_draw_is_open(array $match): bool
 {
     return (string) ($match['status'] ?? '') === 'programado'
         && empty($match['multi_draw_winner_option_id'])
+        && (empty($match['director_proposals_enabled']) || time() >= director_proposal_voting_start($match))
         && time() < multiple_draw_deadline($match);
 }
 
@@ -97,12 +132,22 @@ function multiple_draw_user_can_vote(array $match): bool
     if ($playerId <= 0 || !multiple_draw_is_open($match)) {
         return false;
     }
+    if (!empty($match['director_proposals_enabled'])) return false;
     return in_array($playerId, multiple_draw_participant_ids((int) $match['id']), true);
 }
 
 function multiple_draw_options(int $matchId): array
 {
     ensure_multiple_draw_schema();
+    $match = repo_match_by_id($matchId);
+    if (!empty($match['director_proposals_enabled'])) {
+        $stmt = db()->prepare('SELECT o.*, (SELECT COUNT(*) FROM director_proposal_votes v WHERE v.option_id = o.id) AS vote_count FROM match_draw_options o WHERE o.match_id = ? ORDER BY o.option_number');
+        $stmt->execute([$matchId]);
+        $options = $stmt->fetchAll();
+        foreach ($options as &$option) $option['teams'] = json_decode((string) $option['teams_json'], true) ?: [];
+        unset($option);
+        return $options;
+    }
     $stmt = db()->prepare(
         'SELECT o.*,
                 (SELECT COUNT(*) FROM match_draw_option_votes v WHERE v.option_id = o.id) AS vote_count
@@ -138,6 +183,7 @@ function multiple_draw_generate(int $matchId, int $count, bool $replace = false)
     if ((string) ($match['status'] ?? '') === 'finalizado') {
         throw new RuntimeException('La fecha ya esta finalizada.');
     }
+    if (!empty($match['director_proposals_enabled'])) throw new RuntimeException('Esta fecha recibe propuestas de directivos, no variantes automaticas.');
     $players = repo_match_participants_basic($matchId);
     $numTeams = max(2, min(4, (int) ($match['num_teams'] ?? 2)));
     if (!$players || (count($players) % $numTeams) !== 0) {
@@ -264,6 +310,13 @@ function multiple_draw_save_vote(int $matchId, int $optionId): void
 
 function multiple_draw_winning_option_id(int $matchId): int
 {
+    $match = repo_match_by_id($matchId);
+    if (!empty($match['director_proposals_enabled'])) {
+        $options = multiple_draw_options($matchId);
+        usort($options, static fn(array $a, array $b): int => (int) $b['vote_count'] <=> (int) $a['vote_count']);
+        if (!$options || (int) $options[0]['vote_count'] === 0 || (isset($options[1]) && (int) $options[0]['vote_count'] === (int) $options[1]['vote_count'])) return 0;
+        return (int) $options[0]['id'];
+    }
     $stmt = db()->prepare(
         'SELECT o.id
          FROM match_draw_options o
@@ -277,7 +330,7 @@ function multiple_draw_winning_option_id(int $matchId): int
     return (int) ($stmt->fetchColumn() ?: 0);
 }
 
-function multiple_draw_apply_option(int $matchId, int $optionId): void
+function multiple_draw_apply_option(int $matchId, int $optionId, bool $automaticTieBreak = false): void
 {
     ensure_multiple_draw_schema();
     $match = repo_match_by_id($matchId);
@@ -301,12 +354,40 @@ function multiple_draw_apply_option(int $matchId, int $optionId): void
     $pdo = db();
     $pdo->beginTransaction();
     try {
+        $lock = $pdo->prepare('SELECT * FROM matches WHERE id = ? FOR UPDATE');
+        $lock->execute([$matchId]);
+        $match = $lock->fetch();
+        if (!$match || $match['status'] === 'finalizado') throw new RuntimeException('La fecha ya no se puede modificar.');
+        $freshOption = $pdo->prepare('SELECT teams_json FROM match_draw_options WHERE id = ? AND match_id = ?');
+        $freshOption->execute([$optionId, $matchId]);
+        $freshJson = $freshOption->fetchColumn();
+        if ($freshJson === false) throw new RuntimeException('La propuesta ya no existe. Recarga la fecha.');
+        $teams = json_decode((string) $freshJson, true);
+        if (!is_array($teams) || !$teams) throw new RuntimeException('Equipos invalidos.');
+        if (!empty($match['director_proposals_enabled'])) {
+            if (!empty($match['multi_draw_winner_option_id'])) { $pdo->commit(); return; }
+            if (time() < multiple_draw_deadline($match)) throw new RuntimeException('La votacion todavia esta abierta.');
+            $winner = multiple_draw_winning_option_id($matchId);
+            if ($winner > 0 && $winner !== $optionId) throw new RuntimeException('Debe publicarse la propuesta mas votada.');
+            if ($winner === 0 && !is_admin() && !$automaticTieBreak) { $pdo->commit(); return; }
+            if ($winner === 0) {
+                $options = multiple_draw_options($matchId);
+                $maxVotes = max(array_column($options, 'vote_count'));
+                $selectedVotes = 0;
+                foreach ($options as $candidate) if ((int) $candidate['id'] === $optionId) $selectedVotes = (int) $candidate['vote_count'];
+                if ($selectedVotes < $maxVotes) throw new RuntimeException('Elegi una de las propuestas empatadas.');
+            }
+            $ids = [];
+            foreach ($teams as $team) foreach ($team['players'] as $player) $ids[] = (int) $player['id'];
+            sort($ids);
+            if ($ids !== multiple_draw_participant_ids($matchId)) throw new RuntimeException('Los convocados cambiaron. La propuesta requiere revision.');
+        }
         $pdo->prepare('DELETE FROM captain_picks WHERE match_id = :mid')->execute(['mid' => $matchId]);
         $pdo->prepare('DELETE FROM captain_drafts WHERE match_id = :mid')->execute(['mid' => $matchId]);
         $pdo->prepare('DELETE FROM match_teams WHERE match_id = :mid')->execute(['mid' => $matchId]);
         $pdo->prepare(
             'UPDATE match_players
-             SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0, lineup_order = NULL, formation_line_order = NULL
+             SET team_number = NULL, assigned_position = NULL, is_goalkeeper = 0, is_substitute = 0, lineup_order = NULL, formation_line_order = NULL
              WHERE match_id = :mid'
         )->execute(['mid' => $matchId]);
 
@@ -316,7 +397,7 @@ function multiple_draw_apply_option(int $matchId, int $optionId): void
         );
         $savePlayer = $pdo->prepare(
             'UPDATE match_players
-             SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper,
+             SET team_number = :team_number, assigned_position = :assigned_position, is_goalkeeper = :is_goalkeeper, is_substitute = :is_substitute, availability_percent = :availability_percent,
                  lineup_order = :lineup_order, formation_line_order = :formation_line_order
              WHERE match_id = :mid AND player_id = :player_id'
         );
@@ -342,6 +423,8 @@ function multiple_draw_apply_option(int $matchId, int $optionId): void
                     'team_number' => $teamNumber,
                     'assigned_position' => (string) ($player['assigned_position'] ?? 'MED'),
                     'is_goalkeeper' => (int) ($player['is_goalkeeper'] ?? 0),
+                    'is_substitute' => (int) ($player['is_substitute'] ?? 0),
+                    'availability_percent' => (int) ($player['availability_percent'] ?? 100),
                     'lineup_order' => (int) ($player['lineup_order'] ?? 0),
                     'formation_line_order' => (int) ($player['formation_line_order'] ?? 0),
                 ]);
@@ -354,7 +437,7 @@ function multiple_draw_apply_option(int $matchId, int $optionId): void
                  draw_mode = "random",
                  draw_started_at = COALESCE(draw_started_at, NOW()),
                  draw_completed_at = NOW(),
-                 teams_published_at = NULL,
+                 teams_published_at = IF(director_proposals_enabled = 1, NOW(), NULL),
                  multi_draw_winner_option_id = :oid,
                  players_per_team = :players_per_team,
                  formation_edit_deadline = DATE_SUB(match_date, INTERVAL 1 HOUR)
@@ -380,10 +463,20 @@ function multiple_draw_finalize_if_due(array $match): bool
         return false;
     }
     $winner = multiple_draw_winning_option_id((int) $match['id']);
+    $automaticTieBreak = false;
+    if ($winner <= 0 && !empty($match['director_proposals_enabled'])) {
+        $options = multiple_draw_options((int) $match['id']);
+        if ($options) {
+            $maxVotes = max(array_column($options, 'vote_count'));
+            $tied = array_values(array_filter($options, static fn(array $option): bool => (int) $option['vote_count'] === (int) $maxVotes));
+            $winner = (int) $tied[random_int(0, count($tied) - 1)]['id'];
+            $automaticTieBreak = true;
+        }
+    }
     if ($winner <= 0) {
         return false;
     }
-    multiple_draw_apply_option((int) $match['id'], $winner);
+    multiple_draw_apply_option((int) $match['id'], $winner, $automaticTieBreak);
     return true;
 }
 
@@ -398,12 +491,14 @@ function multiple_draw_render_pitch_view(array $option, bool $visible = false): 
     $html .= '<button class="multi-draw-pitch-close" type="button" data-multi-draw-pitch-close aria-label="Volver a vista lista">x</button>';
     $html .= formation_view_render_pitch((array) ($option['teams'] ?? []), [
         'highlight_player_id' => current_player_id(),
+        'proposal' => !empty($option['author_user_id']),
+        'grid_class' => !empty($option['author_user_id']) ? 'proposal-teams' : 'grid gap-3 lg:grid-cols-2',
     ]);
     $html .= '</div>';
     return $html;
 }
 
-function multiple_draw_render_option(array $option, bool $selected = false, bool $showPitchByDefault = false): string
+function multiple_draw_render_option(array $option, bool $selected = false, bool $showPitchByDefault = false, bool $isWinner = false): string
 {
     $currentPlayerId = current_player_id();
     $selectedClasses = $selected
@@ -411,15 +506,34 @@ function multiple_draw_render_option(array $option, bool $selected = false, bool
         : '';
     $pitchClass = $showPitchByDefault ? ' lg:col-span-full' : '';
     $toggleLabel = $showPitchByDefault ? 'Ver lista' : 'Ver en cancha';
-    $html = '<article class="multi-draw-option' . $selectedClasses . $pitchClass . '">';
+    $html = '<article id="proposal-option-' . (int) $option['id'] . '" class="multi-draw-option' . $selectedClasses . $pitchClass . '">';
+    if (!empty($option['author_user_id'])) $html .= '<h3 class="proposal-option-heading" style="color: #fff !important; -webkit-text-fill-color: #fff !important;">Propuesta ' . (int) $option['option_number'] . ($isWinner ? ' — Ganadora' : '') . '</h3>';
     $html .= '<button class="multi-draw-option-toggle" type="button" data-multi-draw-pitch-toggle><span class="multi-draw-option-copy"><strong class="multi-draw-option-title"><span data-multi-draw-pitch-label>' . h($toggleLabel) . '</span>: Opcion ' . h((string) $option['option_number']) . '</strong><small class="multi-draw-option-meta">Diferencia ' . h(number_format((float) $option['total_diff'], 1)) . '</small></span><span class="multi-draw-vote-pill">' . h((string) (int) ($option['vote_count'] ?? 0)) . ' votos</span></button>';
     $html .= '<div class="multi-draw-teams" data-multi-draw-list-view' . ($showPitchByDefault ? ' hidden' : '') . '>';
     foreach (($option['teams'] ?? []) as $team) {
         $teamTotal = (float) ($team['total_skill'] ?? 0);
+        $kitName = (string) ($team['color_name'] ?? '');
+        $kitColors = [
+            'ROSA' => ['#f9a8d4', '#07130f'], 'AZUL' => ['#2563eb', '#ffffff'],
+            'NARANJA' => ['#fb923c', '#07130f'], 'NEGRO' => ['#111827', '#ffffff'],
+            'VERDE' => ['#15803d', '#ffffff'], 'CAMISADO' => ['#ffffff', '#07130f'],
+            'DESCAMISADO' => ['#d6d3d1', '#07130f'],
+        ];
+        [$kitBackground, $kitText] = $kitColors[strtoupper($kitName)] ?? ['#e5e7eb', '#07130f'];
+        $kitStyle = 'background: ' . $kitBackground . ' !important; color: ' . $kitText . ' !important; -webkit-text-fill-color: ' . $kitText . ' !important; border: 1px solid #adc8bb;';
         $html .= '<section class="multi-draw-team">';
-        $html .= '<h4 class="multi-draw-team-head"><span class="multi-draw-team-title">' . h((string) ($team['team_name'] ?? 'Equipo')) . '</span><span class="multi-draw-team-badges"><em>General ' . h(number_format($teamTotal, 1)) . '</em><strong>' . h((string) ($team['color_name'] ?? '')) . '</strong></span></h4>';
+        $html .= '<h4 class="multi-draw-team-head"><span class="multi-draw-team-title">' . h((string) ($team['team_name'] ?? 'Equipo')) . '</span><span class="multi-draw-team-badges"><em>General ' . h(number_format($teamTotal, 1)) . '</em><strong class="proposal-team-kit" style="' . h($kitStyle) . '">' . h($kitName) . '</strong></span></h4>';
         $html .= '<div class="multi-draw-player-list">';
-        foreach (($team['players'] ?? []) as $player) {
+        $listPlayers = $team['players'] ?? [];
+        usort($listPlayers, static function (array $a, array $b): int {
+            $normalizeName = static function (array $player): string {
+                $name = mb_strtolower(trim((string) ($player['name'] ?? 'Jugador')), 'UTF-8');
+                return iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name) ?: $name;
+            };
+            return strnatcasecmp($normalizeName($a), $normalizeName($b))
+                ?: (int) ($a['id'] ?? 0) <=> (int) ($b['id'] ?? 0);
+        });
+        foreach ($listPlayers as $player) {
             $rating = (float) ($player['rating'] ?? 0);
             $position = (string) ($player['assigned_position'] ?? 'MED');
             $isCurrentPlayer = $currentPlayerId > 0 && (int) ($player['id'] ?? 0) === $currentPlayerId;

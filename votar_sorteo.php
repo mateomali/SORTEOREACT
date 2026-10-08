@@ -5,7 +5,7 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/sorteo_multiple.php';
 
 ensure_multiple_draw_schema();
-require_player_user();
+if (current_user_id() <= 0) require_player_user();
 
 $matchId = (int) ($_GET['match_id'] ?? $_POST['match_id'] ?? 0);
 $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
@@ -14,6 +14,7 @@ if (!$match) {
     redirect('perfil.php');
 }
 
+if (!empty($match['director_proposals_enabled'])) redirect('propuestas_equipos.php?match_id=' . $matchId);
 multiple_draw_finalize_if_due($match);
 $match = repo_match_by_id($matchId) ?: $match;
 

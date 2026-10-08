@@ -103,6 +103,24 @@ async function generate(players, n, avoid = []) {
     globalThis.paceGood = {...goodEval, paceExcess: 0, adaptationCount: 1, lineQualityCost: 100};
   `);
   assert.equal(run('isBetterDraw(paceGood,paceBad)'), true, 'Mix slow players before preserving natural positions');
+  run(`globalThis.paceGood = {...paceGood, enduranceTierGaps: [4, 3], fastCountSpread: 4,
+    enduranceGap: 10, enduranceVariance: 50, diff: 10};
+    globalThis.paceBad = {...paceBad, enduranceTierGaps: [0, 0], fastCountSpread: 0,
+    enduranceGap: 0, enduranceVariance: 0, diff: 0};`);
+  assert.equal(run('isBetterDraw(paceGood,paceBad)'), true, 'Slow-player balance outranks endurance and total ratings');
+  assert.equal(run('isBetterDraw(paceBad,paceGood)'), false, 'Other improvements cannot undo pace balance');
+  for (const slowTotal of [8, 9, 10]) {
+    const players = run(`roster(3).map((p,i)=>({...p,
+      ritmo_stat: i >= 3 && i < 3 + ${slowTotal} ? 2 : 5,
+      resistencia: i >= 3 && i < 3 + ${slowTotal} ? 6 : 2}))`);
+    const { result } = await generate(players, 3);
+    const counts = result.evaluation.teamMetrics.map(team => team.slowCount).sort((a,b)=>a-b);
+    assert.equal(counts.reduce((sum,count)=>sum+count,0), slowTotal);
+    assert.ok(counts[2]-counts[0] <= 1, 'Slow players differ by at most one per team');
+    if (slowTotal === 9) assert.deepEqual(Array.from(counts), [3,3,3]);
+    const repeated = await generate(players, 3, [run('drawSignature')(result.teams)]);
+    assert.ok(repeated.result.evaluation.slowSpread <= 1, 'Repeated draws preserve pace balance');
+  }
   const slowRoster = run("roster(3).map((p,i)=>({...p,ritmo_stat:i>=3 && i<9 ? 2 : 5}))");
   const paceDraw = await generate(slowRoster,3);
   assert.ok(paceDraw.result.evaluation.slowSpread <= 1, 'Spread six slow defenders across three teams');
@@ -118,7 +136,9 @@ async function generate(players, n, avoid = []) {
   context.comparisonPlayers = comparisonPlayers;
   const before = run('scoreTeams(baseline.previousTeamsByIndex.map(indices=>indices.map(index=>comparisonPlayers[index])),{}, {})');
   const after = await generate(comparisonPlayers,2);
-  assert.ok(after.result.evaluation.diff <= before.diff + 1e-6, 'Total-gap priority must improve or preserve the previous draw total gap');
+  assert.ok(after.result.evaluation.paceExcess <= before.paceExcess, 'Preserve or improve pace balance against the previous draw');
+  assert.ok(after.result.evaluation.paceExcess < before.paceExcess || after.result.evaluation.diff <= before.diff + 1e-6,
+    'Total-gap improvement is subordinate to distributing slow players');
   report.push({scenario:'Previous algorithm vs new algorithm; unequal keepers',
     before:{gaps:baseline.previousGaps,totalAverageGap:before.totalBalance},
     after:{gaps:Object.fromEntries(Object.entries(after.result.evaluation.lineBalance.details).map(([k,v])=>[k,v.gap])),totalAverageGap:after.result.evaluation.totalBalance},ms:after.ms});

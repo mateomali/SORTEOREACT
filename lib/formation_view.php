@@ -129,6 +129,7 @@ function formation_view_render_pitch(array $teams, array $options = []): string
         $html .= formation_view_render_team($team, [
             'highlight_player_id' => $highlightPlayerId,
             'compact' => $compact,
+            'proposal' => !empty($options['proposal']),
         ]);
     }
     $html .= '</div>';
@@ -145,6 +146,7 @@ function formation_view_render_team(array $team, array $options = []): string
     $teamTotal = (float) ($team['total_skill'] ?? 0);
     $lines = formation_view_group_players((array) ($team['players'] ?? []));
     $pitchClasses = 'team-formation';
+    if (!empty($options['proposal'])) $pitchClasses .= ' director-proposal-pitch';
     if ($compact) {
         $pitchClasses .= ' profile-next-team-formation';
     }
@@ -172,7 +174,7 @@ function formation_view_render_team(array $team, array $options = []): string
         }
         $html .= '<div class="' . h($lineClasses) . '">';
         $html .= '<div class="line-label">' . h($line === 'DEF' && ($lines['LAT'] ?? []) ? 'DEF/LAT' : $line) . '</div>';
-        $html .= '<div class="line-players">';
+        $html .= '<div class="line-players" data-player-count="' . count($linePlayers) . '" style="--proposal-player-count: ' . max(1, count($linePlayers)) . '">';
         if (!$linePlayers) {
             $html .= '<span class="formation-player empty-slot">-</span>';
         } else {

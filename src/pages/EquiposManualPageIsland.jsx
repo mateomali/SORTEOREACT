@@ -56,7 +56,7 @@ function ManualTeamsShell({ payload }) {
       ) : null}
 
       <div className="manual-teams-status mt-3" data-manual-status />
-      <div className="manual-team-color-toolbar mt-3" data-manual-color-toolbar />
+      {!config.proposalMode ? <div className="manual-team-color-toolbar mt-3" data-manual-color-toolbar /> : null}
       <div className="manual-player-search mt-3" role="search">
         <label htmlFor="manualPlayerSearch">Buscar jugador</label>
         <div className="manual-player-search-box">
@@ -70,7 +70,7 @@ function ManualTeamsShell({ payload }) {
       <div className="manual-save-footer mt-3">
         <p className="small-muted" data-manual-formation-note>Completa todos los equipos para habilitar formaciones y guardar.</p>
         <div className="manual-team-characteristics" data-manual-team-characteristics hidden />
-        <button className="btn btn-primary" type="button" data-manual-save>Guardar equipos</button>
+        <button className="btn btn-primary" type="button" data-manual-save>{config.proposalMode ? 'Acomodar formaciones' : 'Guardar equipos'}</button>
       </div>
     </section>
   );

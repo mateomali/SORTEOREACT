@@ -39,6 +39,17 @@ try {
     throw $e;
 }
 
+// Publication is a prerequisite, including direct POST requests.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action'] ?? ''), ['save_result', 'save_score', 'finalize_round_robin_date'], true)) {
+    $publicationMatch = repo_match_by_id((int) ($_POST['match_id'] ?? 0));
+    if ($publicationMatch && !repo_match_teams_are_public($publicationMatch)) {
+        $message = 'Primero publica la fecha para poder finalizarla.';
+        if ((string) ($_POST['ajax'] ?? '') === '1') finish_json_response(['ok' => false, 'message' => $message], 422);
+        flash('error', $message);
+        redirect('encuentros.php');
+    }
+}
+
 $matchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
 $detailFormError = '';
 $forceEditDetails = false;
@@ -1172,7 +1183,7 @@ $savedAwards = $selectedMatch ? repo_match_awards((int) $selectedMatch['id']) : 
 $valuationsLocked = $selectedMatch ? valuations_locked_after_deadline($selectedMatch) : false;
 $editDetails = !$valuationsLocked;
 $editFormations = isset($_GET['edit_formations']) && $_GET['edit_formations'] === '1';
-$showScorePanel = !$editFormations || (isset($_GET['show_score']) && $_GET['show_score'] === '1') || $editDetails;
+$showScorePanel = !$editFormations || (isset($_GET['show_score']) && $_GET['show_score'] === '1');
 $formationOnlyView = $editFormations && !$showScorePanel;
 $backUrl = 'editar_partidos.php';
 $referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
@@ -1637,7 +1648,7 @@ require __DIR__ . '/includes/header.php';
         </div>
       </details>
       <div class="btn-row finish-valuations-actions">
-        <button class="btn btn-primary" type="submit" form="finish-score-form" name="action" value="<?= $isRoundRobinMatch ? 'finalize_round_robin_date' : 'save_score' ?>" data-confirm="Finalizar la fecha con estos goles?">Finalizar fecha</button>
+        <button class="btn btn-primary" type="submit" form="finish-score-form" name="action" value="<?= $isRoundRobinMatch ? 'finalize_round_robin_date' : 'save_score' ?>" data-confirm="Finalizar la fecha con estos goles?" <?= !repo_match_teams_are_public($selectedMatch) ? 'disabled title="Primero publica la fecha"' : '' ?>>Finalizar fecha</button>
       </div>
       <?php endif; ?>
     <?php endif; ?>

@@ -6,7 +6,9 @@ require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/sorteo.php';
 
-require_admin();
+require_once __DIR__ . '/lib/director_proposals.php';
+require_directivo_or_admin();
+ensure_director_proposals_schema();
 ensure_control_schema();
 
 if (!function_exists('repo_match_participants_basic')) {
@@ -166,6 +168,12 @@ if (!is_array($data)) {
     exit;
 }
 
+$proposalMode = !empty($data['proposal_mode']);
+if (!$proposalMode && !is_admin()) { http_response_code(403); echo json_encode(['ok' => false, 'message' => 'Guarda los equipos desde Crear mi propuesta.']); exit; }
+if ($proposalMode) {
+    try { director_proposal_check_csrf((string) ($data['proposal_csrf'] ?? '')); }
+    catch (Throwable $e) { http_response_code(403); echo json_encode(['ok' => false, 'message' => $e->getMessage()]); exit; }
+}
 $matchId = (int) ($data['match_id'] ?? 0);
 $numTeams = max(2, min(4, (int) ($data['num_teams'] ?? 2)));
 $drawMode = (string) ($data['draw_mode'] ?? 'random');
@@ -194,6 +202,9 @@ if ($match['status'] === 'finalizado') {
     exit;
 }
 
+if (!$proposalMode && !empty($match['director_proposals_enabled']) && empty($match['multi_draw_winner_option_id'])) {
+    http_response_code(409); echo json_encode(['ok' => false, 'message' => 'Esta fecha tiene una votacion de propuestas pendiente.']); exit;
+}
 $hasExistingRandomDraw = (string) ($match['status'] ?? '') === 'sorteado' && (string) ($match['draw_mode'] ?? '') === 'random';
 if ($drawMode === 'random' && $hasExistingRandomDraw && $redrawIncrement < 1) {
     $redrawIncrement = 1;
@@ -268,6 +279,8 @@ if (count($teams) !== $numTeams) {
     echo json_encode(['ok' => false, 'message' => 'La cantidad de equipos no coincide con la configuracion']);
     exit;
 }
+
+if ($proposalMode) foreach (match_team_kits($match) as $index => $kit) $teamMeta[$index]['color_name'] = $kit;
 
 $teamColorError = validate_unique_team_colors_legacy($teamMeta, $numTeams);
 if ($teamColorError !== null) {
@@ -375,6 +388,38 @@ $auditSnapshot = array_merge($auditSnapshot, [
 $auditSnapshotJson = json_encode($auditSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if ($auditSnapshotJson === false || strlen($auditSnapshotJson) > 65535) {
     $auditSnapshotJson = null;
+}
+
+if ($proposalMode) {
+    try {
+        $proposalTeams = [];
+        foreach ($teams as $idx => $team) {
+            $lineOrder = array_fill_keys(player_formation_lines(), 0);
+            $rows = [];
+            foreach ($team as $order => $player) {
+                $assigned = normalize_assigned_position_legacy((string) ($player['assigned_position'] ?? ''), $player);
+                $lineOrder[$assigned]++;
+                $rows[] = [
+                    'id' => (int) $player['id'], 'name' => (string) $player['name'],
+                    'assigned_position' => $assigned, 'is_substitute' => (int) ($player['is_substitute'] ?? 0),
+                    'is_goalkeeper' => empty($player['is_substitute']) && $assigned === 'ARQ' ? 1 : 0,
+                    'lineup_order' => $order + 1, 'formation_line_order' => $lineOrder[$assigned],
+                    'availability_percent' => availability_percent_legacy($player),
+                    'rating' => adjusted_position_rating_legacy($player, $assigned),
+                    'photo_path' => player_photo_path($player),
+                ];
+            }
+            $proposalTeams[] = ['team_number' => $idx + 1, 'team_name' => 'Equipo ' . ($idx + 1),
+                'color_name' => normalize_team_color_name_legacy((string) $teamMeta[$idx]['color_name']),
+                'total_skill' => $teamScores[$idx], 'formation_name' => team_formation_summary_legacy($team), 'players' => $rows];
+        }
+        director_proposal_publish($matchId, $proposalTeams, $maxDiff);
+        unset($_SESSION['proposal_manual_drafts'][current_user_id()][$matchId]);
+        echo json_encode(['ok' => true, 'message' => 'Propuesta guardada para votacion.']);
+    } catch (Throwable $e) {
+        http_response_code(409); echo json_encode(['ok' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
 }
 
 $pdo = db();

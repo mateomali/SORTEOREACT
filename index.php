@@ -7,10 +7,11 @@ require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/match_goals.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/directivos.php';
-require_once __DIR__ . '/lib/sorteo_multiple.php';
+require_once __DIR__ . '/lib/director_proposals.php';
 
 ensure_control_schema();
 ensure_multiple_draw_schema();
+director_proposals_finalize_due();
 directive_publish_due_results();
 
 $showHistoryPage = defined('SHOW_HISTORY_PAGE') && SHOW_HISTORY_PAGE;
@@ -1174,6 +1175,10 @@ if (!$showHistoryPage && is_directivo() && current_directivo_id() > 0) {
     }
 }
 
+if (!$showHistoryPage && is_directivo()) {
+    require __DIR__ . '/includes/director_home.php';
+    exit;
+}
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -1220,7 +1225,7 @@ require __DIR__ . '/includes/header.php';
     $topMatch = $matches[0];
     $headerMatch = $showHistoryPage
         ? ($selectedMatch ?: $topMatch)
-        : (($requestedMatchId > 0 && $selectedMatch) ? $selectedMatch : ($futureMatches[0] ?? $topMatch));
+        : (($requestedMatchId > 0 && $selectedMatch) ? $selectedMatch : (director_proposal_latest_match() ?? $futureMatches[0] ?? $topMatch));
     $headerTeams = repo_match_teams_visible_to_current_user($headerMatch)
         ? repo_match_teams((int) $headerMatch['id'])
         : [];
@@ -1267,10 +1272,18 @@ require __DIR__ . '/includes/header.php';
     $headerMultiDrawOptions = multiple_draw_options((int) $headerMatch['id']);
     $headerMultiDrawWinnerId = (int) ($headerMatch['multi_draw_winner_option_id'] ?? 0);
     $headerShowMultiDrawVote = $headerMultiDrawOptions
+        && (empty($headerMatch['director_proposals_enabled']) || director_proposals_are_visible($headerMatch))
         && $headerMultiDrawWinnerId <= 0
         && (string) ($headerMatch['status'] ?? '') === 'programado';
     $headerMultiDrawCanVote = $headerShowMultiDrawVote && multiple_draw_user_can_vote($headerMatch);
     $headerMultiDrawSelectedOptionId = current_user_id() > 0 ? multiple_draw_vote_for_user((int) $headerMatch['id'], current_user_id()) : 0;
+    $headerDirectorProposals = !empty($headerMatch['director_proposals_enabled']);
+    if ($headerDirectorProposals) {
+        $headerMultiDrawCanVote = multiple_draw_is_open($headerMatch) && current_user_id() > 0 && in_array(current_role(), ['usuario', 'jugador'], true);
+        $vote = db()->prepare('SELECT option_id FROM director_proposal_votes WHERE match_id = ? AND user_id = ?');
+        $vote->execute([(int) $headerMatch['id'], current_user_id()]);
+        $headerMultiDrawSelectedOptionId = (int) $vote->fetchColumn();
+    }
     $headerMultiDrawDeadline = multiple_draw_deadline($headerMatch);
     $headerMultiDrawParticipantCount = count(multiple_draw_participant_ids((int) $headerMatch['id']));
   ?>
@@ -1298,6 +1311,19 @@ require __DIR__ . '/includes/header.php';
           <button class="btn btn-primary" type="submit">Soy capitan</button>
         </div>
       </form>
+    <?php endif; ?>
+    <?php if (!$showHistoryPage && is_directivo()):
+        $homeOwnProposal = director_proposal_for_user((int) $headerMatch['id']);
+        $homeCanEdit = director_proposal_can_edit($headerMatch);
+        $homeCanCreate = !$homeOwnProposal && director_proposal_can_create($headerMatch);
+    ?>
+      <?php if ($homeCanEdit && $homeOwnProposal): ?>
+        <a class="btn btn-primary" href="sorteo_legacy_csv.php?match_id=<?= (int) $headerMatch['id'] ?>&amp;proposal=1&amp;edit_proposal=1">Editar mi formación</a>
+      <?php elseif ($homeCanCreate): ?>
+        <a class="btn btn-primary" href="crear_propuesta.php?match_id=<?= (int) $headerMatch['id'] ?>">Crear mi propuesta</a>
+      <?php elseif (!$homeOwnProposal && !director_proposal_roster_ready($headerMatch)): ?>
+        <p class="small-muted">El administrador debe completar la lista de jugadores para habilitar tu propuesta.</p>
+      <?php endif; ?>
     <?php endif; ?>
     <?php if ($showHistoryPage): ?>
       <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $headerMatch['id'] ?>" data-match-detail-toggle aria-label="Ver detalles de la fecha">
@@ -1349,17 +1375,23 @@ require __DIR__ . '/includes/header.php';
     <section class="card home-multi-draw-card">
       <div class="section-toolbar home-multi-draw-head">
         <div>
-          <span class="home-kicker">Votacion abierta</span>
+          <span class="home-kicker"><?= $headerDirectorProposals && time() < director_proposal_voting_start($headerMatch) ? 'Preparacion de propuestas' : ($headerDirectorProposals && !multiple_draw_is_open($headerMatch) ? 'Pendiente del administrador' : 'Votacion abierta') ?></span>
           <h3>Elegir sorteo de la fecha</h3>
           <p class="small-muted">
             <?= h((string) count($headerMultiDrawOptions)) ?> variantes publicadas.
-            Votan solo los <?= h((string) $headerMultiDrawParticipantCount) ?> jugadores convocados hasta <?= h(date('d/m/Y H:i', $headerMultiDrawDeadline)) ?>.
+            <?php if ($headerDirectorProposals): ?>
+              Propuestas de directivos. Inicio: <?= h(date('d/m/Y H:i', director_proposal_voting_start($headerMatch))) ?>. Los usuarios comunes pueden votar hasta <?= h(date('d/m/Y H:i', $headerMultiDrawDeadline)) ?>.
+            <?php else: ?>
+              Votan solo los <?= h((string) $headerMultiDrawParticipantCount) ?> jugadores convocados hasta <?= h(date('d/m/Y H:i', $headerMultiDrawDeadline)) ?>.
+            <?php endif; ?>
           </p>
         </div>
         <?php if ($headerMultiDrawCanVote): ?>
           <a class="btn btn-primary" href="votar_sorteo.php?match_id=<?= (int) $headerMatch['id'] ?>">
             <?= $headerMultiDrawSelectedOptionId > 0 ? 'Cambiar mi voto' : 'Votar ahora' ?>
           </a>
+        <?php elseif ($headerDirectorProposals): ?>
+          <a class="btn btn-muted" href="propuestas_equipos.php?match_id=<?= (int) $headerMatch['id'] ?>">Ver propuestas</a>
         <?php elseif (!is_player_user()): ?>
           <a class="btn btn-muted" href="login.php?next=<?= h(rawurlencode('votar_sorteo.php?match_id=' . (int) $headerMatch['id'])) ?>">Ingresar para votar</a>
         <?php else: ?>
@@ -1370,12 +1402,12 @@ require __DIR__ . '/includes/header.php';
       <?php if ($headerMultiDrawSelectedOptionId > 0): ?>
         <p class="small-muted home-multi-draw-vote-status">Tu voto esta guardado. Podes cambiarlo mientras la votacion siga abierta.</p>
       <?php else: ?>
-        <p class="small-muted home-multi-draw-vote-status">Esperando votos de los jugadores logueados convocados para completar la eleccion.</p>
+        <p class="small-muted home-multi-draw-vote-status"><?= $headerDirectorProposals ? (time() < director_proposal_voting_start($headerMatch) ? 'La votacion todavia no comenzo. Las propuestas pueden editarse hasta su inicio.' : (multiple_draw_is_open($headerMatch) ? 'Los usuarios pueden elegir su propuesta preferida. Las propuestas estan bloqueadas. Si hay empate y el administrador no elige al cerrar, se resuelve por sorteo.' : 'Votacion cerrada. Los empates se resuelven por sorteo automatico.')) : 'Esperando votos de los jugadores logueados convocados para completar la eleccion.' ?></p>
       <?php endif; ?>
 
       <div class="home-multi-draw-options grid gap-3 lg:grid-cols-3">
         <?php foreach ($headerMultiDrawOptions as $option): ?>
-          <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id'], true) ?>
+          <?= multiple_draw_render_option($option, $headerMultiDrawSelectedOptionId === (int) $option['id'], false) ?>
         <?php endforeach; ?>
       </div>
     </section>

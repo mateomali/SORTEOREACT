@@ -14,6 +14,8 @@ if (!$match) {
     redirect('editar_partidos.php');
 }
 
+if (!empty($match['director_proposals_enabled'])) redirect('propuestas_equipos.php?match_id=' . $matchId);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     try {
