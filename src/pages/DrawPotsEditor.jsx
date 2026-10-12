@@ -139,7 +139,7 @@ export function DrawPotsEditor({ mode, onModeChange, pots, onChange: updatePots,
                 <input className={control} value={pot.name} maxLength={60} onChange={event => onChange(pots.map((item, i) => i === index ? { ...item, name: event.target.value } : item))} disabled={disabled} aria-label={`Nombre del pote ${index + 1}`} />
               </label>
               <span className="text-xs text-[#526b62]">{count} convocados · Reparto inicial {Math.floor(count / numTeams)}–{Math.ceil(count / numTeams)} por equipo{count === 2 ? ' · Siempre separados' : ''}{absent > 0 ? ` · ${absent} guardados fuera de esta selección` : ''}</span>
-              
+
             </div>
             <div className="flex items-center gap-1">
               <button className={button} type="button" disabled={disabled || index === 0} onClick={() => move(index, -1)} aria-label={`Subir pote ${index + 1}`}>↑</button>
