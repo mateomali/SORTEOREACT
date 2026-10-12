@@ -404,7 +404,9 @@ function director_recalculate_player_stats(array $playerIds = []): void
                 $next[$field] = director_internal_stat_from_0_99((int) round((float) $avg[$field]));
             }
         }
-        $skill = player_overall_rating($next);
+        // A submitted valuation recalculates the new rating even when the
+        // previous general was imported and protected from automatic sync.
+        $skill = player_position_rating($next, player_primary_position($next));
         $pace = player_pace_from_rhythm((float) player_effective_stat($next, 'rhythm'));
         $update->execute([
             'id' => (int) $playerId,

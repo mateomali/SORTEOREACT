@@ -6,6 +6,7 @@ require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/match_goals.php';
+require_once __DIR__ . '/lib/draw_pots.php';
 
 $isRoundRobinAjaxRequest = $_SERVER['REQUEST_METHOD'] === 'POST'
     && (string) ($_POST['ajax'] ?? '') === '1'
@@ -702,6 +703,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $positionAssignments = is_array($_POST['player_position'] ?? null) ? $_POST['player_position'] : [];
 
     try {
+        $drawPots = json_decode((string) ($match['draw_pots_json'] ?? 'null'), true);
+        if (is_array($drawPots) && !draw_pots_pairs_separated($participants, $teamAssignments, $drawPots)) {
+            throw new RuntimeException('Los dos jugadores de un pote deben quedar en equipos distintos.');
+        }
         finish_save_match_formations($matchId, $participants, $teams, $teamColorData, $teamAssignments, $positionAssignments, is_array($_POST['player_substitute'] ?? null) ? $_POST['player_substitute'] : []);
         if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
             header('Content-Type: application/json; charset=utf-8');
@@ -869,6 +874,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
             $teamAssignments = is_array($_POST['player_team'] ?? null) ? $_POST['player_team'] : [];
             $positionAssignments = is_array($_POST['player_position'] ?? null) ? $_POST['player_position'] : [];
+            $drawPots = json_decode((string) ($match['draw_pots_json'] ?? 'null'), true);
+            if (is_array($drawPots) && !draw_pots_pairs_separated($participants, $teamAssignments, $drawPots)) {
+                throw new RuntimeException('Los dos jugadores de un pote deben quedar en equipos distintos.');
+            }
             $allowedPositions = player_formation_lines();
             $participantIds = array_map(static fn(array $player): int => (int) $player['id'], $participants);
             $participantIdSet = array_flip($participantIds);
@@ -1438,6 +1447,7 @@ require __DIR__ . '/includes/header.php';
           $drawBalanceWeights = player_draw_balance_weights();
           $formationEditorPayload = [
               'mode' => 'formation_editor',
+              'generatedPots' => json_decode((string) ($selectedMatch['draw_pots_json'] ?? 'null'), true),
               'matchId' => (int) $selectedMatch['id'],
               'match' => [
                   'id' => (int) $selectedMatch['id'],

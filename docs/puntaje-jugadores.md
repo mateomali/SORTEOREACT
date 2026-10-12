@@ -12,6 +12,8 @@ La política está en `assets/player-rating-policy.json`. PHP la lee directament
 
 El general del catálogo representa la primera posición elegida. Los puntajes por posición evalúan cada rol por separado. La posición secundaria sigue disponible y el sorteo puede usarla según sus restricciones; no se cambia automáticamente la posición declarada.
 
+Cuando se importa expresamente la puntuación del servidor, `players.preserve_stored_skill = 1` conserva el valor de `players.skill` como general del catálogo y del perfil. Abrir páginas no lo recalcula. Los puntajes por posición siguen disponibles; guardar una edición de atributos o aplicar una valoración puede actualizar explícitamente la general almacenada. Los jugadores sin esta marca mantienen el cálculo habitual. Verificación: `php tests/imported-player-rating.php`.
+
 ## Pesos predeterminados
 
 | Atributo | ARQ | DEF | LAT | MED | DEL |

@@ -1,5 +1,6 @@
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toJpeg } from 'html-to-image';
+import { DrawPotsEditor } from './DrawPotsEditor';
 
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
 const PITCH_LINES = ['ARQ', 'DEF', 'MED', 'DEL'];
@@ -153,6 +154,9 @@ function parsePayload(root) {
       mode: String(parsed.mode || 'sorteo'),
       proposalMode: parsed.proposalMode === true,
       proposalCsrf: String(parsed.proposalCsrf || ''),
+      pots: Array.isArray(parsed.pots) ? parsed.pots : [],
+      potsCsrf: String(parsed.potsCsrf || ''),
+      generatedPots: Array.isArray(parsed.generatedPots) ? parsed.generatedPots : null,
       matchId: Number(parsed.matchId || 0),
       match: parsed.match || null,
       players: Array.isArray(parsed.players) ? parsed.players : [],
@@ -175,6 +179,9 @@ function parsePayload(root) {
       mode: 'sorteo',
       proposalMode: false,
       proposalCsrf: '',
+      pots: [],
+      potsCsrf: '',
+      generatedPots: null,
       matchId: 0,
       match: null,
       players: [],
@@ -1172,7 +1179,7 @@ function generationConstraints(teams, assignments = null) {
   return { valid: violations === 0, violations, sizes, unique, goalkeeperRule, naturalPositions, platinum, coverageViolations, shortage, adaptationCount, adaptationBudget: rules.adaptationBudget };
 }
 
-function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) {
+function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}, pots = null, potReferenceTeams = null) {
   rosterFormationRules(teams.flat(), teams.length, teams[0]?.length || 0);
   const assignments = teams.map((team) => buildTeamAssignment(team, assignmentOverrides));
   const totals = teams.map((team, index) => team.reduce((sum, player) => sum + adjustedPositionRating(player, assignments[index][playerKey(player)]), 0));
@@ -1220,14 +1227,24 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
   const profileDistribution = profileDistributionPenalty(teams);
   const lineBalance = lineStrengthBalance(teams, assignmentOverrides, assignments);
   const hardConstraints = generationConstraints(teams, assignments);
+  const separatedPairs = teamsSeparateTwoPlayerPots(teams, pots);
+  if (!separatedPairs) {
+    hardConstraints.valid = false;
+    hardConstraints.violations += 1;
+  }
+  hardConstraints.separatedPairs = separatedPairs;
   const positionalBalance = lineBalance.positionalBalance;
   const secondaryCost = slowSpread * 600 + speedBalance * 300 + irregularSpread * 95 + tierBalancePenalty(teams, assignmentOverrides)
     + positionUsePenalty(teams, assignmentOverrides) + profileDistribution.penalty + statPenalty + historicalRepeatPenalty(teams, pairHistory)
     + lineBalance.eliteExcess * 120;
   const totalBalance = countSpread(totals.map((total, index) => teams[index].length ? total / teams[index].length : 0));
   const totalCost = hardConstraints.violations * 1e15 + paceExcess * 1e12 + hardConstraints.adaptationCount * 1e10 + positionalBalance * 1e6 + lineBalance.qualityCost * 1000 + totalBalance * 100 + secondaryCost;
+  const potExchangePenalty = potExchangeDistancePenalty(teams, potReferenceTeams, pots);
   return {
     ...enduranceBalance(teams),
+    potExchangePenalty,
+    potAdjustedDiff: diff + potExchangePenalty * 0.25,
+    potCompensationCost: potCompensationCost(teams, pots, assignments),
     valid: hardConstraints.valid, hardConstraints, hardViolations: hardConstraints.violations,
     value: totalCost, totalCost, paceExcess, speedBalance, adaptationCount: hardConstraints.adaptationCount, secondaryCost, positionalBalance, lineQualityCost: lineBalance.qualityCost,
     maxLineGap: lineBalance.maxLineGap, totalBalance, paceBalance: slowSpread,
@@ -1240,6 +1257,252 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}) 
       totalStrength: totals[index], averageQuality: team.length ? totals[index] / team.length : 0, slowCount: slowCounts[index],
     })),
   };
+}
+
+function buildAutomaticDrawPots(players, numTeams, maxGeneralGap = 5, existingPots = []) {
+  const byPosition = new Map();
+  const selected = new Set(players.map(playerKey));
+  for (const player of players) {
+    const position = player.manualGoalkeeper ? 'ARQ' : getPrimaryPlayerPosition(player);
+    const rating = Number(player.base_puntuacion ?? player.puntuacion ?? 3);
+    const entry = { player, rating, general: playerCardRating(rating) };
+    if (!byPosition.has(position)) byPosition.set(position, []);
+    byPosition.get(position).push(entry);
+  }
+  const groups = [];
+  const targetSize = Math.max(2, Math.min(4, numTeams));
+  const gap = Math.max(0, Number(maxGeneralGap) || 0);
+  for (const [position, entries] of byPosition) {
+    entries.sort((a, b) => b.rating - a.rating || playerKey(a.player).localeCompare(playerKey(b.player)));
+    // Goalkeepers form one role pool regardless of score or team count.
+    if (position === 'ARQ') {
+      groups.push({ position, average: entries.reduce((sum, item) => sum + item.rating, 0) / entries.length,
+        name: 'ARQ · Arqueros', playerIds: entries.map(item => playerKey(item.player)) });
+      continue;
+    }
+    const costs = Array(entries.length + 1).fill(Infinity);
+    const ends = Array(entries.length).fill(0);
+    costs[entries.length] = 0;
+    // Partition neighboring ratings, avoiding lone players when a similar
+    // group can fit. No player is discarded when a position has odd numbers.
+    for (let start = entries.length - 1; start >= 0; start--) {
+      for (let size = 1; size <= targetSize + 1 && start + size <= entries.length; size++) {
+        const range = entries[start].general - entries[start + size - 1].general;
+        if (range > gap) break;
+        const cost = costs[start + size] + (size - targetSize) ** 2 * 3 + (size === 1 ? 9 : 0) + (range / Math.max(1, gap)) ** 2;
+        if (cost < costs[start]) { costs[start] = cost; ends[start] = start + size; }
+      }
+    }
+    for (let start = 0; start < entries.length;) {
+      const end = ends[start];
+      const group = entries.slice(start, end);
+      const minimum = group[group.length - 1].general;
+      const maximum = group[0].general;
+      groups.push({ position, entries: group, average: group.reduce((sum, item) => sum + item.rating, 0) / group.length,
+        name: `${position} · ${minimum === maximum ? maximum : `${minimum}–${maximum}`} GEN`, playerIds: group.map(item => playerKey(item.player)) });
+      start = end;
+    }
+  }
+  const fallbackPositions = player => {
+    const positions = getOrderedPlayerPositions(player);
+    return [...new Set([positions[1], ...(positions.includes('LAT') ? ['DEF', 'MED'] : [])])]
+      .filter(position => position && position !== 'ARQ');
+  };
+  // Isolated players use their secondary role; LAT can also cover DEF/MED.
+  // Keep established groups and the goalkeeper pool intact.
+  for (const source of groups) {
+    if (source.position === 'ARQ' || source.entries?.length !== 1) continue;
+    const entry = source.entries[0];
+    const alternatives = fallbackPositions(entry.player);
+    if (!alternatives.length) continue;
+    const candidates = groups.filter(target => target !== source && alternatives.includes(target.position)
+      && target.entries?.length > 0
+      && Math.max(entry.general, ...target.entries.map(item => item.general))
+        - Math.min(entry.general, ...target.entries.map(item => item.general)) <= gap);
+    candidates.sort((a, b) => Math.abs(a.average - entry.rating) - Math.abs(b.average - entry.rating));
+    let target = candidates[0];
+    if (!target) {
+      // Two isolated players can also share a secondary field position.
+      target = groups.find(other => other !== source && other.position !== 'ARQ' && other.entries?.length === 1
+        && alternatives.some(position => [...getOrderedPlayerPositions(other.entries[0].player), ...fallbackPositions(other.entries[0].player)].includes(position))
+        && Math.abs(other.entries[0].general - entry.general) <= gap);
+      if (target) target.position = alternatives.find(position => [...getOrderedPlayerPositions(target.entries[0].player), ...fallbackPositions(target.entries[0].player)].includes(position));
+    }
+    if (!target) continue;
+    target.entries.push(entry);
+    source.entries = [];
+    source.playerIds = [];
+    target.playerIds = target.entries.map(item => playerKey(item.player));
+    target.average = target.entries.reduce((sum, item) => sum + item.rating, 0) / target.entries.length;
+    const minimum = Math.min(...target.entries.map(item => item.general));
+    const maximum = Math.max(...target.entries.map(item => item.general));
+    target.name = `${target.position} · ${minimum === maximum ? maximum : `${minimum}–${maximum}`} GEN`;
+  }
+  // Minimum two field players takes priority over position, gap and target size.
+  // Merge remaining singletons by nearest general score, never into ARQ.
+  const isolated = groups.filter(group => group.position !== 'ARQ' && group.entries?.length === 1);
+  isolated.sort((a, b) => a.average - b.average);
+  for (const source of isolated) {
+    if (source.entries.length !== 1) continue;
+    const entry = source.entries[0];
+    const candidates = groups.filter(target => target !== source && target.position !== 'ARQ' && target.entries?.length > 0);
+    const meanGeneral = target => target.entries.reduce((sum, item) => sum + item.general, 0) / target.entries.length;
+    candidates.sort((a, b) => Math.abs(meanGeneral(a) - entry.general) - Math.abs(meanGeneral(b) - entry.general)
+      || a.entries.length - b.entries.length);
+    const target = candidates[0];
+    if (!target) continue; // Only one field player in the entire roster.
+    target.entries.push(entry);
+    source.entries = [];
+    source.playerIds = [];
+    target.playerIds = target.entries.map(item => playerKey(item.player));
+    target.average = target.entries.reduce((sum, item) => sum + item.rating, 0) / target.entries.length;
+    const supportsRole = item => getOrderedPlayerPositions(item.player).includes(target.position)
+      || fallbackPositions(item.player).includes(target.position);
+    const label = target.entries.every(supportsRole) ? target.position : 'Mixto';
+    const minimum = Math.min(...target.entries.map(item => item.general));
+    const maximum = Math.max(...target.entries.map(item => item.general));
+    target.name = `${label} · ${minimum === maximum ? maximum : `${minimum}–${maximum}`} GEN`;
+  }
+  // Pot order groups roles together; it is not a global strength ranking.
+  groups.sort((a, b) => POSITION_ORDER[a.position] - POSITION_ORDER[b.position] || b.average - a.average);
+  const result = groups.filter(group => group.playerIds.length).map(({ name, playerIds }) => ({ name, playerIds }));
+  // Proposing groups for the current roster preserves saved absent members.
+  const absent = new Set();
+  for (const pot of existingPots) {
+    const playerIds = [];
+    for (const rawId of pot.playerIds) {
+      const id = String(rawId);
+      if (!selected.has(id) && !absent.has(id)) { playerIds.push(id); absent.add(id); }
+    }
+    if (playerIds.length) result.push({ name: pot.name, playerIds });
+  }
+  return result;
+}
+
+function teamsSeparateTwoPlayerPots(teams, pots) {
+  if (!pots) return true;
+  const present = new Set(teams.flat().map(playerKey));
+  return pots.every(pot => {
+    const ids = pot.playerIds.map(String).filter(id => present.has(id));
+    return ids.length !== 2 || !teams.some(team => ids.every(id => team.some(player => playerKey(player) === id)));
+  });
+}
+
+function activeDrawPots(pots, players) {
+  const selected = new Set(players.map(playerKey));
+  const seen = new Set();
+  const active = [];
+  for (const pot of pots) {
+    const ids = (pot.playerIds || []).map(String).filter(id => selected.has(id));
+    for (const id of ids) {
+      if (seen.has(id)) return null;
+      seen.add(id);
+    }
+    active.push({ name: pot.name, playerIds: ids });
+  }
+  return seen.size === selected.size ? active : null;
+}
+
+function teamsRespectPots(teams, pots) {
+  if (!pots) return true;
+  const cumulative = teams.map(() => 0);
+  for (const pot of pots) {
+    const members = new Set(pot.playerIds);
+    const counts = teams.map(team => team.filter(player => members.has(playerKey(player))).length);
+    if (counts.reduce((sum, count) => sum + count, 0) !== members.size || countSpread(counts) > 1) return false;
+    counts.forEach((count, index) => { cumulative[index] += count; });
+    // An odd pot is compensated by the next one, rather than giving every
+    // spare player to the same team. This also works for three/four teams.
+    if (countSpread(cumulative) > 1) return false;
+  }
+  return true;
+}
+
+function drawPotDistance(sourceKey, targetKey, pots) {
+  if (!pots) return 0;
+  const source = pots.findIndex(pot => pot.playerIds.includes(String(sourceKey)));
+  const target = pots.findIndex(pot => pot.playerIds.includes(String(targetKey)));
+  return source < 0 || target < 0 ? null : Math.abs(source - target);
+}
+
+function potExchangeDistancePenalty(teams, referenceTeams, pots) {
+  if (!pots || !referenceTeams) return 0;
+  const levels = new Map(pots.flatMap((pot, index) => pot.playerIds.map(id => [String(id), index])));
+  let penalty = 0;
+  teams.forEach((team, index) => {
+    const previous = new Set(referenceTeams[index].map(playerKey));
+    const current = new Set(team.map(playerKey));
+    const outgoing = [...previous].filter(id => !current.has(id)).map(id => levels.get(id)).sort((a, b) => a - b);
+    const incoming = [...current].filter(id => !previous.has(id)).map(id => levels.get(id)).sort((a, b) => a - b);
+    // Pair sorted levels to measure the smallest displacement from the
+    // original pot distribution. Squaring strongly discourages distant pots.
+    outgoing.forEach((level, i) => { penalty += (level - incoming[i]) ** 2; });
+  });
+  return penalty / 2;
+}
+
+function potCompensationCost(teams, pots, assignments) {
+  if (!pots) return 0;
+  const cumulative = teams.map(() => 0);
+  return pots.reduce((cost, pot) => {
+    const ids = new Set(pot.playerIds);
+    teams.forEach((team, index) => {
+      cumulative[index] += team.filter(player => ids.has(playerKey(player))).reduce((sum, player) =>
+        sum + adjustedPositionRatingForTeamSize(player, assignments[index][playerKey(player)], team.length), 0);
+    });
+    return cost + countSpread(cumulative) ** 2;
+  }, 0);
+}
+
+function buildPotCandidateTeams(players, numTeams, teamSize, pots) {
+  const byId = new Map(players.map(player => [playerKey(player), player]));
+  const teams = Array.from({ length: numTeams }, () => []);
+  const totals = teams.map(() => 0);
+  const keepers = teams.map(() => 0);
+  const lines = teams.map(() => ({ DEF: 0, MED: 0, DEL: 0 }));
+  for (const pot of pots) {
+    const pool = shuffle(pot.playerIds.map(id => byId.get(id)));
+    const base = Math.floor(pool.length / numTeams);
+    const extra = pool.length % numTeams;
+    // First compensate the number of players, then the accumulated strength.
+    const priority = shuffle(teams.map((_, index) => index)).sort((a, b) => teams[a].length - teams[b].length || totals[a] - totals[b]);
+    // Vary equally sized teams across attempts so positional constraints can
+    // override a locally attractive choice without violating pot quotas.
+    if (Math.random() < 0.35) {
+      for (let start = 0; start < priority.length;) {
+        let end = start + 1;
+        while (end < priority.length && teams[priority[end]].length === teams[priority[start]].length) end++;
+        priority.splice(start, end - start, ...shuffle(priority.slice(start, end)));
+        start = end;
+      }
+    }
+    const slots = teams.map((_, index) => base + Number(priority.slice(0, extra).includes(index)));
+    if (teams.some((team, index) => team.length + slots[index] > teamSize)) return null;
+    // Reserve keepers before filling the field slots, within their own pot.
+    pool.sort((a, b) => Number(isFixedGoalkeeper(b)) - Number(isFixedGoalkeeper(a)) || bestNaturalPlayerRating(b) - bestNaturalPlayerRating(a));
+    for (const player of pool) {
+      const keeper = isFixedGoalkeeper(player);
+      const position = keeper ? 'ARQ' : getOrderedPlayerPositions(player).find(p => p !== 'ARQ');
+      if (!position) return null;
+      const rating = adjustedPositionRatingForTeamSize(player, position, teamSize);
+      const line = pitchLineForPosition(position);
+      const eligible = shuffle(teams.map((_, index) => index)).filter(index => slots[index] > 0
+        && (!keeper || keepers[index] === 0)
+        && (keeper || keepers[index] > 0 || teams[index].length < teamSize - 1));
+      if (!eligible.length) return null;
+      // The strongest available player generally goes to the weaker team.
+      // Position coverage breaks close choices; the final full-roster search
+      // uses all the existing constraints and formation evaluations.
+      eligible.sort((a, b) => totals[a] - totals[b] || (keeper ? 0 : lines[a][line] - lines[b][line]));
+      const index = Math.random() < 0.2 && eligible.length > 1 ? eligible[1] : eligible[0];
+      teams[index].push(player);
+      totals[index] += rating;
+      keepers[index] += Number(keeper);
+      if (!keeper) lines[index][line]++;
+      slots[index]--;
+    }
+  }
+  return teams.every((team, index) => team.length === teamSize && keepers[index] === 1) && teamsRespectPots(teams, pots) ? teams : null;
 }
 
 function buildCandidateTeams(players, numTeams, teamSize, pairHistory, weights) {
@@ -1330,9 +1593,9 @@ function isBetterDraw(evaluation, best) {
     const difference=Number(evaluation.enduranceTierGaps?.[index] || 0)-Number(best.enduranceTierGaps?.[index] || 0);
     if (difference) return difference<0;
   }
-  for (const field of ['hardViolations', 'fastCountSpread', 'enduranceGap', 'enduranceVariance', 'diff', 'paceExcess', 'adaptationCount', 'lineQualityCost', 'positionalBalance', 'secondaryCost']) {
-    const left = Number(evaluation[field] ?? (field === 'totalBalance' ? evaluation.diff : field === 'secondaryCost' ? evaluation.value : 0));
-    const right = Number(best[field] ?? (field === 'totalBalance' ? best.diff : field === 'secondaryCost' ? best.value : 0));
+  for (const field of ['hardViolations', 'fastCountSpread', 'enduranceGap', 'enduranceVariance', 'potAdjustedDiff', 'diff', 'potCompensationCost', 'paceExcess', 'adaptationCount', 'lineQualityCost', 'positionalBalance', 'secondaryCost']) {
+    const left = Number(evaluation[field] ?? (field === 'potAdjustedDiff' || field === 'totalBalance' ? evaluation.diff : field === 'secondaryCost' ? evaluation.value : 0));
+    const right = Number(best[field] ?? (field === 'potAdjustedDiff' || field === 'totalBalance' ? best.diff : field === 'secondaryCost' ? best.value : 0));
     if (Math.abs(left - right) > 1e-6) return left < right;
   }
   return false;
@@ -1348,6 +1611,8 @@ function drawsAreNear(evaluation, best) {
     && evaluation.paceExcess === best.paceExcess
     && evaluation.adaptationCount === best.adaptationCount
     && evaluation.diff <= best.diff + 1e-6
+    && Number(evaluation.potAdjustedDiff ?? evaluation.diff) <= Number(best.potAdjustedDiff ?? best.diff) + 1e-6
+    && Number(evaluation.potCompensationCost || 0) <= Number(best.potCompensationCost || 0) + 1e-6
     && evaluation.lineQualityCost <= best.lineQualityCost + 1e-6
     && evaluation.positionalBalance === best.positionalBalance;
 }
@@ -1375,11 +1640,11 @@ async function refineDrawFormations(pool, pairHistory, weights, avoidSignatures,
     const base = Object.assign({}, ...item.teams.map(team => buildTeamAssignment(team)));
     const formation = mostBalancedFormations(item.teams, base);
     if (!formation) continue;
-    const evaluation = scoreTeams(item.teams, pairHistory, formation.assignments, weights);
+    const evaluation = scoreTeams(item.teams, pairHistory, formation.assignments, weights, options.pots, item.potReferenceTeams);
     const validRefinement = evaluation.valid && evaluation.paceExcess === 0
       && evaluation.adaptationCount <= item.evaluation.adaptationCount;
     refined.push(validRefinement
-      ? { teams: item.teams, evaluation, assignments: formation.assignments }
+      ? { ...item, evaluation, assignments: formation.assignments }
       : { ...item, assignments: base });
   }
   if (!refined.length) return null;
@@ -1387,9 +1652,10 @@ async function refineDrawFormations(pool, pairHistory, weights, avoidSignatures,
   return selectTopDraw(refined, refined[0], avoidSignatures);
 }
 
-function* swapSearchSteps(teams, teamSize, pairHistory, weights) {
+function* swapSearchSteps(teams, teamSize, pairHistory, weights, pots = null) {
   let best = teams.map((team) => team.slice());
-  let bestEval = scoreTeams(best, pairHistory, {}, weights);
+  const potReferenceTeams = pots ? teams.map(team => team.slice()) : null;
+  let bestEval = scoreTeams(best, pairHistory, {}, weights, pots, potReferenceTeams);
   let changed = true;
   let guard = 0;
   while (changed && guard < 12) {
@@ -1403,11 +1669,12 @@ function* swapSearchSteps(teams, teamSize, pairHistory, weights) {
             candidate[a] = best[a].slice();
             candidate[b] = best[b].slice();
             [candidate[a][i], candidate[b][j]] = [candidate[b][j], candidate[a][i]];
+            if (!teamsSeparateTwoPlayerPots(candidate, pots)) continue;
             if (!candidate.every((team) => team.length === teamSize)) continue;
             if (isFixedGoalkeeper(best[a][i]) !== isFixedGoalkeeper(best[b][j])) continue;
             if (!teamsRespectGoalkeepers(candidate)) continue;
             if (platinumSpread(candidate) > 1) continue;
-            const evaluation = scoreTeams(candidate, pairHistory, {}, weights);
+            const evaluation = scoreTeams(candidate, pairHistory, {}, weights, pots, potReferenceTeams);
             if (isBetterDraw(evaluation, bestEval)) {
               best = candidate;
               bestEval = evaluation;
@@ -1419,7 +1686,7 @@ function* swapSearchSteps(teams, teamSize, pairHistory, weights) {
       }
     }
   }
-  return { teams: best, evaluation: bestEval };
+  return { teams: best, evaluation: bestEval, potReferenceTeams };
 }
 
 function improveBySwaps(teams, teamSize, pairHistory, weights) {
@@ -1429,8 +1696,8 @@ function improveBySwaps(teams, teamSize, pairHistory, weights) {
   return result.value;
 }
 
-async function improveBySwapsAsync(teams, teamSize, pairHistory, weights, yieldToUi) {
-  const steps = swapSearchSteps(teams, teamSize, pairHistory, weights);
+async function improveBySwapsAsync(teams, teamSize, pairHistory, weights, yieldToUi, pots = null) {
+  const steps = swapSearchSteps(teams, teamSize, pairHistory, weights, pots);
   let result = steps.next();
   while (!result.done) {
     await yieldToUi();
@@ -1515,9 +1782,10 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
         (pickedFlags[index] ? left : right).push(players[index]);
       }
       const teams = [left, right];
+      if (!teamsRespectPots(teams, options.pots)) return;
       if (!teamsFitFormationRules(teams, teamSize)) return;
       if (avoidSignatures.has(drawSignature(teams))) return;
-      const evaluationBase = scoreTeams(teams, pairHistory, {}, weights);
+      const evaluationBase = scoreTeams(teams, pairHistory, {}, weights, options.pots);
       evaluatedCandidates += 1;
       const signature = drawSignature(teams);
       const evaluation = { ...evaluationBase, signature };
@@ -1550,6 +1818,16 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
 
   await visit(1);
   if (!best) return null;
+  if (options.pots) {
+    // Start with a pot-based draw, then allow measured exceptions for finer
+    // balance. Keep the reference so formation refinement retains the cost.
+    for (const item of topPool.slice(0, 8)) {
+      const improved = await improveBySwapsAsync(item.teams, teamSize, pairHistory, weights, yieldToUi, options.pots);
+      if (improved.evaluation.valid && !avoidSignatures.has(drawSignature(improved.teams))) {
+        topPool = collectTopDraw(topPool, improved);
+      }
+    }
+  }
   const selectedDraw = await refineDrawFormations(topPool, pairHistory, weights, avoidSignatures, options);
   if (!selectedDraw) return null;
   return { ...selectedDraw, bestEvaluation: bestEval, topSolutions: topPool.length, evaluatedCandidates, exhaustive: true, usedMaxDiff: Math.max(maxDiff, selectedDraw.evaluation.diff) };
@@ -1557,6 +1835,9 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
 
 async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights, avoidSignatures = new Set(), options = {}) {
   if (![2, 3, 4].includes(numTeams) || players.length % numTeams !== 0 || new Set(players.map(playerKey)).size !== players.length) return null;
+  const pots = options.pots ? activeDrawPots(options.pots, players) : null;
+  if (options.pots && !pots) return null;
+  options = { ...options, pots };
   const pure = players.filter(player => getOrderedPlayerPositions(player).length === 1 && getPrimaryPlayerPosition(player) === 'ARQ');
   if (pure.length > numTeams) return null;
   const pureKeys = new Set(pure.map(playerKey));
@@ -1578,7 +1859,9 @@ async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, we
   let evaluatedCandidates = 0;
   let topPool = [];
   const finalists = [];
-  const consider = (teams, evaluationBase) => {
+  const consider = (teams, evaluationBase, potReferenceTeams = null) => {
+    if (!teamsSeparateTwoPlayerPots(teams, pots)) return;
+    if (!potReferenceTeams && !teamsRespectPots(teams, pots)) return;
     if (!teamsFitFormationRules(teams, teamSize)) return;
     evaluatedCandidates += 1;
     const signature = drawSignature(teams);
@@ -1588,14 +1871,16 @@ async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, we
       best = teams;
       bestEval = evaluation;
     }
-    topPool = collectTopDraw(topPool, { teams, evaluation }, { teams: best, evaluation: bestEval });
+    topPool = collectTopDraw(topPool, { teams, evaluation, potReferenceTeams }, { teams: best, evaluation: bestEval });
   };
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await yieldToUi();
     options.onProgress?.(attempt / (attempts + 8));
-    const candidate = buildCandidateTeams(shuffle(players), numTeams, teamSize, pairHistory, weights);
+    const candidate = pots
+      ? buildPotCandidateTeams(players, numTeams, teamSize, pots)
+      : buildCandidateTeams(shuffle(players), numTeams, teamSize, pairHistory, weights);
     if (!candidate) continue;
-    const evaluation = scoreTeams(candidate, pairHistory, {}, weights);
+    const evaluation = scoreTeams(candidate, pairHistory, {}, weights, pots);
     consider(candidate, evaluation);
     const signature = drawSignature(candidate);
     if (!finalists.some(item => drawSignature(item.teams) === signature)) finalists.push({ teams: candidate, evaluation });
@@ -1605,8 +1890,8 @@ async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, we
   for (let index = 0; index < finalists.length; index += 1) {
     await yieldToUi();
     options.onProgress?.((attempts + index) / (attempts + finalists.length));
-    const improved = await improveBySwapsAsync(finalists[index].teams, teamSize, pairHistory, weights, yieldToUi);
-    consider(improved.teams, improved.evaluation);
+    const improved = await improveBySwapsAsync(finalists[index].teams, teamSize, pairHistory, weights, yieldToUi, pots);
+    consider(improved.teams, improved.evaluation, improved.potReferenceTeams);
   }
   if (!best) return null;
   const selectedDraw = await refineDrawFormations(topPool, pairHistory, weights, avoidSignatures, options);
@@ -3091,6 +3376,12 @@ export function SorteoLegacyPageIsland({ root }) {
   const [manualGoalkeepers, setManualGoalkeepers] = useState(() => initialManualGoalkeepers(payload.players.map(normalizePlayer)));
   const [numTeams] = useState(payload.numTeams);
   const [maxDiff, setMaxDiff] = useState(0.7);
+  const [drawMode, setDrawMode] = useState('standard');
+  const [drawPots, setDrawPots] = useState(payload.pots);
+  const [savedPots, setSavedPots] = useState(() => JSON.stringify(payload.pots));
+  const [savingPots, setSavingPots] = useState(false);
+  const [potsMessage, setPotsMessage] = useState('');
+  const [generatedPots, setGeneratedPots] = useState(payload.generatedPots);
   const [sortKey, setSortKey] = useState('nombre');
   const [sortDirection, setSortDirection] = useState(1);
   const [teams, setTeams] = useState(() => (initialTeams.length ? initialTeams.map(team => team.filter(player => !Number(player.is_substitute))) : null));
@@ -3281,13 +3572,37 @@ export function SorteoLegacyPageIsland({ root }) {
     if (availabilityAdjustedCount > 0) {
       warnings.push(`${availabilityAdjustedCount} jugador${availabilityAdjustedCount === 1 ? '' : 'es'} con estado menor a 100%.`);
     }
+    if (drawMode === 'pots') {
+      if (!drawPots.length) issues.push('Agregá potes y asigná los jugadores seleccionados.');
+      else if (!activeDrawPots(drawPots, selectedPlayers)) issues.push('Asigná cada jugador seleccionado a un único pote.');
+      if (drawPots.some(pot => !pot.name.trim())) issues.push('Escribí un nombre para cada pote.');
+    }
     return {
       issues,
       warnings,
       ready: issues.length === 0,
       teamSizeLabel: teamSize ? `${teamSize} por equipo` : 'Sin dividir',
     };
-  }, [availabilityAdjustedCount, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.redrawLimit, redrawsRemaining, selectedGoalkeepers.length, selectedPlayers]);
+  }, [availabilityAdjustedCount, drawMode, drawPots, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.redrawLimit, redrawsRemaining, selectedGoalkeepers.length, selectedPlayers]);
+
+  const savePotsTemplate = async () => {
+    setSavingPots(true);
+    setPotsMessage('');
+    try {
+      const response = await fetch('guardar_potes.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csrf: payload.potsCsrf, pots: drawPots }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || 'No se pudieron guardar los potes.');
+      setSavedPots(JSON.stringify(data.pots));
+      setPotsMessage('Plantilla compartida guardada para próximas fechas.');
+    } catch (error) {
+      setPotsMessage(error.message || 'No se pudieron guardar los potes.');
+    } finally {
+      setSavingPots(false);
+    }
+  };
 
   const sortedPlayers = useMemo(() => {
     const sorted = players.slice();
@@ -3490,6 +3805,11 @@ export function SorteoLegacyPageIsland({ root }) {
     ));
     const prepared = prepareEmergencyGoalkeepers(selectedWithGoalkeepers, numTeams);
     const candidates = prepared.players;
+    const pots = drawMode === 'pots' ? activeDrawPots(drawPots, candidates) : null;
+    if (drawMode === 'pots' && (!pots || !pots.length || drawPots.some(pot => !pot.name.trim()))) {
+      setError('Agregá potes con nombre y asigná cada jugador seleccionado a un único pote.');
+      return null;
+    }
     if (!candidates.length) {
       setError('Selecciona al menos un jugador.');
       return null;
@@ -3533,7 +3853,7 @@ export function SorteoLegacyPageIsland({ root }) {
     setGenerationProgress(0);
     await advanceGenerationStage('Preparando arqueros');
     try {
-      await advanceGenerationStage('Repartiendo platinum');
+      await advanceGenerationStage(pots ? 'Repartiendo potes y compensando fuerza' : 'Repartiendo platinum');
       const avoidSignatures = new Set(seenDrawSignatures.current);
       if (teams) avoidSignatures.add(drawSignature(teams));
       let result = null;
@@ -3548,15 +3868,16 @@ export function SorteoLegacyPageIsland({ root }) {
       await advanceGenerationStage('Buscando equipos distintos y minimizando diferencia');
       result = await generateBalancedTeams(candidates, numTeams, Math.min(Number(maxDiff), STRICT_MAX_DIFF),
         payload.pairHistory, payload.drawBalanceWeights, avoidSignatures,
-        { yieldToUi, onProgress: reportProgress });
+        { yieldToUi, onProgress: reportProgress, pots });
       if (!result) {
-        setError('No se encontró otro reparto válido distinto con estos jugadores y reglas. Los equipos actuales se conservan.');
+        setError(pots ? 'No se encontró un reparto válido distinto respetando estos potes, arqueros y posiciones. Revisá la composición o el orden de los potes. Los equipos actuales se conservan.' : 'No se encontró otro reparto válido distinto con estos jugadores y reglas. Los equipos actuales se conservan.');
         return null;
       }
       await advanceGenerationStage('Validando sorteo');
       const signature = drawSignature(result.teams);
       if (signature) seenDrawSignatures.current.add(signature);
       setTeams(result.teams);
+      setGeneratedPots(pots);
       setBenches({});
       setLockedPlayerPositions({});
       const generatedBase = Object.assign({}, ...result.teams.map(team => buildTeamAssignment(team)));
@@ -3582,14 +3903,17 @@ export function SorteoLegacyPageIsland({ root }) {
         ? ` Arqueros de emergencia: ${prepared.emergencyGoalkeepers.map((player) => player.nombre).join(', ')}.`
         : '';
       const balanceMessage = `Mejor resultado encontrado entre ${result.evaluatedCandidates} combinaciones validas, equilibrando defensa, medio y ataque. Diferencia de ida y vuelta: ${result.evaluation.enduranceGap.toFixed(2)}. Diferencia de puntos: ${result.evaluation.diff.toFixed(2)}.`;
-      setSuccess(`${balanceMessage}${emergencyMessage}${result.evaluation.diff > STRICT_MAX_DIFF ? ' La búsqueda no encontró un reparto distinto con diferencia de 2 puntos o menos; se muestra el mejor encontrado.' : ''}`);
+      setSuccess(`${pots ? 'Sorteo por potes con compensación de cantidad y fuerza. ' : ''}${balanceMessage}${emergencyMessage}${result.evaluation.diff > STRICT_MAX_DIFF ? ' La búsqueda no encontró un reparto distinto con diferencia de 2 puntos o menos; se muestra el mejor encontrado.' : ''}`);
       return result.teams;
+    } catch (error) {
+      setError(error.message || 'No se pudo generar el sorteo. Intentá nuevamente.');
+      return null;
     } finally {
       setGenerating(false);
       setGenerationStage('');
       setGenerationProgress(0);
     }
-  }, [applyDefaultFormationVariants, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
+  }, [applyDefaultFormationVariants, drawMode, drawPots, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
 
   useEffect(() => {
     const previous = window.generarEquipos;
@@ -4036,17 +4360,19 @@ export function SorteoLegacyPageIsland({ root }) {
           assigned,
           sameExactLine,
           samePitchLine,
+          potDistance: drawPotDistance(sourcePlayerKey, key, generatedPots) ?? 0,
           rating: adjustedPositionRatingForTeamSize(player, assigned, targetTeam.length),
         };
       })
       .sort((left, right) => (
         right.sameExactLine - left.sameExactLine
         || right.samePitchLine - left.samePitchLine
+        || left.potDistance - right.potDistance
         || left.rating - right.rating
         || String(left.player.nombre).localeCompare(String(right.player.nombre))
       ));
     return candidates[0] ? playerKey(candidates[0].player) : null;
-  }, [assignments, lockedPlayerPositions, teams]);
+  }, [assignments, generatedPots, lockedPlayerPositions, teams]);
 
   const validateDropTarget = useCallback((source, targetTeamIndex, targetLine = null, targetPlayerKey = null) => {
     if (!teams || source == null) return { ok: false, message: 'Primero genera los equipos.' };
@@ -4065,6 +4391,14 @@ export function SorteoLegacyPageIsland({ root }) {
       return { ok: false, message: `${sourcePlayer?.nombre || 'El jugador'} tiene la posicion bloqueada.` };
     }
     const targetPlayer = resolvedTargetPlayerKey ? teams[normalizedTargetTeamIndex]?.find((player) => playerKey(player) === String(resolvedTargetPlayerKey)) : null;
+    if (sourceTeamIndex !== normalizedTargetTeamIndex && targetPlayer && generatedPots) {
+      const proposedTeams = teams.map((team, index) => index === sourceTeamIndex
+        ? team.map(player => playerKey(player) === key ? targetPlayer : player)
+        : index === normalizedTargetTeamIndex ? team.map(player => playerKey(player) === playerKey(targetPlayer) ? sourcePlayer : player) : team);
+      if (!teamsSeparateTwoPlayerPots(proposedTeams.map((team, index) => [...team, ...(benches[index] || [])]), generatedPots)) {
+        return { ok: false, message: 'Los dos jugadores de un pote deben quedar en equipos distintos.' };
+      }
+    }
     if (resolvedTargetPlayerKey && lockedPlayerPositions[String(resolvedTargetPlayerKey)]) {
       return { ok: false, message: `${targetPlayer?.nombre || 'El jugador destino'} tiene la posicion bloqueada.` };
     }
@@ -4135,7 +4469,7 @@ export function SorteoLegacyPageIsland({ root }) {
       }
     }
     return { ok: true, message: '', targetKeyForAssignment, sourceLine, sourcePlayer, resolvedTargetPlayerKey };
-  }, [assignments, findCrossTeamSwapTargetKey, lockedPlayerPositions, teams]);
+  }, [assignments, benches, findCrossTeamSwapTargetKey, generatedPots, lockedPlayerPositions, teams]);
 
   const movePlayer = (source, targetTeamIndex, targetLine = null, targetPlayerKey = null, targetInsertIndex = null) => {
     const validation = validateDropTarget(source, targetTeamIndex, targetLine, targetPlayerKey);
@@ -4818,13 +5152,15 @@ export function SorteoLegacyPageIsland({ root }) {
           </div>
         </div>
         <p className="m-0 text-[11px] text-[#526b62]">Diferencia en tu posicion ({sourcePosition}), con el descuento aplicado.</p>
+        {generatedPots ? <p className="m-0 text-xs font-bold text-[#063d2b]">Preferí el mismo pote o potes vecinos. Podés intercambiar con cualquier pote; cuanto mayor sea la distancia, mayor puede ser el impacto sobre el equilibrio.</p> : null}
         <div className="grid max-h-[32dvh] gap-2 overflow-y-auto overscroll-contain" data-exchange-list="true">
           {teams.map((team, targetTeamIndex) => {
             if (targetTeamIndex === Number(source.teamIndex)) return null;
             const targetAssignments = buildTeamAssignment(team, assignments);
             const candidates = team.filter(player => exchangeFilter === 'all'
               || targetAssignments[playerKey(player)] === sourcePosition
-              || getOrderedPlayerPositions(player).includes(sourcePosition));
+              || getOrderedPlayerPositions(player).includes(sourcePosition))
+              .sort((a, b) => (drawPotDistance(source.playerKey, playerKey(a), generatedPots) ?? 0) - (drawPotDistance(source.playerKey, playerKey(b), generatedPots) ?? 0));
             return (
               <fieldset key={targetTeamIndex} className="min-w-0 rounded-md border border-[#c4d8ce] bg-[#f5faf7] p-2" style={{ borderLeft: `4px solid ${getTeamColor(targetTeamIndex).accentHex}` }}>
                 <legend className="flex items-center gap-2 px-1 text-xs font-black uppercase" data-exchange-team-title>
@@ -4841,9 +5177,11 @@ export function SorteoLegacyPageIsland({ root }) {
                     const delta = incomingRating - sourceRating;
                     const difference = `${delta > 0 ? '+' : ''}${delta} pts`;
                     const reason = lockedPlayerPositions[key] ? 'Bloqueado' : !validation.ok ? 'No disponible' : '';
+                    const potDistance = generatedPots ? drawPotDistance(source.playerKey, key, generatedPots) : null;
+                    const potLabel = potDistance === null ? '' : potDistance === 0 ? 'Mismo pote' : `${potDistance} ${potDistance === 1 ? 'nivel' : 'niveles'} de distancia`;
                     return (
-                      <button key={key} data-exchange-player={key} data-exchange-position={position} data-exchange-delta={delta} type="button" className="grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded border border-[#c4d8ce] bg-white px-2 py-1 text-left text-xs hover:bg-[#e7f2eb] disabled:cursor-not-allowed disabled:opacity-55" disabled={!validation.ok} title={validation.message || `${player.nombre} en ${sourcePosition}: ${incomingRating} pts; ${sourcePlayer.nombre}: ${sourceRating} pts. Diferencia: ${difference}.`} onClick={() => { movePlayer(source, targetTeamIndex, position, key); setPreview(null); }}>
-                        <span className="min-w-0 truncate font-bold">{player.nombre}</span>
+                      <button key={key} data-exchange-player={key} data-exchange-position={position} data-exchange-delta={delta} data-exchange-pot-distance={potDistance ?? undefined} type="button" className="grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded border border-[#c4d8ce] bg-white px-2 py-1 text-left text-xs hover:bg-[#e7f2eb] disabled:cursor-not-allowed disabled:opacity-55" disabled={!validation.ok} title={validation.message || `${player.nombre} en ${sourcePosition}: ${incomingRating} pts; ${sourcePlayer.nombre}: ${sourceRating} pts. Diferencia: ${difference}.${potLabel ? ` ${potLabel}.` : ''}`} onClick={() => { movePlayer(source, targetTeamIndex, position, key); setPreview(null); }}>
+                        <span className="min-w-0 font-bold"><span className="block truncate">{player.nombre}</span>{potLabel ? <span className={`block text-[10px] font-semibold ${potDistance > 1 ? 'text-amber-800' : 'text-[#526b62]'}`}>{potLabel}</span> : null}</span>
                         <span className="whitespace-nowrap text-[11px] text-[#526b62]">{reason || Array.from(new Set([position, ...getOrderedPlayerPositions(player)])).join('/')}</span>
                         <span className={`whitespace-nowrap font-black tabular-nums ${delta < 0 ? 'text-[#a23b24]' : delta > 0 ? 'text-[#12633c]' : 'text-[#526b62]'}`}>{difference}</span>
                       </button>
@@ -5159,6 +5497,7 @@ export function SorteoLegacyPageIsland({ root }) {
           num_teams: numTeams,
           redraw_increment: redrawsUsedThisSession,
           teams: teamsPayload,
+          draw_pots: generatedPots,
           draw_audit_snapshot: drawAuditSnapshot,
         }),
       });
@@ -5617,6 +5956,11 @@ export function SorteoLegacyPageIsland({ root }) {
         <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'gf-workflow-main'}`}>
           {!isFormationEditor ? (
           <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm gf-generation-panel">
+            <DrawPotsEditor mode={drawMode} onModeChange={setDrawMode} pots={drawPots} onChange={pots => { setDrawPots(pots); setPotsMessage(''); }} onAutoBuild={gap => {
+              const roster = selectedPlayers.map(player => ({ ...player, manualGoalkeeper: manualGoalkeepers[playerKey(player)] === true }));
+              setDrawPots(buildAutomaticDrawPots(roster, numTeams, gap, drawPots));
+              setPotsMessage('Propuesta automática lista. Podés editarla, reordenarla y guardarla.');
+            }} players={selectedPlayers} numTeams={numTeams} disabled={generating || savingDraw || savingPots} onSave={savePotsTemplate} saving={savingPots} saved={JSON.stringify(drawPots) === savedPots} message={potsMessage} />
             <div className="gf-goalkeeper-preparation grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -5776,7 +6120,7 @@ export function SorteoLegacyPageIsland({ root }) {
                       <button key={index} type="button" className={visibleTeamIndex === index ? secondaryButtonClass : quietButtonClass} aria-pressed={visibleTeamIndex === index} onClick={() => scrollToTeam(index)}>{getTeamDisplayName(index)}</button>
                     ))}
                   </div>
-                  <p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado y llevá la tarjeta al borde para avanzar a la otra cancha; soltala sobre el jugador destino. También podés tocar un jugador y después su destino.</p>
+                  <p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado y llevá la tarjeta al borde para avanzar a la otra cancha; soltala sobre el jugador destino. También podés tocar un jugador y después su destino.{generatedPots ? ' Conviene intercambiar dentro del mismo pote o con potes vecinos; los saltos grandes pueden desbalancear los equipos.' : ''}</p>
                   </>
                 )}
                 <div ref={teamsScrollerRef} data-teams-scroller="1" data-show-both={!isFormationEditor && showBothTeams ? 'true' : 'false'} data-dragging={dragState ? 'true' : 'false'} className="sorteo-teams-scroller grid gap-4 xl:grid-cols-2" onScroll={event => {
@@ -5796,7 +6140,11 @@ export function SorteoLegacyPageIsland({ root }) {
                       || teamFormationSelectValue(team, currentAssignments, teamFormations[teamIndex], isFormationEditor, isFormationEditor);
                     return (
                       <article key={teamIndex} className={`${isFormationEditor ? 'team-card team' : 'gf-team-column'} sorteo-team-card grid gap-3 rounded-lg border p-3 shadow-sm max-[760px]:gap-2 max-[760px]:p-2`} data-team-index={teamIndex} data-sorteo-team-card="1">
-
+                        {generatedPots ? <details className="min-w-0 rounded-md border border-[#d7e6df] bg-white p-2 text-xs text-[#526b62]" data-team-pots>
+                          <summary className="cursor-pointer font-bold text-[#07130f]">Jugadores por pote</summary>
+                          <ul className="m-0 mt-2 grid list-none gap-1 p-0">{generatedPots.map((pot, index) => <li key={index}><strong>{pot.name}:</strong> {team.filter(player => pot.playerIds.includes(playerKey(player))).map(player => player.nombre).join(', ') || 'Sin jugadores'}</li>)}</ul>
+                          {!teamsRespectPots(teams, generatedPots) ? <p className="m-0 mt-2 text-amber-800">El ajuste modificó el reparto inicial de potes. Revisá la comparación de equipos.</p> : null}
+                        </details> : null}
 
                         <div className={`grid ${payload.proposalMode ? 'grid-cols-1' : 'grid-cols-2'} gap-2 rounded-md border border-[#d7e6df] bg-white p-2 max-[760px]:gap-1.5 max-[760px]:p-1.5`}>
                           {!payload.proposalMode ? (

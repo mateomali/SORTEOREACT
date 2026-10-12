@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
+require_once __DIR__ . '/lib/draw_pots.php';
 
 require_once __DIR__ . '/lib/director_proposals.php';
 ensure_director_proposals_schema();
@@ -18,6 +19,7 @@ if ($proposalMode) {
     }
 }
 ensure_control_schema();
+ensure_draw_pots_schema();
 
 if (!function_exists('repo_match_participants_basic')) {
     function repo_match_participants_basic(int $matchId): array
@@ -208,6 +210,9 @@ $sorteoLegacyPayload = [
     'mode' => $proposalEditing ? 'formation_editor' : 'sorteo',
     'proposalMode' => $proposalMode,
     'proposalCsrf' => $proposalMode ? director_proposal_csrf() : '',
+    'pots' => draw_pots_template(),
+    'potsCsrf' => draw_pots_csrf(),
+    'generatedPots' => !$proposalMode && $legacyMatch ? json_decode((string) ($legacyMatch['draw_pots_json'] ?? 'null'), true) : null,
     'matchId' => (int) $legacyMatchId,
     'match' => $legacyMatch ? [
         'id' => (int) $legacyMatch['id'],

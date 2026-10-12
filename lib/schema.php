@@ -292,6 +292,7 @@ function ensure_control_schema(): array
         ['captain_drafts', 'captain4_color_name', 'captain4_color_name VARCHAR(40) NULL AFTER captain3_color_name'],
         ['match_awards', 'notes', 'notes VARCHAR(255) NULL AFTER player_id'],
         ['players', 'technique', 'technique DECIMAL(3,1) NULL AFTER skill'],
+        ['players', 'preserve_stored_skill', 'preserve_stored_skill TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER skill'],
         ['players', 'pass_vision', 'pass_vision DECIMAL(3,1) NULL AFTER technique'],
         ['players', 'rhythm', 'rhythm DECIMAL(3,1) NULL AFTER pass_vision'],
         ['players', 'stamina', 'stamina DECIMAL(3,1) NULL AFTER rhythm'],
@@ -451,6 +452,9 @@ function backfill_control_schema(PDO $pdo): void
         $players = $pdo->query('SELECT * FROM players')->fetchAll(PDO::FETCH_ASSOC);
         $updateRating = $pdo->prepare('UPDATE players SET skill = :skill, pace = :pace WHERE id = :id');
         foreach ($players as $player) {
+            // Imported server ratings are authoritative. Explicit edits and
+            // valuations may still update skill; page loads must not do so.
+            if (!empty($player['preserve_stored_skill'])) continue;
             $rating = player_overall_rating($player);
             $pace = player_pace_from_rhythm(player_effective_stat($player, 'rhythm'));
             if ((float) $player['skill'] !== $rating || $player['pace'] !== $pace) {

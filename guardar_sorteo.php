@@ -5,11 +5,13 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/sorteo.php';
+require_once __DIR__ . '/lib/draw_pots.php';
 
 require_once __DIR__ . '/lib/director_proposals.php';
 require_directivo_or_admin();
 ensure_director_proposals_schema();
 ensure_control_schema();
+ensure_draw_pots_schema();
 
 if (!function_exists('repo_match_participants_basic')) {
     function repo_match_participants_basic(int $matchId): array
@@ -183,6 +185,16 @@ if (!in_array($drawMode, ['random', 'manual'], true)) {
 $redrawIncrement = max(0, min(20, (int) ($data['redraw_increment'] ?? 0)));
 $postedTeams = $data['teams'] ?? [];
 $auditSnapshot = is_array($data['draw_audit_snapshot'] ?? null) ? $data['draw_audit_snapshot'] : [];
+$drawPots = null;
+if (isset($data['draw_pots'])) {
+    try {
+        $drawPots = draw_pots_validate_template($data['draw_pots']);
+    } catch (InvalidArgumentException $error) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'message' => $error->getMessage()], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
 
 if ($matchId <= 0 || !is_array($postedTeams) || !$postedTeams) {
     http_response_code(422);
@@ -293,6 +305,25 @@ if (count($allIds) !== count($participantsById)) {
     http_response_code(422);
     echo json_encode(['ok' => false, 'message' => 'Deben incluirse todos los convocados en el sorteo']);
     exit;
+}
+
+if ($drawPots !== null) {
+    $potIds = array_map('intval', array_merge([], ...array_column($drawPots, 'playerIds')));
+    $rosterIds = $allIds;
+    sort($potIds);
+    sort($rosterIds);
+    if ($potIds !== $rosterIds) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'message' => 'Los potes guardados deben incluir exactamente a los convocados.']);
+        exit;
+    }
+    $potParticipants = [];
+    foreach ($teams as $index => $team) foreach ($team as $player) $potParticipants[] = ['id' => $player['id'], 'team_number' => $index + 1];
+    if (!draw_pots_pairs_separated($potParticipants, [], $drawPots)) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'message' => 'Los dos jugadores de un pote deben quedar en equipos distintos.']);
+        exit;
+    }
 }
 
 if ($drawMode === 'random' && $hasExistingRandomDraw) {
@@ -512,6 +543,11 @@ try {
         'id' => $matchId,
     ]);
 
+    if (array_key_exists('draw_pots', $data)) {
+        $pdo->prepare('UPDATE matches SET draw_pots_json = ? WHERE id = ?')->execute([
+            $drawPots === null ? null : json_encode($drawPots, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $matchId,
+        ]);
+    }
     $pdo->commit();
     echo json_encode(['ok' => true, 'message' => $drawMode === 'manual' ? 'Equipos manuales guardados correctamente' : 'Sorteo guardado correctamente en la fecha']);
 } catch (Throwable $e) {

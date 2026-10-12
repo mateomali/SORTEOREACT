@@ -410,6 +410,9 @@ function player_has_goalkeeper_position(array $player): bool
 
 function player_overall_rating(array $player): float
 {
+    if (!empty($player['preserve_stored_skill']) && isset($player['skill'])) {
+        return normalize_player_stat($player['skill']);
+    }
     return player_position_rating($player, player_primary_position($player));
 }
 
