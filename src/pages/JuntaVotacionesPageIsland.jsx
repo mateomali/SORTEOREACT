@@ -291,7 +291,7 @@ function AwardField({ award, players }) {
           </div>
         </div>;
       })}
-      {values.length < max && <button className={mutedButton} type="button" disabled={!players.some((p) => p.awardValue === values.at(-1))} onClick={() => setValues((old) => [...old, ''])}>Agregar {values.length + 1}.º puesto a {award.label}</button>}
+      {values.length < max && <button className={mutedButton} type="button" aria-label={`Agregar puesto a ${award.label}`} disabled={!players.some((p) => p.awardValue === values.at(-1))} onClick={() => setValues((old) => [...old, ''])}>Agregar puesto</button>}
     </fieldset>
   );
 }

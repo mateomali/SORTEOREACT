@@ -4038,6 +4038,17 @@
     }, 2600);
   }
 
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-add-award-position]');
+    if (!button) return;
+    const group = button.closest('[data-award-positions]');
+    const next = group?.querySelector('[data-award-position][hidden]');
+    if (!next) return;
+    next.hidden = false;
+    next.querySelector('input')?.focus();
+    button.hidden = !group.querySelector('[data-award-position][hidden]');
+  });
+
   hydrateDynamicContent(document);
   focusHashTarget();
   window.addEventListener('hashchange', focusHashTarget);

@@ -1654,19 +1654,33 @@ require __DIR__ . '/includes/header.php';
           <p class="small-muted">Opcional. Puedes cargarlos ahora o luego desde Directivo &gt; Mis valoraciones.</p>
           <div class="award-grid">
             <?php foreach ($awardDefinitions as $code => $award): ?>
-              <div class="award-field">
+              <?php
+                $awardMax = award_max_recipients($code);
+                $awardVisible = 1;
+                $awardInputs = [];
+                for ($position = 1; $position <= $awardMax; $position++) {
+                    $saved = $savedAwards[$code]['podium'][$position - 1] ?? null;
+                    $posted = $postedAwardData[$code] ?? [];
+                    $posted = is_array($posted) ? array_values($posted) : [$posted];
+                    $awardInputs[$position] = $detailFormError !== '' ? (string) ($posted[$position - 1] ?? '') : ($saved ? $saved['name'] . ' (#' . (int) $saved['player_id'] . ')' : '');
+                    if ($awardInputs[$position] !== '') $awardVisible = $position;
+                }
+              ?>
+              <div class="award-field" data-award-positions>
                 <strong><span class="award-icon"><?= h($award['icon']) ?></span> <?= h($award['label']) ?></strong>
                 <?php for ($awardPosition = 1; $awardPosition <= award_max_recipients($code); $awardPosition++): ?>
                   <?php
-                    $savedAward = $savedAwards[$code]['podium'][$awardPosition - 1] ?? null;
-                    $postedValues = $postedAwardData[$code] ?? [];
-                    $postedValues = is_array($postedValues) ? array_values($postedValues) : [$postedValues];
-                    $savedValue = $detailFormError !== '' ? (string) ($postedValues[$awardPosition - 1] ?? '') : ($savedAward ? $savedAward['name'] . ' (#' . (int) $savedAward['player_id'] . ')' : '');
+                    $savedValue = $awardInputs[$awardPosition];
                     $fieldId = 'award-' . $code . ($awardPosition === 1 ? '' : '-' . $awardPosition);
                   ?>
+                  <div data-award-position <?= $awardPosition > $awardVisible ? 'hidden' : '' ?>>
                   <label for="<?= h($fieldId) ?>"><?= award_max_recipients($code) > 1 ? $awardPosition . '.&#186; puesto' : 'Jugador' ?></label>
                   <input id="<?= h($fieldId) ?>" type="text" list="<?= $code === 'goodfellas' ? 'allAwardPlayers' : ($code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers') ?>" form="finish-score-form" name="awards[<?= h($code) ?>][<?= $awardPosition - 1 ?>]" value="<?= h($savedValue) ?>" placeholder="Buscar jugador">
+                  </div>
                 <?php endfor; ?>
+                <?php if ($awardMax > 1): ?>
+                  <button type="button" class="btn btn-muted" data-add-award-position <?= $awardVisible >= $awardMax ? 'hidden' : '' ?> aria-label="Agregar puesto a <?= h($award['label']) ?>">Agregar puesto</button>
+                <?php endif; ?>
               </div>
             <?php endforeach; ?>
           </div>

@@ -5856,6 +5856,26 @@
     @apply flex items-center gap-2;
   }
 
+  .award-field[data-award-positions] {
+    display: block;
+  }
+
+  .award-field[data-award-positions] > strong {
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .award-field[data-award-positions] [data-award-position] {
+    margin-top: 6px;
+  }
+
+  .award-field[data-award-positions] [data-add-award-position] {
+    margin-top: 8px;
+    min-height: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
   .award-icon {
     @apply inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-full bg-white px-2 text-sm font-extrabold shadow-sm;
   }
@@ -25269,3 +25289,7 @@ html body .sorteo-react-page .gf-drag-feedback {
 }
 
 @media (max-width: 760px) { .sorteo-react-page .gf-desktop-draw-actions { display: none; } }
+
+@layer utilities {
+  .award-field[data-award-positions] { display: block; }
+}
