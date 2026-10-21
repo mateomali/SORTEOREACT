@@ -871,3 +871,18 @@ html body main.content .live-matches .live-goal-dialog-footer .live-button {
   flex:1;
   min-height:48px
 }
+
+/* Post-close corrections keep the same hierarchy and 44px touch targets. */
+html body main.content .live-matches .live-result-options {
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:20px; align-items:center;
+}
+html body main.content .live-matches .live-result-options .live-actions { margin:0; flex-wrap:wrap; }
+html body main.content .live-matches .live-fixture-game-footer { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; padding:8px 12px; }
+html body main.content .live-matches .live-delete-game { color:#9f261e; }
+html body main.content .live-matches .live-legacy-scorers summary { min-height:44px; cursor:pointer; font-weight:700; }
+html body main.content .live-matches .live-legacy-scorers form > button { margin-top:16px; }
+html body main.content .live-matches .live-result-options h2 { font-size:19px; }
+@media (max-width:760px) {
+  html body main.content .live-matches .live-result-options { grid-template-columns:minmax(0,1fr); gap:12px; }
+  html body main.content .live-matches .live-result-options .live-actions { display:grid; grid-template-columns:minmax(0,1fr); }
+}

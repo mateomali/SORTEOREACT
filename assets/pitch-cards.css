@@ -253,6 +253,23 @@ html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-play
 
 }
 
+/* Public match cards: projected fullbacks must not enlarge all four field rows.
+   Scope by the component so the root URL works without a page-index body class. */
+@layer properties {
+.public-teams-uniform .team-formation > .formation-line {
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+.public-teams-uniform .team-formation .formation-line > .line-players {
+  min-height: 0 !important;
+  padding: 0 !important;
+  align-items: center !important;
+}
+.public-teams-uniform .team-formation .formation-line.is-projected-defense [data-assigned-position="LAT"] {
+  transform: translateY(10px) !important;
+}
+}
+
 /* Inicio: projected fullbacks share the same row geometry as every other team. */
 @layer properties {
 html body.page-index .content .public-teams .team-formation:is(.gf-current-pitch, .is-base-formation) .formation-line > .line-players {
@@ -530,4 +547,164 @@ html body main.content .proposal-page .proposal-primary span { color: inherit !i
 @layer base {
 .proposal-page-head { min-width: 0; }
 html body main.content .proposal-page h1 { overflow-wrap: anywhere !important; max-width: 100%; }
+}
+
+/* Public match presentation uses the same current surface and card components as Sorteo. */
+@layer properties {
+html body main.content .public-teams-uniform > .team-card {
+  min-width: 0; padding: 0 !important; overflow: visible !important;
+  border: 1px solid #28675d !important; border-radius: 10px !important;
+  background: #fff !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-head {
+  display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important; gap: 4px 12px !important; margin: 0 !important;
+  padding: 14px 12px !important; border-radius: 9px 9px 0 0 !important;
+  border-bottom: 1px solid #28675d !important;
+  background: linear-gradient(125deg, #080d19, #031917 72%, #062823) !important;
+  color: #f2fffc !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-head h4 {
+  grid-column: 1; margin: 0 !important; color: #fff !important;
+  -webkit-text-fill-color: #fff !important; font-size: clamp(16px, 2vw, 23px) !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-head .small-muted {
+  grid-column: 1; color: #b9d7d0 !important; -webkit-text-fill-color: #b9d7d0 !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-score {
+  grid-column: 2; grid-row: 1 / 3; display: grid !important; justify-items: center;
+  padding: 6px 12px !important; border: 1px solid #278b83; border-radius: 8px;
+  background: rgba(0, 10, 12, .65); color: #fff;
+}
+html body main.content .public-teams-uniform .gf-public-team-score strong {
+  font-size: 36px !important; line-height: 1 !important; font-weight: 900;
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-score > span {
+  font-size: 11px !important; color: #74ffe5 !important; -webkit-text-fill-color: #74ffe5 !important;
+}
+html body main.content .public-teams-uniform .formation-title-row { margin: 0 !important; padding: 8px !important; }
+html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch {
+  container-type: inline-size !important; position: relative !important; isolation: isolate;
+  grid-template-rows: repeat(4, minmax(0, 1fr)) !important; height: auto !important;
+  padding: 12px 10px !important; gap: 0 !important;
+}
+html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch > .formation-line {
+  position: relative !important; display: grid !important; grid-template-columns: minmax(0, 1fr) !important;
+  min-height: clamp(145px, 30cqw, 180px) !important; padding: 34px 6px 12px !important;
+  margin: 0 !important; gap: 0 !important; border: 0 !important;
+  background: transparent !important; box-shadow: none !important;
+}
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .formation-line::before,
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .formation-line::after { content: none !important; }
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-label {
+  position: absolute !important; top: 4px !important; left: 4px !important;
+  display: flex !important; align-items: center; width: auto !important; min-width: 0 !important;
+  min-height: 24px !important; padding: 0 6px !important; font-size: 10px !important;
+  border: 1px solid rgba(120,255,220,.22) !important; border-radius: 5px !important;
+  background: rgba(0,16,18,.78) !important; color: #bfe8df !important;
+}
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-players {
+  display: grid !important; grid-template-columns: repeat(var(--gf-player-count, 1), minmax(0, 1fr)) !important;
+  align-items: center !important; justify-items: center !important; align-content: center !important;
+  grid-column: 1 / -1 !important; gap: 8px !important; padding: 0 !important;
+  min-width: 0 !important; min-height: 0 !important; width: 100% !important; height: auto !important;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+}
+html body main.content .public-teams-uniform .gf-public-player-slot {
+  position: relative; width: min(100%, 112px, calc((100cqw - 40px) / var(--gf-line-capacity, 3)));
+  min-width: 0; margin: 0; padding: 0; align-self: center; justify-self: center;
+}
+html body main.content .public-teams-uniform .gf-public-player-slot[data-assigned-position="LAT"] { transform: translateY(10px); }
+html body main.content .public-teams-uniform .gf-player-card {
+  position: relative !important; display: block !important; width: 100% !important;
+  min-height: 0 !important; height: auto !important; aspect-ratio: 1000 / 980 !important;
+  container-type: inline-size !important; padding: 0 !important; margin: 0 !important;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+  cursor: pointer !important;
+}
+.public-teams-uniform .gf-player-card:focus-visible { outline: 2px solid #d9f99d !important; outline-offset: 3px; }
+.gf-public-match-indicators {
+  position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 3px;
+  font: 700 10px/1.3 Poppins, sans-serif; color: #fff; min-height: 16px;
+}
+.gf-public-match-indicators > span { background: #092a23; border: 1px solid #52756a; border-radius: 3px; padding: 1px 3px; }
+html body main.content .public-teams-uniform .team-card > :last-child { margin: 8px !important; }
+html body .gf-public-player-dialog {
+  position: fixed !important; inset: 0 !important; width: min(850px, calc(100vw - 24px)) !important;
+  max-height: calc(100dvh - 24px); margin: auto !important; padding: 20px !important;
+  border: 1px solid #28675d !important; border-radius: 10px !important; background: #071b16 !important;
+  color: #fff !important; overflow: auto;
+}
+.gf-public-player-dialog::backdrop { background: rgba(0,0,0,.76); }
+.gf-public-player-detail { display: grid; grid-template-columns: 220px minmax(0,1fr); gap: 24px; align-items: center; }
+.gf-public-full-card { display: grid; place-items: center; min-height: 385px; }
+.gf-public-full-card > article { transform: scale(1.3); }
+.gf-public-player-detail aside { display: grid; gap: 12px; }
+html body .gf-public-player-detail h3 { color: #fff !important; margin: 0 !important; font-size: 20px !important; }
+html body .gf-public-player-detail p { color: #b9d7d0 !important; margin: 0 !important; font-size: 12px !important; }
+.gf-public-position-ratings { display: grid; gap: 8px; }
+.gf-public-position-ratings > div { display: grid; grid-template-columns: 38px minmax(0,1fr) 36px; align-items: center; gap: 8px; padding: 8px; border: 1px solid #36554a; border-radius: 6px; }
+.gf-public-position-ratings [data-active="true"] { border-color: #d9f99d; background: #d9f99d15; }
+.gf-public-position-ratings meter { width: 100%; accent-color: #d9f99d; }
+html body .gf-public-player-detail aside > button { min-height: 42px; border: 1px solid #52756a !important; border-radius: 6px; color: #fff !important; background: #153b2e !important; }
+html body .gf-public-player-dialog [data-sorteo-full-card-text] { color: var(--sorteo-card-text) !important; -webkit-text-fill-color: var(--sorteo-card-text) !important; }
+@media (max-width: 600px) {
+  .gf-public-player-detail { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .gf-public-full-card { min-height: 300px; }
+  .gf-public-full-card > article { transform: none; }
+}
+@container (max-width: 230px) {
+  html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-players { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-players > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch > .formation-line { min-height: 210px !important; }
+}
+}
+
+@layer properties {
+/* Neutralize legacy mobile wrapping when these rows contain the shared cards. */
+html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch .line-players > .gf-public-player-slot:nth-child(n) {
+  grid-column: auto !important;
+}
+}
+
+@layer properties {
+/* Public-page contrast rules must preserve each shared card's tier palette. */
+html body main.content .public-teams-uniform .gf-player-card [data-sorteo-card-text],
+html body main.content .public-teams-uniform .gf-player-card [data-sorteo-card-text] :is(strong, span) {
+  color: var(--sorteo-card-text) !important;
+  -webkit-text-fill-color: var(--sorteo-card-text) !important;
+}
+html body main.content .public-teams-uniform .gf-player-card [data-sorteo-card-position] {
+  color: var(--sorteo-card-position) !important;
+  -webkit-text-fill-color: var(--sorteo-card-position) !important;
+}
+}
+
+@layer properties {
+html body main.content .public-final-standings {
+  grid-column: 1 / -1; flex-basis: 100%; width: 100%; min-width: 0;
+  margin: 12px 0; padding: 0; color: #173c2e;
+}
+html body main.content .public-final-standings h3 { margin: 16px 0 8px !important; font-size: 18px !important; color: #173c2e !important; }
+html body main.content .public-final-winner {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  border: 1px solid #759d63; border-left: 4px solid #537c36; border-radius: 8px;
+  background: #eef6e6; color: #233e19;
+}
+.public-final-winner > span { font-size: 26px; }
+.public-final-winner > div { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.public-final-winner > div > span { font-size: 12px; }
+html body main.content .public-final-winner strong { color: #233e19 !important; -webkit-text-fill-color: #233e19 !important; }
+.public-final-winner > strong { white-space: nowrap; }
+.public-final-table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid #c5d9ce; border-radius: 6px; }
+html body main.content .public-final-standings table { width: 100% !important; min-width: 540px; margin: 0 !important; border-collapse: collapse; font-size: 13px !important; }
+html body main.content .public-final-standings :is(th,td) { padding: 10px 8px !important; text-align: center; border-bottom: 1px solid #d7e6df; white-space: nowrap; }
+html body main.content .public-final-standings th[scope="row"] { text-align: left; }
+html body main.content .public-final-standings thead { background: #f1f6f3; }
+html body main.content .public-final-standings tr.is-date-winner > :is(th,td) { background: #e6f2dc !important; color: #233e19 !important; font-weight: 800; }
+html body main.content .public-final-standings p { margin: 8px 0 0 !important; font-size: 11px !important; color: #526b62 !important; }
+html body main.content .public-teams-uniform > .team-card.is-date-winner { border: 2px solid #91b563 !important; }
+html body main.content .public-winner-label { grid-column: 1; color: #d9f99d !important; -webkit-text-fill-color: #d9f99d !important; font-size: 12px !important; font-weight: 800; }
+html body main.content .public-teams-uniform .is-date-winner .gf-public-team-score { grid-row: 1 / 4; }
 }

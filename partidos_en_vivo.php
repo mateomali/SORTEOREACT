@@ -19,7 +19,7 @@ ensure_control_schema();
 ensure_live_match_schema();
 $matchId = (int) ($_GET['match_id'] ?? 0);
 $match = repo_match_by_id($matchId);
-if (!$match || empty($match['dynamic_fixture']) || !in_array((int) $match['num_teams'], [3, 4], true)) {
+if (!$match || (empty($match['dynamic_fixture']) && $match['status'] !== 'finalizado') || !in_array((int) $match['num_teams'], [3, 4], true)) {
     if ($isApi) live_json(['message' => 'Esta fecha no usa el fixture dinámico.'], 404);
     flash('error', 'Esta fecha no usa el fixture dinámico.');
     redirect('editar_partidos.php');
@@ -42,11 +42,11 @@ if ($isApi) {
             $lock->execute([$matchId]);
             $match = $lock->fetch();
             $action = (string) ($input['action'] ?? '');
-            $correction = in_array($action, ['edit_goal', 'correct_game'], true);
+            $correction = in_array($action, ['edit_goal', 'correct_game', 'add_finished_game', 'delete_game', 'add_finished_goal', 'remove_goal', 'set_pending_scorers'], true);
             $teamRows = repo_match_teams($matchId);
             $teams = array_map(static fn(array $t): int => (int) $t['team_number'], $teamRows);
             $participants = repo_match_participants($matchId);
-            if (!$match || empty($match['dynamic_fixture']) || !repo_match_teams_are_public($match) || !in_array($match['status'], $correction ? ['sorteado', 'finalizado'] : ['sorteado'], true) || count($teams) !== (int) $match['num_teams']) throw new RuntimeException('La fecha debe estar publicada y tener todos sus equipos para jugar.');
+            if (!$match || (empty($match['dynamic_fixture']) && !($correction && $match['status'] === 'finalizado')) || !repo_match_teams_are_public($match) || !in_array($match['status'], $correction ? ['sorteado', 'finalizado'] : ['sorteado'], true) || count($teams) !== (int) $match['num_teams']) throw new RuntimeException('La fecha debe estar publicada y tener todos sus equipos para jugar.');
             $session = live_load_session($match);
             if (($input['revision'] ?? -1) !== $session['revision']) {
                 $pdo->rollBack();
@@ -54,9 +54,11 @@ if ($isApi) {
             }
             $state = live_apply_action($session['state'], $action, $input, $teams, $participants);
             $revision = $session['revision'] + 1;
-            $save = $pdo->prepare('INSERT INTO match_live_sessions (match_id, revision, state_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE revision = VALUES(revision), state_json = VALUES(state_json)');
-            $save->execute([$matchId, $revision, json_encode($state, JSON_THROW_ON_ERROR)]);
-            if (in_array($action, ['finish', 'edit_goal', 'remove_goal', 'correct_game', 'close'], true)) live_sync_totals($matchId, $state, $teams, $participants);
+            live_store_session($matchId, $state, $revision);
+            if (in_array($action, ['finish', 'edit_goal', 'remove_goal', 'correct_game', 'close', 'add_finished_game', 'delete_game', 'add_finished_goal', 'set_pending_scorers'], true)) {
+                live_sync_totals($matchId, $state, $teams, $participants);
+                $pdo->prepare('UPDATE matches SET result_saved_at = NOW() WHERE id = ?')->execute([$matchId]);
+            }
             if ($action === 'duration') $pdo->prepare('UPDATE matches SET game_duration_minutes = ? WHERE id = ?')->execute([intdiv($state['duration'], 60), $matchId]);
             if ($action === 'close') $pdo->prepare("UPDATE matches SET status = 'finalizado', finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW() WHERE id = ?")->execute([$matchId]);
             $pdo->commit();

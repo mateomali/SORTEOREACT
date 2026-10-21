@@ -7,6 +7,7 @@ require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/match_goals.php';
 require_once __DIR__ . '/lib/draw_pots.php';
+require_once __DIR__ . '/lib/round_robin_standings.php';
 
 $isRoundRobinAjaxRequest = $_SERVER['REQUEST_METHOD'] === 'POST'
     && (string) ($_POST['ajax'] ?? '') === '1'
@@ -22,15 +23,17 @@ function finish_json_response(array $payload, int $status = 200): void
 
 // New dates use the live fixture for score operations; legacy dates keep their editor.
 require_once __DIR__ . '/lib/live_match_repository.php';
+$directResultMode = (string) ($_POST['direct_result'] ?? $_GET['direct_result'] ?? '') === '1';
 if (is_admin() || is_directivo()) {
     ensure_control_schema();
     ensure_live_match_schema();
     $liveMatchId = (int) ($_POST['match_id'] ?? $_GET['match_id'] ?? 0);
     $liveMatch = $liveMatchId > 0 ? repo_match_by_id($liveMatchId) : null;
-    $usesLiveFixture = $liveMatch && !empty($liveMatch['dynamic_fixture']) && (int) $liveMatch['num_teams'] > 2;
+    $usesLiveFixture = $liveMatch && in_array((int) $liveMatch['num_teams'], [3, 4], true) && (!empty($liveMatch['dynamic_fixture']) || $liveMatch['status'] === 'finalizado');
     $scoreActions = ['save_result', 'save_score', 'save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'];
     $isScorePost = $_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action'] ?? ''), $scoreActions, true);
-    if ($usesLiveFixture && ($isScorePost || ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['edit_formations']) && !isset($_GET['edit_details'])))) {
+    $isDirectScorePost = $directResultMode && ($_POST['action'] ?? '') === 'save_score';
+    if ($usesLiveFixture && !$isDirectScorePost && ($isScorePost || ($_SERVER['REQUEST_METHOD'] === 'GET' && !$directResultMode && !isset($_GET['edit_formations']) && !isset($_GET['edit_details'])))) {
         if ((string) ($_POST['ajax'] ?? '') === '1') finish_json_response(['ok' => false, 'message' => 'Esta fecha usa Partidos en vivo. Abrí el marcador para registrar los resultados.'], 422);
         redirect('partidos_en_vivo.php?match_id=' . $liveMatchId);
     }
@@ -392,55 +395,6 @@ function ensure_round_robin_settings_schema(): void
     }
 }
 
-function normalize_round_robin_legs(mixed $value): int
-{
-    return (int) $value === 1 ? 1 : 2;
-}
-
-function round_robin_fixtures(array $teams, int $legs = 2): array
-{
-    $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], $teams);
-    sort($teamNumbers);
-    $legs = normalize_round_robin_legs($legs);
-
-    $firstLeg = [];
-    $secondLeg = [];
-    $rotation = $teamNumbers;
-    if (count($rotation) % 2 === 1) {
-        $rotation[] = 0;
-    }
-
-    $roundCount = max(0, count($rotation) - 1);
-    $half = (int) (count($rotation) / 2);
-    for ($round = 0; $round < $roundCount; $round++) {
-        for ($i = 0; $i < $half; $i++) {
-            $a = (int) $rotation[$i];
-            $b = (int) $rotation[count($rotation) - 1 - $i];
-            if ($a === 0 || $b === 0) {
-                continue;
-            }
-
-            if ($round % 2 === 1) {
-                [$a, $b] = [$b, $a];
-            }
-            $firstLeg[] = ['home' => $a, 'away' => $b, 'leg' => 1];
-            $secondLeg[] = ['home' => $b, 'away' => $a, 'leg' => 2];
-        }
-
-        $fixed = array_shift($rotation);
-        $last = array_pop($rotation);
-        array_unshift($rotation, $fixed);
-        array_splice($rotation, 1, 0, [$last]);
-    }
-
-    return $legs === 1 ? $firstLeg : array_merge($firstLeg, $secondLeg);
-}
-
-function round_robin_result_key(int $homeTeam, int $awayTeam, int $leg): string
-{
-    return $homeTeam . '-' . $awayTeam . '-' . $leg;
-}
-
 function repo_round_robin_results(int $matchId): array
 {
     $stmt = db()->prepare(
@@ -559,79 +513,6 @@ function save_round_robin_results(int $matchId, array $fixtures, array $scores):
             'away_goals' => $score['away'],
         ]);
     }
-}
-
-function calculate_round_robin_table(array $teams, array $fixtures, array $scores): array
-{
-    $table = [];
-    $validTeams = [];
-    foreach ($teams as $team) {
-        $teamNumber = (int) $team['team_number'];
-        $validTeams[$teamNumber] = true;
-        $table[$teamNumber] = [
-            'team_number' => $teamNumber,
-            'points' => 0,
-            'played' => 0,
-            'won' => 0,
-            'drawn' => 0,
-            'lost' => 0,
-            'gf' => 0,
-            'ga' => 0,
-            'gd' => 0,
-        ];
-    }
-
-    foreach ($fixtures as $fixture) {
-        $home = (int) $fixture['home'];
-        $away = (int) $fixture['away'];
-        $leg = (int) $fixture['leg'];
-        if (!isset($validTeams[$home], $validTeams[$away])) {
-            continue;
-        }
-
-        $score = $scores[round_robin_result_key($home, $away, $leg)] ?? null;
-        if (!$score || $score['home'] === null || $score['away'] === null) {
-            continue;
-        }
-
-        $homeGoals = (int) $score['home'];
-        $awayGoals = (int) $score['away'];
-        $table[$home]['played']++;
-        $table[$away]['played']++;
-        $table[$home]['gf'] += $homeGoals;
-        $table[$home]['ga'] += $awayGoals;
-        $table[$away]['gf'] += $awayGoals;
-        $table[$away]['ga'] += $homeGoals;
-
-        if ($homeGoals > $awayGoals) {
-            $table[$home]['points'] += 3;
-            $table[$home]['won']++;
-            $table[$away]['lost']++;
-        } elseif ($homeGoals < $awayGoals) {
-            $table[$away]['points'] += 3;
-            $table[$away]['won']++;
-            $table[$home]['lost']++;
-        } else {
-            $table[$home]['points']++;
-            $table[$away]['points']++;
-            $table[$home]['drawn']++;
-            $table[$away]['drawn']++;
-        }
-    }
-
-    foreach ($table as &$row) {
-        $row['gd'] = $row['gf'] - $row['ga'];
-    }
-    unset($row);
-
-    uasort($table, static function (array $a, array $b): int {
-        return ($b['points'] <=> $a['points'])
-            ?: ($b['gd'] <=> $a['gd'])
-            ?: ($b['gf'] <=> $a['gf'])
-            ?: ($a['team_number'] <=> $b['team_number']);
-    });
-
-    return $table;
 }
 
 function render_round_robin_standings_table(array $roundRobinTable, array $teamLabels): string
@@ -1014,7 +895,7 @@ function finish_save_optional_awards(array $match, array $participants): void
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_live_awards') {
     $awardMatch = repo_match_by_id((int) ($_POST['match_id'] ?? 0));
     try {
-        if (!$awardMatch || empty($awardMatch['dynamic_fixture'])) throw new RuntimeException('Fecha inválida.');
+        if (!$awardMatch || !in_array((int) $awardMatch['num_teams'], [3, 4], true)) throw new RuntimeException('Fecha inválida.');
         finish_save_optional_awards($awardMatch, repo_match_participants((int) $awardMatch['id']));
         flash('success', 'Premios guardados. Un jugador puede recibir varios premios distintos.');
     } catch (Throwable $error) { flash('error', $error->getMessage()); }
@@ -1027,6 +908,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $returnToFormations = (string) ($_POST['return_to_formations'] ?? '') === '1';
     $scoreReturnUrl = 'finalizar_partido.php?match_id=' . $matchId . ($returnToFormations ? '&edit_formations=1&show_score=1#resultado' : '');
     $scoreSuccessUrl = 'finalizar_partido.php?match_id=' . $matchId . ($returnToFormations ? '&edit_formations=1' : '');
+    if ($directResultMode) {
+        $scoreReturnUrl = 'finalizar_partido.php?match_id=' . $matchId . '&direct_result=1';
+        $scoreSuccessUrl = $scoreReturnUrl;
+    }
 
     $match = $matchId > 0 ? repo_match_by_id($matchId) : null;
     if (!$match) {
@@ -1053,11 +938,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
     $pdo->beginTransaction();
     try {
+        if ($directResultMode) {
+            if (!hash_equals((string) ($_SESSION['live_csrf'] ?? ''), (string) ($_POST['live_csrf'] ?? '')) || empty($_SESSION['live_csrf'])) throw new RuntimeException('La sesión cambió. Recargá el formulario.');
+            $lock = $pdo->prepare('SELECT * FROM matches WHERE id = ? FOR UPDATE');
+            $lock->execute([$matchId]);
+            $match = $lock->fetch();
+            if (!$match || !in_array((int) $match['num_teams'], [3, 4], true) || !in_array($match['status'], ['sorteado', 'finalizado'], true) || !repo_match_teams_are_public($match)) throw new RuntimeException('La fecha debe estar publicada y tener sus equipos completos.');
+            $teams = repo_match_teams($matchId);
+            if (count($teams) !== (int) $match['num_teams']) throw new RuntimeException('Faltan equipos.');
+            $directSession = live_load_session($match);
+            if (filter_var($_POST['live_revision'] ?? null, FILTER_VALIDATE_INT) !== $directSession['revision']) throw new RuntimeException('Otra pantalla actualizó la fecha. Recargá y revisá los resultados antes de guardar.');
+            $recorded = $pdo->prepare('SELECT COUNT(*) FROM match_round_robin_results WHERE match_id = ? AND home_goals IS NOT NULL AND away_goals IS NOT NULL');
+            $recorded->execute([$matchId]);
+            if ($directSession['state']['games'] || (int) $recorded->fetchColumn() > 0) throw new RuntimeException('Ya hay partidos registrados. Corregí sus resultados y goleadores desde el fixture para mantener las estadísticas consistentes.');
+            foreach ($teams as $team) {
+                $value = filter_var($teamGoalsData[(int) $team['team_number']] ?? null, FILTER_VALIDATE_INT);
+                if ($value === false || $value < 0 || $value > 24000) throw new RuntimeException('Los totales deben ser enteros entre 0 y 24000.');
+            }
+        }
         $scorerGoals = match_validate_scorers(repo_match_participants($matchId), is_array($teamGoalsData) ? $teamGoalsData : [], is_array($_POST['goals'] ?? null) ? $_POST['goals'] : []);
         finish_save_team_goals($matchId, $teams, is_array($teamGoalsData) ? $teamGoalsData : []);
         $saveScorer = $pdo->prepare('UPDATE match_players SET goals = :goals WHERE match_id = :mid AND player_id = :pid');
         foreach ($scorerGoals as $pid => $goals) $saveScorer->execute(['goals' => $goals, 'mid' => $matchId, 'pid' => $pid]);
         finish_save_optional_awards($match, repo_match_participants($matchId));
+        if ($directResultMode) {
+            $directState = $directSession['state'];
+            $directState['closed'] = true;
+            $directState['summary'] = ['team_goals' => array_map('intval', $teamGoalsData), 'player_goals' => $scorerGoals];
+            live_store_session($matchId, $directState, $directSession['revision'] + 1);
+        }
         $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW(), teams_published_at = COALESCE(teams_published_at, NOW()) WHERE id = :id');
         $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
         $pdo->commit();
@@ -1191,6 +1100,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
 }
 
 $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
+$directResultMode = $directResultMode && $selectedMatch && in_array((int) $selectedMatch['num_teams'], [3, 4], true);
+if ($directResultMode) {
+    $_SESSION['live_csrf'] ??= bin2hex(random_bytes(32));
+    $directSessionForForm = live_load_session($selectedMatch);
+    $hasRecordedGames = count(array_filter(repo_round_robin_results($matchId), static fn(array $row): bool => $row['home_goals'] !== null && $row['away_goals'] !== null)) > 0;
+    if ($directSessionForForm['state']['games'] || $hasRecordedGames) {
+        flash('info', 'Esta fecha ya tiene partidos. Corregí los goles y goleadores desde sus resultados.');
+        redirect((!empty($selectedMatch['dynamic_fixture']) || $selectedMatch['status'] === 'finalizado' ? 'partidos_en_vivo.php' : 'finalizar_partido.php') . '?match_id=' . $matchId);
+    }
+}
 $selectedValuationMode = $selectedMatch ? match_valuation_mode($selectedMatch) : 'both';
 $valuationsIncludeRatings = match_valuation_includes_ratings($selectedValuationMode);
 $valuationsIncludeAwards = match_valuation_includes_awards($selectedValuationMode);
@@ -1222,9 +1141,10 @@ $activePage = 'finalizar_partido.php';
 $bodyClass = $editFormations ? 'page-finalizar-partido page-sorteo-legacy sorteo-page' : 'page-finalizar-partido';
 require __DIR__ . '/includes/header.php';
 ?>
+<link rel="stylesheet" href="assets/finalizar-fecha.css?v=<?= h((string) filemtime(__DIR__ . '/assets/finalizar-fecha.css')) ?>">
 
 <?php if (!$formationOnlyView): ?>
-  <section class="page-head">
+  <section class="page-head finish-page-header">
     <div>
       <h1>Finalizar fecha</h1>
       <p class="small-muted">Carga los goles para finalizar. Los premios son opcionales y pueden cargarse luego desde Directivo.</p>
@@ -1234,10 +1154,10 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <?php if ($selectedMatch): ?>
-  <section class="<?= $formationOnlyView ? 'mb-3.5' : 'card mb-3.5' ?>">
+  <section class="<?= $formationOnlyView ? 'mb-3.5' : 'card mb-3.5 finish-date-shell' ?>">
     <?php if (!$formationOnlyView): ?>
-      <h3><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h3>
-      <p class="small-muted">Estado actual: <strong><?= h((string) $selectedMatch['status']) ?></strong> | Valoraciones: <strong><?= h(match_valuation_mode_label($selectedValuationMode)) ?></strong></p>
+      <header class="finish-date-header"><h2><?= h((string) ($selectedMatch['title'] ?: ('Fecha #' . $selectedMatch['id']))) ?></h2>
+      <div class="finish-date-meta"><span>Estado <strong><?= h((string) $selectedMatch['status']) ?></strong></span><span>Valoraciones <strong><?= h(match_valuation_mode_label($selectedValuationMode)) ?></strong></span></div></header>
     <?php endif; ?>
     <?php if (!$groupedTeams): ?>
       <p>No hay equipos sorteados todavia para esta fecha.</p>
@@ -1295,9 +1215,9 @@ require __DIR__ . '/includes/header.php';
       ?>
       <?php if ($showScorePanel): ?>
       <section class="finish-score-shell" id="resultado">
-        <?php if (!empty($usesLiveFixture)): ?>
-          <section class="card"><h3>Goles y fixture</h3><p>Los resultados y goleadores de esta fecha se gestionan por partido.</p><a class="btn btn-primary" href="partidos_en_vivo.php?match_id=<?= (int) $selectedMatch['id'] ?>">Abrir partidos en vivo</a></section>
-        <?php elseif ($isRoundRobinMatch): ?>
+        <?php if (!empty($usesLiveFixture) && !$directResultMode): ?>
+          <section class="card finish-live-link"><div><h3>Goles y fixture</h3><p>Los resultados y goleadores de esta fecha se gestionan por partido.</p></div><a class="btn btn-primary" href="partidos_en_vivo.php?match_id=<?= (int) $selectedMatch['id'] ?>">Abrir partidos en vivo</a></section>
+        <?php elseif ($isRoundRobinMatch && !$directResultMode): ?>
           <section class="card finish-round-robin-fixture" data-round-robin-fixture-details>
             <h3>Goles</h3>
           <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?><?= $editFormations ? '&edit_formations=1&show_score=1#resultado' : '' ?>" id="finish-score-form" data-round-robin-form>
@@ -1374,6 +1294,12 @@ require __DIR__ . '/includes/header.php';
           <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?><?= $editFormations ? '&edit_formations=1&show_score=1#resultado' : '' ?>" id="finish-score-form" data-no-partial>
             <input type="hidden" name="action" value="save_score">
             <input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>">
+            <?php if ($directResultMode): ?>
+              <input type="hidden" name="direct_result" value="1">
+              <input type="hidden" name="live_csrf" value="<?= h($_SESSION['live_csrf']) ?>">
+              <input type="hidden" name="live_revision" value="<?= (int) $directSessionForForm['revision'] ?>">
+              <p class="flash flash-info">Carga general sin partidos: ingresá los goles de cada equipo y sus autores. Los premios son opcionales y respetan la configuración de esta fecha. La tabla de posiciones estará disponible cuando registres los cruces.</p>
+            <?php endif; ?>
             <?php if ($editFormations): ?>
               <input type="hidden" name="return_to_formations" value="1">
             <?php endif; ?>
@@ -1628,7 +1554,7 @@ require __DIR__ . '/includes/header.php';
       <?php endif; ?>
 
       <?php if (!$formationOnlyView): ?>
-      <details class="card finish-valuations finish-valuations-disclosure" id="valoraciones" <?= $detailFormError !== '' ? 'open' : '' ?>>
+      <details class="card finish-valuations finish-valuations-disclosure" id="valoraciones" <?= $detailFormError !== '' || $directResultMode ? 'open' : '' ?>>
         <summary><h3><?= $valuationsIncludeAwards ? 'Premios' : 'Puntajes' ?></h3><span class="finish-valuations-toggle" aria-hidden="true"></span></summary>
         <div class="finish-valuations-content">
         <datalist id="matchAwardPlayers">
@@ -1696,11 +1622,11 @@ require __DIR__ . '/includes/header.php';
         <?php endif; ?>
         </div>
       </details>
-      <?php if (!empty($usesLiveFixture)): ?>
+      <?php if (!empty($usesLiveFixture) && !$directResultMode): ?>
       <form id="finish-score-form" method="post"><input type="hidden" name="action" value="save_live_awards"><input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>"></form>
       <?php endif; ?>
       <div class="btn-row finish-valuations-actions">
-        <button class="btn btn-primary" type="submit" form="finish-score-form" name="action" value="<?= !empty($usesLiveFixture) ? 'save_live_awards' : ($isRoundRobinMatch ? 'finalize_round_robin_date' : 'save_score') ?>" data-confirm="Guardar los datos de la fecha?" <?= !repo_match_teams_are_public($selectedMatch) ? 'disabled title="Primero publica la fecha"' : '' ?>><?= !empty($usesLiveFixture) ? 'Guardar premios' : 'Finalizar fecha' ?></button>
+        <button class="btn btn-primary" type="submit" form="finish-score-form" name="action" value="<?= $directResultMode ? 'save_score' : (!empty($usesLiveFixture) ? 'save_live_awards' : ($isRoundRobinMatch ? 'finalize_round_robin_date' : 'save_score')) ?>" data-confirm="Guardar los datos de la fecha?" <?= !repo_match_teams_are_public($selectedMatch) ? 'disabled title="Primero publica la fecha"' : '' ?>><?= $directResultMode ? ($selectedMatch['status'] === 'finalizado' ? 'Guardar goles y premios' : 'Finalizar fecha con goles y premios') : (!empty($usesLiveFixture) ? 'Guardar premios' : 'Finalizar fecha') ?></button>
       </div>
       <?php endif; ?>
     <?php endif; ?>

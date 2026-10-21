@@ -1172,6 +1172,7 @@ function admin_match_list_item_payload(
             'finish' => !empty($match['dynamic_fixture']) && (int) $match['num_teams'] > 2 ? 'partidos_en_vivo.php?match_id=' . $matchId : 'finalizar_partido.php?match_id=' . $matchId . '&show_score=1#resultado',
             'valuations' => is_directivo() ? 'junta_votaciones.php?match_id=' . $matchId : 'finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones',
             'view' => 'finalizar_partido.php?match_id=' . $matchId,
+            'correctResults' => $isFinalized && in_array((int) $match['num_teams'], [3, 4], true) ? 'partidos_en_vivo.php?match_id=' . $matchId : '',
         ],
         'deleteConfirm' => $isScheduled
             ? '¿Eliminar fecha y sus datos?'

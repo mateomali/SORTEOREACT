@@ -54,6 +54,12 @@ test('podium voting on mobile, all-player Goodfellas, weighted publication and a
     await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}&edit_details=1`);
     await page.locator('#valoraciones > summary').click();
     await expect(page.locator('#award-masterful_pass-3')).toBeVisible();
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: `outputs/finalizar-fecha-${width}.png`, fullPage: true });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('#award-goodfellas').getAttribute('data-award-list')).resolves.toBe('allAwardPlayers');
     const picker = page.locator('[data-award-picker]').filter({ has: page.locator('#award-masterful_pass') });
     await picker.getByRole('button', { name: /Ver jugadores/ }).click();

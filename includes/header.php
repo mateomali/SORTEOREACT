@@ -20,6 +20,9 @@ if ($bodyClass === '') {
         $bodyClass = 'page-' . trim($pageClass, '-');
     }
 }
+if (!empty($publicMatchPage)) {
+    $bodyClass = trim($bodyClass . ' public-match-page');
+}
 $flashMessages = consume_flash();
 $tailwindVersion = (string) (@filemtime(__DIR__ . '/../assets/tailwind.css') ?: time());
 $contrastVersion = (string) (@filemtime(__DIR__ . '/../assets/contrast-overrides.css') ?: time());
@@ -176,6 +179,7 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
     <link rel="stylesheet" href="assets/contrast-overrides.css?v=<?= h($contrastCacheHash) ?>">
   <?php endif; ?>
   <link rel="stylesheet" href="assets/pitch-cards.css?v=<?= h($pitchCardsCacheHash) ?>">
+  <link rel="stylesheet" href="assets/public-match-page.css?v=<?= h((string) md5_file(__DIR__ . '/../assets/public-match-page.css')) ?>">
 </head>
 <body<?= $bodyClass !== '' ? ' class="' . h($bodyClass) . '"' : '' ?>>
   <div class="app-shell">

@@ -30,8 +30,44 @@ function live_load_session(array $match): array
     $stmt = db()->prepare('SELECT revision, state_json FROM match_live_sessions WHERE match_id = ?');
     $stmt->execute([(int) $match['id']]);
     $row = $stmt->fetch();
-    return ['revision' => $row ? (int) $row['revision'] : 0,
-        'state' => $row ? json_decode($row['state_json'], true, 512, JSON_THROW_ON_ERROR) : live_initial_state($match)];
+    $state = $row ? json_decode($row['state_json'], true, 512, JSON_THROW_ON_ERROR) : live_initial_state($match);
+    if (($match['status'] ?? '') === 'finalizado') {
+        $state['closed'] = true;
+        if (!$row) {
+            $results = db()->prepare('SELECT * FROM match_round_robin_results WHERE match_id = ? AND home_goals IS NOT NULL AND away_goals IS NOT NULL ORDER BY leg, id');
+            $results->execute([(int) $match['id']]);
+            foreach ($results->fetchAll() as $result) {
+                $game = live_new_game([(int) $result['home_team_number'], (int) $result['away_team_number']], $state['duration'], 'Resultado guardado antes de usar el registro por partido.');
+                $game['status'] = 'finished';
+                $game['first_goal_known'] = false;
+                foreach (['home', 'away'] as $side) {
+                    $goals = (int) $result[$side . '_goals'];
+                    if ($goals < 0 || $goals > 100) throw new RuntimeException('El resultado guardado supera el límite de 100 goles por equipo y partido.');
+                    for ($i = 0; $i < $goals; $i++) $game['goals'][] = ['team' => (int) $result[$side . '_team_number'], 'player' => null, 'own' => false, 'at' => null];
+                }
+                $state['games'][] = $game;
+            }
+            $scorers = [];
+            foreach (repo_match_participants((int) $match['id']) as $player) {
+                if ($player['team_number'] !== null) $scorers[(int) $player['id']] = (int) ($player['goals'] ?? 0);
+            }
+            if ($state['games']) {
+                // Preserve aggregate authors without inventing which game they scored in.
+                $state['pending_scorers'] = $scorers;
+            } elseif (!empty($match['result_saved_at']) || array_sum($scorers) > 0) {
+                $totals = [];
+                foreach (repo_match_teams((int) $match['id']) as $team) $totals[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
+                $state['summary'] = ['team_goals' => $totals, 'player_goals' => $scorers];
+            }
+        }
+    }
+    return ['revision' => $row ? (int) $row['revision'] : 0, 'state' => $state];
+}
+
+function live_store_session(int $matchId, array $state, int $revision): void
+{
+    db()->prepare('INSERT INTO match_live_sessions (match_id, revision, state_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE revision = VALUES(revision), state_json = VALUES(state_json)')
+        ->execute([$matchId, $revision, json_encode($state, JSON_THROW_ON_ERROR)]);
 }
 
 function live_sync_totals(int $matchId, array $state, array $teams, array $participants): void
@@ -56,6 +92,9 @@ function live_sync_totals(int $matchId, array $state, array $teams, array $parti
         foreach ($game['goals'] as $goal) {
             if ($goal['player'] !== null && !$goal['own']) $playerGoals[$goal['player']]++;
         }
+    }
+    foreach ($state['pending_scorers'] ?? [] as $player => $goals) {
+        if (array_key_exists($player, $playerGoals)) $playerGoals[$player] += (int) $goals;
     }
     $stmt = $pdo->prepare('UPDATE match_teams SET goals = ?, updated_at = NOW() WHERE match_id = ? AND team_number = ?');
     foreach ($teamGoals as $t => $count) $stmt->execute([$count, $matchId, $t]);

@@ -8,6 +8,7 @@ require_once __DIR__ . '/lib/match_goals.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/directivos.php';
 require_once __DIR__ . '/lib/director_proposals.php';
+require_once __DIR__ . '/lib/public_round_robin.php';
 
 ensure_control_schema();
 ensure_multiple_draw_schema();
@@ -446,6 +447,47 @@ function public_round_robin_results(int $matchId): array
     return $stmt->fetchAll();
 }
 
+function render_public_final_standings(array $match, array $teams, array $teamLabels): string
+{
+    if (count($teams) <= 2 || ($match['status'] ?? '') !== 'finalizado') {
+        return '';
+    }
+    $summary = public_round_robin_summary($match, $teams, public_round_robin_results((int) $match['id']));
+    if ($summary['played'] === 0) {
+        return '';
+    }
+    $winner = $summary['winner'];
+    ob_start();
+    ?>
+    <section class="public-final-standings" aria-label="Tabla de posiciones de la fecha">
+      <?php if ($winner): ?>
+        <div class="public-final-winner" data-public-final-winner>
+          <span aria-hidden="true">&#127942;</span>
+          <div><span>Ganador de la fecha</span><strong><?= render_team_label($teamLabels[(int) $winner['team_number']] ?? ('Equipo ' . $winner['team_number'])) ?></strong></div>
+          <strong><?= (int) $winner['points'] ?> pts</strong>
+        </div>
+      <?php endif; ?>
+      <h3><?= $summary['complete'] ? 'Tabla de posiciones final' : 'Tabla de posiciones · resultados cargados' ?></h3>
+      <div class="public-final-table-scroll" tabindex="0" role="region" aria-label="Posiciones y estadísticas por equipo">
+        <table>
+          <thead><tr><th scope="col">Pos.</th><th scope="col">Equipo</th><th scope="col">Pts</th><th scope="col">PJ</th><th scope="col">G</th><th scope="col">E</th><th scope="col">P</th><th scope="col">GF</th><th scope="col">GC</th><th scope="col">DG</th></tr></thead>
+          <tbody>
+            <?php foreach (array_values($summary['table']) as $position => $row): ?>
+              <tr<?= $winner && $row['team_number'] === $winner['team_number'] ? ' class="is-date-winner"' : '' ?>>
+                <td><?= $position + 1 ?></td><th scope="row"><?= render_team_label($teamLabels[(int) $row['team_number']] ?? ('Equipo ' . $row['team_number'])) ?></th>
+                <?php foreach (['points', 'played', 'won', 'drawn', 'lost', 'gf', 'ga', 'gd'] as $field): ?><td><?= (int) $row[$field] ?></td><?php endforeach; ?>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+      <p class="public-table-scroll-hint">Deslizá la tabla para ver todas las columnas.</p>
+      <p>G: ganados · E: empatados · P: perdidos · GF/GC: goles a favor/en contra · DG: diferencia de gol.</p>
+    </section>
+    <?php
+    return (string) ob_get_clean();
+}
+
 function render_public_round_robin_results(array $roundRobinResults, array $teamLabels): string
 {
     if (!$roundRobinResults) {
@@ -465,7 +507,7 @@ function render_public_round_robin_results(array $roundRobinResults, array $team
             $awayLabel = $teamLabels[$awayTeam] ?? ('Equipo ' . $awayTeam);
           ?>
           <article class="public-round-robin-card">
-            <span class="public-round-robin-leg"><?= ((int) $result['leg']) === 1 ? 'Ida' : 'Vuelta' ?></span>
+            <span class="public-round-robin-leg"><?= ((int) $result['leg']) === 1 ? 'Ida' : (((int) $result['leg']) === 2 ? 'Vuelta' : 'Ronda ' . (int) $result['leg']) ?></span>
             <div class="public-round-robin-score">
               <span><?= render_team_label($homeLabel) ?></span>
               <strong><?= h((string) ((int) $result['home_goals'])) ?> - <?= h((string) ((int) $result['away_goals'])) ?></strong>
@@ -865,6 +907,8 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     $matchTeams = $teamsVisible ? repo_match_teams($matchId) : [];
     $teamLabels = $matchTeams ? repo_match_team_labels($match, $matchTeams) : [];
     $roundRobinResults = count($matchTeams) > 2 ? public_round_robin_results($matchId) : [];
+    $roundRobinSummary = count($matchTeams) > 2 ? public_round_robin_summary($match, $matchTeams, $roundRobinResults) : null;
+    $winnerTeamNumber = (int) ($roundRobinSummary['winner']['team_number'] ?? 0);
     $teamGoals = [];
     foreach ($matchTeams as $team) {
         $teamGoals[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
@@ -876,6 +920,9 @@ function render_public_match_detail_content(array $match, array $awardDefinition
     $matchAwards = [];
 
     if ($isFinalized) {
+        if ($winnerTeamNumber > 0) {
+            $matchAwards[] = ['label' => 'Ganador', 'value' => $teamLabels[$winnerTeamNumber] ?? ('Equipo ' . $winnerTeamNumber)];
+        }
         usort($ratedPlayers, static fn(array $a, array $b): int => ((float) $b['rating'] <=> (float) $a['rating']) ?: strcasecmp((string) $a['name'], (string) $b['name']));
         if (!$savedMatchAwards && $ratedPlayers) {
             $matchAwards[] = ['label' => 'Figura', 'value' => (string) $ratedPlayers[0]['name'] . ' (' . number_format((float) $ratedPlayers[0]['rating'], 1) . ')'];
@@ -887,7 +934,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
             $matchAwards[] = ['label' => 'Goleador', 'value' => (string) $goalPlayers[0]['name'] . ' (' . (int) $goalPlayers[0]['goals'] . ')'];
         }
 
-        if (!$savedMatchAwards && $teamGoals) {
+        if (!$savedMatchAwards && $teamGoals && count($matchTeams) <= 2) {
             $maxGoals = max($teamGoals);
             $winningTeams = array_keys(array_filter($teamGoals, static fn(int $goals): bool => $goals === $maxGoals));
             $matchAwards[] = [
@@ -955,21 +1002,31 @@ function render_public_match_detail_content(array $match, array $awardDefinition
         </section>
       <?php endif; ?>
     <?php else: ?>
-      <div class="grid cols-2 public-teams">
+      <header class="public-detail-heading">
+        <h2>Detalle de la fecha</h2>
+        <nav class="public-detail-nav" aria-label="Secciones del detalle de la fecha">
+          <a href="#public-teams-<?= $matchId ?>">Equipos</a>
+          <?php if ($isFinalized && $roundRobinResults): ?><a href="#public-crosses-<?= $matchId ?>">Cruces</a><?php endif; ?>
+          <?php if ($isFinalized): ?><a href="#public-summary-<?= $matchId ?>">Resumen</a><a href="#public-awards-<?= $matchId ?>">Premios</a><?php endif; ?>
+        </nav>
+      </header>
+      <h3 class="public-section-title" id="public-teams-<?= $matchId ?>">Equipos y formaciones</h3>
+      <div class="grid cols-2 public-teams public-teams-uniform sorteo-react-page">
         <?php foreach ($groupedTeams as $teamNumber => $lines): ?>
           <?php
             $displayLines = $showResultFormation ? $lines : public_base_display_lines($lines);
             $teamPlayersForCharacteristics = public_team_players_from_lines($displayLines);
             $teamTacticLabel = public_team_tactic_label($displayLines);
           ?>
-          <article class="team-card">
-            <div class="team-head">
+          <article class="team-card<?= $winnerTeamNumber === (int) $teamNumber ? ' is-date-winner' : '' ?>">
+            <div class="team-head gf-public-team-head">
               <h4>
                 <?= render_team_label(
                     $teamLabels[(int) $teamNumber] ?? ('Equipo ' . (int) $teamNumber),
                     $isFinalized ? (int) ($teamGoals[(int) $teamNumber] ?? 0) : null
                 ) ?>
               </h4>
+              <?php if ($winnerTeamNumber === (int) $teamNumber): ?><span class="public-winner-label">&#127942; Ganador de la fecha</span><?php endif; ?>
               <span class="small-muted">
                 <?php if ($isFinalized): ?>
                   <?= h((string) ($teamGoals[$teamNumber] ?? 0)) ?> goles
@@ -977,11 +1034,12 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                   Formacion base
                 <?php endif; ?>
               </span>
+              <div class="gf-public-team-score" aria-label="Puntaje del equipo"><strong><?= h(number_format((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), 1)) ?></strong><span>pts</span></div>
             </div>
             <?= render_formation_title_row((float) ($teamTotals[$teamNumber]['total_skill'] ?? 0), $teamTacticLabel) ?>
             <?php $formationPitchClass = $showResultFormation ? 'is-result-formation' : 'is-base-formation'; ?>
             <div class="team-formation gf-current-pitch <?= h($formationPitchClass) ?>" style="--gf-line-capacity: <?= max(3, count($displayLines['DEF'] ?? []) + count($displayLines['LAT'] ?? []), count($displayLines['MED'] ?? []), count($displayLines['DEL'] ?? [])) ?>" data-static-team-formation data-static-formation-locked="1" data-team-number="<?= h((string) $teamNumber) ?>">
-              <span class="gf-pitch-direction">Ataque ?</span><div class="gf-premium-pitch-markings" aria-hidden="true"><i class="gf-premium-midline"></i><i class="gf-premium-circle"></i><i class="gf-premium-center"></i><i class="gf-premium-area gf-premium-area-top"></i><i class="gf-premium-area gf-premium-area-bottom"></i><i class="gf-premium-six gf-premium-six-top"></i><i class="gf-premium-six gf-premium-six-bottom"></i><i class="gf-premium-goal gf-premium-goal-top"></i><i class="gf-premium-goal gf-premium-goal-bottom"></i></div>
+              <span class="gf-pitch-direction">Ataque &#8595;</span><div class="gf-premium-pitch-markings" aria-hidden="true"><i class="gf-premium-midline"></i><i class="gf-premium-circle"></i><i class="gf-premium-center"></i><i class="gf-premium-area gf-premium-area-top"></i><i class="gf-premium-area gf-premium-area-bottom"></i><i class="gf-premium-six gf-premium-six-top"></i><i class="gf-premium-six gf-premium-six-bottom"></i><i class="gf-premium-goal gf-premium-goal-top"></i><i class="gf-premium-goal gf-premium-goal-bottom"></i></div>
               <?php foreach (player_pitch_lines() as $line): ?>
                 <?php
                   $linePlayers = $line === 'DEF'
@@ -1030,6 +1088,10 @@ function render_public_match_detail_content(array $match, array $awardDefinition
                           data-player-mentality="<?= h(number_format(player_effective_stat($player, 'mentality'), 1, '.', '')) ?>"
                           data-player-regularity="<?= h(number_format(player_effective_stat($player, 'regularity'), 1, '.', '')) ?>"
                           data-player-goalkeeper-skill="<?= h(number_format(player_effective_stat($player, 'goalkeeper_skill'), 1, '.', '')) ?>"
+                          data-player-availability="<?= h((string) ($player['availability_percent'] ?? 100)) ?>"
+                          data-player-photo-x="<?= h((string) ($player['photo_position_x'] ?? 50)) ?>"
+                          data-player-photo-y="<?= h((string) ($player['photo_position_y'] ?? 50)) ?>"
+                          data-player-photo-zoom="<?= h((string) ($player['photo_zoom'] ?? 100)) ?>"
                           <?= $assignedLine === 'LAT' ? 'data-lane-role="lateral"' : '' ?>
                         >
                           <?= render_player_card_rating($formationBaseRating, 'GEN') ?>
@@ -1069,8 +1131,9 @@ function render_public_match_detail_content(array $match, array $awardDefinition
       </div>
 
       <?php if ($isFinalized): ?>
+        <div id="public-crosses-<?= $matchId ?>" class="public-section-anchor"></div>
         <?= render_public_round_robin_results($roundRobinResults, $teamLabels) ?>
-        <section class="match-results">
+        <section class="match-results" id="public-summary-<?= $matchId ?>">
           <h3>Resumen de la fecha</h3>
           <div class="match-result-mobile-groups">
             <?php foreach ($teamLabels as $teamNumber => $teamLabel): ?>
@@ -1123,6 +1186,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
           </div>
 
           <?php match_render_scorers($participants, $teamLabels); ?>
+          <div id="public-awards-<?= $matchId ?>" class="public-section-anchor"></div>
           <?php if ($matchAwards): ?>
             <h4 class="match-awards-title">Premios</h4>
             <div class="grid cols-3 match-awards">
@@ -1181,6 +1245,7 @@ if (!$showHistoryPage && is_directivo()) {
     require __DIR__ . '/includes/director_home.php';
     exit;
 }
+$publicMatchPage = true;
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -1306,6 +1371,7 @@ require __DIR__ . '/includes/header.php';
         <span>Resultado final</span>
         <?= render_match_scoreboard($headerGoals, $headerTeamLabels) ?>
       </div>
+      <?= render_public_final_standings($headerMatch, $headerTeams, $headerTeamLabels) ?>
     <?php elseif ($headerHasCaptains): ?>
       <form class="home-captain-access" method="post" action="capitanes.php">
         <input type="hidden" name="action" value="captain_token_login">
@@ -1438,6 +1504,7 @@ require __DIR__ . '/includes/header.php';
         <span>Resultado final</span>
         <?= render_match_scoreboard($latestResultGoals, $latestResultLabels) ?>
       </div>
+      <?= render_public_final_standings($latestFinalizedMatch, $latestResultTeams, $latestResultLabels) ?>
       <a class="btn btn-primary match-detail-toggle-btn" href="historial.php?match_id=<?= (int) $latestFinalizedMatch['id'] ?>" aria-label="Ver detalles de la ultima fecha">
         <span>Detalles</span>
       </a>
@@ -1611,5 +1678,6 @@ require __DIR__ . '/includes/header.php';
 <script src="assets/home-captains.js"></script>
 <?php endif; ?>
 
+<div data-react-root data-react-island="public_formation_cards"></div>
 <?php require __DIR__ . '/includes/footer.php'; ?>
 

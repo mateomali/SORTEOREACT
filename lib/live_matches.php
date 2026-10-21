@@ -37,10 +37,83 @@ function live_new_game(array $pair, int $duration, string $reason): array
 
 function live_apply_action(array $state, string $action, array $input, array $teams, array $participants, ?float $now = null): array
 {
+    $next = live_apply_action_internal($state, $action, $input, $teams, $participants, $now);
+    live_validate_pending_scorers($next, $participants);
+    return $next;
+}
+
+function live_validate_pending_scorers(array $state, array $participants): void
+{
+    $available = [];
+    foreach ($state['games'] as $game) {
+        if ($game['status'] !== 'finished') continue;
+        foreach ($game['goals'] as $goal) {
+            if ($goal['player'] === null && !$goal['own']) $available[$goal['team']] = ($available[$goal['team']] ?? 0) + 1;
+        }
+    }
+    $pending = [];
+    foreach ($participants as $player) {
+        $team = (int) $player['team_number'];
+        $pending[$team] = ($pending[$team] ?? 0) + (int) ($state['pending_scorers'][(int) $player['id']] ?? 0);
+    }
+    foreach ($pending as $team => $count) {
+        if ($count > ($available[$team] ?? 0)) throw new RuntimeException('Primero ajustá los goleadores generales del equipo ' . $team . ': superan los goles que quedarían disponibles.');
+    }
+}
+
+function live_apply_action_internal(array $state, string $action, array $input, array $teams, array $participants, ?float $now = null): array
+{
     $now ??= microtime(true);
-    if ($state['closed'] && !in_array($action, ['edit_goal', 'correct_game'], true)) throw new RuntimeException('La fecha ya está finalizada.');
+    if ($state['closed'] && !in_array($action, ['edit_goal', 'correct_game', 'remove_goal', 'add_finished_goal', 'add_finished_game', 'delete_game', 'set_pending_scorers'], true)) throw new RuntimeException('La fecha ya está finalizada.');
     $games = &$state['games'];
     $index = count($games) - 1;
+    if ($action === 'add_finished_game') {
+        if (!$state['closed']) throw new RuntimeException('Esta carga es para fechas finalizadas.');
+        if (count($games) >= 240) throw new RuntimeException('Se alcanzó el máximo de partidos por fecha.');
+        $pair = is_array($input['teams'] ?? null) ? $input['teams'] : [];
+        if (count($pair) !== 2 || !is_int($pair[0]) || !is_int($pair[1]) || $pair[0] === $pair[1] || array_diff($pair, $teams)) throw new RuntimeException('Elegí dos equipos distintos de esta fecha.');
+        if (isset($state['summary']) && ($input['replace_summary'] ?? false) !== true) throw new RuntimeException('Confirmá el reemplazo de la carga general por los partidos detallados.');
+        $newGame = live_new_game($pair, $state['duration'], 'Partido cargado después del cierre.');
+        $newGame['status'] = 'finished';
+        $newGame['first_goal_known'] = false;
+        foreach ($pair as $team) {
+            $value = filter_var($input['scores'][$team] ?? null, FILTER_VALIDATE_INT);
+            if ($value === false || $value < 0 || $value > 100) throw new RuntimeException('Los goles deben estar entre 0 y 100.');
+            for ($i = 0; $i < $value; $i++) $newGame['goals'][] = ['team' => $team, 'player' => null, 'own' => false, 'at' => null];
+        }
+        unset($state['summary']);
+        $games[] = $newGame;
+        return $state;
+    }
+    if ($action === 'set_pending_scorers') {
+        if (!isset($state['pending_scorers']) || !is_array($input['goals'] ?? null)) throw new RuntimeException('No hay goleadores generales pendientes.');
+        foreach ($participants as $player) {
+            $id = (int) $player['id'];
+            $count = filter_var($input['goals'][$id] ?? null, FILTER_VALIDATE_INT);
+            if ($count === false || $count < 0 || $count > 24000) throw new RuntimeException('Ingresá cantidades enteras de goles.');
+            $state['pending_scorers'][$id] = $count;
+        }
+        return $state;
+    }
+    if ($action === 'delete_game') {
+        $editIndex = filter_var($input['game'] ?? null, FILTER_VALIDATE_INT);
+        if (!$state['closed'] || $editIndex === false || !isset($games[$editIndex]) || $games[$editIndex]['status'] !== 'finished') throw new RuntimeException('Solo se pueden quitar partidos de una fecha finalizada.');
+        array_splice($games, $editIndex, 1);
+        return $state;
+    }
+    if ($action === 'add_finished_goal' || ($action === 'remove_goal' && $state['closed'])) {
+        $editIndex = filter_var($input['game'] ?? null, FILTER_VALIDATE_INT);
+        if ($editIndex === false || !isset($games[$editIndex]) || $games[$editIndex]['status'] !== 'finished') throw new RuntimeException('Elegí un partido finalizado.');
+        if ($action === 'add_finished_goal') {
+            if (count($games[$editIndex]['goals']) >= 200) throw new RuntimeException('Se alcanzó el máximo de goles del partido.');
+            $games[$editIndex]['goals'][] = live_validate_goal((int) ($input['team'] ?? 0), $input, $games[$editIndex], $participants) + ['at' => null];
+        } else {
+            $goalIndex = filter_var($input['goal'] ?? null, FILTER_VALIDATE_INT);
+            if ($goalIndex === false || !isset($games[$editIndex]['goals'][$goalIndex])) throw new RuntimeException('Gol inválido.');
+            array_splice($games[$editIndex]['goals'], $goalIndex, 1);
+        }
+        return $state;
+    }
     if ($action === 'duration') {
         $minutes = filter_var($input['minutes'] ?? null, FILTER_VALIDATE_INT);
         if ($minutes === false || $minutes < 1 || $minutes > 120) throw new RuntimeException('La duración debe estar entre 1 y 120 minutos.');
@@ -88,7 +161,7 @@ function live_apply_action(array $state, string $action, array $input, array $te
         $edited['first_goal_known'] = false;
         $edited['tie_choice'] = null;
         [$a, $b] = $edited['teams'];
-        if ($editIndex === 0 && (int) $scores[$a] === (int) $scores[$b]) {
+        if (!$state['closed'] && $editIndex === 0 && (int) $scores[$a] === (int) $scores[$b]) {
             $choice = (int) ($input['tie_choice'] ?? 0);
             if (!in_array($choice, $edited['teams'], true)) throw new RuntimeException('En empate, indicá el primer equipo en marcar; con 0–0, quién tiene prioridad.');
             $edited['tie_choice'] = $choice;
@@ -102,6 +175,8 @@ function live_apply_action(array $state, string $action, array $input, array $te
         $goalIndex = (int) ($input['goal'] ?? -1);
         if (!isset($games[$editIndex]['goals'][$goalIndex])) throw new RuntimeException('Gol inválido.');
         $goal = &$games[$editIndex]['goals'][$goalIndex];
+        $newPlayer = (int) ($input['player'] ?? 0);
+        if ($goal['player'] === null && !$goal['own'] && empty($input['own']) && $newPlayer > 0 && ($state['pending_scorers'][$newPlayer] ?? 0) > 0) $state['pending_scorers'][$newPlayer]--;
         $goal = live_validate_goal($goal['team'], $input, $games[$editIndex], $participants) + ['at' => $goal['at']];
         return $state;
     }

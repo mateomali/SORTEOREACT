@@ -460,7 +460,7 @@ function adjustedPositionRating(player, assignedPosition, options = {}) {
   return rating;
 }
 
-function adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize) {
+export function adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize) {
   return adjustedPositionRating(player, assignedPosition);
 }
 
@@ -527,7 +527,7 @@ function playerCardStats(player, assignedPosition) {
   ];
 }
 
-function playerPositionRatings(player, assignedPosition = '', teamSize = null) {
+export function playerPositionRatings(player, assignedPosition = '', teamSize = null) {
   const natural = getOrderedPlayerPositions(player);
   const positions = Array.from(new Set([...natural, String(assignedPosition || '').toUpperCase()].filter((position) => FORMATION_LINES.includes(position))));
   return positions
@@ -2444,7 +2444,7 @@ function PositionPenaltyBubble({ percent }) {
   );
 }
 
-function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
+export function FullPlayerCard({ player, assignedPosition, teamSize = null }) {
   const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
   const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);
   const tier = playerCardTier(adjusted);
@@ -2535,7 +2535,7 @@ export function restorePlayerExchanges(teams, assignments, exchanges, playerId) 
   return { teams: nextTeams, assignments: nextAssignments, exchanges: exchanges.filter((_, index) => !undone.has(index)) };
 }
 
-function CompactPlayerCard({ player, assignedPosition, teamSize = null, topPlayerRank = null, laneRole = '', draggableProps = {}, onOpen, onDoubleOpen }) {
+export function CompactPlayerCard({ player, assignedPosition, teamSize = null, topPlayerRank = null, laneRole = '', draggableProps = {}, onOpen, onDoubleOpen }) {
   const { dragging = false, selected = false, locked = false, swapTarget = false, ...domDraggableProps } = draggableProps;
   const adjusted = adjustedPositionRatingForTeamSize(player, assignedPosition, teamSize);
   const positionPenalty = positionPenaltyPercent(player, assignedPosition, teamSize);

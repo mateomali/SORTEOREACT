@@ -186,6 +186,18 @@
     scrollProposalTarget(target);
   });
 
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('.public-detail-nav a[href^="#"]');
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const target = document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    event.preventDefault();
+    window.history.replaceState(window.history.state, '', link.getAttribute('href'));
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ behavior: 'instant', block: 'start' });
+  });
+
   const focusHashTarget = () => {
     if (!window.location.hash) return;
     let targetId = window.location.hash.slice(1);

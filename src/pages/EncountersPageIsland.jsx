@@ -227,6 +227,7 @@ function MatchActions({ match, compact = false }) {
           <>
             {match.needsValuations ? <a className={`${strongAction} w-full px-2`} href={match.links.valuations}>Valoraciones</a> : null}
             <a className={`${mutedAction} w-full px-2`} href={match.links.view}>Ver</a>
+            {match.links.correctResults && <a className={`${primaryAction} w-full px-2`} href={match.links.correctResults}>Corregir resultados</a>}
           </>
         ) : (
           <span className={`${disabledAction} w-full px-2`}>Finalizar</span>
@@ -338,6 +339,7 @@ function MobileMatchActions({ match }) {
             <>
               {match.needsValuations ? <MobileActionLink className={strongAction} href={match.links.valuations}>Valoraciones</MobileActionLink> : null}
               <MobileActionLink className={mutedAction} href={match.links.view}>Ver</MobileActionLink>
+              {match.links.correctResults && <MobileActionLink className={primaryAction} href={match.links.correctResults}>Corregir resultados</MobileActionLink>}
             </>
           ) : (
             <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs lg:col-span-1`}>Finalizar</span>
