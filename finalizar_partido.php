@@ -1675,7 +1675,13 @@ require __DIR__ . '/includes/header.php';
                   ?>
                   <div data-award-position <?= $awardPosition > $awardVisible ? 'hidden' : '' ?>>
                   <label for="<?= h($fieldId) ?>"><?= award_max_recipients($code) > 1 ? $awardPosition . '.&#186; puesto' : 'Jugador' ?></label>
-                  <input id="<?= h($fieldId) ?>" type="text" list="<?= $code === 'goodfellas' ? 'allAwardPlayers' : ($code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers') ?>" form="finish-score-form" name="awards[<?= h($code) ?>][<?= $awardPosition - 1 ?>]" value="<?= h($savedValue) ?>" placeholder="Buscar jugador">
+                  <div class="award-player-picker" data-award-picker>
+                    <div class="award-player-control">
+                      <input id="<?= h($fieldId) ?>" type="text" data-award-list="<?= $code === 'goodfellas' ? 'allAwardPlayers' : ($code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers') ?>" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="<?= h($fieldId) ?>-options" autocomplete="off" form="finish-score-form" name="awards[<?= h($code) ?>][<?= $awardPosition - 1 ?>]" value="<?= h($savedValue) ?>" placeholder="Buscar jugador">
+                      <button type="button" data-award-picker-toggle aria-label="Ver jugadores para <?= h($award['label']) ?>, puesto <?= $awardPosition ?>" aria-controls="<?= h($fieldId) ?>-options" aria-expanded="false">▾</button>
+                    </div>
+                    <div id="<?= h($fieldId) ?>-options" class="award-player-options" role="listbox" aria-label="Jugadores para <?= h($award['label']) ?>, puesto <?= $awardPosition ?>" hidden></div>
+                  </div>
                   </div>
                 <?php endfor; ?>
                 <?php if ($awardMax > 1): ?>

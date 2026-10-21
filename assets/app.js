@@ -4049,6 +4049,90 @@
     button.hidden = !group.querySelector('[data-award-position][hidden]');
   });
 
+  const closeAwardPickers = (except = null) => {
+    document.querySelectorAll('[data-award-picker]').forEach(picker => {
+      if (picker === except) return;
+      picker.querySelector('[role="listbox"]').hidden = true;
+      picker.querySelector('input').setAttribute('aria-expanded', 'false');
+      picker.querySelector('input').removeAttribute('aria-activedescendant');
+      picker.querySelector('[data-award-picker-toggle]').setAttribute('aria-expanded', 'false');
+    });
+  };
+  const openAwardPicker = (input, showAll = false) => {
+    const picker = input.closest('[data-award-picker]');
+    const list = picker.querySelector('[role="listbox"]');
+    const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
+    const values = Array.from(document.getElementById(input.dataset.awardList)?.options || []).map(option => option.value);
+    const query = showAll || values.includes(input.value) ? '' : normalize(input.value);
+    closeAwardPickers(picker);
+    input.removeAttribute('aria-activedescendant');
+    list.replaceChildren();
+    values.filter(value => normalize(value).includes(query)).forEach((value, index) => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.role = 'option';
+      option.id = `${list.id}-${index}`;
+      option.tabIndex = -1;
+      option.dataset.awardPlayerValue = value;
+      option.textContent = value;
+      option.setAttribute('aria-selected', String(value === input.value));
+      list.append(option);
+    });
+    if (!list.children.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'No hay jugadores con ese nombre.';
+      empty.setAttribute('role', 'status');
+      list.append(empty);
+    }
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    picker.querySelector('[data-award-picker-toggle]').setAttribute('aria-expanded', 'true');
+  };
+  document.addEventListener('focusin', event => {
+    if (event.target.matches('input[data-award-list]')) openAwardPicker(event.target);
+    else if (!event.target.closest('[data-award-picker]')) closeAwardPickers();
+  });
+  document.addEventListener('input', event => {
+    if (event.target.matches('input[data-award-list]')) openAwardPicker(event.target);
+  });
+  document.addEventListener('click', event => {
+    const picker = event.target.closest('[data-award-picker]');
+    if (!picker) { closeAwardPickers(); return; }
+    const input = picker.querySelector('input');
+    const option = event.target.closest('[data-award-player-value]');
+    if (option) {
+      input.value = option.dataset.awardPlayerValue;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.focus();
+      closeAwardPickers();
+    } else if (event.target.closest('[data-award-picker-toggle]')) {
+      const wasOpen = !picker.querySelector('[role="listbox"]').hidden;
+      input.focus();
+      if (wasOpen) closeAwardPickers();
+      else openAwardPicker(input, true);
+    } else if (event.target === input) openAwardPicker(input);
+  });
+  document.addEventListener('keydown', event => {
+    if (!event.target.matches('input[data-award-list]')) return;
+    const input = event.target;
+    const list = input.closest('[data-award-picker]').querySelector('[role="listbox"]');
+    if (event.key === 'Escape' || event.key === 'Tab') { closeAwardPickers(); return; }
+    if (event.key === 'Enter' && !list.hidden) {
+      const active = document.getElementById(input.getAttribute('aria-activedescendant'));
+      if (active) { event.preventDefault(); active.click(); }
+    }
+    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+    event.preventDefault();
+    if (list.hidden) openAwardPicker(input, true);
+    const options = Array.from(list.querySelectorAll('[role="option"]'));
+    const current = options.findIndex(option => option.id === input.getAttribute('aria-activedescendant'));
+    const next = options[(current + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length];
+    if (!next) return;
+    options.forEach(option => option.setAttribute('aria-selected', String(option === next)));
+    input.setAttribute('aria-activedescendant', next.id);
+    next.scrollIntoView({ block: 'nearest' });
+  });
+
   hydrateDynamicContent(document);
   focusHashTarget();
   window.addEventListener('hashchange', focusHashTarget);

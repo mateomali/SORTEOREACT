@@ -54,7 +54,27 @@ test('podium voting on mobile, all-player Goodfellas, weighted publication and a
     await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}&edit_details=1`);
     await page.locator('#valoraciones > summary').click();
     await expect(page.locator('#award-masterful_pass-3')).toBeVisible();
-    await expect(page.locator('#award-goodfellas').getAttribute('list')).resolves.toBe('allAwardPlayers');
+    await expect(page.locator('#award-goodfellas').getAttribute('data-award-list')).resolves.toBe('allAwardPlayers');
+    const picker = page.locator('[data-award-picker]').filter({ has: page.locator('#award-masterful_pass') });
+    await picker.getByRole('button', { name: /Ver jugadores/ }).click();
+    await expect(picker.getByRole('listbox')).toBeVisible();
+    await expect(picker.getByRole('option')).toHaveCount(data.players.length);
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await picker.screenshot({ path: `outputs/award-player-picker-${width}.png` });
+    }
+    await page.locator('#award-masterful_pass').fill('zzzz-no-player');
+    await expect(picker).toContainText('No hay jugadores con ese nombre.');
+    await page.locator('#award-masterful_pass').fill(value(data.players[1]).slice(0, -1));
+    await expect(picker.getByRole('option')).toHaveCount(1);
+    await picker.getByRole('option').click();
+    await expect(page.locator('#award-masterful_pass')).toHaveValue(value(data.players[1]));
+    await expect(picker.getByRole('listbox')).toBeHidden();
+    await page.locator('#award-masterful_pass').fill(value(data.players[1]).slice(0, -1));
+    await page.locator('#award-masterful_pass').press('ArrowDown');
+    await page.locator('#award-masterful_pass').press('Enter');
+    await expect(page.locator('#award-masterful_pass')).toHaveValue(value(data.players[1]));
     await page.locator('#award-masterful_pass-2').fill('');
     await page.locator('#award-masterful_pass-3').fill('');
     await page.getByRole('button', { name: 'Guardar premios', exact: true }).click();

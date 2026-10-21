@@ -25293,3 +25293,13 @@ html body .sorteo-react-page .gf-drag-feedback {
 @layer utilities {
   .award-field[data-award-positions] { display: block; }
 }
+@layer utilities {
+  .award-player-control { display: flex; align-items: stretch; }
+  .award-player-control input { width: 100%; min-width: 0; flex: 1; border-radius: 8px 0 0 8px; }
+  .award-player-control button { flex: 0 0 44px; min-height: 44px; border: 1px solid #a8c2b7; border-left: 0; border-radius: 0 8px 8px 0; background: #edf3ed; color: #063d2b; font-size: 20px; }
+  .award-player-options { max-height: 220px; overflow-y: auto; border: 1px solid #8da99a; border-radius: 6px; margin-top: 4px; background: white; }
+  .award-player-options[hidden] { display: none; }
+  .award-player-options [role="option"] { display: block; width: 100%; min-height: 44px; text-align: left; padding: 8px 12px; border: 0; border-bottom: 1px solid #e1e9e3; border-radius: 0; background: white; color: #10271e; font-size: 14px; overflow-wrap: anywhere; }
+  .award-player-options [role="option"]:hover, .award-player-options [aria-selected="true"] { background: #edf5e9; }
+  .award-player-options p { margin: 0; padding: 12px; color: #526b62; font-size: 13px; }
+}
