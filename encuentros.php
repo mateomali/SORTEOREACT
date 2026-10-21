@@ -6,6 +6,7 @@ require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/director_proposals.php';
 require_once __DIR__ . '/lib/admin_config.php';
+require_once __DIR__ . '/lib/live_match_repository.php';
 
 require_directivo_or_admin();
 
@@ -15,6 +16,7 @@ if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'encuentros.php' && !
 
 $pdo = db();
 ensure_control_schema();
+ensure_live_match_schema();
 ensure_director_proposals_schema();
 ensure_admin_config_schema();
 $adminSettings = admin_config_settings();
@@ -33,6 +35,8 @@ $matchListPage = 'editar_partidos.php';
 
 function clear_match_draw_data(PDO $pdo, int $matchId): void
 {
+    $pdo->prepare('DELETE FROM match_live_sessions WHERE match_id = ?')->execute([$matchId]);
+    $pdo->prepare('DELETE FROM match_round_robin_results WHERE match_id = ?')->execute([$matchId]);
     $pdo->prepare('DELETE FROM match_draw_options WHERE match_id = :mid')->execute(['mid' => $matchId]);
     $pdo->prepare('DELETE FROM captain_picks WHERE match_id = :mid')->execute(['mid' => $matchId]);
     $pdo->prepare('DELETE FROM captain_drafts WHERE match_id = :mid')->execute(['mid' => $matchId]);
@@ -567,6 +571,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $selectedCourtId = max(0, (int) ($_POST['rental_court_id'] ?? 0));
         $selectedCourt = $selectedCourtId > 0 ? rental_court_by_id($selectedCourtId) : null;
         $matchDate = trim((string) ($_POST['match_date'] ?? ''));
+        $gameDuration = filter_var($_POST['game_duration_minutes'] ?? $adminSettings['game_duration_minutes_default'], FILTER_VALIDATE_INT);
+        if ($gameDuration === false || $gameDuration < 1 || $gameDuration > 120) {
+            flash('error', 'La duración debe estar entre 1 y 120 minutos.');
+            redirect($matchFormPage);
+        }
         $numTeams = max(2, min(4, (int) ($_POST['num_teams'] ?? 2)));
         $playersPerTeam = max(1, min(12, (int) ($_POST['players_per_team'] ?? 9)));
         $maxDiff = 0.7;
@@ -628,7 +637,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $stmt = $pdo->prepare(
                 'UPDATE matches
-                 SET title = :title, rental_court_id = :rental_court_id, match_date = :match_date, num_teams = :num_teams, team_kits_json = :team_kits_json, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, multi_draw_count = :multi_draw_count, multi_draw_lock_minutes = :multi_draw_lock_minutes, valuation_mode = :valuation_mode, notes = :notes, status = :status,
+                 SET game_duration_minutes = :game_duration_minutes, title = :title, rental_court_id = :rental_court_id, match_date = :match_date, num_teams = :num_teams, team_kits_json = :team_kits_json, players_per_team = :players_per_team, max_diff = :max_diff, allow_redraw = :allow_redraw, redraw_limit = :redraw_limit, multi_draw_count = :multi_draw_count, multi_draw_lock_minutes = :multi_draw_lock_minutes, valuation_mode = :valuation_mode, notes = :notes, status = :status,
                      draw_mode = "none", draw_started_at = NULL, draw_completed_at = NULL, finalized_at = NULL, teams_published_at = NULL, formation_edit_deadline = :formation_edit_deadline
                  WHERE id = :id'
             );
@@ -647,6 +656,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'multi_draw_count' => $multiDrawCount,
                 'multi_draw_lock_minutes' => $multiDrawLockMinutes,
                 'valuation_mode' => $valuationMode,
+                'game_duration_minutes' => $gameDuration,
                 'notes' => $notes === '' ? null : $notes,
                 'status' => 'programado',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -658,8 +668,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Fecha actualizada.');
         } else {
             $stmt = $pdo->prepare(
-                'INSERT INTO matches (title, rental_court_id, match_date, num_teams, team_kits_json, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, multi_draw_count, multi_draw_lock_minutes, valuation_mode, status, draw_mode, formation_edit_deadline, notes)
-                 VALUES (:title, :rental_court_id, :match_date, :num_teams, :team_kits_json, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :multi_draw_count, :multi_draw_lock_minutes, :valuation_mode, :status, :draw_mode, :formation_edit_deadline, :notes)'
+                'INSERT INTO matches (dynamic_fixture, game_duration_minutes, title, rental_court_id, match_date, num_teams, team_kits_json, players_per_team, max_diff, allow_redraw, redraw_limit, redraw_count, multi_draw_count, multi_draw_lock_minutes, valuation_mode, status, draw_mode, formation_edit_deadline, notes)
+                 VALUES (1, :game_duration_minutes, :title, :rental_court_id, :match_date, :num_teams, :team_kits_json, :players_per_team, :max_diff, :allow_redraw, :redraw_limit, 0, :multi_draw_count, :multi_draw_lock_minutes, :valuation_mode, :status, :draw_mode, :formation_edit_deadline, :notes)'
             );
             $savedMatchDate = date('Y-m-d H:00:00', strtotime($matchDate));
             $stmt->execute([
@@ -675,6 +685,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'multi_draw_count' => $multiDrawCount,
                 'multi_draw_lock_minutes' => $multiDrawLockMinutes,
                 'valuation_mode' => $valuationMode,
+                'game_duration_minutes' => $gameDuration,
                 'status' => 'programado',
                 'draw_mode' => 'none',
                 'formation_edit_deadline' => date('Y-m-d H:i:s', strtotime($savedMatchDate . ' -1 hour')),
@@ -810,6 +821,7 @@ if ($editing) {
 }
 
 $form = $editing ?: [
+    'game_duration_minutes' => (int) $adminSettings['game_duration_minutes_default'],
     'id' => 0,
     'title' => '',
     'rental_court_id' => 0,
@@ -1133,6 +1145,7 @@ function admin_match_list_item_payload(
         'valuationMode' => $valuationMode,
         'valuationModeLabel' => match_valuation_mode_label($valuationMode),
         'canFinalize' => $canFinalize,
+        'usesLiveFixture' => !empty($match['dynamic_fixture']) && (int) $match['num_teams'] > 2,
         'isFinalized' => $isFinalized,
         'isScheduled' => $isScheduled,
         'isNext' => $isNext,
@@ -1156,8 +1169,8 @@ function admin_match_list_item_payload(
             'captains' => 'capitanes.php?match_id=' . $matchId,
             'manual' => 'equipos_manual.php?match_id=' . $matchId,
             'formations' => 'finalizar_partido.php?match_id=' . $matchId . '&edit_formations=1#formaciones',
-            'finish' => 'finalizar_partido.php?match_id=' . $matchId . '&show_score=1#resultado',
-            'valuations' => 'finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones',
+            'finish' => !empty($match['dynamic_fixture']) && (int) $match['num_teams'] > 2 ? 'partidos_en_vivo.php?match_id=' . $matchId : 'finalizar_partido.php?match_id=' . $matchId . '&show_score=1#resultado',
+            'valuations' => is_directivo() ? 'junta_votaciones.php?match_id=' . $matchId : 'finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones',
             'view' => 'finalizar_partido.php?match_id=' . $matchId,
         ],
         'deleteConfirm' => $isScheduled
@@ -1345,6 +1358,11 @@ ob_start();
         <input class="<?= $showCreateSection && !$showEditSection ? 'w-full rounded-xl border border-lime-200/40 bg-emerald-950/92 px-3 py-2.5 text-sm font-semibold text-lime-50 outline-none placeholder:text-emerald-100/45 transition focus:border-lime-200 focus:ring-4 focus:ring-lime-200/25' : '' ?>" type="number" name="num_teams" min="2" max="4" value="<?= h((string) min(4, max(2, (int) $form['num_teams']))) ?>" required data-num-teams data-rental-court-field-input>
         <span class="<?= $showCreateSection && !$showEditSection ? 'mt-2 hidden w-fit rounded-lg border border-lime-200/45 bg-lime-100 px-2.5 py-1 text-xs font-black text-[#07130f] shadow-sm shadow-lime-200/15' : 'hidden' ?>" data-rental-court-field-changed>Actualizado por cancha</span>
       </div>
+    <div class="form-row" data-game-duration-field <?= $showCreateSection && !$showEditSection && (int) $form['num_teams'] <= 2 ? 'hidden' : '' ?>>
+      <label for="game-duration">Duración de cada partido (minutos)</label>
+      <input id="game-duration" type="number" name="game_duration_minutes" min="1" max="120" value="<?= (int) ($form['game_duration_minutes'] ?? $adminSettings['game_duration_minutes_default']) ?>" required <?= $showCreateSection && !$showEditSection && (int) $form['num_teams'] <= 2 ? 'disabled' : '' ?>>
+      <p class="small-muted">Para el fixture dinámico de 3 o 4 equipos. El cronómetro permite pausa, reanudación y tiempo extra.</p>
+    </div>
       <fieldset class="form-row" data-team-kits>
         <legend>Camisetas de los equipos</legend>
         <div class="grid gap-3 sm:grid-cols-2">

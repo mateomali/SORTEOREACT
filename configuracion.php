@@ -34,6 +34,7 @@ $positionWeightLabels = admin_config_position_weight_labels();
 $courts = rental_courts(false);
 $configIslandPayload = [
     'settings' => [
+        'game_duration_minutes_default' => (int) $settings['game_duration_minutes_default'],
         'director_proposal_start_hours' => (float) $settings['director_proposal_start_minutes'] / 60,
         'director_proposal_lock_hours' => (float) $settings['director_proposal_lock_minutes'] / 60,
         'allow_redraw_default' => (string) $settings['allow_redraw_default'],

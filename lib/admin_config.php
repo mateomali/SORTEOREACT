@@ -46,6 +46,7 @@ function admin_config_default_position_weights_json(): string
 function admin_config_seed_defaults(): void
 {
     $defaults = [
+        'game_duration_minutes_default' => '10',
         'allow_redraw_default' => '1',
         'redraw_limit_default' => '3',
         'director_proposal_start_minutes' => '1440',
@@ -94,6 +95,7 @@ function admin_config_settings(): array
 {
     ensure_admin_config_schema();
     $settings = [
+        'game_duration_minutes_default' => '10',
         'allow_redraw_default' => '1',
         'redraw_limit_default' => '3',
         'director_proposal_start_minutes' => '1440',
@@ -134,6 +136,9 @@ function admin_config_save_settings(array $input): void
 {
     ensure_admin_config_schema();
     $currentSettings = admin_config_settings();
+    $duration = filter_var($input['game_duration_minutes_default'] ?? $currentSettings['game_duration_minutes_default'], FILTER_VALIDATE_INT);
+    if ($duration === false || $duration < 1 || $duration > 120) throw new RuntimeException('La duración debe estar entre 1 y 120 minutos.');
+    admin_config_set_default('game_duration_minutes_default', (string) $duration);
     $startHours = filter_var($input['director_proposal_start_hours'] ?? ((float) $currentSettings['director_proposal_start_minutes'] / 60), FILTER_VALIDATE_FLOAT);
     $closeHours = filter_var($input['director_proposal_lock_hours'] ?? ((float) $currentSettings['director_proposal_lock_minutes'] / 60), FILTER_VALIDATE_FLOAT);
     if ($startHours === false || $closeHours === false || $startHours <= $closeHours || $startHours > 168 || $closeHours < 0 || round($startHours * 60) <= round($closeHours * 60)) throw new RuntimeException('El inicio debe ser anterior al cierre, entre 0 y 168 horas antes del partido.');

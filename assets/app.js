@@ -2793,8 +2793,9 @@
         return;
       }
       const ratingCount = juntaVoteForm.querySelectorAll('input[name^="rating["]').length;
-      const awardCount = Array.from(juntaVoteForm.querySelectorAll('input[name^="awards["]'))
-        .filter((input) => String(input.value || '').trim() !== '').length;
+      const awardSelections = Array.from(juntaVoteForm.querySelectorAll('input[name^="awards["]'))
+        .filter((input) => String(input.value || '').trim() !== '');
+      const awardCount = new Set(awardSelections.map((input) => input.name.match(/^awards\[([^\]]+)\]/)?.[1])).size;
       const votesRatings = juntaVoteForm.dataset.voteRatings !== '0';
       const votesAwards = juntaVoteForm.dataset.voteAwards !== '0';
       const confirmLines = [];
@@ -2802,7 +2803,7 @@
         confirmLines.push(`Puntajes cargados: ${ratingCount}`);
       }
       if (votesAwards) {
-        confirmLines.push(`Premios elegidos: ${awardCount}`);
+        confirmLines.push(`Premios elegidos: ${awardCount} · Puestos asignados: ${awardSelections.length}`);
       }
       const confirmMessage = `Esta seguro que esta es su votacion?${confirmLines.length ? '\n\n' + confirmLines.join('\n') : ''}`;
       if (!window.confirm(confirmMessage)) {

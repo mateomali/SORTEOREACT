@@ -846,7 +846,7 @@ $awardDescriptions = award_descriptions();
 $monthlyAwardDefinition = monthly_player_award_definition();
 $playerMonthlyAwards = monthly_player_awards_for_player($playerId);
 $awardStmt = db()->prepare(
-    "SELECT ma.award_code, COUNT(*) AS total
+    "SELECT ma.award_code, COUNT(*) AS total, SUM(ma.award_position = 1) AS first_count, SUM(ma.award_position = 2) AS second_count, SUM(ma.award_position = 3) AS third_count
      FROM match_awards ma
      INNER JOIN matches m ON m.id = ma.match_id AND m.status = 'finalizado'
      WHERE ma.player_id = :player_id
@@ -854,6 +854,7 @@ $awardStmt = db()->prepare(
 );
 $awardStmt->execute(['player_id' => $playerId]);
 $playerAwardCounts = [];
+$playerAwardPositions = [];
 $playerAwardTotal = 0;
 $playerGoodAwardTotal = 0;
 $playerBadAwardTotal = 0;
@@ -864,6 +865,7 @@ foreach ($awardStmt->fetchAll() as $awardRow) {
         continue;
     }
     $playerAwardCounts[$code] = $count;
+    $playerAwardPositions[$code] = [1 => (int) $awardRow['first_count'], 2 => (int) $awardRow['second_count'], 3 => (int) $awardRow['third_count']];
     $playerAwardTotal += $count;
     if (($awardDefinitions[$code]['type'] ?? 'good') === 'bad') {
         $playerBadAwardTotal += $count;
@@ -1094,6 +1096,7 @@ ob_start();
             <span><?= h((string) $award['icon']) ?></span>
             <strong><?= h((string) $award['label']) ?></strong>
             <em>x<?= h((string) $count) ?></em>
+            <?php if (award_max_recipients($code) > 1): ?><span><?php foreach ($playerAwardPositions[$code] as $position => $total): ?><?php if ($total > 0): ?> <?= (int) $position ?>.&#186;: <?= (int) $total ?><?php endif; ?><?php endforeach; ?></span><?php endif; ?>
           </span>
         <?php endforeach; ?>
         <?php foreach ($playerMonthlyAwards as $monthlyAward): ?>

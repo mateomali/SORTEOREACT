@@ -25,6 +25,11 @@ function SettingsForm({ settings, positionWeights, positionWeightLabels }) {
   return (
     <form className="grid gap-3" method="post">
       <input type="hidden" name="action" value="save_settings" />
+      <label className={labelPanelClass}>
+        <span>Duración de cada partido (minutos)</span>
+        <input className={inputClass} type="number" name="game_duration_minutes_default" min="1" max="120" defaultValue={settings.game_duration_minutes_default ?? 10} required />
+        <span className={helpTextClass}>Para fechas nuevas con 3 o 4 equipos. Al llegar a cero, el reloj continúa en tiempo extra hasta finalizar el partido.</span>
+      </label>
       <label className={`${labelPanelClass} text-sm font-bold text-lime-50`}>
         <span className={labelTextClass}>Rehacer sorteo</span>
         <span className="flex min-h-11 items-center gap-3 rounded-lg border border-lime-200/35 bg-emerald-950/92 px-3 py-2">

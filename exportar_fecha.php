@@ -10,6 +10,7 @@ require_admin();
 
 $pdo = db();
 ensure_control_schema();
+ensure_match_awards_schema();
 
 $matchId = isset($_GET['match_id']) ? (int) $_GET['match_id'] : 0;
 $mode = strtolower(trim((string) ($_GET['mode'] ?? 'completo')));
@@ -61,11 +62,11 @@ function export_match_court_label(array $match): string
 function export_match_awards(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT ma.award_code, p.name AS player_name
+        'SELECT ma.award_code, ma.award_position, p.name AS player_name
          FROM match_awards ma
          INNER JOIN players p ON p.id = ma.player_id
          WHERE ma.match_id = :mid
-         ORDER BY ma.award_code ASC'
+         ORDER BY ma.award_code ASC, ma.award_position ASC'
     );
     $stmt->execute(['mid' => $matchId]);
     return $stmt->fetchAll();
@@ -205,11 +206,11 @@ foreach ($participants as $player) {
 if ($mode === 'completo') {
     export_match_csv_row($out, []);
     export_match_csv_row($out, ['PREMIOS']);
-    export_match_csv_row($out, ['Premio', 'Jugador']);
+    export_match_csv_row($out, ['Premio', 'Jugador', 'Puesto']);
     foreach ($awards as $award) {
         $code = (string) ($award['award_code'] ?? '');
         $label = (string) ($awardLabels[$code]['label'] ?? $code);
-        export_match_csv_row($out, [$label, (string) ($award['player_name'] ?? '')]);
+        export_match_csv_row($out, [$label, (string) ($award['player_name'] ?? ''), (string) $award['award_position']]);
     }
 }
 

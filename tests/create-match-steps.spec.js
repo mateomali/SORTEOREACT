@@ -8,11 +8,34 @@ for(const width of [1440,390,320])test(`create match steps at ${width}`,async({p
  await page.waitForURL('**/crear_partido.php');
  const config=page.locator('[data-wizard-panel="1"]'), players=page.locator('[data-wizard-panel="2"]');
  await expect(config).toBeVisible();await expect(players).toBeHidden();
+ const duration=page.getByLabel('Duración de cada partido (minutos)',{exact:true});
+ await page.locator('[data-num-teams]').fill('2');
+ await expect(duration).toBeHidden();await expect(duration).toBeDisabled();
+ for(const teams of ['3','4']){
+  await page.locator('[data-num-teams]').fill(teams);
+  await expect(duration).toBeVisible();await expect(duration).toBeEnabled();
+  if(teams==='3'){
+   await expect(page.locator('[data-players-per-team]')).toHaveValue('7');
+   await expect(page.locator('[data-match-cup-total]').first()).toHaveText('21');
+   await page.locator('[data-players-per-team]').fill('8');
+   await page.locator('[data-players-per-team]').blur();
+   await expect(page.locator('[data-players-per-team]')).toHaveValue('8');
+  }
+ }
+ await duration.fill('15');
+ await page.locator('[data-num-teams]').fill('2');
+ await expect(duration).toBeHidden();await expect(duration).toBeDisabled();
+ await page.locator('[data-num-teams]').fill('3');
+ await expect(duration).toHaveValue('15');
+ await duration.fill('0');
+ await page.locator('[data-match-next]').click();
+ await expect(config).toBeVisible();await expect(players).toBeHidden();
+ await duration.fill('15');
  await page.locator('[data-num-teams]').fill('5');
- await page.getByRole('button',{name:'Continuar a jugadores convocados'}).click();await expect(config).toBeVisible();
+ await page.locator('[data-match-next]').click();await expect(config).toBeVisible();
  await page.locator('[data-num-teams]').fill('2');
  await page.locator('[data-players-per-team]').fill('3');
- await page.getByRole('button',{name:'Continuar a jugadores convocados'}).click();
+ await page.locator('[data-match-next]').click();
  await expect(players).toBeVisible();await expect(config).toBeHidden();
  await expect(page.locator('.participant-search-toolbar')).toContainText('/6 convocados');
  const row=page.locator('[data-player-row]:visible').first();
@@ -24,8 +47,8 @@ for(const width of [1440,390,320])test(`create match steps at ${width}`,async({p
  await page.locator('#participantSearchReact').fill('zzzz-no-player');
  await expect(page.locator('[data-player-row]:visible')).toHaveCount(0);
  await page.locator('#participantSearchReact').fill('');
- await page.getByRole('button',{name:/Volver a configuraci/}).click();
- await expect(config).toBeVisible();await page.getByRole('button',{name:'Continuar a jugadores convocados'}).click();
+ await page.locator('[data-match-back]').click();
+ await expect(config).toBeVisible();await page.locator('[data-match-next]').click();
  await expect(page.locator(`input[name="participants[]"][value="${id}"]`)).toBeChecked();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:`outputs/create-match-steps-${width}.png`,fullPage:true});

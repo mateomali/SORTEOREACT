@@ -14,6 +14,7 @@ function ensure_directivos_schema(): void
         return;
     }
     ensure_control_schema();
+    ensure_match_awards_schema();
     $pdo = db();
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS directive_members (
@@ -150,6 +151,7 @@ function ensure_directivos_schema(): void
     if (!schema_column_exists($pdo, 'director_player_stat_votes', 'pass_vision')) {
         $pdo->exec('ALTER TABLE director_player_stat_votes ADD COLUMN pass_vision TINYINT UNSIGNED NULL AFTER technique');
     }
+    award_ensure_position_schema('match_director_award_votes', 'uniq_director_award_vote', 'match_id, voter_id, award_code');
     ensure_default_directive_site_users();
     $done = true;
 }
@@ -710,17 +712,13 @@ function directive_member_award_votes(int $matchId, int $voterId): array
 {
     ensure_directivos_schema();
     $stmt = db()->prepare(
-        'SELECT av.award_code, av.player_id, p.name
+        'SELECT av.award_code, av.player_id, av.award_position, p.name
          FROM match_director_award_votes av
          INNER JOIN players p ON p.id = av.player_id
-         WHERE av.match_id = :mid AND av.voter_id = :voter_id'
+         WHERE av.match_id = :mid AND av.voter_id = :voter_id ORDER BY av.award_code, av.award_position'
     );
     $stmt->execute(['mid' => $matchId, 'voter_id' => $voterId]);
-    $votes = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $votes[(string) $row['award_code']] = $row;
-    }
-    return $votes;
+    return award_group_rows($stmt->fetchAll());
 }
 
 function directive_publication(int $matchId): ?array
@@ -792,27 +790,14 @@ function directive_save_vote(int $matchId, int $voterId, array $ratings, array $
         }
 
         if ($includeAwards) {
-            $definitions = award_definitions();
+            $parsed = award_parse_form($awards);
+            $allPlayers = $pdo->query('SELECT id FROM players')->fetchAll(PDO::FETCH_COLUMN);
             $deleteAward = $pdo->prepare('DELETE FROM match_director_award_votes WHERE match_id = :mid AND voter_id = :voter_id AND award_code = :code');
-            $awardStmt = $pdo->prepare(
-                'INSERT INTO match_director_award_votes (match_id, voter_id, award_code, player_id)
-                 VALUES (:mid, :voter_id, :code, :pid)
-                 ON DUPLICATE KEY UPDATE player_id = VALUES(player_id), updated_at = CURRENT_TIMESTAMP'
-            );
-            foreach ($definitions as $code => $_definition) {
-                $rawAward = trim((string) ($awards[$code] ?? ''));
-                if ($rawAward === '') {
-                    $deleteAward->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code]);
-                    continue;
-                }
-                if (preg_match('/#(\d+)/', $rawAward, $matchAward) !== 1) {
-                    throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
-                }
-                $pid = (int) $matchAward[1];
-                if (!isset($allowed[$pid])) {
-                    throw new RuntimeException('Premio invalido: el jugador no participo de la fecha.');
-                }
-                $awardStmt->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code, 'pid' => $pid]);
+            $awardStmt = $pdo->prepare('INSERT INTO match_director_award_votes (match_id, voter_id, award_code, player_id, award_position) VALUES (:mid, :voter_id, :code, :pid, :position)');
+            foreach (award_definitions() as $code => $_definition) {
+                $ids = award_validate_recipients($code, $parsed[$code], $allowedPlayerIds, $allPlayers);
+                $deleteAward->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code]);
+                foreach ($ids as $index => $pid) $awardStmt->execute(['mid' => $matchId, 'voter_id' => $voterId, 'code' => $code, 'pid' => $pid, 'position' => $index + 1]);
             }
         }
 
@@ -1115,39 +1100,33 @@ function directive_resolve_awards(int $matchId, array $allowedPlayerIds): array
         $goals[(int) $row['player_id']] = (int) $row['goals'];
     }
     $names = [];
-    if ($allowedPlayerIds) {
-        $in = implode(',', array_fill(0, count($allowedPlayerIds), '?'));
-        $nameStmt = db()->prepare("SELECT id, name FROM players WHERE id IN ($in)");
-        $nameStmt->execute(array_values(array_map('intval', $allowedPlayerIds)));
-        foreach ($nameStmt->fetchAll() as $row) {
-            $names[(int) $row['id']] = (string) $row['name'];
-        }
-    }
+    foreach (db()->query('SELECT id, name FROM players')->fetchAll() as $row) $names[(int) $row['id']] = (string) $row['name'];
     foreach ($definitions as $code => $_definition) {
         $stmt = db()->prepare(
-            'SELECT player_id, COUNT(*) AS votes
+            'SELECT player_id, COUNT(*) AS votes, SUM(4 - award_position) AS points, SUM(award_position = 1) AS first_votes, SUM(award_position = 2) AS second_votes
              FROM match_director_award_votes
              WHERE match_id = :mid AND award_code = :code
              GROUP BY player_id'
         );
         $stmt->execute(['mid' => $matchId, 'code' => $code]);
-        $rows = array_values(array_filter($stmt->fetchAll(), static fn(array $row): bool => isset($allowed[(int) $row['player_id']])));
+        $eligible = $code === 'goodfellas' ? $names : $allowed;
+        $ranked = award_max_recipients($code) > 1;
+        $rows = array_values(array_filter($stmt->fetchAll(), static fn(array $row): bool => isset($eligible[(int) $row['player_id']])));
         if (!$rows) {
             $finalAwards[$code] = 0;
             continue;
         }
-        usort($rows, static function (array $a, array $b) use ($ratingAverages, $goals, $names): int {
+        usort($rows, static function (array $a, array $b) use ($ratingAverages, $goals, $names, $ranked): int {
             $aId = (int) $a['player_id'];
             $bId = (int) $b['player_id'];
-            // Gana el jugador con mas votos de la junta.
-            // Desempate: mejor promedio de la junta (si la fecha se puntua),
-            // luego mas goles en la fecha y por ultimo orden alfabetico.
-            return ((int) $b['votes'] <=> (int) $a['votes'])
+            // Ranked awards: 3/2/1 points, then first and second place counts.
+            // Single awards retain vote count and the existing rating/goals/name tiebreak.
+            return ($ranked ? (((int) $b['points'] <=> (int) $a['points']) ?: ((int) $b['first_votes'] <=> (int) $a['first_votes']) ?: ((int) $b['second_votes'] <=> (int) $a['second_votes'])) : ((int) $b['votes'] <=> (int) $a['votes']))
                 ?: (($ratingAverages[$bId] ?? 0.0) <=> ($ratingAverages[$aId] ?? 0.0))
                 ?: (($goals[$bId] ?? 0) <=> ($goals[$aId] ?? 0))
-                ?: strcmp($names[$aId] ?? '', $names[$bId] ?? '');
+                ?: strcasecmp($names[$aId] ?? '', $names[$bId] ?? '') ?: ($aId <=> $bId);
         });
-        $finalAwards[$code] = (int) $rows[0]['player_id'];
+        $finalAwards[$code] = $ranked ? array_map(static fn(array $r): int => (int) $r['player_id'], array_slice($rows, 0, 3)) : (int) $rows[0]['player_id'];
     }
     return $finalAwards;
 }

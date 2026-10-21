@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export function DrawPotsEditor({ mode, onModeChange, pots, onChange: updatePots, onAutoBuild, players, numTeams, disabled, onSave, saving, saved, message }) {
-  const [assembly, setAssembly] = useState('manual');
+  const [assembly, setAssembly] = useState('automatic');
   const [maxGeneralGap, setMaxGeneralGap] = useState(5);
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);

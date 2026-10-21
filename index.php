@@ -332,14 +332,15 @@ $awardDefinitions = award_definitions(true);
 $awardDescriptions = award_descriptions();
 $savedMatchAwards = $selectedMatchId > 0 ? repo_match_awards($selectedMatchId) : [];
 $playerAwardIcons = [];
-foreach ($savedMatchAwards as $awardCode => $awardRow) {
+foreach (award_flatten_rows($savedMatchAwards) as $awardRow) {
+        $awardCode = (string) $awardRow['award_code'];
     $awardPlayerId = (int) ($awardRow['player_id'] ?? 0);
     if ($awardPlayerId <= 0 || !isset($awardDefinitions[$awardCode])) {
         continue;
     }
     $playerAwardIcons[$awardPlayerId][] = [
         'icon' => (string) $awardDefinitions[$awardCode]['icon'],
-        'label' => (string) $awardDefinitions[$awardCode]['label'],
+        'label' => (string) $awardDefinitions[$awardCode]['label'] . (award_max_recipients($awardCode) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
     ];
 }
 
@@ -380,7 +381,7 @@ if ($selectedMatch && (string) $selectedMatch['status'] === 'finalizado' && $par
         }
         $matchAwards[] = [
             'label' => (string) $award['icon'] . ' ' . (string) $award['label'],
-            'value' => (string) $savedMatchAwards[$code]['name'],
+            'value' => award_display_name($savedMatchAwards[$code]),
         ];
     }
 }
@@ -674,7 +675,8 @@ function render_history_match_scoreboard(array $match, array $teams, array $capt
 function match_player_award_icons(array $savedMatchAwards, array $awardDefinitions): array
 {
     $icons = [];
-    foreach ($savedMatchAwards as $awardCode => $awardRow) {
+    foreach (award_flatten_rows($savedMatchAwards) as $awardRow) {
+        $awardCode = (string) $awardRow['award_code'];
         $awardPlayerId = (int) ($awardRow['player_id'] ?? 0);
         if ($awardPlayerId <= 0 || !isset($awardDefinitions[$awardCode])) {
             continue;
@@ -682,7 +684,7 @@ function match_player_award_icons(array $savedMatchAwards, array $awardDefinitio
         $icons[$awardPlayerId][] = [
             'code' => (string) $awardCode,
             'icon' => (string) $awardDefinitions[$awardCode]['icon'],
-            'label' => (string) $awardDefinitions[$awardCode]['label'],
+            'label' => (string) $awardDefinitions[$awardCode]['label'] . (award_max_recipients($awardCode) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
         ];
     }
     return $icons;
@@ -900,7 +902,7 @@ function render_public_match_detail_content(array $match, array $awardDefinition
             }
             $matchAwards[] = [
                 'label' => (string) $award['icon'] . ' ' . (string) $award['label'],
-                'value' => (string) $savedMatchAwards[$code]['name'],
+                'value' => award_display_name($savedMatchAwards[$code]),
             ];
         }
     }

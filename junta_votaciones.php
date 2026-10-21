@@ -319,9 +319,12 @@ foreach ($awardDefinitions as $code => $award) {
         'label' => (string) $award['label'],
         'icon' => (string) $award['icon'],
         'description' => (string) ($awardDescriptions[$code] ?? ''),
-        'listId' => $code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers',
+        'listId' => $code === 'goodfellas' ? 'allAwardPlayers' : ($code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers'),
+        'maxRecipients' => award_max_recipients((string) $code),
+        'values' => array_map(static fn(array $row): string => $row['name'] . ' (#' . (int) $row['player_id'] . ')', $myAwardVotes[$code]['podium'] ?? []),
+        'winners' => $winner['podium'] ?? [],
         'value' => junta_award_value($myAwardVotes, (string) $code),
-        'winner' => $winner ? (string) $winner['name'] : '-',
+        'winner' => $winner ? award_display_name($winner) : '-',
     ];
 }
 
@@ -364,6 +367,7 @@ if ($selectedMatch) {
         'ratingsEnabled' => $valuationsIncludeRatings,
         'awardsEnabled' => $valuationsIncludeAwards,
         'participants' => $voteParticipants,
+        'allAwardPlayers' => array_map(static fn(array $p): array => ['id' => (int) $p['id'], 'name' => $p['name'], 'awardValue' => $p['name'] . ' (#' . (int) $p['id'] . ')'], repo_all_players(false)),
         'awards' => $awardsPayload,
         'inviteRows' => array_map(
             static fn(array $invite): array => [

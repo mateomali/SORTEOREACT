@@ -238,6 +238,7 @@ $playerAwardDates = [];
 $awardDatesSql = "SELECT
   ma.player_id,
   ma.award_code,
+  ma.award_position,
   am.id AS match_id,
   am.title,
   am.match_date
@@ -251,7 +252,7 @@ foreach ($stmtAwardDates->fetchAll() as $awardDateRow) {
     $playerId = (int) $awardDateRow['player_id'];
     $awardCode = (string) $awardDateRow['award_code'];
     $playerAwardDates[$playerId][$awardCode][] = [
-        'title' => (string) ($awardDateRow['title'] ?: ('Fecha #' . $awardDateRow['match_id'])),
+        'title' => (string) ($awardDateRow['title'] ?: ('Fecha #' . $awardDateRow['match_id'])) . (award_max_recipients($awardCode) > 1 ? ' (' . award_position_label((int) $awardDateRow['award_position']) . ')' : ''),
         'date' => date('d/m/Y H:i', strtotime((string) $awardDateRow['match_date'])),
     ];
 }

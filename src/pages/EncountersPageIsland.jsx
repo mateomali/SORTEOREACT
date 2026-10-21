@@ -222,7 +222,7 @@ function MatchActions({ match, compact = false }) {
 
       <ActionSection label={followUpLabel} tone={match.canFinalize || match.needsValuations ? 'primary' : 'neutral'} contentClassName={singleActionGrid}>
         {match.canFinalize && match.teamsPublished ? (
-          <a className={`${primaryAction} w-full px-2`} href={match.links.finish}>Finalizar</a>
+          <a className={`${primaryAction} w-full px-2`} href={match.links.finish}>{match.usesLiveFixture ? 'Partidos en vivo' : 'Finalizar'}</a>
         ) : match.isFinalized ? (
           <>
             {match.needsValuations ? <a className={`${strongAction} w-full px-2`} href={match.links.valuations}>Valoraciones</a> : null}
@@ -299,6 +299,7 @@ function MobileMatchActions({ match }) {
         <>
           {match.hasOwnProposal ? <MobileActionLink className={formationAction} href={match.links.proposalFormations}>{match.canEditOwnProposal ? 'Editar mi formación' : 'Ver mi formación'}</MobileActionLink> : match.canCreateProposal ? <MobileActionLink className={primaryAction} href={match.links.createProposal}>Crear mi propuesta</MobileActionLink> : <span className={disabledAction}>Propuesta no disponible</span>}
           <MobileActionLink className={mutedAction} href={match.links.proposals}>Propuestas y votos</MobileActionLink>
+          {match.usesLiveFixture && match.canFinalize && match.teamsPublished ? <MobileActionLink className={primaryAction} href={match.links.finish}>Partidos en vivo</MobileActionLink> : null}
         </>
       ) : match.isScheduled ? (
         <>
@@ -331,7 +332,7 @@ function MobileMatchActions({ match }) {
                 <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs lg:col-span-1`}>Publicada</span>
               )}
               <UndoForm match={match} className={`${undoAction} min-h-9 w-full px-2 py-1.5 text-xs`} />
-              {match.teamsPublished ? <MobileActionLink className={primaryAction} href={match.links.finish}>Finalizar</MobileActionLink> : <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs`} aria-disabled="true" title="Primero publica la fecha">Finalizar</span>}
+              {match.teamsPublished ? <MobileActionLink className={primaryAction} href={match.links.finish}>{match.usesLiveFixture ? 'Partidos en vivo' : 'Finalizar'}</MobileActionLink> : <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs`} aria-disabled="true" title="Primero publica la fecha">Finalizar</span>}
             </>
           ) : match.isFinalized ? (
             <>

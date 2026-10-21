@@ -36,7 +36,7 @@ test('pots can be edited, persisted, drawn, saved and reviewed on mobile', async
     await page.reload();
     await page.getByRole('combobox', { name: 'Modalidad de sorteo', exact: true }).selectOption('pots');
     await expect(page.locator('[data-pot-row]')).toHaveCount(pots.length);
-    await page.getByRole('combobox',{name:'Armado de potes',exact:true}).selectOption('automatic');
+    await expect(page.getByRole('combobox',{name:'Armado de potes',exact:true})).toHaveValue('automatic');
     await page.getByRole('button',{name:'Armar potes automáticamente',exact:true}).click();
     await expect(page.locator('[data-pot-row]')).toHaveCount(5);
     await expect(page.locator('[data-pot-row]').first()).toContainText('Pote 1');

@@ -20,6 +20,22 @@ function finish_json_response(array $payload, int $status = 200): void
     exit;
 }
 
+// New dates use the live fixture for score operations; legacy dates keep their editor.
+require_once __DIR__ . '/lib/live_match_repository.php';
+if (is_admin() || is_directivo()) {
+    ensure_control_schema();
+    ensure_live_match_schema();
+    $liveMatchId = (int) ($_POST['match_id'] ?? $_GET['match_id'] ?? 0);
+    $liveMatch = $liveMatchId > 0 ? repo_match_by_id($liveMatchId) : null;
+    $usesLiveFixture = $liveMatch && !empty($liveMatch['dynamic_fixture']) && (int) $liveMatch['num_teams'] > 2;
+    $scoreActions = ['save_result', 'save_score', 'save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'];
+    $isScorePost = $_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action'] ?? ''), $scoreActions, true);
+    if ($usesLiveFixture && ($isScorePost || ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['edit_formations']) && !isset($_GET['edit_details'])))) {
+        if ((string) ($_POST['ajax'] ?? '') === '1') finish_json_response(['ok' => false, 'message' => 'Esta fecha usa Partidos en vivo. Abrí el marcador para registrar los resultados.'], 422);
+        redirect('partidos_en_vivo.php?match_id=' . $liveMatchId);
+    }
+}
+
 if (!is_admin()) {
     if ($isRoundRobinAjaxRequest) {
         finish_json_response(['ok' => false, 'message' => 'La sesion admin vencio. Vuelve a ingresar y reintenta.'], 401);
@@ -93,14 +109,15 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
     }
 
     $awardsByPlayer = [];
-    foreach ($savedAwards as $code => $awardRow) {
+    foreach (award_flatten_rows($savedAwards) as $awardRow) {
+        $code = (string) $awardRow['award_code'];
         $playerId = (int) ($awardRow['player_id'] ?? 0);
         if ($playerId <= 0 || !isset($awardDefinitions[$code])) {
             continue;
         }
         $awardsByPlayer[$playerId][] = [
             'icon' => (string) $awardDefinitions[$code]['icon'],
-            'label' => (string) $awardDefinitions[$code]['label'],
+            'label' => (string) $awardDefinitions[$code]['label'] . (award_max_recipients($code) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
             'name' => (string) ($awardRow['name'] ?? ''),
         ];
     }
@@ -137,11 +154,12 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
 
     if ($savedAwards) {
         $lines[] = 'Premios';
-        foreach ($savedAwards as $code => $awardRow) {
+        foreach (award_flatten_rows($savedAwards) as $awardRow) {
+            $code = (string) $awardRow['award_code'];
             if (!isset($awardDefinitions[$code])) {
                 continue;
             }
-            $lines[] = (string) $awardDefinitions[$code]['icon'] . ' ' . (string) $awardDefinitions[$code]['label'] . ': ' . (string) $awardRow['name'];
+            $lines[] = (string) $awardDefinitions[$code]['icon'] . ' ' . (string) $awardDefinitions[$code]['label'] . ': ' . (string) $awardRow['name'] . (award_max_recipients($code) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : '');
         }
     }
 
@@ -962,18 +980,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
             $parsedAwards = [];
             if ($resultIncludesAwards) {
-                foreach (award_definitions() as $code => $_definition) {
-                    $rawAward = trim((string) ($awardData[$code] ?? ''));
-                    if ($rawAward === '') {
-                        $parsedAwards[$code] = 0;
-                        continue;
-                    }
-                    if (preg_match('/#(\d+)/', $rawAward, $matchAward)) {
-                        $parsedAwards[$code] = (int) $matchAward[1];
-                        continue;
-                    }
-                    throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
-                }
+                $parsedAwards = award_parse_form($awardData);
                 repo_save_match_awards($matchId, $parsedAwards, $allowedAwardPlayerIds);
             }
 
@@ -999,15 +1006,19 @@ function finish_save_optional_awards(array $match, array $participants): void
     if (valuations_locked_after_deadline($match)) throw new RuntimeException('Los premios de esta fecha estan bloqueados.');
     $input = $_POST['awards'];
     if (!is_array($input)) throw new RuntimeException('Premios invalidos.');
-    $parsed = [];
-    foreach (award_definitions() as $code => $_definition) {
-        $raw = trim((string) ($input[$code] ?? ''));
-        if ($raw === '') { $parsed[$code] = 0; continue; }
-        if (!preg_match('/#(\d+)\)$/', $raw, $selection)) throw new RuntimeException('Selecciona los premios desde la lista de jugadores de la fecha.');
-        $parsed[$code] = (int) $selection[1];
-    }
+    $parsed = award_parse_form($input);
     $allowed = array_map(static fn(array $player): int => (int) $player['id'], array_filter($participants, static fn(array $player): bool => $player['team_number'] !== null));
     repo_save_match_awards((int) $match['id'], $parsed, $allowed);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_live_awards') {
+    $awardMatch = repo_match_by_id((int) ($_POST['match_id'] ?? 0));
+    try {
+        if (!$awardMatch || empty($awardMatch['dynamic_fixture'])) throw new RuntimeException('Fecha inválida.');
+        finish_save_optional_awards($awardMatch, repo_match_participants((int) $awardMatch['id']));
+        flash('success', 'Premios guardados. Un jugador puede recibir varios premios distintos.');
+    } catch (Throwable $error) { flash('error', $error->getMessage()); }
+    redirect('finalizar_partido.php?match_id=' . (int) ($_POST['match_id'] ?? 0) . '&edit_details=1#valoraciones');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_score') {
@@ -1284,7 +1295,9 @@ require __DIR__ . '/includes/header.php';
       ?>
       <?php if ($showScorePanel): ?>
       <section class="finish-score-shell" id="resultado">
-        <?php if ($isRoundRobinMatch): ?>
+        <?php if (!empty($usesLiveFixture)): ?>
+          <section class="card"><h3>Goles y fixture</h3><p>Los resultados y goleadores de esta fecha se gestionan por partido.</p><a class="btn btn-primary" href="partidos_en_vivo.php?match_id=<?= (int) $selectedMatch['id'] ?>">Abrir partidos en vivo</a></section>
+        <?php elseif ($isRoundRobinMatch): ?>
           <section class="card finish-round-robin-fixture" data-round-robin-fixture-details>
             <h3>Goles</h3>
           <form method="post" action="finalizar_partido.php?match_id=<?= (int) $selectedMatch['id'] ?><?= $editFormations ? '&edit_formations=1&show_score=1#resultado' : '' ?>" id="finish-score-form" data-round-robin-form>
@@ -1624,6 +1637,11 @@ require __DIR__ . '/includes/header.php';
             <option value="<?= h((string) $player['name'] . ' (#' . (int) $player['id'] . ')') ?>"></option>
           <?php endforeach; ?>
         </datalist>
+        <datalist id="allAwardPlayers">
+          <?php foreach (repo_all_players(false) as $awardPlayer): ?>
+            <option value="<?= h($awardPlayer['name'] . ' (#' . (int) $awardPlayer['id'] . ')') ?>"></option>
+          <?php endforeach; ?>
+        </datalist>
         <datalist id="matchAwardGoalkeepers">
           <?php foreach ($participants as $player): ?>
             <?php if ($player['team_number'] === null || !in_array('ARQ', parse_positions_csv((string) $player['positions']), true)) continue; ?>
@@ -1636,18 +1654,19 @@ require __DIR__ . '/includes/header.php';
           <p class="small-muted">Opcional. Puedes cargarlos ahora o luego desde Directivo &gt; Mis valoraciones.</p>
           <div class="award-grid">
             <?php foreach ($awardDefinitions as $code => $award): ?>
-              <?php
-                $savedAward = $savedAwards[$code] ?? null;
-                $savedValue = $detailFormError !== ''
-                    ? (string) ($postedAwardData[$code] ?? '')
-                    : ($savedAward ? (string) $savedAward['name'] . ' (#' . (int) $savedAward['player_id'] . ')' : '');
-              ?>
               <div class="award-field">
-                <label for="award-<?= h($code) ?>">
-                  <span class="award-icon" title="<?= h($awardDescriptions[$code] ?? $award['label']) ?>"><?= h($award['icon']) ?></span>
-                  <span><?= h($award['label']) ?></span>
-                </label>
-                <input id="award-<?= h($code) ?>" type="text" list="<?= $code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers' ?>" form="finish-score-form" name="awards[<?= h($code) ?>]" value="<?= h($savedValue) ?>" placeholder="Buscar jugador">
+                <strong><span class="award-icon"><?= h($award['icon']) ?></span> <?= h($award['label']) ?></strong>
+                <?php for ($awardPosition = 1; $awardPosition <= award_max_recipients($code); $awardPosition++): ?>
+                  <?php
+                    $savedAward = $savedAwards[$code]['podium'][$awardPosition - 1] ?? null;
+                    $postedValues = $postedAwardData[$code] ?? [];
+                    $postedValues = is_array($postedValues) ? array_values($postedValues) : [$postedValues];
+                    $savedValue = $detailFormError !== '' ? (string) ($postedValues[$awardPosition - 1] ?? '') : ($savedAward ? $savedAward['name'] . ' (#' . (int) $savedAward['player_id'] . ')' : '');
+                    $fieldId = 'award-' . $code . ($awardPosition === 1 ? '' : '-' . $awardPosition);
+                  ?>
+                  <label for="<?= h($fieldId) ?>"><?= award_max_recipients($code) > 1 ? $awardPosition . '.&#186; puesto' : 'Jugador' ?></label>
+                  <input id="<?= h($fieldId) ?>" type="text" list="<?= $code === 'goodfellas' ? 'allAwardPlayers' : ($code === 'keeper' ? 'matchAwardGoalkeepers' : 'matchAwardPlayers') ?>" form="finish-score-form" name="awards[<?= h($code) ?>][<?= $awardPosition - 1 ?>]" value="<?= h($savedValue) ?>" placeholder="Buscar jugador">
+                <?php endfor; ?>
               </div>
             <?php endforeach; ?>
           </div>
@@ -1657,8 +1676,11 @@ require __DIR__ . '/includes/header.php';
         <?php endif; ?>
         </div>
       </details>
+      <?php if (!empty($usesLiveFixture)): ?>
+      <form id="finish-score-form" method="post"><input type="hidden" name="action" value="save_live_awards"><input type="hidden" name="match_id" value="<?= (int) $selectedMatch['id'] ?>"></form>
+      <?php endif; ?>
       <div class="btn-row finish-valuations-actions">
-        <button class="btn btn-primary" type="submit" form="finish-score-form" name="action" value="<?= $isRoundRobinMatch ? 'finalize_round_robin_date' : 'save_score' ?>" data-confirm="Finalizar la fecha con estos goles?" <?= !repo_match_teams_are_public($selectedMatch) ? 'disabled title="Primero publica la fecha"' : '' ?>>Finalizar fecha</button>
+        <button class="btn btn-primary" type="submit" form="finish-score-form" name="action" value="<?= !empty($usesLiveFixture) ? 'save_live_awards' : ($isRoundRobinMatch ? 'finalize_round_robin_date' : 'save_score') ?>" data-confirm="Guardar los datos de la fecha?" <?= !repo_match_teams_are_public($selectedMatch) ? 'disabled title="Primero publica la fecha"' : '' ?>><?= !empty($usesLiveFixture) ? 'Guardar premios' : 'Finalizar fecha' ?></button>
       </div>
       <?php endif; ?>
     <?php endif; ?>

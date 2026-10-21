@@ -23,6 +23,8 @@
     "test:spa": "playwright test tests/spa-progressive-smoke.spec.js",
     "watch:css": "tailwindcss -i ./assets/tailwind.input.css -o ./assets/tailwind.css --watch",
     "test:rating": "node tests/player-rating.cjs",
+    "test:live": "php tests/live-matches.php && playwright test tests/live-matches.spec.js --workers=1",
+    "test:awards": "playwright test tests/award-podium.spec.js --workers=1",
     "test:formations": "node tests/small-team-formations.cjs",
     "test:line-controls": "node tests/sorteo-line-controls.cjs && playwright test tests/sorteo-line-controls.spec.js --workers=1",
     "test:line-strength": "node tests/sorteo-line-strength.cjs && playwright test tests/sorteo-line-strength.spec.js --workers=1",

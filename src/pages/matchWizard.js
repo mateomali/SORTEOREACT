@@ -4,7 +4,7 @@ export function bindMatchWizard(root) {
   const panels = [...form.querySelectorAll('[data-wizard-panel]')];
   const buttons = [...form.querySelectorAll('[data-wizard-go]')];
   const draftKey = 'goodfellas:match-import-configuration';
-  const fields = ['title', 'rental_court_id', 'match_date', 'num_teams', 'players_per_team', 'valuation_mode', ...Array.from({ length: 4 }, (_, i) => `team_kits[${i}]`)];
+  const fields = ['title', 'rental_court_id', 'match_date', 'num_teams', 'players_per_team', 'game_duration_minutes', 'valuation_mode', ...Array.from({ length: 4 }, (_, i) => `team_kits[${i}]`)];
   try {
     const draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
     sessionStorage.removeItem(draftKey);
@@ -16,14 +16,28 @@ export function bindMatchWizard(root) {
       form.querySelector('[data-num-teams]')?.dispatchEvent(new Event('change', { bubbles: true }));
     }
   } catch { /* Continue with the server defaults when storage is unavailable. */ }
+  let previousTeamCount = Number(form.querySelector('[name="num_teams"]').value);
   const syncSummary = () => {
     const teams = form.querySelector('[name="num_teams"]');
+    const players = form.querySelector('[name="players_per_team"]');
+    const teamCount = Number(teams.value);
+    const useSevenPlayers = teamCount === 3 && previousTeamCount !== 3;
+    previousTeamCount = teamCount;
+    if (useSevenPlayers) {
+      players.value = '7';
+      players.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const durationField = form.querySelector('[data-game-duration-field]');
+    if (durationField) {
+      const enabled = Number(teams.value) > 2;
+      durationField.hidden = !enabled;
+      durationField.querySelector('input').disabled = !enabled;
+    }
     form.querySelectorAll('[data-team-kit-row]').forEach(row => {
       const enabled = Number(row.dataset.teamKitRow) < Number(teams.value);
       row.hidden = !enabled;
       row.querySelector('select').disabled = !enabled;
     });
-    const players = form.querySelector('[name="players_per_team"]');
     root.querySelectorAll('[data-match-cup-total]').forEach(node => { node.textContent = String(Number(teams.value) * Number(players.value)); });
     root.querySelectorAll('[data-match-team-total]').forEach(node => { node.textContent = teams.value; });
     root.querySelectorAll('[data-match-per-team]').forEach(node => { node.textContent = players.value; });

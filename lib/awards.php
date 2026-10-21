@@ -2,6 +2,84 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/schema.php';
+
+function award_max_recipients(string $code): int
+{
+    return in_array($code, ['masterful_pass', 'wall', 'capocannoniere', 'terminator', 'guinda', 'golosa', 'putita', 'chenemigo', 'goodfellas'], true) ? 3 : 1;
+}
+
+function award_ensure_position_schema(string $table, string $oldIndex, string $columns): void
+{
+    $pdo = db();
+    schema_add_column($pdo, $table, 'award_position', 'award_position TINYINT UNSIGNED NOT NULL DEFAULT 1');
+    $newIndex = $oldIndex . '_position';
+    if (!schema_index_exists($pdo, $table, $newIndex)) $pdo->exec("ALTER TABLE `$table` ADD UNIQUE KEY `$newIndex` ($columns, award_position)");
+    if (schema_index_exists($pdo, $table, $oldIndex)) $pdo->exec("ALTER TABLE `$table` DROP INDEX `$oldIndex`");
+}
+
+function award_group_rows(array $rows): array
+{
+    $grouped = [];
+    foreach ($rows as $row) {
+        $code = (string) $row['award_code'];
+        if (!isset($grouped[$code])) $grouped[$code] = $row + ['podium' => []];
+        $grouped[$code]['podium'][] = $row;
+    }
+    return $grouped;
+}
+
+function award_flatten_rows(array $awards): array
+{
+    $rows = [];
+    foreach ($awards as $code => $award) foreach ($award['podium'] ?? [$award] as $row) $rows[] = $row + ['award_code' => $code, 'award_position' => 1];
+    return $rows;
+}
+
+function award_display_name(array $award): string
+{
+    return implode(' · ', array_map(static fn(array $row): string => (award_max_recipients((string) $row['award_code']) > 1 ? award_position_label((int) $row['award_position']) . ' ' : '') . $row['name'], $award['podium'] ?? [$award]));
+}
+
+function award_position_label(int $position): string
+{
+    return $position . '.º';
+}
+
+function award_parse_form(array $input): array
+{
+    $parsed = [];
+    foreach (award_definitions() as $code => $_definition) {
+        $raw = $input[$code] ?? '';
+        $values = is_array($raw) ? array_values($raw) : [$raw];
+        $ids = [];
+        $gap = false;
+        foreach ($values as $value) {
+            if (!is_scalar($value)) throw new RuntimeException('Selección de premio inválida.');
+            $value = trim((string) $value);
+            if ($value === '') { $gap = true; continue; }
+            if ($gap) throw new RuntimeException('Completá el podio sin dejar posiciones vacías.');
+            if (!preg_match('/#(\d+)\)$/', $value, $selection)) throw new RuntimeException('Seleccioná los premios desde la lista de jugadores.');
+            $ids[] = (int) $selection[1];
+        }
+        $parsed[$code] = $ids;
+    }
+    return $parsed;
+}
+
+function award_validate_recipients(string $code, mixed $input, array $participantIds, array $allPlayerIds): array
+{
+    $ids = is_array($input) ? array_values($input) : ((int) $input > 0 ? [(int) $input] : []);
+    if (count($ids) > award_max_recipients($code)) throw new RuntimeException(award_definitions()[$code]['label'] . ': permite hasta ' . award_max_recipients($code) . ' jugador(es).');
+    $allowed = array_flip(array_map('intval', $code === 'goodfellas' ? $allPlayerIds : $participantIds));
+    $seen = [];
+    foreach ($ids as $id) {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false || (int) $id <= 0 || !isset($allowed[(int) $id])) throw new RuntimeException('Premio inválido: elegí un jugador de la lista habilitada para esa categoría.');
+        if (isset($seen[(int) $id])) throw new RuntimeException('Un jugador no puede ocupar dos posiciones del mismo podio. Puede recibir otros premios.');
+        $seen[(int) $id] = true;
+    }
+    return array_map('intval', $ids);
+}
 
 function award_definitions(bool $includeLegacy = false): array
 {
@@ -200,6 +278,8 @@ function award_legend_details_html(array $awardDefinitions, ?array $awardDescrip
 
 function ensure_match_awards_schema(): void
 {
+    static $done = false;
+    if ($done) return;
     db()->exec(
         "CREATE TABLE IF NOT EXISTS match_awards (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -218,6 +298,8 @@ function ensure_match_awards_schema(): void
               ON DELETE RESTRICT ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+    award_ensure_position_schema('match_awards', 'uniq_match_award', 'match_id, award_code');
+    $done = true;
 }
 
 function repo_match_awards(int $matchId): array
@@ -226,17 +308,13 @@ function repo_match_awards(int $matchId): array
         ensure_match_awards_schema();
     }
     $stmt = db()->prepare(
-        'SELECT ma.award_code, ma.player_id, p.name
+        'SELECT ma.award_code, ma.player_id, ma.award_position, p.name
          FROM match_awards ma
          INNER JOIN players p ON p.id = ma.player_id
-         WHERE ma.match_id = :mid'
+         WHERE ma.match_id = :mid ORDER BY ma.award_code, ma.award_position'
     );
     $stmt->execute(['mid' => $matchId]);
-    $awards = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $awards[(string) $row['award_code']] = $row;
-    }
-    return $awards;
+    return award_group_rows($stmt->fetchAll());
 }
 
 function repo_save_match_awards(int $matchId, array $awards, array $allowedPlayerIds): void
@@ -245,25 +323,28 @@ function repo_save_match_awards(int $matchId, array $awards, array $allowedPlaye
         ensure_match_awards_schema();
     }
     $definitions = award_definitions();
-    $allowed = array_flip(array_map('intval', $allowedPlayerIds));
     $pdo = db();
+    $allPlayers = $pdo->query('SELECT id FROM players')->fetchAll(PDO::FETCH_COLUMN);
+    $validated = [];
+    foreach ($definitions as $code => $_definition) $validated[$code] = award_validate_recipients($code, $awards[$code] ?? [], $allowedPlayerIds, $allPlayers);
 
     $delete = $pdo->prepare('DELETE FROM match_awards WHERE match_id = :mid AND award_code = :code');
     $upsert = $pdo->prepare(
-        'INSERT INTO match_awards (match_id, award_code, player_id)
-         VALUES (:mid, :code, :pid)
+        'INSERT INTO match_awards (match_id, award_code, player_id, award_position)
+         VALUES (:mid, :code, :pid, :position)
          ON DUPLICATE KEY UPDATE player_id = VALUES(player_id)'
     );
 
-    foreach ($definitions as $code => $_definition) {
-        $playerId = (int) ($awards[$code] ?? 0);
-        if ($playerId <= 0) {
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) $pdo->beginTransaction();
+    try {
+        foreach ($definitions as $code => $_definition) {
             $delete->execute(['mid' => $matchId, 'code' => $code]);
-            continue;
+            foreach ($validated[$code] as $index => $playerId) $upsert->execute(['mid' => $matchId, 'code' => $code, 'pid' => $playerId, 'position' => $index + 1]);
         }
-        if (!isset($allowed[$playerId])) {
-            throw new RuntimeException('Premio invalido: el jugador no participo de la fecha.');
-        }
-        $upsert->execute(['mid' => $matchId, 'code' => $code, 'pid' => $playerId]);
+        if ($ownsTransaction) $pdo->commit();
+    } catch (Throwable $error) {
+        if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
     }
 }

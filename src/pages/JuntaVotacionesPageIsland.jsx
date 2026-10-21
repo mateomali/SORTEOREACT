@@ -254,7 +254,7 @@ function PublishedResults({ match }) {
                   <span title={award.label}>{award.icon}</span>
                   <span>{award.label}</span>
                 </label>
-                <strong className="text-emerald-100">{award.winner}</strong>
+                {award.maxRecipients > 1 && award.winners?.length ? <ol className="m-0 list-decimal space-y-1 pl-5 text-sm font-bold">{award.winners.map((winner) => <li key={winner.player_id}>{winner.name}</li>)}</ol> : <strong className="text-emerald-100">{award.winner}</strong>}
               </div>
             ))}
           </div>
@@ -265,35 +265,34 @@ function PublishedResults({ match }) {
 }
 
 function AwardField({ award, players }) {
-  const [value, setValue] = useState(award.value || '');
-  const hasSelectedPlayer = players.some((player) => player.awardValue === value);
+  const [values, setValues] = useState(award.values?.length ? award.values : [award.value || '']);
+  const max = award.maxRecipients || 1;
+  const update = (index, value) => setValues((old) => old.map((v, i) => i === index ? value : v));
+  const remove = (index) => setValues((old) => old.length === 1 ? [''] : old.filter((_, i) => i !== index));
+  const move = (from, to) => setValues((old) => { const next = [...old]; [next[from], next[to]] = [next[to], next[from]]; return next; });
   return (
-    <div className="grid gap-1.5 rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
-      <label className="flex items-center gap-2 text-sm font-black text-lime-50" htmlFor={`award-${award.code}`}>
-        <span title={award.label}>{award.icon}</span>
-        <span>{award.label}</span>
-      </label>
-      <p id={`award-description-${award.code}`} className={`${mutedText} m-0`}>{award.description}</p>
-      <input
-        id={`award-${award.code}`}
-        className={inputClass}
-        type="text"
-        list={award.listId}
-        name={`awards[${award.code}]`}
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        aria-describedby={`award-description-${award.code}`}
-        placeholder="Buscar jugador"
-      />
-      {hasSelectedPlayer ? <button
-        className={`${mutedButton} justify-self-start`}
-        type="button"
-        aria-label={`Quitar selección de ${award.label}`}
-        onClick={() => setValue('')}
-      >
-        Quitar selección
-      </button> : null}
-    </div>
+    <fieldset className="grid min-w-0 gap-3 rounded-lg border border-lime-200/25 bg-emerald-900/45 p-3">
+      <legend className="px-1 text-sm font-black"><span title={award.label}>{award.icon}</span> {award.label}</legend>
+      <p className={`${mutedText} m-0`}>{award.description}</p>
+      {values.map((value, index) => {
+        const selected = players.some((p) => p.awardValue === value);
+        const id = index === 0 ? `award-${award.code}` : `award-${award.code}-${index + 1}`;
+        return <div key={index} className="grid min-w-0 gap-2 border-t border-lime-200/20 pt-2">
+          <label htmlFor={id} className="text-sm font-bold">{max > 1 ? `${index + 1}.º puesto` : 'Jugador'}</label>
+          <input id={id} className={inputClass} type="text" list={award.listId} name={`awards[${award.code}][${index}]`} value={value} onChange={(e) => update(index, e.target.value)} placeholder="Buscar jugador" />
+          <select className={inputClass} aria-label={`Elegir jugador para ${award.label}${max > 1 ? ` - ${index + 1}` : ''}`} value={selected ? value : ''} onChange={(e) => update(index, e.target.value)}>
+            <option value="">Elegir de la lista / sin premio</option>
+            {players.map((p) => <option key={p.id} value={p.awardValue} disabled={p.awardValue !== value && values.includes(p.awardValue)}>{p.name}</option>)}
+          </select>
+          <div className="flex flex-wrap gap-2">
+            {(value || values.length > 1) && <button className={mutedButton} type="button" onClick={() => remove(index)} aria-label={`Quitar puesto ${index + 1} de ${award.label}`}>Quitar</button>}
+            {index > 0 && <button className={mutedButton} type="button" onClick={() => move(index, index - 1)} aria-label={`Subir puesto ${index + 1} de ${award.label}`}>Subir</button>}
+            {index < values.length - 1 && <button className={mutedButton} type="button" onClick={() => move(index, index + 1)} aria-label={`Bajar puesto ${index + 1} de ${award.label}`}>Bajar</button>}
+          </div>
+        </div>;
+      })}
+      {values.length < max && <button className={mutedButton} type="button" disabled={!players.some((p) => p.awardValue === values.at(-1))} onClick={() => setValues((old) => [...old, ''])}>Agregar {values.length + 1}.º puesto a {award.label}</button>}
+    </fieldset>
   );
 }
 
@@ -301,6 +300,7 @@ function VoteForm({ match }) {
   if (match.publication || match.currentVoteMemberId <= 0 || !match.isOpen) return null;
   const playerOptions = match.participants || [];
   const goalkeeperOptions = playerOptions.filter((player) => player.isGoalkeeper);
+  const allPlayerOptions = match.allAwardPlayers || playerOptions;
   const showRatings = match.ratingsEnabled !== false;
   const showAwards = match.awardsEnabled !== false;
   const awardsTieBreak = showRatings
@@ -317,6 +317,7 @@ function VoteForm({ match }) {
     >
       <input type="hidden" name="action" value="save_directive_vote" />
       <input type="hidden" name="match_id" value={match.id} />
+      <datalist id="allAwardPlayers">{allPlayerOptions.map((p) => <option key={p.id} value={p.awardValue} />)}</datalist>
       <datalist id="matchAwardPlayers">
         {playerOptions.map((player) => <option key={player.id} value={player.awardValue} />)}
       </datalist>
@@ -363,10 +364,10 @@ function VoteForm({ match }) {
             <span>Premios</span>
             <small className="text-xs font-black text-lime-100">Gana quien tenga mas votos</small>
           </summary>
-          <p className={`${mutedText} mt-3`}>{awardsTieBreak}</p>
+          <p className={`${mutedText} mt-3`}>En los premios con podio podés elegir uno, dos o tres jugadores: 1.º suma 3 puntos, 2.º suma 2 y 3.º suma 1. Se publica el podio con más puntos. En empate se priorizan primeros y segundos puestos; luego, {awardsTieBreak.toLowerCase()} Podés repetir jugador en distintas categorías. Goodfellas incluye a todos los jugadores registrados, aunque no estén convocados.</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {match.awards.map((award) => (
-              <AwardField key={`${match.id}-${award.code}`} award={award} players={award.listId === 'matchAwardGoalkeepers' ? goalkeeperOptions : playerOptions} />
+              <AwardField key={`${match.id}-${award.code}`} award={award} players={award.code === 'goodfellas' ? allPlayerOptions : award.listId === 'matchAwardGoalkeepers' ? goalkeeperOptions : playerOptions} />
             ))}
           </div>
         </details>
