@@ -32,13 +32,13 @@ function award_group_rows(array $rows): array
 function award_flatten_rows(array $awards): array
 {
     $rows = [];
-    foreach ($awards as $code => $award) foreach ($award['podium'] ?? [$award] as $row) $rows[] = $row + ['award_code' => $code, 'award_position' => 1];
+    foreach ($awards as $code => $award) foreach ($award['podium'] ?? [$award] as $row) $rows[] = $row + ['award_code' => $code, 'award_position' => 1, 'recipient_count' => count($award['podium'] ?? [$award])];
     return $rows;
 }
 
 function award_display_name(array $award): string
 {
-    return implode(' · ', array_map(static fn(array $row): string => (award_max_recipients((string) $row['award_code']) > 1 ? award_position_label((int) $row['award_position']) . ' ' : '') . $row['name'], $award['podium'] ?? [$award]));
+    return implode(' · ', array_map(static fn(array $row): string => (count($award['podium'] ?? [$award]) > 1 ? award_position_label((int) $row['award_position']) . ' ' : '') . $row['name'], $award['podium'] ?? [$award]));
 }
 
 function award_position_label(int $position): string

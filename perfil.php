@@ -846,7 +846,7 @@ $awardDescriptions = award_descriptions();
 $monthlyAwardDefinition = monthly_player_award_definition();
 $playerMonthlyAwards = monthly_player_awards_for_player($playerId);
 $awardStmt = db()->prepare(
-    "SELECT ma.award_code, COUNT(*) AS total, SUM(ma.award_position = 1) AS first_count, SUM(ma.award_position = 2) AS second_count, SUM(ma.award_position = 3) AS third_count
+    "SELECT ma.award_code, COUNT(*) AS total, SUM(ma.award_position = 1 AND EXISTS (SELECT 1 FROM match_awards siblings WHERE siblings.match_id = ma.match_id AND siblings.award_code = ma.award_code AND siblings.player_id <> ma.player_id)) AS first_count, SUM(ma.award_position = 2 AND EXISTS (SELECT 1 FROM match_awards siblings WHERE siblings.match_id = ma.match_id AND siblings.award_code = ma.award_code AND siblings.player_id <> ma.player_id)) AS second_count, SUM(ma.award_position = 3 AND EXISTS (SELECT 1 FROM match_awards siblings WHERE siblings.match_id = ma.match_id AND siblings.award_code = ma.award_code AND siblings.player_id <> ma.player_id)) AS third_count
      FROM match_awards ma
      INNER JOIN matches m ON m.id = ma.match_id AND m.status = 'finalizado'
      WHERE ma.player_id = :player_id

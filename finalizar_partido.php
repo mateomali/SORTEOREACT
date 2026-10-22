@@ -120,7 +120,7 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
         }
         $awardsByPlayer[$playerId][] = [
             'icon' => (string) $awardDefinitions[$code]['icon'],
-            'label' => (string) $awardDefinitions[$code]['label'] . (award_max_recipients($code) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
+            'label' => (string) $awardDefinitions[$code]['label'] . ((int) ($awardRow['recipient_count'] ?? 1) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
             'name' => (string) ($awardRow['name'] ?? ''),
         ];
     }
@@ -162,7 +162,7 @@ function build_match_share_summary(array $match, array $matchTeams, array $teamL
             if (!isset($awardDefinitions[$code])) {
                 continue;
             }
-            $lines[] = (string) $awardDefinitions[$code]['icon'] . ' ' . (string) $awardDefinitions[$code]['label'] . ': ' . (string) $awardRow['name'] . (award_max_recipients($code) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : '');
+            $lines[] = (string) $awardDefinitions[$code]['icon'] . ' ' . (string) $awardDefinitions[$code]['label'] . ': ' . (string) $awardRow['name'] . ((int) ($awardRow['recipient_count'] ?? 1) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : '');
         }
     }
 

@@ -10,7 +10,10 @@ require_once __DIR__ . '/lib/awards.php';
 ensure_control_schema();
 
 $isAdmin = is_admin();
-$showInactive = $isAdmin && (($_GET['show_inactive'] ?? '') === '1');
+$showInactive = $isAdmin && (($_GET['show_inactive'] ?? $_POST['show_inactive'] ?? '') === '1');
+if ($isAdmin && empty($_SESSION['jugadores2_delete_token'])) {
+    $_SESSION['jugadores2_delete_token'] = bin2hex(random_bytes(32));
+}
 
 function jugadores2_normalize_player_name(string $name): string
 {
@@ -140,6 +143,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = (string) ($_POST['action'] ?? '');
     $returnUrl = 'jugadores2.php' . ($showInactive ? '?show_inactive=1' : '');
+
+    if ($action === 'remove_photo') {
+        $token = $_POST['delete_token'] ?? '';
+        if (!is_string($token) || !hash_equals((string) $_SESSION['jugadores2_delete_token'], $token)) {
+            http_response_code(403);
+            exit('Solicitud no valida. Recarga la pagina e intenta nuevamente.');
+        }
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id <= 0 || !repo_player_by_id($id)) {
+            flash('error', 'No se encontro el jugador.');
+            redirect($returnUrl);
+        }
+        db()->prepare('UPDATE players SET photo_path = NULL, photo_position_x = 50, photo_position_y = 50, photo_zoom = 100 WHERE id = :id')->execute(['id' => $id]);
+        flash('success', 'Foto quitada. El jugador vuelve a usar la imagen predeterminada.');
+        redirect($returnUrl);
+    }
+
+    if ($action === 'delete') {
+        $token = $_POST['delete_token'] ?? '';
+        if (!is_string($token) || !hash_equals((string) $_SESSION['jugadores2_delete_token'], $token)) {
+            http_response_code(403);
+            exit('Solicitud no valida. Recarga la pagina e intenta nuevamente.');
+        }
+        $id = (int) ($_POST['id'] ?? 0);
+        $player = $id > 0 ? repo_player_by_id($id) : null;
+        if (!$player) {
+            flash('error', 'No se encontro el jugador.');
+            redirect($returnUrl);
+        }
+        try {
+            // Never remove participation history, including schemas with cascading keys.
+            $history = db()->prepare('SELECT 1 FROM match_players WHERE player_id = :id LIMIT 1');
+            $history->execute(['id' => $id]);
+            if ($history->fetchColumn()) {
+                db()->prepare('UPDATE players SET active = 0 WHERE id = :id')->execute(['id' => $id]);
+                flash('info', 'El jugador tiene historial. Se desactivo y se conservan sus partidos, premios y estadisticas.');
+            } else {
+                try {
+                    db()->prepare('DELETE FROM players WHERE id = :id')->execute(['id' => $id]);
+                    flash('success', 'Jugador eliminado correctamente.');
+                } catch (PDOException $e) {
+                    if ((string) $e->getCode() !== '23000') throw $e;
+                    db()->prepare('UPDATE players SET active = 0 WHERE id = :id')->execute(['id' => $id]);
+                    flash('info', 'El jugador tiene registros vinculados. Se desactivo para conservarlos.');
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('jugadores2 delete failed: ' . $e->getMessage());
+            flash('error', 'No se pudo eliminar el jugador. Intenta nuevamente.');
+        }
+        redirect($returnUrl);
+    }
 
     if ($action === 'save') {
         $id = (int) ($_POST['id'] ?? 0);
@@ -428,18 +483,20 @@ $awardEnd = sprintf('%04d-01-01', $awardYear + 1);
 $awardDefinitions = award_definitions(true);
 $awardDescriptions = award_descriptions();
 $annualAwards = [];
-$annualAwardStmt = db()->prepare("SELECT ma.player_id, ma.award_code, ma.award_position, COUNT(*) AS total
+$annualAwardStmt = db()->prepare("SELECT ma.player_id, ma.award_code,
+    CASE WHEN EXISTS (SELECT 1 FROM match_awards siblings WHERE siblings.match_id = ma.match_id AND siblings.award_code = ma.award_code AND siblings.player_id <> ma.player_id) THEN ma.award_position ELSE 0 END AS display_position,
+    COUNT(*) AS total
     FROM match_awards ma INNER JOIN matches m ON m.id = ma.match_id
     WHERE m.status = 'finalizado' AND m.match_date >= :start AND m.match_date < :end
-    GROUP BY ma.player_id, ma.award_code, ma.award_position
-    ORDER BY ma.award_code, ma.award_position");
+    GROUP BY ma.player_id, ma.award_code, display_position
+    ORDER BY ma.award_code, display_position");
 $annualAwardStmt->execute(['start' => $awardStart, 'end' => $awardEnd]);
 foreach ($annualAwardStmt->fetchAll() as $awardRow) {
     $code = (string) $awardRow['award_code'];
     if (!isset($awardDefinitions[$code])) continue;
     $annualAwards[(int) $awardRow['player_id']][] = $awardDefinitions[$code] + [
         'code' => $code, 'description' => $awardDescriptions[$code] ?? '',
-        'position' => (int) $awardRow['award_position'], 'count' => (int) $awardRow['total'],
+        'position' => (int) $awardRow['display_position'], 'count' => (int) $awardRow['total'],
     ];
 }
 foreach (monthly_player_awards() as $monthlyAward) {
@@ -573,6 +630,7 @@ foreach ($players as $player) {
 }
 $jugadores2Payload = [
     'isAdmin' => $isAdmin,
+    'deleteToken' => $isAdmin ? (string) $_SESSION['jugadores2_delete_token'] : '',
     'showInactive' => $showInactive,
     'summary' => [
         'active' => $activeCount,

@@ -341,7 +341,7 @@ foreach (award_flatten_rows($savedMatchAwards) as $awardRow) {
     }
     $playerAwardIcons[$awardPlayerId][] = [
         'icon' => (string) $awardDefinitions[$awardCode]['icon'],
-        'label' => (string) $awardDefinitions[$awardCode]['label'] . (award_max_recipients($awardCode) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
+        'label' => (string) $awardDefinitions[$awardCode]['label'] . ((int) ($awardRow['recipient_count'] ?? 1) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
     ];
 }
 
@@ -726,7 +726,7 @@ function match_player_award_icons(array $savedMatchAwards, array $awardDefinitio
         $icons[$awardPlayerId][] = [
             'code' => (string) $awardCode,
             'icon' => (string) $awardDefinitions[$awardCode]['icon'],
-            'label' => (string) $awardDefinitions[$awardCode]['label'] . (award_max_recipients($awardCode) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
+            'label' => (string) $awardDefinitions[$awardCode]['label'] . ((int) ($awardRow['recipient_count'] ?? 1) > 1 ? ' (' . award_position_label((int) $awardRow['award_position']) . ')' : ''),
         ];
     }
     return $icons;
@@ -1246,6 +1246,9 @@ if (!$showHistoryPage && is_directivo()) {
     exit;
 }
 $publicMatchPage = true;
+if ($showHistoryPage) {
+    $headExtraHtml = ($headExtraHtml ?? '') . '<link rel="stylesheet" href="assets/history-directory.css?v=' . (string) filemtime(__DIR__ . '/assets/history-directory.css') . '">';
+}
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -1516,7 +1519,7 @@ require __DIR__ . '/includes/header.php';
 <section class="home-layout <?= $showHistoryPage ? '' : 'home-layout-single' ?>">
   <?php if ($showHistoryPage): ?>
     <article class="card match-history">
-      <h3>Historial de fechas</h3>
+      <h3>Fechas registradas</h3>
       <?php if ($historyMatches): ?>
         <div
           data-react-root
@@ -1561,11 +1564,15 @@ require __DIR__ . '/includes/header.php';
               class="match-list-item history-match-accordion <?= $isSelected ? 'active' : '' ?>"
               id="partido-<?= (int) $match['id'] ?>"
               data-home-history-card
+              data-year="<?= h(date('Y', strtotime((string) $match['match_date']))) ?>"
+              data-status="<?= h((string) $match['status']) ?>"
+              data-status-label="<?= h(match_status_label((string) $match['status'])) ?>"
               data-search="<?= h(mb_strtolower($historySearchText, 'UTF-8')) ?>"
               <?= $isSelected ? 'open' : '' ?>
             >
               <summary class="history-match-summary">
-                <span>
+                <span class="history-date-tile" aria-hidden="true"><b><?= h(date('d', strtotime((string) $match['match_date']))) ?></b><span><?= h(['01'=>'ene','02'=>'feb','03'=>'mar','04'=>'abr','05'=>'may','06'=>'jun','07'=>'jul','08'=>'ago','09'=>'sep','10'=>'oct','11'=>'nov','12'=>'dic'][date('m', strtotime((string) $match['match_date']))]) ?></span></span>
+                <span class="history-match-info">
                   <strong>
                     <?= h((string) ($match['title'] ?: ('Fecha #' . $match['id']))) ?>
                     <?php if ($historyScoreboard !== ''): ?>

@@ -217,3 +217,9 @@ body.page-jugadores2 .player-annual-results article > p b { color: #063d2b; font
 body.page-jugadores2 .annual-ranking-label { display: block; margin-top: 4px; font-size: 11px; color: #657169; }
 body.page-jugadores2 .annual-ranking-context { margin: 0 0 16px; font-size: 11px; line-height: 1.6; font-weight: 400; color: #657169; }
 @media (max-width:640px) { body.page-jugadores2 .player-annual-results { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; } }
+body.page-jugadores2 .player-delete-action { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid #e4e8e5; padding-top: 16px; }
+body.page-jugadores2 .player-delete-action p { margin: 0; font-size: 12px; font-weight: 400; color: #657169; }
+body.page-jugadores2 .player-delete-action button { min-height: 44px; padding: 10px 16px; border: 1px solid #bd5050; border-radius: 6px; background: #fff; color: #a12828 !important; font-size: 13px; font-weight: 600; box-shadow: none; }
+body.page-jugadores2 .player-delete-action button:hover { background: #fff3f3; }
+body.page-jugadores2 .player-remove-photo { min-height: 40px; border: 1px solid #d9baba; border-radius: 6px; padding: 8px 12px; background: #fff; color: #a12828 !important; font-size: 12px; font-weight: 600; box-shadow: none; }
+body.page-jugadores2 .player-remove-photo:hover { background: #fff3f3; }

@@ -30,6 +30,7 @@ function parsePayload(root) {
       statHelp: parsed.statHelp || {},
       createOpen: parsed.createOpen === true,
       isAdmin: parsed.isAdmin === true,
+      deleteToken: parsed.deleteToken || '',
       showInactive: parsed.showInactive === true,
     };
   } catch {
@@ -553,7 +554,7 @@ function PlayerAwards({ player }) {
     <p className="annual-ranking-context">Rankings del año entre jugadores con partidos finalizados, en todas las canchas. Desempates según partidos jugados, promedio y nombre.</p>
     {results.played > results.won + results.drawn + results.lost ? <p className="annual-ranking-context">{results.played - results.won - results.drawn - results.lost} partidos sin marcador completo: cuentan como jugados, sin resultado asignado.</p> : null}
     {awards.length ? <div className="player-awards-grid">{awards.map((award, index) => <article key={`${award.code}-${index}`} className={`player-award ${award.type === 'bad' ? 'is-special' : ''}`}>
-      <span className="player-award-icon" aria-hidden="true">{award.icon}</span><div><h4>{award.label}</h4><p>{award.description}</p>{award.detail ? <p>{award.detail}</p> : <span>{award.position}&#176; puesto</span>}</div><strong aria-label={`${award.count} veces`}>×{award.count}</strong>
+      <span className="player-award-icon" aria-hidden="true">{award.icon}</span><div><h4>{award.label}</h4><p>{award.description}</p>{award.detail ? <p>{award.detail}</p> : award.position > 0 ? <span>{award.position}&#176; puesto</span> : null}</div><strong aria-label={`${award.count} veces`}>×{award.count}</strong>
     </article>)}</div> : <p className="player-awards-empty">Todavía no tiene premios registrados en {player.awardYear}.</p>}
   </section>;
 }
@@ -734,6 +735,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
           >
             Editar foto
           </button>
+          {!isCreate && player.hasCustomPhoto ? <button className="player-remove-photo" type="submit" form={`remove-photo-${player.id}`}>Quitar foto</button> : null}
           {photoEditorOpen && hasPreviewPhoto ? (
             <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 text-left">
               <span className="relative mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-full border border-[#d7e6df] bg-[#f8fbfa]">
@@ -909,7 +911,7 @@ function CreatePlayerPanel({ positions, statLabels, statHelp, defaultOpen }) {
   );
 }
 
-function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, positionRatingsPreview, onOverallPreviewChange }) {
+function PlayerModal({ player, isAdmin, deleteToken, showInactive, positions, onClose, onRadarOpen, positionRatingsPreview, onOverallPreviewChange }) {
   if (!player) return null;
   const headerRatings = positionRatingsPreview?.length ? positionRatingsPreview : player.positionRatings;
   return (
@@ -931,12 +933,30 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, positio
           ) : (
             <ReadonlyProfile player={player} onRadarOpen={onRadarOpen} />
           )}
+          {isAdmin && player.hasCustomPhoto ? <form id={`remove-photo-${player.id}`} method="post" action="jugadores2.php" hidden onSubmit={event => {
+            if (!window.confirm(`Quitar la foto de ${player.name}? Volvera a la imagen predeterminada. Los cambios de la ficha que no hayas guardado se descartaran.`)) event.preventDefault();
+          }}>
+            <input type="hidden" name="action" value="remove_photo" />
+            <input type="hidden" name="id" value={player.id} />
+            <input type="hidden" name="delete_token" value={deleteToken} />
+            <input type="hidden" name="show_inactive" value={showInactive ? '1' : '0'} />
+          </form> : null}
           {isAdmin ? <PlayerStory player={player} /> : null}
           <PlayerAwards player={player} />
           <details className="rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3">
             <summary className="cursor-pointer text-sm font-black text-[#07130f]">Ver ayuda de stats</summary>
             <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat.</p>
           </details>
+          {isAdmin ? <form method="post" action="jugadores2.php" className="player-delete-action" onSubmit={event => {
+            if (!window.confirm(`Eliminar a ${player.name}? Si tiene historial o registros vinculados, se desactivara para conservarlos.`)) event.preventDefault();
+          }}>
+            <input type="hidden" name="action" value="delete" />
+            <input type="hidden" name="id" value={player.id} />
+            <input type="hidden" name="delete_token" value={deleteToken} />
+            <input type="hidden" name="show_inactive" value={showInactive ? '1' : '0'} />
+            <p>Si tiene historial, se conserva como inactivo.</p>
+            <button type="submit">Eliminar jugador</button>
+          </form> : null}
           <button className={modalSecondaryButtonClass} type="button" onClick={onClose}>Cerrar</button>
         </div>
       </section>
@@ -1219,7 +1239,7 @@ export function Jugadores2PageIsland({ root }) {
       </section>
 
       <CardPreviewModal player={cardPlayer} onClose={() => setCardId(null)} />
-      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} positionRatingsPreview={activePositionRatings} onOverallPreviewChange={handleOverallPreviewChange} />
+      <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} deleteToken={payload.deleteToken} showInactive={payload.showInactive} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} positionRatingsPreview={activePositionRatings} onOverallPreviewChange={handleOverallPreviewChange} />
       <RadarOverlay player={radarPlayer} onClose={() => setRadarId(null)} />
     </div>
   );
