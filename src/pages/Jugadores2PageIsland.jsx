@@ -1,36 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-const cardBackgrounds = {
-  bronze: 'assets/card-backgrounds/reference-bronze.png',
-  silver: 'assets/card-backgrounds/reference-silver.png',
-  gold: 'assets/card-backgrounds/reference-gold.png',
-  elite: 'assets/card-backgrounds/reference-elite.png',
-  supreme: 'assets/card-backgrounds/reference-supreme.png',
-};
-
-const cardPalettes = {
-  bronze: {
-    text: 'text-[#f0b170] [text-shadow:0_2px_0_rgba(0,0,0,.74),0_1px_5px_rgba(0,0,0,.38)]',
-    separator: 'bg-[#f0b170]/34',
-  },
-  silver: {
-    text: 'text-[#e8eeea] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.42)]',
-    separator: 'bg-[#e8eeea]/32',
-  },
-  gold: {
-    text: 'text-[#f5d867] [text-shadow:0_2px_0_rgba(0,0,0,.72),0_1px_5px_rgba(0,0,0,.36)]',
-    separator: 'bg-[#f5d867]/34',
-  },
-  elite: {
-    text: 'text-[#a5fff0] [text-shadow:0_2px_0_rgba(0,0,0,.78),0_1px_5px_rgba(0,0,0,.42)]',
-    separator: 'bg-[#a5fff0]/34',
-  },
-  supreme: {
-    text: 'text-[#dffdf3] [text-shadow:0_2px_0_rgba(0,0,0,.82),0_1px_6px_rgba(0,255,220,.34)]',
-    separator: 'bg-[#9fffe6]/38',
-  },
-};
-
 const statFields = ['technique', 'pass_vision', 'rhythm', 'stamina', 'defense_physical', 'attack', 'teamwork', 'mentality', 'regularity'];
 
 
@@ -232,6 +201,7 @@ function playerForCardPosition(player, position) {
     ...player,
     overall,
     tier: tierFromOverall(overall),
+    primaryPosition: position,
     cardStats: cardStatsForPosition(player, position),
     positionRatings: [{ position, overall }],
   };
@@ -253,77 +223,31 @@ function Arrow({ form }) {
   );
 }
 
-function PlayerCard({ player, onOpen, size = 'compact' }) {
-  const cardImage = cardBackgrounds[player.tier] || cardBackgrounds.bronze;
-  const palette = cardPalettes[player.tier] || cardPalettes.bronze;
-  const cardTextClass = palette.text;
-  const separatorClass = palette.separator;
-  const integratedTintClass = 'from-transparent via-[#07130f]/6 to-[#07130f]/34';
-  const isLongName = player.name.length > 12;
-  const widthClass = size === 'preview' ? 'w-[168px]' : 'w-[clamp(126px,calc((100vw-36px)/2),156px)] sm:w-[168px]';
+const credentialTiers = {
+  bronze: { label: 'Bronce', accent: '#dba678' },
+  silver: { label: 'Plata', accent: '#d4dfdc' },
+  gold: { label: 'Oro', accent: '#ecd27d' },
+  elite: { label: 'Elite', accent: '#8ce1bf' },
+  supreme: { label: 'Supreme', accent: '#b4ecd8' },
+};
+
+function PlayerCard({ player, onOpen }) {
+  const tier = credentialTiers[player.tier] || credentialTiers.bronze;
+  const positions = player.positionRatings?.length ? player.positionRatings : [{ position: player.primaryPosition, overall: player.overall }];
   const Shell = onOpen ? 'button' : 'div';
-  const shellProps = onOpen
-    ? { type: 'button', onClick: () => onOpen(player.id), 'aria-label': `Ver ficha de ${player.name}` }
-    : { role: 'img', 'aria-label': `Credencial de ${player.name}` };
-
   return (
-    <Shell
-      {...shellProps}
-      className={`relative mx-auto block aspect-[409/710] ${widthClass} overflow-visible border-0 bg-transparent p-0 text-[#07130f] drop-shadow-[0_7px_12px_rgba(2,14,9,0.22)] ${onOpen ? '' : 'cursor-default'}`}
-      style={{ background: `url("${cardImage}") center / contain no-repeat`, fontFamily: '"Barlow Condensed", sans-serif' }}
-      data-j2-card-tier={player.tier}
-    >
-      <span className={`absolute left-[9%] right-[8%] top-[8.8%] z-20 h-[49%] bg-gradient-to-b ${integratedTintClass}`} aria-hidden="true" />
-
-      <span
-        className={`absolute left-[14.2%] top-[13.8%] z-30 grid h-[26%] w-[23.2%] grid-rows-[auto_auto] content-start justify-items-center overflow-visible px-0.5 pt-0.5 ${cardTextClass}`}
-        data-j2-card-rating-panel
-      >
-        <span className="block text-[1.87rem] font-black leading-[.8] sm:text-[2.03rem]">{player.overall}</span>
-        <span className="mt-[5px] grid justify-items-center gap-[1px] text-center leading-none">
-          {(player.positionRatings?.length ? player.positionRatings : [{ position: player.primaryPosition, overall: player.overall }]).map((rating, index) => (
-            <span key={rating.position} className={`block font-black uppercase leading-none ${index === 0 ? 'text-[.75rem] sm:text-[.8rem]' : 'text-[.56rem] opacity-85 sm:text-[.62rem]'}`}>
-              {rating.position}
-            </span>
-          ))}
-          <span className="mt-[3px] block aspect-square w-[14px] sm:w-[15px]" data-j2-regularity-arrow>
-            <Arrow form={player.regularityForm} />
-          </span>
-        </span>
-      </span>
-
-      <span
-        className="absolute z-10 flex items-start justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,.10),transparent_50%)]"
-        style={{
-          left: '37.7%',
-          right: '14.9%',
-          top: '14.2%',
-          height: '34.9%',
-          borderRadius: '13% 13% 9% 9%',
-          WebkitMaskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)',
-          maskImage: 'linear-gradient(180deg,#000 0 74%,transparent 100%)',
-        }}
-      >
-        {player.photo ? (
-          <img className={`h-full w-full ${player.hasCustomPhoto ? 'object-cover object-top' : 'object-contain object-top opacity-56'}`} src={player.photo} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.hasCustomPhoto ? '1' : undefined} />
-        ) : null}
-      </span>
-
-      <span className={`absolute left-[12.1%] right-[10.9%] top-[53.3%] z-30 grid h-[7.8%] place-items-center overflow-hidden px-1 text-center ${isLongName ? 'text-[.86rem] sm:text-[.95rem]' : 'text-[1.17rem] sm:text-[1.28rem]'} font-black uppercase leading-none text-ellipsis whitespace-nowrap ${cardTextClass}`}>
-        {player.name}
-      </span>
-
-      <span className={`absolute left-[20.3%] right-[20.3%] top-[62.8%] z-30 block h-px ${separatorClass}`} aria-hidden="true" />
-
-      <span className="absolute left-[17.3%] right-[16.1%] top-[66.7%] z-30 grid h-[17%] grid-cols-2 grid-rows-3 gap-x-[7%] gap-y-0 overflow-visible px-[1.8%] py-[.9%]">
-        <span className={`absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 ${separatorClass}`} aria-hidden="true" />
-        {player.cardStats.map((stat) => (
-          <span key={`${player.id}-${stat.label}`} className={`grid grid-cols-[1.18rem_minmax(0,1fr)] items-center gap-[3px] overflow-visible ${cardTextClass}`}>
-            <span className="text-right text-[.94rem] font-black leading-none sm:text-[1.03rem]">{stat.value}</span>
-            <span className="text-[.77rem] font-black uppercase leading-none sm:text-[.85rem]">{stat.label}</span>
-          </span>
-        ))}
-      </span>
+    <Shell className="gf-credential" style={{ '--credential-accent': tier.accent }} data-j2-card-tier={player.tier}
+      {...(onOpen ? { type: 'button', onClick: () => onOpen(player.id), 'aria-label': `Ver ficha de ${player.name}` } : { role: 'img', 'aria-label': `Credencial de ${player.name}` })}>
+      <div className="gf-credential-brand"><img src="assets/goodfellas-logo.png" alt="" /><span>Goodfellas<strong>Fútbol y amigos</strong></span><span className="gf-credential-tier">{tier.label}</span></div>
+      <div className="gf-credential-portrait">
+        <div className="gf-credential-overall" data-j2-card-rating-panel><span>Media</span><strong>{player.overall}</strong><b>{player.primaryPosition}</b>
+          <span className="gf-credential-form" title={player.regularityLabel}><span data-j2-regularity-arrow><Arrow form={player.regularityForm} /></span>{player.regularityLabel}</span>
+        </div>
+        <div className="gf-credential-photo"><img src={player.photo} alt="" style={playerPhotoPositionStyle(player)} data-player-photo-oval={player.hasCustomPhoto ? '1' : undefined} /></div>
+      </div>
+      <div className="gf-credential-identity"><h2>{player.name}</h2><div className="gf-credential-positions">{positions.map((rating, index) => <span key={rating.position}><em>{index === 0 ? '1\u00b0' : '2\u00b0'}</em> {rating.position}<b>{rating.overall}</b></span>)}</div></div>
+      <div className="gf-credential-stats">{player.cardStats.map(stat => <div key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></div>)}</div>
+      <footer className="gf-credential-footer"><span>{player.isActive ? 'Jugador activo' : 'Jugador inactivo'}</span><span>Goodfellas F.C.</span></footer>
     </Shell>
   );
 }
@@ -475,7 +399,7 @@ function RadarSvg({ stats }) {
   }).join(' ');
 
   return (
-    <svg className="mx-auto block aspect-square w-full max-w-[260px]" viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Radar de stats">
+    <svg className="mx-auto block aspect-square w-full max-w-[320px]" viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Radar de stats">
       {[0.25, 0.5, 0.75, 1].map((step) => {
         const points = visible.map((_, index) => {
           const point = radarPoint(center, maxRadius * step, index, total);
@@ -485,13 +409,13 @@ function RadarSvg({ stats }) {
       })}
       {visible.map((stat, index) => {
         const axis = radarPoint(center, maxRadius, index, total);
-        const label = radarPoint(center, maxRadius + 48, index, total);
+        const label = radarPoint(center, maxRadius + 30, index, total);
         const lines = statLabelLines(stat.label);
-        const textAnchor = label.x < center - 26 ? 'end' : label.x > center + 26 ? 'start' : 'middle';
+        const textAnchor = 'middle';
         return (
           <g key={stat.field}>
             <line x1={center} y1={center} x2={axis.x.toFixed(1)} y2={axis.y.toFixed(1)} stroke="rgba(6,61,43,.18)" strokeWidth="1" />
-            <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor={textAnchor} dominantBaseline="middle" fill="#07130f" fontSize="10" fontWeight="900">
+            <text x={label.x.toFixed(1)} y={label.y.toFixed(1)} textAnchor={textAnchor} dominantBaseline="middle" fill="#07130f" fontSize="10" fontWeight="600">
               {lines.map((line, lineIndex) => (
                 <tspan key={line} x={label.x.toFixed(1)} dy={lineIndex === 0 ? `${(1 - lines.length) * 5}px` : '11px'}>{line}</tspan>
               ))}
@@ -523,6 +447,117 @@ function StatLine({ stat }) {
   );
 }
 
+function PlayerStory({ player }) {
+  const roles = { ARQ: 'Arquero', DEF: 'Defensor', LAT: 'Lateral', MED: 'Mediocampista', DEL: 'Delantero' };
+  const resources = {
+    technique: 'el control de pelota', pass_vision: 'el pase y la lectura del juego',
+    rhythm: 'la velocidad', stamina: 'el despliegue', defense_physical: 'la marca y el juego f\u00edsico',
+    attack: 'la llegada al arco', teamwork: 'el juego colectivo', mentality: 'la concentraci\u00f3n',
+    goalkeeper_skill: 'la atajada',
+  };
+  const virtues = {
+    technique: {
+      high: ['Tiene un control fino: puede sacarse la marca de encima sin perder la pelota.', 'Su calidad con la pelota le permite resolver donde hay poco espacio y mucha marca.'],
+      good: ['Maneja bien la pelota y tiene recursos para salir de la presi\u00f3n.', 'El buen primer control le facilita dar continuidad a la jugada.'],
+    },
+    pass_vision: {
+      high: ['Ve pases que abren defensas y tiene la precisi\u00f3n para hacerlos llegar.', 'Lee la jugada con claridad y puede dejar a un compa\u00f1ero en ventaja con un solo pase.'],
+      good: ['Distribuye con criterio y encuentra opciones para hacer avanzar al equipo.', 'Levanta la cabeza y elige bien a qui\u00e9n darle continuidad al ataque.'],
+    },
+    rhythm: {
+      high: ['Su aceleraci\u00f3n puede romper un partido: gana metros tanto para atacar como para recuperar.', 'Tiene una marcha m\u00e1s para despegarse de la marca y llegar al cruce.'],
+      good: ['La velocidad le permite atacar espacios y responder en las transiciones.', 'Tiene piernas para sacar ventaja en el desmarque y corregir a tiempo.'],
+    },
+    stamina: {
+      high: ['Sostiene un despliegue intenso: puede repetir subidas, presiones y regresos sin perder presencia.', 'El ida y vuelta es una de sus grandes armas: tiene resto para seguir participando cuando el partido se alarga.'],
+      good: ['Tiene buen recorrido para acompa\u00f1ar el ataque y volver a dar una mano.', 'Puede encadenar esfuerzos y mantener su participaci\u00f3n en ambas \u00e1reas.'],
+    },
+    defense_physical: {
+      high: ['Se hace fuerte en los duelos y cuesta superarlo cuando protege su zona.', 'Combina firmeza en la marca y presencia f\u00edsica para cerrar el camino al rival.'],
+      good: ['Responde bien al roce y ofrece respaldo en la marca.', 'Es firme en la disputa y ayuda a sostener el orden defensivo.'],
+    },
+    attack: {
+      high: ['Cerca del arco hace da\u00f1o: encuentra espacios y tiene recursos para terminar las jugadas.', 'Tiene peso en el \u00e1rea: su llegada y su capacidad para definir obligan a seguirlo de cerca.'],
+      good: ['Se mueve bien en ataque y aporta peligro cuando pisa el \u00e1rea.', 'Tiene buenos recursos para sumarse a la jugada y buscar el arco.'],
+    },
+    teamwork: {
+      high: ['Hace jugar a los dem\u00e1s: ofrece apoyos, se asocia y ayuda a que el equipo funcione como conjunto.', 'Su juego colectivo potencia a quienes lo rodean: entiende la descarga, el apoyo y la cobertura.'],
+      good: ['Se asocia bien y suele ofrecer una salida al compa\u00f1ero.', 'Participa del circuito de pases y acompa\u00f1a las necesidades del equipo.'],
+    },
+    mentality: {
+      high: ['Mantiene la cabeza en el partido incluso cuando aumenta la presi\u00f3n.', 'Tiene temple para competir en situaciones exigentes sin perder el foco.'],
+      good: ['Compite con buena concentraci\u00f3n y suele responder ante la dificultad.', 'La fortaleza mental le ayuda a seguir en partido cuando una jugada sale mal.'],
+    },
+    goalkeeper_skill: {
+      high: ['Bajo los tres palos puede sostener al equipo con atajadas de mucho valor.', 'Tiene reflejos y recursos para responder incluso cuando el remate llega en ventaja.'],
+      good: ['Ofrece buenas respuestas en el arco y recursos para resolver situaciones de riesgo.', 'Responde con solvencia bajo los tres palos y puede aportar atajadas importantes.'],
+    },
+  };
+  // Stable wording: revisiting a profile should not change its assessment.
+  const pickVirtue = stat => {
+    const pool = virtues[stat.field][Number(stat.overall) >= 90 ? 'high' : 'good'];
+    const seed = `${player.id}|${stat.field}`;
+    const index = Array.from(seed).reduce((sum, character) => sum + character.charCodeAt(0), 0) % pool.length;
+    return pool[index];
+  };
+  const advice = {
+    technique: 'Le conviene priorizar controles y pases simples bajo presi\u00f3n.',
+    pass_vision: 'Necesita opciones de pase cercanas para facilitar sus decisiones.',
+    rhythm: 'Conviene evitar que quede expuesto en carreras largas.',
+    stamina: 'Le conviene administrar los esfuerzos y contar con apoyo en los relevos.',
+    defense_physical: 'Necesita respaldo en la marca y en los duelos f\u00edsicos.',
+    attack: 'Tiene margen para mejorar la definici\u00f3n y la decisi\u00f3n cerca del arco.',
+    teamwork: 'Puede mejorar su participaci\u00f3n en las asociaciones y los apoyos.',
+    mentality: 'Necesita sostener la concentraci\u00f3n cuando el partido se complica.',
+    goalkeeper_skill: 'Necesita protecci\u00f3n defensiva para reducir las situaciones de riesgo.',
+  };
+  const stats = player.allStats.filter(stat => resources[stat.field] && (player.primaryPosition === 'ARQ' ? stat.field !== 'attack' : stat.field !== 'goalkeeper_skill'));
+  const ranked = [...stats].sort((a, b) => Number(b.overall) - Number(a.overall));
+  const best = ranked[0];
+  const weakest = ranked[ranked.length - 1];
+  const role = roles[player.primaryPosition] || 'Jugador';
+  const secondary = player.secondaryPosition ? `, con alternativa como ${(roles[player.secondaryPosition] || player.secondaryPosition).toLowerCase()}` : '';
+  const sentences = [`${role}${secondary}.`];
+  if (best) {
+    const standouts = ranked.filter(stat => Number(stat.overall) >= 85).slice(0, 2);
+    if (standouts.length) {
+      standouts.forEach(stat => sentences.push(pickVirtue(stat)));
+    } else {
+      const top = ranked.filter(stat => Number(best.overall) - Number(stat.overall) <= 8).slice(0, 2);
+      const strengths = top.map(stat => resources[stat.field]).join(', junto con ');
+      sentences.push(Number(best.overall) >= 80 ? `Cuenta con buenos recursos en ${strengths.replace(/^(el |la )/, '')}.` : `Dentro de su perfil, aporta m\u00e1s desde ${strengths}.`);
+    }
+    if (weakest && Number(weakest.overall) < 75 && Number(best.overall) - Number(weakest.overall) >= 10) sentences.push(advice[weakest.field]);
+  }
+  const regularity = player.allStats.find(stat => stat.field === 'regularity');
+  if (regularity) sentences.push(Number(regularity.overall) >= 90 ? 'A esa calidad le suma constancia: rara vez se aleja de su mejor versi\u00f3n.' : Number(regularity.overall) >= 85 ? 'Es confiable a lo largo de los partidos, con pocas ca\u00eddas de nivel.' : Number(regularity.overall) >= 75 ? 'Suele mantener una l\u00ednea de rendimiento pareja.' : Number(regularity.overall) < 65 ? 'Su nivel puede variar de un partido a otro.' : 'Su regularidad tiene margen de mejora.');
+  return <section className="player-story" aria-label="Lectura del jugador"><h3>Perfil de juego</h3><p>{sentences.join(' ')}</p><span className="player-story-source">Lectura basada en los atributos de la ficha.</span></section>;
+}
+
+function PlayerAwards({ player }) {
+  const awards = player.annualAwards || [];
+  const count = awards.reduce((sum, award) => sum + award.count, 0);
+  const results = player.annualResults || { played: 0, won: 0, drawn: 0, lost: 0, ranks: {}, totalPlayers: 0 };
+  return <section className="player-annual-awards" aria-label={`Premios de ${player.awardYear}`}>
+    <div className="player-awards-heading"><h3>Premios {player.awardYear}</h3><span>{count} reconocimientos</span></div>
+    <p className="player-awards-period">Desde el 1 de enero · Partidos finalizados</p>
+    <div className="player-annual-results" aria-label={`Partidos y rankings de ${player.awardYear}`}>
+      {[['played', 'Jugados', 'Más partidos'], ['won', 'Ganados', 'Más victorias'], ['drawn', 'Empatados', 'Más empates'], ['lost', 'Perdidos', 'Menos derrotas']].map(([metric, label, ranking]) => (
+        <article key={metric}>
+          <span>{label}</span><strong>{results[metric]}</strong>
+          <p>{results.ranks[metric] ? <><b>{results.ranks[metric]}&#176;</b> de {results.totalPlayers}</> : 'Sin ranking'}</p>
+          <span className="annual-ranking-label">{ranking}</span>
+        </article>
+      ))}
+    </div>
+    <p className="annual-ranking-context">Rankings del año entre jugadores con partidos finalizados, en todas las canchas. Desempates según partidos jugados, promedio y nombre.</p>
+    {results.played > results.won + results.drawn + results.lost ? <p className="annual-ranking-context">{results.played - results.won - results.drawn - results.lost} partidos sin marcador completo: cuentan como jugados, sin resultado asignado.</p> : null}
+    {awards.length ? <div className="player-awards-grid">{awards.map((award, index) => <article key={`${award.code}-${index}`} className={`player-award ${award.type === 'bad' ? 'is-special' : ''}`}>
+      <span className="player-award-icon" aria-hidden="true">{award.icon}</span><div><h4>{award.label}</h4><p>{award.description}</p>{award.detail ? <p>{award.detail}</p> : <span>{award.position}&#176; puesto</span>}</div><strong aria-label={`${award.count} veces`}>×{award.count}</strong>
+    </article>)}</div> : <p className="player-awards-empty">Todavía no tiene premios registrados en {player.awardYear}.</p>}
+  </section>;
+}
+
 function ReadonlyProfile({ player, onRadarOpen }) {
   return (
     <>
@@ -531,7 +566,7 @@ function ReadonlyProfile({ player, onRadarOpen }) {
           <RadarSvg stats={player.allStats} />
         </button>
           <div className="grid content-start gap-3">
-            <p className="m-0 border border-emerald-100 bg-emerald-50/50 p-3 text-sm font-semibold leading-relaxed text-slate-700">{player.description}</p>
+            <PlayerStory player={player} />
             <div className="grid gap-2 sm:grid-cols-3">
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{player.overall}</strong></article>
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Fuerte</span><strong className="block text-sm font-black text-[#07130f]">{player.bestStat?.label || '-'}</strong></article>
@@ -880,12 +915,13 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, positio
   return (
     <>
       <button className="fixed inset-0 z-40 block bg-black/55" type="button" aria-label="Cerrar ficha" onClick={onClose} />
-      <section className="fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[#adc8bb] bg-white shadow-[0_12px_28px_rgba(7,19,15,.18)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
+      <section className="player-info-modal fixed inset-x-3 top-4 bottom-4 z-50 mx-auto grid max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[#adc8bb] bg-white shadow-[0_12px_28px_rgba(7,19,15,.18)] md:inset-x-8" role="dialog" aria-modal="true" aria-label={`Ficha de ${player.name}`}>
         <header className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-[#d7e6df] bg-[#f8fbfa] p-4">
-          <div className="min-w-0">
+          <div className="player-info-identity min-w-0">
+            <DirectoryAvatar player={player} /><div>
             <h2 className="m-0 truncate text-xl font-black text-[#07130f]">{player.name}</h2>
             <p className="m-0 mt-1 text-sm font-semibold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'}</p>
-          </div>
+          </div></div>
           <PositionRatingSummary ratings={headerRatings} />
           <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar ficha">x</button>
         </header>
@@ -895,6 +931,8 @@ function PlayerModal({ player, isAdmin, positions, onClose, onRadarOpen, positio
           ) : (
             <ReadonlyProfile player={player} onRadarOpen={onRadarOpen} />
           )}
+          {isAdmin ? <PlayerStory player={player} /> : null}
+          <PlayerAwards player={player} />
           <details className="rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3">
             <summary className="cursor-pointer text-sm font-black text-[#07130f]">Ver ayuda de stats</summary>
             <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat.</p>
@@ -940,8 +978,8 @@ function CardPreviewModal({ player, onClose }) {
   return (
     <>
       <button className="fixed inset-0 z-[80] bg-black/70" type="button" aria-label="Cerrar credencial" onClick={onClose} />
-      <section className="fixed inset-0 z-[90] grid place-items-center overflow-auto p-4" role="dialog" aria-modal="true" aria-label={`Credencial de ${player.name}`}>
-        <div className="grid place-items-center gap-3">
+      <section className="credential-viewer fixed inset-0 z-[90] grid place-items-center overflow-auto p-4" role="dialog" aria-modal="true" aria-label={`Credencial de ${player.name}`}>
+        <div className="credential-viewer-content grid place-items-center gap-3">
           {options.length > 1 ? (
             <div className="grid w-[min(82vw,320px)] grid-cols-2 gap-2" aria-label="Elegir posicion de credencial">
               {options.map((rating, index) => {
@@ -949,8 +987,9 @@ function CardPreviewModal({ player, onClose }) {
                 return (
                   <button
                     key={rating.position}
-                    className={`min-h-10 rounded-lg border px-2 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#f5d867] bg-[#f5d867] text-[#07130f]' : 'border-white/20 bg-black/65 text-white hover:bg-black/80'}`}
+                    className={`min-h-10 rounded-lg border px-2 text-xs font-black transition-colors ${focusRing} ${active ? 'border-[#8ce1bf] bg-[#d7f4e7] text-[#07130f]' : 'border-white/20 bg-black/65 text-white hover:bg-black/80'}`}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => setSelectedPosition(rating.position)}
                   >
                     {index === 0 ? '1°' : '2°'} {rating.position} {rating.overall}
@@ -959,8 +998,8 @@ function CardPreviewModal({ player, onClose }) {
               })}
             </div>
           ) : null}
-          <div className="relative grid aspect-[409/710] w-[min(78vw,320px)] max-h-[82vh] place-items-center overflow-visible">
-            <div className="origin-center scale-[1.72] sm:scale-[1.9]">
+          <div className="credential-viewer-card">
+            <div className="credential-viewer-card-inner">
               <PlayerCard player={previewPlayer} size="preview" />
             </div>
           </div>
@@ -971,9 +1010,24 @@ function CardPreviewModal({ player, onClose }) {
   );
 }
 
+function DirectoryAvatar({ player }) {
+  return <span className="directory-avatar" aria-hidden="true">{player.hasCustomPhoto
+    ? <img src={player.photoEdit || player.photo} alt="" loading="lazy" style={playerPhotoPositionStyle(player)} />
+    : <span>{player.initials || player.name.slice(0, 2)}</span>}</span>;
+}
+
+function DirectoryRatings({ player }) {
+  return <div className="directory-ratings">{player.positionRatings.map((rating, index) => (
+    <div key={rating.position} className={`directory-rating ${index ? 'is-secondary' : ''}`} title={index ? 'Posici?n secundaria' : 'Posici?n primaria'}>
+      <span>{index ? '2\u00b0' : '1\u00b0'} {rating.position}</span><strong>{rating.overall}</strong>
+    </div>
+  ))}</div>;
+}
+
 export function Jugadores2PageIsland({ root }) {
   const payload = useMemo(() => parsePayload(root), [root]);
   const [query, setQuery] = useState('');
+  const [positionFilter, setPositionFilter] = useState('');
   const [sortConfig, setSortConfig] = useState({ field: 'name', direction: 'asc' });
   const [activeId, setActiveId] = useState(null);
   const [cardId, setCardId] = useState(null);
@@ -1015,10 +1069,10 @@ export function Jugadores2PageIsland({ root }) {
   const visiblePlayers = useMemo(() => {
     const normalizedQuery = normalize(query);
     const filtered = payload.players.filter((player) => (
-      normalizedQuery === '' || normalize(`${player.search} ${player.overall} ${player.rating}`).includes(normalizedQuery)
+      (!positionFilter || player.positions.includes(positionFilter)) && (normalizedQuery === '' || normalize(`${player.search} ${player.overall} ${player.rating}`).includes(normalizedQuery))
     ));
     return filtered.slice().sort((a, b) => comparePlayersBySort(a, b, sortConfig));
-  }, [payload.players, query, sortConfig]);
+  }, [payload.players, query, sortConfig, positionFilter]);
 
   const activePlayer = payload.players.find((player) => String(player.id) === String(activeId)) || null;
   const cardPlayer = payload.players.find((player) => String(player.id) === String(cardId)) || null;
@@ -1026,21 +1080,21 @@ export function Jugadores2PageIsland({ root }) {
   const activePositionRatings = activePlayer && modalOverall?.id === String(activePlayer.id) ? modalOverall.positionRatings : null;
 
   return (
-    <div className="grid gap-4">
-      <section className="grid items-end gap-4 rounded-lg border border-[#adc8bb] bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="players-directory grid gap-4">
+      <section className="players-directory-header grid items-end gap-4 rounded-lg border border-[#adc8bb] bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto]">
         <div>
           <h1 className="m-0 text-2xl font-black text-[#07130f]">Jugadores</h1>
           <p className="m-0 mt-1 text-sm font-semibold text-slate-500">Plantilla, posiciones y rendimiento actual.</p>
         </div>
-        <div className="grid grid-cols-3 gap-2" aria-label="Resumen de jugadores">
+        <div className="players-directory-summary grid grid-cols-3 gap-2" aria-label="Resumen de jugadores">
           <article className="min-w-20 rounded-lg border border-[#d7e6df] bg-[#f4fbf7] p-2"><span className="block text-[11px] font-extrabold text-[#526b62]">Activos</span><strong className="block text-lg font-black text-[#07130f]">{payload.summary.active}</strong></article>
           <article className="min-w-20 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2"><span className="block text-[11px] font-extrabold text-[#526b62]">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{payload.summary.average}</strong></article>
           <article className="min-w-20 rounded-lg border border-[#d7e6df] bg-white p-2"><span className="block text-[11px] font-extrabold text-[#526b62]">Top</span><strong className="block text-lg font-black text-[#063d2b]">{payload.summary.top}</strong></article>
         </div>
       </section>
 
-      <section className="grid gap-2 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] p-3 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_auto]" aria-label="Controles de jugadores">
-        <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
+      <section className="players-directory-toolbar grid gap-2 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] p-3 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_auto]" aria-label="Controles de jugadores">
+        <div className="players-directory-search grid grid-cols-[minmax(0,1fr)_44px] gap-2">
           <input className="min-h-10 w-full rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60 sm:min-h-11" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
           <button className={primaryIconButtonClass} type="button" onClick={() => setQuery(query.trim())} aria-label="Buscar">
             <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -1050,10 +1104,23 @@ export function Jugadores2PageIsland({ root }) {
           </button>
         </div>
         <div className="flex flex-wrap gap-2 pt-1 sm:pt-0">
-          {payload.isAdmin ? <a className={toolbarLinkClass} href="jugadores2.php?create=1#crear-jugador">Crear jugador</a> : null}
+          {payload.isAdmin ? <a className={`players-directory-create ${toolbarLinkClass}`} href="jugadores2.php?create=1#crear-jugador">Crear jugador</a> : null}
           {payload.isAdmin && payload.links.toggleInactive ? <a className={toolbarLinkClass} href={payload.links.toggleInactive}>{payload.showInactive ? 'Ver solo activos' : 'Ver inactivos'}</a> : null}
         </div>
       </section>
+
+      <div className="directory-filters">
+        <div className="directory-position-tabs" role="group" aria-label="Filtrar por posici?n">
+          {[{ value: '', label: 'Todos' }, ...payload.positions].map(position => <button key={position.value} type="button" aria-pressed={positionFilter === position.value} onClick={() => setPositionFilter(position.value)}>{position.value || position.label}</button>)}
+        </div>
+        <label className="directory-sort">Ordenar por
+          <select value={`${sortConfig.field}:${sortConfig.direction}`} onChange={event => { const [field, direction] = event.target.value.split(':'); setSortConfig({ field, direction }); }}>
+            <option value="name:asc">Nombre A-Z</option><option value="name:desc">Nombre Z-A</option>
+            <option value="overall:desc">Mayor media</option><option value="overall:asc">Menor media</option>
+            <option value="position:asc">Posici?n A?Z</option><option value="position:desc">Posici?n Z?A</option>
+          </select>
+        </label>
+      </div>
 
       {payload.isAdmin ? (
         <CreatePlayerPanel
@@ -1064,15 +1131,21 @@ export function Jugadores2PageIsland({ root }) {
         />
       ) : null}
 
+      <div className="players-directory-list-heading">
+        <h2>Plantilla</h2>
+        <span role="status" aria-live="polite">{visiblePlayers.length} de {payload.players.length} jugadores</span>
+      </div>
+
       {visiblePlayers.length === 0 ? (
         <p className="m-0 border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">No hay jugadores que coincidan con la busqueda.</p>
       ) : null}
 
-      <section className="grid gap-2 md:hidden" aria-label="Lista de jugadores">
+      <section className="players-directory-mobile grid gap-2 md:hidden" aria-label="Lista de jugadores">
         {visiblePlayers.map((player) => (
           <article key={player.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-[#d7e6df] bg-white p-3">
-            <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
-              <span className="min-w-0 w-full">
+            <button className={`directory-player-name ${focusRing}`} type="button" onClick={() => openPlayerModal(player.id)}>
+              <DirectoryAvatar player={player} />
+              <span className="directory-player-copy min-w-0 w-full">
                 <strong className="block truncate text-[15px] font-black leading-tight text-[#07130f]">{player.name}</strong>
                 <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-500">
                   <span>{player.isActive ? 'Activo' : 'Inactivo'}</span>
@@ -1081,20 +1154,20 @@ export function Jugadores2PageIsland({ root }) {
             </button>
             <div className="grid shrink-0 grid-cols-[minmax(56px,auto)_36px] grid-rows-2 items-stretch gap-1.5">
               <span className="row-span-2 grid">
-                <PositionRatingSummary ratings={player.positionRatings} />
+                <DirectoryRatings player={player} />
               </span>
-              <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
-                <CredentialIcon />
+              <button className={`directory-credential ${rowCredentialButtonClass}`} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
+                <CredentialIcon /><span className="directory-action-label">Credencial</span>
               </button>
-              <button className={rowEditButtonClass} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
-                {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}
+              <button className={`directory-open ${rowEditButtonClass}`} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
+                {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}<span className="directory-action-label">{payload.isAdmin ? 'Editar' : 'Ver ficha'}</span>
               </button>
             </div>
           </article>
         ))}
       </section>
 
-      <section className="hidden overflow-x-auto rounded-lg border border-[#adc8bb] bg-white md:block" aria-label="Tabla de jugadores">
+      <section className="players-directory-table hidden overflow-x-auto rounded-lg border border-[#adc8bb] bg-white md:block" aria-label="Tabla de jugadores">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-[#f2f6f4]">
             <tr>
@@ -1114,8 +1187,9 @@ export function Jugadores2PageIsland({ root }) {
             {visiblePlayers.map((player) => (
               <tr key={player.id} className="border-b border-[#dfece6] transition-colors last:border-b-0 hover:bg-[#f8fbfa]">
                 <td className="px-3 py-2">
-                  <button className={playerNameButtonClass} type="button" onClick={() => openPlayerModal(player.id)}>
-                    <span className="min-w-0 w-full">
+                  <button className={`directory-player-name ${focusRing}`} type="button" onClick={() => openPlayerModal(player.id)}>
+                    <DirectoryAvatar player={player} />
+              <span className="directory-player-copy min-w-0 w-full">
                       <strong className="block truncate text-sm font-black text-[#07130f]">{player.name}</strong>
                       <small className="text-xs font-bold text-slate-500">{player.isActive ? 'Activo' : 'Inactivo'}</small>
                       <span className="mt-1 block">
@@ -1126,15 +1200,15 @@ export function Jugadores2PageIsland({ root }) {
                 </td>
                 <td className="px-3 py-2"><PositionChips positions={player.positions} /></td>
                 <td className="px-3 py-2">
-                  <PositionRatingChips ratings={player.positionRatings} />
+                  <DirectoryRatings player={player} />
                 </td>
                 <td className="px-3 py-2 text-right">
                   <div className="inline-flex items-center justify-end gap-2">
-                    <button className={rowCredentialButtonClass} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
-                      <CredentialIcon />
+                    <button className={`directory-credential ${rowCredentialButtonClass}`} type="button" onClick={() => setCardId(player.id)} aria-label={`Ver credencial de ${player.name}`}>
+                      <CredentialIcon /><span className="directory-action-label">Credencial</span>
                     </button>
-                    <button className={rowEditButtonClass} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
-                      {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}
+                    <button className={`directory-open ${rowEditButtonClass}`} type="button" onClick={() => openPlayerModal(player.id)} aria-label={`${payload.isAdmin ? 'Editar ficha' : 'Ver datos'} de ${player.name}`}>
+                      {payload.isAdmin ? <PencilIcon /> : <InfoIcon />}<span className="directory-action-label">{payload.isAdmin ? 'Editar' : 'Ver ficha'}</span>
                     </button>
                   </div>
                 </td>

@@ -5,6 +5,7 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/player_profile_visual.php';
+require_once __DIR__ . '/lib/awards.php';
 
 ensure_control_schema();
 
@@ -410,6 +411,7 @@ $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores2.php';
 $bodyClass = 'page-jugadores2';
 $headExtraHtml = '<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&display=swap" rel="stylesheet">';
+$headExtraHtml .= '<link rel="stylesheet" href="assets/jugadores-directory.css?v=' . (string) filemtime(__DIR__ . '/assets/jugadores-directory.css') . '">';
 $positionLabels = player_position_labels();
 $positionsPayload = array_map(
     static fn(string $position): array => [
@@ -418,6 +420,82 @@ $positionsPayload = array_map(
     ],
     allowed_positions()
 );
+// Aggregate all players in one query; use match dates rather than award creation dates.
+ensure_match_awards_schema();
+$awardYear = (int) date('Y');
+$awardStart = sprintf('%04d-01-01', $awardYear);
+$awardEnd = sprintf('%04d-01-01', $awardYear + 1);
+$awardDefinitions = award_definitions(true);
+$awardDescriptions = award_descriptions();
+$annualAwards = [];
+$annualAwardStmt = db()->prepare("SELECT ma.player_id, ma.award_code, ma.award_position, COUNT(*) AS total
+    FROM match_awards ma INNER JOIN matches m ON m.id = ma.match_id
+    WHERE m.status = 'finalizado' AND m.match_date >= :start AND m.match_date < :end
+    GROUP BY ma.player_id, ma.award_code, ma.award_position
+    ORDER BY ma.award_code, ma.award_position");
+$annualAwardStmt->execute(['start' => $awardStart, 'end' => $awardEnd]);
+foreach ($annualAwardStmt->fetchAll() as $awardRow) {
+    $code = (string) $awardRow['award_code'];
+    if (!isset($awardDefinitions[$code])) continue;
+    $annualAwards[(int) $awardRow['player_id']][] = $awardDefinitions[$code] + [
+        'code' => $code, 'description' => $awardDescriptions[$code] ?? '',
+        'position' => (int) $awardRow['award_position'], 'count' => (int) $awardRow['total'],
+    ];
+}
+foreach (monthly_player_awards() as $monthlyAward) {
+    if ($monthlyAward['month_start'] < $awardStart || $monthlyAward['month_start'] >= $awardEnd) continue;
+    $annualAwards[(int) $monthlyAward['player_id']][] = monthly_player_award_definition() + [
+        'code' => 'monthly', 'description' => $monthlyAward['tooltip'],
+        'detail' => $monthlyAward['month_label'] . ' - ' . $monthlyAward['court_label'],
+        'position' => 1, 'count' => 1,
+    ];
+}
+$annualResultsStmt = db()->prepare("SELECT p.id, p.name,
+    COUNT(DISTINCT mp.match_id) AS played, ROUND(AVG(mp.rating), 2) AS average,
+    SUM(CASE WHEN mt.goals > opponent.goals THEN 1 ELSE 0 END) AS won,
+    SUM(CASE WHEN mt.goals = opponent.goals THEN 1 ELSE 0 END) AS drawn,
+    SUM(CASE WHEN mt.goals < opponent.goals THEN 1 ELSE 0 END) AS lost
+    FROM match_players mp
+    INNER JOIN players p ON p.id = mp.player_id
+    INNER JOIN matches m ON m.id = mp.match_id AND m.status = 'finalizado'
+    LEFT JOIN match_teams mt ON mt.match_id = mp.match_id AND mt.team_number = mp.team_number
+    LEFT JOIN (
+        SELECT own.match_id, own.team_number, MAX(other.goals) AS goals
+        FROM match_teams own INNER JOIN match_teams other
+          ON other.match_id = own.match_id AND other.team_number <> own.team_number
+        GROUP BY own.match_id, own.team_number
+    ) opponent ON opponent.match_id = mp.match_id AND opponent.team_number = mp.team_number
+    WHERE m.match_date >= :start AND m.match_date < :end
+    GROUP BY p.id, p.name");
+$annualResultsStmt->execute(['start' => $awardStart, 'end' => $awardEnd]);
+$annualResultRows = $annualResultsStmt->fetchAll();
+$annualResults = [];
+$annualRankRules = [
+    'played' => ['desc', ['average' => 'desc']],
+    'won' => ['desc', ['played' => 'asc', 'average' => 'desc']],
+    'drawn' => ['desc', ['played' => 'asc', 'average' => 'desc']],
+    'lost' => ['asc', ['played' => 'desc', 'average' => 'desc']],
+];
+foreach ($annualResultRows as $row) {
+    $annualResults[(int) $row['id']] = [
+        'played' => (int) $row['played'], 'won' => (int) $row['won'],
+        'drawn' => (int) $row['drawn'], 'lost' => (int) $row['lost'],
+        'totalPlayers' => count($annualResultRows), 'ranks' => [],
+    ];
+}
+foreach ($annualRankRules as $metric => [$direction, $tieBreakers]) {
+    $ranked = $annualResultRows;
+    usort($ranked, static function (array $a, array $b) use ($metric, $direction, $tieBreakers): int {
+        foreach ([$metric => $direction] + $tieBreakers as $field => $order) {
+            $comparison = (float) ($a[$field] ?? 0) <=> (float) ($b[$field] ?? 0);
+            if ($comparison !== 0) return $order === 'desc' ? -$comparison : $comparison;
+        }
+        return strcasecmp((string) $a['name'], (string) $b['name']) ?: ((int) $a['id'] <=> (int) $b['id']);
+    });
+    foreach ($ranked as $index => $row) {
+        $annualResults[(int) $row['id']]['ranks'][$metric] = $index + 1;
+    }
+}
 $playersPayload = [];
 foreach ($players as $player) {
     $id = (int) $player['id'];
@@ -488,6 +566,9 @@ foreach ($players as $player) {
         'bestStat' => $bestStat !== null ? ['label' => (string) $bestStat['label']] : null,
         'weakStat' => $weakStat !== null ? ['label' => (string) $weakStat['label']] : null,
         'description' => shared_profile_player_description($player, $statLabels),
+        'awardYear' => $awardYear,
+        'annualResults' => $annualResults[$id] ?? ['played' => 0, 'won' => 0, 'drawn' => 0, 'lost' => 0, 'totalPlayers' => count($annualResultRows), 'ranks' => []],
+        'annualAwards' => $annualAwards[$id] ?? [],
     ];
 }
 $jugadores2Payload = [

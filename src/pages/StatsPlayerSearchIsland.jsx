@@ -175,6 +175,12 @@ export function StatsPlayerSearchIsland({ root }) {
       if (element) element.textContent = value || '-';
     };
     setText('[data-stats-player-name]', selectedData.name);
+    const photo = document.querySelector('[data-stats-player-photo]');
+    if (photo) {
+      photo.src = selectedData.photo || 'assets/players/default-player-silhouette.png';
+      photo.style.objectPosition = selectedData.photoPosition || '50% 50%';
+      photo.style.transform = selectedData.photoTransform || 'none';
+    }
     setText('[data-stats-player-matches]', selectedData.matches);
     setText('[data-stats-player-goals]', selectedData.goals);
     setText('[data-stats-player-rating]', selectedData.rating);

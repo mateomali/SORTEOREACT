@@ -30,11 +30,12 @@ $availableYears = $pdo->query(
      ORDER BY year_value DESC"
 )->fetchAll(PDO::FETCH_COLUMN);
 $availableYears = array_values(array_filter(array_map('intval', $availableYears), static fn(int $year): bool => $year > 0));
-if (!in_array(2026, $availableYears, true)) {
-    $availableYears[] = 2026;
+$currentStatsYear = (int) date('Y');
+if (!in_array($currentStatsYear, $availableYears, true)) {
+    $availableYears[] = $currentStatsYear;
     rsort($availableYears, SORT_NUMERIC);
 }
-$selectedYearRaw = array_key_exists('year', $_GET) ? trim((string) ($_GET['year'] ?? 'all')) : 'all';
+$selectedYearRaw = array_key_exists('year', $_GET) ? trim((string) ($_GET['year'] ?? $currentStatsYear)) : (string) $currentStatsYear;
 $selectedYear = $selectedYearRaw === 'all' ? 'all' : (string) max(1900, min(2100, (int) $selectedYearRaw));
 $hasCourtRequest = array_key_exists('court_id', $_GET);
 $courtId = $hasCourtRequest ? max(0, (int) ($_GET['court_id'] ?? 0)) : 0;
@@ -466,9 +467,20 @@ foreach ($playerSearchRows as $playerSearchRow) {
     ];
 }
 
+function stats_player_identity_html(array $row, array $profiles, int $currentPlayerId): string
+{
+    $profile = $profiles[(int) $row['id']] ?? $row;
+    $photo = player_photo_path($profile);
+    $photoStyle = 'object-position:' . player_photo_object_position($profile) . ';transform:' . player_photo_transform($profile);
+    return '<span class="stats-identity-avatar"><img src="' . h($photo) . '" alt="" loading="lazy" style="' . h($photoStyle) . '"></span>'
+        . '<span class="stats-identity-name">' . h((string) $row['name'])
+        . ((int) $row['id'] === $currentPlayerId ? '<small>Mi perfil</small>' : '') . '</span>';
+}
+
 $title = 'Estadísticas | ' . APP_NAME;
 $activePage = 'estadisticas.php';
 $bodyClass = 'page-estadisticas';
+$headExtraHtml = '<link rel="stylesheet" href="assets/stats-directory.css?v=' . (string) filemtime(__DIR__ . '/assets/stats-directory.css') . '">';
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -604,6 +616,9 @@ require __DIR__ . '/includes/header.php';
     data-initial-query="<?= h($playerSearchQuery) ?>"
     data-players="<?= h(json_encode(array_map(static fn(array $row): array => [
         'name' => (string) $row['name'],
+        'photo' => player_photo_path($statsProfilePlayersById[(int) $row['id']] ?? $row),
+        'photoPosition' => player_photo_object_position($statsProfilePlayersById[(int) $row['id']] ?? $row),
+        'photoTransform' => player_photo_transform($statsProfilePlayersById[(int) $row['id']] ?? $row),
         'matches' => (string) $row['partidos'],
         'goals' => (string) $row['goles'],
         'rating' => $row['rating_promedio'] !== null ? number_format((float) $row['rating_promedio'], 2) : '-',
@@ -624,7 +639,7 @@ require __DIR__ . '/includes/header.php';
 <section class="stats-player-result" data-stats-player-result hidden>
   <article class="stat-box">
     <div class="label">Jugador</div>
-    <div class="value" data-stats-player-name>-</div>
+    <div class="stats-selected-identity"><span class="stats-identity-avatar"><img data-stats-player-photo src="assets/players/default-player-silhouette.png" alt=""></span><div class="value" data-stats-player-name>-</div></div>
   </article>
   <article class="stat-box">
     <div class="label">Fechas jugadas</div>
@@ -776,7 +791,7 @@ require __DIR__ . '/includes/header.php';
               data-pg="<?= h((string) ((int) ($row['pg'] ?? 0))) ?>"
               data-pe="<?= h((string) ((int) ($row['pe'] ?? 0))) ?>"
               data-pp="<?= h((string) ((int) ($row['pp'] ?? 0))) ?>">
-            <span class="stats-player-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' - Mi perfil' : '' ?></span>
+            <span class="stats-player-name"><?= stats_player_identity_html($row, $statsProfilePlayersById, $currentPlayerId) ?></span>
             <span>
               <button
                 type="button"
@@ -1129,7 +1144,7 @@ require __DIR__ . '/includes/header.php';
       <?php else: ?>
         <?php foreach ($scorers as $row): ?>
           <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-current-player-row is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
-            <span class="stats-compact-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' - Mi perfil' : '' ?></span>
+            <span class="stats-compact-name"><?= stats_player_identity_html($row, $statsProfilePlayersById, $currentPlayerId) ?></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><strong><?= h((string) $row['goles']) ?></strong></span>
             <span><?= h(number_format((float) $row['gol_por_partido'], 2)) ?></span>
@@ -1164,7 +1179,7 @@ require __DIR__ . '/includes/header.php';
       <?php else: ?>
         <?php foreach ($captains as $row): ?>
           <div class="stats-compact-grid-row <?= (int) $row['id'] === $currentPlayerId ? 'is-current-player-row is-highlighted' : '' ?>" data-stats-player-filter-row data-player-name="<?= h((string) $row['name']) ?>">
-            <span class="stats-compact-name"><?= h((string) $row['name']) ?><?= (int) $row['id'] === $currentPlayerId ? ' - Mi perfil' : '' ?></span>
+            <span class="stats-compact-name"><?= stats_player_identity_html($row, $statsProfilePlayersById, $currentPlayerId) ?></span>
             <span><strong><?= h((string) $row['puntos']) ?></strong></span>
             <span><?= h((string) $row['partidos']) ?></span>
             <span><?= h((string) $row['ganados']) ?></span>
