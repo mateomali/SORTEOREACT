@@ -4,6 +4,9 @@ Las fechas creadas desde esta versión guardan `dynamic_fixture = 1`. Con tres o
 
 ## Reglas
 
+- Inicio y el menú Fechas muestran «Seguimiento en vivo» cuando empieza el primer partido de un triangular o cuadrangular publicado. El acceso permanece entre partidos y durante las pausas hasta cerrar la fecha. Si hay varios torneos en marcha, permite elegir uno. La disponibilidad se actualiza al cargar o navegar a una página.
+- El seguimiento conserva los permisos del marcador: visitantes, usuarios y jugadores consultan el desarrollo, fixture y tabla; administradores y directivos pueden gestionar los partidos. Un directivo conserva también su perfil de jugador.
+
 - Se eligen los dos equipos iniciales.
 - Con tres equipos, sigue el ganador. Solo en el primer partido, si empatan con goles, sigue quien marcó primero; si se cargó únicamente el marcador, se pide confirmar ese dato. Con 0–0 inicial se pregunta quién tiene prioridad. En los demás partidos el primer gol no define el cruce. Un equipo debe descansar después de dos partidos consecutivos. Si hace falta, tienen prioridad los cruces pendientes para completar exactamente dos partidos por pareja en seis encuentros. El criterio se muestra junto al marcador.
 - Con cuatro equipos, después del primer partido entran los otros dos. Se sortean los dos cruces de ganador contra perdedor, luego se sortean los cruces restantes. La vuelta repite el orden de los primeros seis partidos. Solo el empate del primer partido usa el primer gol o la elección manual con 0–0 para definir el lugar en los cruces, sin convertir el empate en una victoria para la tabla.

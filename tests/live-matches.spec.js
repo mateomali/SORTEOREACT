@@ -375,3 +375,63 @@ test('expired bulk draw asks for the first scorer and old two-team writes cannot
     } finally { fixture('delete', data.id); }
   }
 });
+
+for (const count of [3, 4]) {
+  test(`home and Fechas expose started ${count}-team tournaments with role permissions`, async ({ page, browser }) => {
+    test.setTimeout(90000);
+    const data = JSON.parse(fixture('create', count));
+    const guest = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const player = await browser.newContext();
+    const director = await browser.newContext();
+    const link = `partidos_en_vivo.php?match_id=${data.id}`;
+    try {
+      await login(page);
+      await page.goto(`${BASE}/${link}`);
+      await page.getByRole('button', { name: 'Preparar primer partido' }).click();
+      const viewer = await guest.newPage();
+      await viewer.goto(`${BASE}/index.php`);
+      await expect(viewer.locator(`main a[href="${link}"]`).filter({ hasText: 'Seguimiento en vivo' })).toHaveCount(0);
+      await page.getByRole('button', { name: 'Comenzar partido', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Pausar', exact: true })).toBeVisible();
+      await viewer.reload();
+      await expect(viewer.locator(`main a[href="${link}"]`).filter({ hasText: 'Seguimiento en vivo' })).toBeVisible();
+      await viewer.locator('#menuToggle').click();
+      await viewer.locator('#mainNav summary').filter({ hasText: /^Fechas/ }).click();
+      await expect(viewer.locator('#mainNav a[href="seguimiento_en_vivo.php"]')).toBeVisible();
+      await viewer.locator('#mainNav a[href="seguimiento_en_vivo.php"]').click();
+      if (!viewer.url().includes(link)) await viewer.locator(`a[href="${link}"]`).filter({ hasText: /Temporary/ }).click();
+      await expect(viewer.getByRole('timer')).toBeVisible();
+      await expect(viewer.getByRole('button', { name: 'Pausar', exact: true })).toBeDisabled();
+      const blocked = await viewer.request.post(`${BASE}/${link}&api=1`, { data: { action: 'pause' } });
+      expect(blocked.status()).toBe(403);
+      await player.addCookies([{ ...JSON.parse(fixture('player-session', data.id)), url: BASE }]);
+      const playerPage = await player.newPage();
+      await playerPage.goto(`${BASE}/${link}`);
+      await expect(playerPage.getByRole('button', { name: 'Pausar', exact: true })).toBeDisabled();
+      expect((await playerPage.request.post(`${BASE}/${link}&api=1`, { data: { action: 'pause' } })).status()).toBe(403);
+      await expect(playerPage.getByRole('link', { name: 'Volver al inicio', exact: true })).toBeVisible();
+      await director.addCookies([{ ...JSON.parse(fixture('director-session', data.id)), url: BASE }]);
+      const directorPage = await director.newPage();
+      await directorPage.goto(`${BASE}/${link}`);
+      await expect(directorPage.getByRole('button', { name: 'Pausar', exact: true })).toBeEnabled();
+      await directorPage.getByRole('button', { name: 'Pausar', exact: true }).click();
+      await expect(directorPage.getByRole('button', { name: 'Reanudar', exact: true })).toBeVisible();
+      await page.goto(`${BASE}/index.php`);
+      await page.locator('#mainNav summary').filter({ hasText: /^Fechas/ }).click();
+      await expect(page.locator('#mainNav a[href="seguimiento_en_vivo.php"]')).toBeVisible();
+      await viewer.goto(`${BASE}/index.php`);
+      await expect(viewer.locator(`main a[href="${link}"]`).filter({ hasText: 'Seguimiento en vivo' })).toBeVisible();
+      await directorPage.getByRole('button', { name: 'Finalizar partido', exact: true }).click();
+      await directorPage.getByRole('dialog').getByRole('radio').first().check();
+      await directorPage.getByRole('button', { name: 'Guardar y finalizar' }).click();
+      await expect(directorPage.getByRole('dialog')).toHaveCount(0);
+      await viewer.reload();
+      await expect(viewer.locator(`main a[href="${link}"]`).filter({ hasText: 'Seguimiento en vivo' })).toBeVisible();
+      await directorPage.getByRole('button', { name: 'Finalizar fecha', exact: true }).click();
+      await directorPage.getByRole('dialog').getByRole('button', { name: 'Finalizar fecha', exact: true }).click();
+      await expect.poll(() => JSON.parse(fixture('inspect', data.id)).session.state.closed).toBe(true);
+      await viewer.reload();
+      await expect(viewer.locator(`main a[href="${link}"]`).filter({ hasText: 'Seguimiento en vivo' })).toHaveCount(0);
+    } finally { await Promise.allSettled([guest.close(), player.close(), director.close()]); fixture('delete', data.id); }
+  });
+}

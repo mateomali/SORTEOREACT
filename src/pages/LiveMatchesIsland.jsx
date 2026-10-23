@@ -200,7 +200,7 @@ export function LiveMatchesIsland({ root }) {
   }
 
   return <div className="live-matches">
-    <header className="live-page-header"><div><h1>Partidos en vivo</h1><p>{payload.title}</p></div><a className="live-button" href="editar_partidos.php">Volver a fechas</a></header>
+    <header className="live-page-header"><div><h1>Partidos en vivo</h1><p>{payload.title}</p></div><a className="live-button" href={payload.canManage ? 'editar_partidos.php' : 'index.php'}>{payload.canManage ? 'Volver a fechas' : 'Volver al inicio'}</a></header>
     <div className="live-progress"><span><strong>{completed}</strong> / {target} {payload.teams.length === 2 ? 'partidos' : 'partidos del ida y vuelta'}{completed > target ? ` · ${completed - target} adicionales` : ''}</span><span role="status">{connection}</span></div>
     <div className="live-actions"><button className="live-button" type="button" onClick={async () => {
       if (sound) { setSound(false); return; }

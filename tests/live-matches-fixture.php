@@ -38,6 +38,17 @@ $match = repo_match_by_id($id);
 if (!$match || $match['title'] !== 'Temporary live matches validation') throw new RuntimeException('Refusing access to non-fixture match');
 if ($action === 'legacy') {
     $pdo->prepare('UPDATE matches SET dynamic_fixture = 0 WHERE id = ?')->execute([$id]);
+} elseif ($action === 'player-session') {
+    $player = repo_match_participants($id)[0];
+    $pdo->prepare("INSERT INTO site_users (username, password_hash, role, player_id, active) VALUES (?, ?, 'jugador', ?, 1)")
+        ->execute(['Temporary live profile ' . $id, password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), $player['id']]);
+    $userId = (int) $pdo->lastInsertId();
+    session_write_close();
+    session_id('liveplayer' . $id);
+    session_start();
+    $_SESSION = ['user_id' => $userId, 'user_role' => 'jugador', 'player_id' => (int) $player['id'], 'player_name' => $player['name']];
+    echo json_encode(['name' => session_name(), 'value' => session_id()]);
+    session_write_close();
 } elseif ($action === 'director-session') {
     $memberName = 'Temporary live director ' . $id;
     $pdo->prepare('INSERT INTO directive_members (name, password_hash) VALUES (?, ?)')->execute([$memberName, password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT)]);
@@ -98,6 +109,7 @@ if ($action === 'legacy') {
         $pdo->prepare('DELETE FROM directive_members WHERE name = ?')->execute(['Temporary live director ' . $id]);
         $pdo->prepare('DELETE FROM directive_members WHERE name LIKE ?')->execute(['Temporary podium evaluator ' . $id . '-%']);
         $pdo->prepare('DELETE FROM site_users WHERE username = ?')->execute(['Temporary podium profile ' . $id]);
+        $pdo->prepare('DELETE FROM site_users WHERE username = ?')->execute(['Temporary live profile ' . $id]);
         foreach ($players as $p) $pdo->prepare('DELETE FROM players WHERE id = ?')->execute([$p['id']]);
         $pdo->commit();
     } catch (Throwable $e) { $pdo->rollBack(); throw $e; }

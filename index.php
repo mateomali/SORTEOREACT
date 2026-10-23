@@ -1251,6 +1251,15 @@ if ($showHistoryPage) {
 }
 require __DIR__ . '/includes/header.php';
 ?>
+<?php if (!$showHistoryPage && $liveFollowMatches): ?>
+  <section class="card" aria-labelledby="home-live-follow-title">
+    <h2 id="home-live-follow-title">Torneo en marcha</h2>
+    <?php foreach ($liveFollowMatches as $liveFollowMatch): ?>
+      <p><?= h((string) ($liveFollowMatch['title'] ?: ('Fecha #' . $liveFollowMatch['id']))) ?> · <?= (int) $liveFollowMatch['num_teams'] === 3 ? 'Triangular' : 'Cuadrangular' ?></p>
+      <a class="btn btn-primary" href="partidos_en_vivo.php?match_id=<?= (int) $liveFollowMatch['id'] ?>">Seguimiento en vivo</a>
+    <?php endforeach; ?>
+  </section>
+<?php endif; ?>
 
 <section class="page-head <?= $showHistoryPage ? "" : "home-dashboard-head" ?>">
   <div>

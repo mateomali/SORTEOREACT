@@ -2,6 +2,9 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/helpers.php';
+require_once __DIR__ . '/../lib/live_match_repository.php';
+
+$liveFollowMatches = live_follow_matches();
 
 $title = $title ?? APP_NAME;
 $activePage = $activePage ?? '';
@@ -155,6 +158,10 @@ if (is_admin()) {
 }
 if ($profileMenuLabel !== null) {
     $publicMenu['perfil.php'] = $profileMenuLabel;
+}
+if ($liveFollowMatches) {
+    if (is_admin()) $roleMenuGroups['Fechas']['seguimiento_en_vivo.php'] = 'Seguimiento en vivo';
+    else $publicMenuGroups['Fechas']['seguimiento_en_vivo.php'] = 'Seguimiento en vivo';
 }
 if ($showLoginMenu) {
     $publicMenu = ['index.php' => 'Inicio', 'login.php' => 'Iniciar sesión'] + $publicMenu;

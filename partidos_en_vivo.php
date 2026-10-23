@@ -105,7 +105,7 @@ $payload = ['matchId' => $matchId, 'title' => $match['title'] ?: 'Fecha #' . $ma
     'canCorrect' => $canManage && repo_match_teams_are_public($match) && in_array($match['status'], ['sorteado', 'finalizado'], true),
     'isAdmin' => is_admin()];
 $title = 'Partidos en vivo | ' . APP_NAME;
-$activePage = 'editar_partidos.php';
+$activePage = 'seguimiento_en_vivo.php';
 require __DIR__ . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="assets/partidos-en-vivo.css?v=<?= h((string) filemtime(__DIR__ . '/assets/partidos-en-vivo.css')) ?>">

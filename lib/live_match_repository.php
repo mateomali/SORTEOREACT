@@ -3,6 +3,30 @@ declare(strict_types=1);
 require_once __DIR__ . '/live_matches.php';
 require_once __DIR__ . '/schema.php';
 
+// Read-only discovery: preparing the first pairing does not start a tournament.
+function live_follow_matches(): array
+{
+    static $matches = null;
+    if ($matches !== null) return $matches;
+    $matches = [];
+    if (!schema_table_exists(db(), 'match_live_sessions')) return $matches;
+    $rows = db()->query("SELECT m.id, m.title, m.num_teams, s.state_json
+        FROM matches m JOIN match_live_sessions s ON s.match_id = m.id
+        WHERE m.status = 'sorteado' AND m.dynamic_fixture = 1
+          AND m.num_teams IN (3, 4) AND m.teams_published_at IS NOT NULL
+        ORDER BY m.match_date DESC, m.id DESC")->fetchAll();
+    foreach ($rows as $row) {
+        $state = json_decode($row['state_json'], true);
+        if (!is_array($state) || !empty($state['closed'])) continue;
+        $started = array_filter($state['games'] ?? [], static fn(array $game): bool =>
+            ($game['running_since'] ?? null) !== null || ($game['elapsed'] ?? 0) > 0 || ($game['status'] ?? '') === 'finished');
+        if (!$started) continue;
+        unset($row['state_json']);
+        $matches[] = $row;
+    }
+    return $matches;
+}
+
 function ensure_live_match_schema(): void
 {
     static $done = false;
