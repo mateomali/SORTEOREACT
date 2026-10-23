@@ -33,7 +33,7 @@ $disableContrastOverrides = (bool) ($disableContrastOverrides ?? true);
 $brandLogoPath = __DIR__ . '/../assets/goodfellas-logo.png';
 $publicMenu = [
     'index.php' => 'Inicio',
-    'jugadores2.php' => 'Jugadores',
+    'jugadores2.php' => 'Fichas',
     'estadisticas.php' => 'Estadísticas',
     'historial.php' => 'Historial',
 ];
@@ -44,7 +44,7 @@ $roleLabel = '';
 if (is_admin()) {
     $roleLabel = 'Admin';
     $roleMenu = [
-        'propuestas_equipos.php' => 'Propuestas próximo partido',
+        'propuestas_equipos.php' => 'Próximo partido',
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
         'configuracion.php' => 'Configuración',
@@ -57,7 +57,7 @@ if (is_admin()) {
 } elseif (is_directivo()) {
     $roleLabel = 'Directivo';
     $roleMenu = [
-        'propuestas_equipos.php' => 'Propuestas próximo partido',
+        'propuestas_equipos.php' => 'Próximo partido',
         'perfil.php' => 'Mi perfil',
         'editar_partidos.php' => 'Fechas',
         'junta_votaciones.php' => 'Votaciones',
@@ -67,7 +67,7 @@ if (is_admin()) {
 } elseif (is_player_user()) {
     $roleLabel = 'Jugador';
     $roleMenu = [
-        'propuestas_equipos.php' => 'Propuestas próximo partido',
+        'propuestas_equipos.php' => 'Próximo partido',
         'perfil.php' => 'Mi perfil',
         'estadisticas.php' => 'Mis stats',
         'logout.php' => 'Salir',
@@ -75,34 +75,38 @@ if (is_admin()) {
 } elseif (current_user_id() > 0) {
     $roleLabel = 'Usuario';
     $roleMenu = [
-        'propuestas_equipos.php' => 'Propuestas próximo partido',
+        'propuestas_equipos.php' => 'Próximo partido',
         'perfil.php' => 'Mi perfil',
         'logout.php' => 'Salir',
     ];
 } elseif (!empty($_SESSION['guest_vote_invite_id'])) {
     $roleLabel = 'Invitado';
     $roleMenu = [
-        'propuestas_equipos.php' => 'Propuestas próximo partido',
+        'propuestas_equipos.php' => 'Próximo partido',
         'junta_votaciones.php' => 'Votacion',
         'logout.php' => 'Salir',
     ];
 } else {
     $roleMenu = [
-        'propuestas_equipos.php' => 'Propuestas próximo partido',
+        'propuestas_equipos.php' => 'Próximo partido',
         'login.php' => 'Ingresar',
     ];
 }
+$showLoginMenu = array_key_exists('login.php', $roleMenu);
+unset($roleMenu['login.php'], $roleMenu['propuestas_equipos.php']);
 $profileMenuLabel = $roleMenu['perfil.php'] ?? null;
 unset($roleMenu['perfil.php']);
 if (is_admin()) {
     $roleMenuGroups = [
         'Fechas' => [
+            'propuestas_equipos.php' => 'Próximo partido',
             'crear_partido.php' => $roleMenu['crear_partido.php'] ?? 'Crear fecha',
             'editar_partidos.php' => $roleMenu['editar_partidos.php'] ?? 'Editar fechas',
             'historial.php' => $publicMenu['historial.php'] ?? 'Historial',
         ],
         'Jugadores' => [
-            'jugadores2.php' => 'Jugadores',
+            'jugadores2.php' => 'Fichas',
+            'jugadores2.php?tab=awards' => 'Premios',
             'jugadores2.php?create=1#crear-jugador' => 'Crear jugador',
             'estadisticas.php' => $publicMenu['estadisticas.php'] ?? 'Estadisticas',
         ],
@@ -119,8 +123,8 @@ if (is_admin()) {
         ],
     ];
     $roleMenuGroups = [
-        'Fechas' => $roleMenuGroups['Fechas'],
         'Jugadores' => $roleMenuGroups['Jugadores'],
+        'Fechas' => $roleMenuGroups['Fechas'],
         'Gestion' => $roleMenuGroups['Gestion'],
         'Personas' => $roleMenuGroups['Personas'],
         'Salir' => $roleMenuGroups['Sesion'],
@@ -131,10 +135,12 @@ if (is_admin()) {
 } else {
     $publicMenuGroups = [
         'Jugadores' => [
-            'jugadores2.php' => 'Jugadores',
+            'jugadores2.php' => 'Fichas',
+            'jugadores2.php?tab=awards' => 'Premios',
             'estadisticas.php' => $publicMenu['estadisticas.php'] ?? 'Estadisticas',
         ],
         'Fechas' => [
+            'propuestas_equipos.php' => 'Próximo partido',
             'historial.php' => $publicMenu['historial.php'] ?? 'Historial',
         ],
     ];
@@ -150,6 +156,9 @@ if (is_admin()) {
 if ($profileMenuLabel !== null) {
     $publicMenu['perfil.php'] = $profileMenuLabel;
 }
+if ($showLoginMenu) {
+    $publicMenu = ['index.php' => 'Inicio', 'login.php' => 'Iniciar sesión'] + $publicMenu;
+}
 $showRoleShortcut = false;
 $roleShortcutHref = is_player_user() ? 'perfil.php' : ((is_directivo() || !empty($_SESSION['guest_vote_invite_id'])) ? 'junta_votaciones.php' : (current_user_id() > 0 ? 'logout.php' : 'login.php'));
 $roleShortcutLabel = is_player_user() ? 'Mi perfil' : (is_directivo() ? 'Junta' : (!empty($_SESSION['guest_vote_invite_id']) ? 'Votacion' : (current_user_id() > 0 ? 'Salir' : 'Ingresar')));
@@ -163,6 +172,17 @@ $navDropdownSummaryActive = $navLinkLayout . ' cursor-pointer list-none select-n
 $navDropdownMenuClass = 'absolute right-0 z-30 mt-1 hidden min-w-44 flex-col gap-1 rounded-lg border border-white/15 bg-emerald-950 p-1.5 shadow-lg shadow-emerald-950/25 group-open:flex max-[760px]:static max-[760px]:mt-1 max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-0 max-[760px]:bg-transparent max-[760px]:p-0 max-[760px]:shadow-none';
 $navDropdownItemClass = 'flex min-h-8 items-center rounded-md border border-transparent px-3 py-2 text-sm font-extrabold leading-tight text-white no-underline transition hover:border-white/25 hover:bg-white/10 hover:text-white max-[760px]:min-h-10 max-[760px]:border-[#1b5a47] max-[760px]:bg-[#082f23] max-[760px]:text-lime-50 hover:max-[760px]:border-lime-200/35 hover:max-[760px]:bg-[#0a4a35]';
 $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-white/45 bg-[#e7eee9] px-3 py-2 text-sm font-extrabold leading-tight text-[#07130f] no-underline transition hover:bg-[#f4f8f6] hover:text-[#07130f] max-[760px]:min-h-10 max-[760px]:border-lime-200/70 max-[760px]:bg-[#0f513c] max-[760px]:text-lime-50 max-[760px]:shadow-[inset_4px_0_0_rgba(217,249,157,0.92)] hover:max-[760px]:bg-[#145f47] hover:max-[760px]:text-lime-50';
+$navLinkActive .= ' gf-nav-current';
+$navDropdownItemActive .= ' gf-nav-current';
+$navDropdownSummaryActive .= ' gf-nav-group-current';
+$navIsActive = static function (string $file) use ($activePage): bool {
+    if ((parse_url($file, PHP_URL_PATH) ?: '') !== $activePage) return false;
+    if ($activePage !== 'jugadores2.php') return true;
+    parse_str((string) parse_url($file, PHP_URL_QUERY), $target);
+    if (isset($target['create'])) return isset($_GET['create']);
+    if (isset($_GET['create'])) return false;
+    return (($target['tab'] ?? '') === 'awards') === (($_GET['tab'] ?? '') === 'awards');
+};
 ?>
 <!doctype html>
 <html lang="es">
@@ -209,13 +229,13 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
         aria-label="Navegacion principal"
       >
         <?php foreach ($publicMenu as $file => $label): ?>
-          <a class="<?= h($activePage === $file ? $navLinkActive : $navLinkBase) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+          <a class="<?= h($navIsActive($file) ? $navLinkActive : $navLinkBase) ?>" href="<?= h($file) ?>"><?= h($label) ?><?php if ($navIsActive($file)): ?><span class="gf-nav-current-mark" aria-hidden="true">&#10003;</span><?php endif; ?></a>
         <?php endforeach; ?>
         <?php foreach ($publicMenuGroups as $groupLabel => $groupLinks): ?>
           <?php $groupIsActive = array_key_exists($activePage, $groupLinks); ?>
           <?php if (count($groupLinks) === 1): ?>
             <?php foreach ($groupLinks as $file => $label): ?>
-              <a class="<?= h($activePage === $file ? $navLinkActive : $navLinkBase) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+              <a class="<?= h($navIsActive($file) ? $navLinkActive : $navLinkBase) ?>" href="<?= h($file) ?>"><?= h($label) ?><?php if ($navIsActive($file)): ?><span class="gf-nav-current-mark" aria-hidden="true">&#10003;</span><?php endif; ?></a>
             <?php endforeach; ?>
           <?php else: ?>
             <details class="<?= h($navDropdownClass) ?>">
@@ -225,7 +245,7 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
               </summary>
               <div class="<?= h($navDropdownMenuClass) ?>" aria-label="<?= h($groupLabel) ?>">
               <?php foreach ($groupLinks as $file => $label): ?>
-                <a class="<?= h($activePage === $file ? $navDropdownItemActive : $navDropdownItemClass) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+                <a class="<?= h($navIsActive($file) ? $navDropdownItemActive : $navDropdownItemClass) ?>" href="<?= h($file) ?>"><?= h($label) ?><?php if ($navIsActive($file)): ?><span class="gf-nav-current-mark" aria-hidden="true">&#10003;</span><?php endif; ?></a>
               <?php endforeach; ?>
               </div>
             </details>
@@ -236,7 +256,7 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
             <?php $groupIsActive = array_key_exists($activePage, $groupLinks); ?>
             <?php if (count($groupLinks) === 1): ?>
               <?php foreach ($groupLinks as $file => $label): ?>
-                <a class="<?= h(($activePage === $file ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+                <a class="<?= h(($navIsActive($file) ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?><?php if ($navIsActive($file)): ?><span class="gf-nav-current-mark" aria-hidden="true">&#10003;</span><?php endif; ?></a>
               <?php endforeach; ?>
             <?php else: ?>
               <details class="<?= h($navDropdownClass) ?>">
@@ -246,7 +266,7 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
                 </summary>
                 <div class="<?= h($navDropdownMenuClass) ?>" aria-label="<?= h($roleLabel . ': ' . $groupLabel) ?>">
                 <?php foreach ($groupLinks as $file => $label): ?>
-                  <a class="<?= h(($activePage === $file ? $navDropdownItemActive : $navDropdownItemClass) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+                  <a class="<?= h(($navIsActive($file) ? $navDropdownItemActive : $navDropdownItemClass) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?><?php if ($navIsActive($file)): ?><span class="gf-nav-current-mark" aria-hidden="true">&#10003;</span><?php endif; ?></a>
                 <?php endforeach; ?>
                 </div>
               </details>
@@ -254,7 +274,7 @@ $navDropdownItemActive = 'flex min-h-8 items-center rounded-md border border-whi
           <?php endforeach; ?>
         <?php else: ?>
           <?php foreach ($roleMenu as $file => $label): ?>
-            <a class="<?= h(($activePage === $file ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?></a>
+            <a class="<?= h(($navIsActive($file) ? $navLinkActive : $navLinkBase) . ' ' . ($file === 'logout.php' ? $navLogout : '')) ?>" href="<?= h($file) ?>"><?= h($label) ?><?php if ($navIsActive($file)): ?><span class="gf-nav-current-mark" aria-hidden="true">&#10003;</span><?php endif; ?></a>
           <?php endforeach; ?>
         <?php endif; ?>
       </nav>

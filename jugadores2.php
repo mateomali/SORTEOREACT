@@ -483,20 +483,35 @@ $awardEnd = sprintf('%04d-01-01', $awardYear + 1);
 $awardDefinitions = award_definitions(true);
 $awardDescriptions = award_descriptions();
 $annualAwards = [];
-$annualAwardStmt = db()->prepare("SELECT ma.player_id, ma.award_code,
+$annualAwardStmt = db()->prepare("SELECT ma.player_id, ma.award_code, m.id AS match_id, m.title, m.match_date,
     CASE WHEN EXISTS (SELECT 1 FROM match_awards siblings WHERE siblings.match_id = ma.match_id AND siblings.award_code = ma.award_code AND siblings.player_id <> ma.player_id) THEN ma.award_position ELSE 0 END AS display_position,
-    COUNT(*) AS total
+    ma.award_position
     FROM match_awards ma INNER JOIN matches m ON m.id = ma.match_id
     WHERE m.status = 'finalizado' AND m.match_date >= :start AND m.match_date < :end
-    GROUP BY ma.player_id, ma.award_code, display_position
-    ORDER BY ma.award_code, display_position");
+    ORDER BY ma.award_code, display_position, m.match_date DESC, m.id DESC");
 $annualAwardStmt->execute(['start' => $awardStart, 'end' => $awardEnd]);
 foreach ($annualAwardStmt->fetchAll() as $awardRow) {
     $code = (string) $awardRow['award_code'];
     if (!isset($awardDefinitions[$code])) continue;
-    $annualAwards[(int) $awardRow['player_id']][] = $awardDefinitions[$code] + [
-        'code' => $code, 'description' => $awardDescriptions[$code] ?? '',
-        'position' => (int) $awardRow['display_position'], 'count' => (int) $awardRow['total'],
+    $playerId = (int) $awardRow['player_id'];
+    $key = $code . ':' . (int) $awardRow['display_position'];
+    if (!isset($annualAwards[$playerId][$key])) {
+        $annualAwards[$playerId][$key] = $awardDefinitions[$code] + [
+            'code' => $code, 'description' => $awardDescriptions[$code] ?? '',
+            'position' => (int) $awardRow['display_position'], 'count' => 0, 'rankingPoints' => 0, 'matches' => [],
+        ];
+    }
+    $annualAwards[$playerId][$key]['count']++;
+    $annualAwards[$playerId][$key]['rankingPoints'] += award_max_recipients($code) > 1
+        ? max(1, 4 - (int) $awardRow['award_position']) : 1;
+    $annualAwards[$playerId][$key]['matches'][] = [
+        'id' => (int) $awardRow['match_id'],
+        'date' => substr((string) $awardRow['match_date'], 0, 10),
+        'dateLabel' => date('d/m/Y', strtotime((string) $awardRow['match_date'])),
+        'title' => trim((string) $awardRow['title']) ?: 'Fecha sin nombre',
+        'position' => (int) $awardRow['display_position'],
+        'awardedPosition' => (int) $awardRow['award_position'],
+        'points' => award_max_recipients($code) > 1 ? max(1, 4 - (int) $awardRow['award_position']) : 1,
     ];
 }
 foreach (monthly_player_awards() as $monthlyAward) {
@@ -505,10 +520,55 @@ foreach (monthly_player_awards() as $monthlyAward) {
         'code' => 'monthly', 'description' => $monthlyAward['tooltip'],
         'detail' => $monthlyAward['month_label'] . ' - ' . $monthlyAward['court_label'],
         'position' => 1, 'count' => 1,
+        'matches' => [[
+            'date' => substr($monthlyAward['month_start'], 0, 7),
+            'dateLabel' => $monthlyAward['month_label'],
+            'title' => 'Jugador del mes · ' . $monthlyAward['court_label'],
+        ]],
     ];
 }
+// One ranking per category, combining all podium positions and all recipients.
+$awardRankingCounts = [];
+$awardRankingPoints = [];
+$awardPlayerNames = [];
+foreach (db()->query('SELECT id, name FROM players')->fetchAll() as $awardPlayer) {
+    $awardPlayerNames[(int) $awardPlayer['id']] = (string) $awardPlayer['name'];
+}
+foreach ($annualAwards as $playerId => $playerAwards) {
+    foreach ($playerAwards as $award) {
+        $rankingKey = $award['code'];
+        $awardRankingCounts[$rankingKey][$playerId] = ($awardRankingCounts[$rankingKey][$playerId] ?? 0) + $award['count'];
+        $awardRankingPoints[$rankingKey][$playerId] = ($awardRankingPoints[$rankingKey][$playerId] ?? 0) + ($award['rankingPoints'] ?? $award['count']);
+    }
+}
+foreach ($annualAwards as $playerId => &$playerAwards) {
+    foreach ($playerAwards as &$award) {
+        $counts = $awardRankingCounts[$award['code']];
+        $points = $awardRankingPoints[$award['code']];
+        $ownCount = $counts[$playerId];
+        $sharedWith = [];
+        foreach ($points as $otherId => $score) {
+            if ($otherId !== $playerId && $score === $points[$playerId]) {
+                $sharedWith[] = ['id' => (int) $otherId, 'name' => $awardPlayerNames[$otherId]];
+            }
+        }
+        usort($sharedWith, static fn($a, $b) => strcasecmp($a['name'], $b['name']) ?: ($a['id'] <=> $b['id']));
+        $award['ranking'] = [
+            'position' => 1 + count(array_filter($points, static fn($score) => $score > $points[$playerId])),
+            'totalPlayers' => count($counts),
+            'count' => $ownCount,
+            'totalAwards' => array_sum($counts),
+            'points' => $points[$playerId],
+            'usesPoints' => award_max_recipients($award['code']) > 1,
+            'sharedWith' => $sharedWith,
+        ];
+    }
+    unset($award);
+}
+unset($playerAwards);
 $annualResultsStmt = db()->prepare("SELECT p.id, p.name,
     COUNT(DISTINCT mp.match_id) AS played, ROUND(AVG(mp.rating), 2) AS average,
+    COALESCE(SUM(mp.goals), 0) AS goals,
     SUM(CASE WHEN mt.goals > opponent.goals THEN 1 ELSE 0 END) AS won,
     SUM(CASE WHEN mt.goals = opponent.goals THEN 1 ELSE 0 END) AS drawn,
     SUM(CASE WHEN mt.goals < opponent.goals THEN 1 ELSE 0 END) AS lost
@@ -525,9 +585,11 @@ $annualResultsStmt = db()->prepare("SELECT p.id, p.name,
     WHERE m.match_date >= :start AND m.match_date < :end
     GROUP BY p.id, p.name");
 $annualResultsStmt->execute(['start' => $awardStart, 'end' => $awardEnd]);
-$annualResultRows = $annualResultsStmt->fetchAll();
+require_once __DIR__ . '/lib/goal_corrections.php';
+$annualResultRows = apply_goal_corrections($annualResultsStmt->fetchAll(), 'goals', $awardYear, true);
 $annualResults = [];
 $annualRankRules = [
+    'goals' => ['desc', ['played' => 'asc', 'average' => 'desc']],
     'played' => ['desc', ['average' => 'desc']],
     'won' => ['desc', ['played' => 'asc', 'average' => 'desc']],
     'drawn' => ['desc', ['played' => 'asc', 'average' => 'desc']],
@@ -537,11 +599,12 @@ foreach ($annualResultRows as $row) {
     $annualResults[(int) $row['id']] = [
         'played' => (int) $row['played'], 'won' => (int) $row['won'],
         'drawn' => (int) $row['drawn'], 'lost' => (int) $row['lost'],
+        'goals' => (int) $row['goals'],
         'totalPlayers' => count($annualResultRows), 'ranks' => [],
     ];
 }
 foreach ($annualRankRules as $metric => [$direction, $tieBreakers]) {
-    $ranked = $annualResultRows;
+    $ranked = $metric === 'goals' ? $annualResultRows : array_values(array_filter($annualResultRows, static fn($row) => (int) $row['played'] > 0));
     usort($ranked, static function (array $a, array $b) use ($metric, $direction, $tieBreakers): int {
         foreach ([$metric => $direction] + $tieBreakers as $field => $order) {
             $comparison = (float) ($a[$field] ?? 0) <=> (float) ($b[$field] ?? 0);
@@ -624,11 +687,42 @@ foreach ($players as $player) {
         'weakStat' => $weakStat !== null ? ['label' => (string) $weakStat['label']] : null,
         'description' => shared_profile_player_description($player, $statLabels),
         'awardYear' => $awardYear,
-        'annualResults' => $annualResults[$id] ?? ['played' => 0, 'won' => 0, 'drawn' => 0, 'lost' => 0, 'totalPlayers' => count($annualResultRows), 'ranks' => []],
-        'annualAwards' => $annualAwards[$id] ?? [],
+        'annualResults' => $annualResults[$id] ?? ['played' => 0, 'won' => 0, 'drawn' => 0, 'lost' => 0, 'goals' => 0, 'totalPlayers' => count($annualResultRows), 'ranks' => []],
+        'annualAwards' => array_values($annualAwards[$id] ?? []),
     ];
 }
+$awardLeaderboards = [];
+foreach ($awardRankingCounts as $code => $counts) {
+    $entries = [];
+    foreach ($counts as $playerId => $count) {
+        $score = $awardRankingPoints[$code][$playerId];
+        $awardHistory = [];
+        foreach ($annualAwards[$playerId] as $playerAward) {
+            if ($playerAward['code'] !== $code) continue;
+            foreach ($playerAward['matches'] as $match) $awardHistory[] = $match + ['points' => 1];
+        }
+        usort($awardHistory, static fn($a, $b) => strcmp($b['date'], $a['date']) ?: (($b['id'] ?? 0) <=> ($a['id'] ?? 0)));
+        $entries[] = ['id' => (int) $playerId, 'name' => $awardPlayerNames[$playerId],
+            'count' => $count, 'points' => $score, 'matches' => $awardHistory,
+            'position' => 1 + count(array_filter($awardRankingPoints[$code], static fn($other) => $other > $score))];
+    }
+    usort($entries, static fn($a, $b) => ($b['points'] <=> $a['points']) ?: strcasecmp($a['name'], $b['name']));
+    $definition = $code === 'monthly' ? monthly_player_award_definition() : $awardDefinitions[$code];
+    $awardLeaderboards[] = ['code' => $code, 'label' => $definition['label'], 'icon' => $definition['icon'],
+        'description' => $code === 'monthly' ? monthly_player_award_description() : ($awardDescriptions[$code] ?? ''),
+        'usesPoints' => award_max_recipients($code) > 1, 'entries' => $entries];
+}
+$annualScorers = array_values(array_filter($annualResultRows, static fn($row) => (int) $row['goals'] > 0));
+usort($annualScorers, static fn($a, $b) => ((int) $b['goals'] <=> (int) $a['goals']) ?: strcasecmp($a['name'], $b['name']));
+$scorerEntries = [];
+foreach ($annualScorers as $row) {
+    $scorerEntries[] = ['id' => (int) $row['id'], 'name' => $row['name'], 'goals' => (int) $row['goals'],
+        'position' => 1 + count(array_filter($annualScorers, static fn($other) => (int) $other['goals'] > (int) $row['goals']))];
+}
 $jugadores2Payload = [
+    'awardYear' => $awardYear,
+    'awardLeaderboards' => $awardLeaderboards,
+    'scorers' => $scorerEntries,
     'isAdmin' => $isAdmin,
     'deleteToken' => $isAdmin ? (string) $_SESSION['jugadores2_delete_token'] : '',
     'showInactive' => $showInactive,

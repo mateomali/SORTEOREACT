@@ -2,6 +2,10 @@ charset = utf-8
 
 # Project Rules
 
+- Historical matches were played on Wednesdays before the schedule changed to Fridays. During historical data reconciliation, do not infer or change a match date solely from the current weekday schedule; resolve contradictions using the source records and user confirmation.
+
+- The Goodfellas award may be assigned to any player in the players roster, including players who were not called up for that match. Receiving this award must not create a match participation or imply that the player played.
+
 - A directivo is a player with additional permissions, not a separate kind of player. A directivo account can be linked to an existing player from the players list and must retain all player features and access to that player's full personal profile, including photo, matches, awards, and statistics. Keep directive permissions additive to player permissions.
 
 - In Directivo > Mis valoraciones, directivos must be able to assign awards and scores according to the settings established when creating the match date (fecha). Preserve both capabilities and respect each fecha's configured rules.

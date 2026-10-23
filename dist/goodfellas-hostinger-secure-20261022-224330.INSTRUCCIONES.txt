@@ -1,0 +1,57 @@
+DESPLIEGUE SEGURO EN HOSTINGER (sitio existente)
+================================================
+
+QUE ES ESTE BUNDLE
+------------------
+Actualizacion de codigo de la aplicacion. NO es una instalacion desde cero:
+no trae configuracion, ni base de datos, ni fotos de jugadores.
+
+NO INCLUYE (a proposito)
+------------------------
+  config.php          -> tus credenciales de produccion. El servidor conserva el suyo.
+  hostinger_diag.php  -> diagnostico sin login que filtraba datos de la base y rutas.
+  scripts/            -> scripts CLI de importacion/migracion, accesibles por HTTP.
+  SQL, CSV, Markdown, package.json, vite.config.js, capturas, src/, tests/, docs/.
+
+ANTES DE SUBIR
+--------------
+1. Copia de seguridad de los archivos del servidor.
+2. Copia de seguridad de la base de datos (hPanel > Bases de datos > Exportar, o backup.php).
+3. Anota la version de PHP del hosting (debe ser 8.0 o superior).
+
+COMO SUBIR
+----------
+4. Extrae el ZIP en la carpeta actual de la aplicacion (donde esta index.php),
+   sobrescribiendo solo los archivos incluidos.
+5. NO borres la carpeta del sitio antes de subir. Se conservan:
+     config.php, uploads/, logs/, y todos los datos existentes.
+6. El ZIP incluye uploads/.htaccess con el mismo contenido que ya tenias; sirve
+   para que un despliegue en carpeta limpia tambien quede protegido. No borra fotos.
+7. El ZIP incluye goodfellas.apk para que el boton "Descarga la app" de la home
+   siga funcionando. Si tu APK del servidor es mas nuevo, no lo sobrescribas.
+
+DESPUES DE SUBIR
+----------------
+8. Verifica que config.php siga en el servidor y que uploads/ conserve las fotos.
+9. Comprueba en el navegador: inicio, login, jugadores, sorteo, capitanes,
+   encuentros, historial, estadisticas, perfil y junta de votaciones.
+10. Confirma que estos devuelven 404 (es lo esperado):
+      /hostinger_diag.php
+      /scripts/
+      /lib/helpers.php
+      /includes/header.php
+      /database.sql
+    Si /hostinger_diag.php responde con texto, borra ese archivo del servidor.
+
+ENDURECIMIENTO PENDIENTE (RECOMENDADO)
+--------------------------------------
+11. config.php en el servidor contiene DB_PASS y ADMIN_PASSWORD con valores por
+    defecto escritos en el codigo. Muevelos a variables de entorno de Hostinger
+    (GOODFELLAS_DB_PASS, GOODFELLAS_ADMIN_PASSWORD, GOODFELLAS_DB_USER) y cambia
+    esas contrasenas: tambien estan en el repositorio local.
+12. Comprueba que la contrasena del panel de admin no sea la misma que la de MySQL.
+
+ROLLBACK
+--------
+13. Si algo falla: restaura la copia de seguridad de los archivos y de la base.
+    El bundle no modifica datos por si mismo, solo codigo.

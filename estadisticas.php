@@ -8,6 +8,7 @@ require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/directivos.php';
 require_once __DIR__ . '/lib/admin_config.php';
 require_once __DIR__ . '/lib/player_profile_visual.php';
+require_once __DIR__ . '/lib/goal_corrections.php';
 
 $pdo = db();
 ensure_auth_schema();
@@ -126,6 +127,14 @@ LIMIT 100";
 $stmtScorers = $pdo->prepare($scorersSql);
 $stmtScorers->execute($params + ['min_matches' => $minMatches]);
 $scorers = $stmtScorers->fetchAll();
+$useGoalCorrections = $courtId === 0 && $dateFrom === '' && $dateTo === '';
+$correctionYear = $selectedYear === 'all' ? null : (int) $selectedYear;
+if ($useGoalCorrections) {
+    $scorers = apply_goal_corrections($scorers, 'goles', $correctionYear, true);
+    usort($scorers, static fn($a, $b) => ($b['goles'] <=> $a['goles'])
+        ?: (($b['gol_por_partido'] ?? 0) <=> ($a['gol_por_partido'] ?? 0)) ?: strcasecmp($a['name'], $b['name']));
+    $summary['goles_totales'] = max(0, (int) $summary['goles_totales'] + array_sum(goal_corrections($correctionYear)));
+}
 
 $matchStatsJoin = ["m.id = mp.match_id", "m.status = 'finalizado'"];
 if ($selectedYear !== 'all') {
@@ -221,6 +230,14 @@ LIMIT 100";
 $stmtRatings = $pdo->prepare($ratingSql);
 $stmtRatings->execute($params + $awardParams + ['min_matches' => $minMatches, 'current_player_id' => $currentPlayerId]);
 $ratings = $stmtRatings->fetchAll();
+if ($useGoalCorrections) {
+    $ratings = apply_goal_corrections($ratings, 'goles', $correctionYear, true);
+    foreach ($ratings as &$row) {
+        $row['indice_rendimiento'] = round((float) ($row['rating_promedio'] ?? 0) * 0.7
+            + ((int) $row['partidos'] > 0 ? $row['goles'] / $row['partidos'] * 3 : 0), 2);
+    }
+    unset($row);
+}
 
 $profileStatLabels = shared_profile_stat_labels();
 $profileStatHelp = shared_profile_stat_help();
@@ -1086,6 +1103,7 @@ require __DIR__ . '/includes/header.php';
                       <span>
                         <strong><?= h((string) (int) $row['goles']) ?> goles</strong>
                         <small>Fechas donde convirtió en el filtro actual.</small>
+                        <?php if (!empty($row['goal_correction'])): ?><small>Total corregido según la tabla de goleadores confirmada de 2026; el detalle por fecha conserva los registros originales.</small><?php endif; ?>
                       </span>
                     </div>
                       <?php if (!empty($playerGoalDetails[$playerRowId])): ?>
@@ -1102,8 +1120,8 @@ require __DIR__ . '/includes/header.php';
                         <div class="award-popover-item">
                           <span class="award-popover-icon">0</span>
                           <span>
-                            <strong>Sin goles registrados</strong>
-                            <small>No tiene goles en el filtro actual.</small>
+                            <strong>Sin goles desglosados por fecha</strong>
+                            <small>El contador puede incluir goles del acumulado confirmado.</small>
                           </span>
                         </div>
                       <?php endif; ?>

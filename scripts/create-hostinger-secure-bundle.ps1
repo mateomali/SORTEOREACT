@@ -586,7 +586,13 @@ ENDURECIMIENTO PENDIENTE (RECOMENDADO)
 ROLLBACK
 --------
 13. Si algo falla: restaura la copia de seguridad de los archivos y de la base.
-    El bundle no modifica datos por si mismo, solo codigo.
+    Esta version incluye la reconciliacion de goles de 2026 confirmada por el usuario.
+    Al abrir jugadores, estadisticas o perfil, crea player_goal_corrections y guarda
+    una correccion por jugador una sola vez para los 32 nombres de la lista.
+    No cambia goles por partido, participaciones ni estados de jugadores.
+    Los jugadores fuera de la lista conservan sus goles; los goles nuevos siguen sumando.
+    La correccion afecta al acumulado general anual y al historico; no se distribuye
+    entre canchas ni intervalos de fechas. Conserva el backup de la base para rollback.
 '@
 Write-TextFile -Path $instructionsPath -Content $instructions
 

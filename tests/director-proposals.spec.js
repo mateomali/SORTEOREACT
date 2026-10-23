@@ -299,7 +299,7 @@ test('reiniciar solo la propuesta propia y mostrar propuestas por decision del a
     await expect(voterPage.locator('[data-proposal-countdown]').first()).toContainText('min');
     await page.goto(`${base}/index.php`);
     await expect(page.getByRole('heading', { name: 'Votación de equipos habilitada', exact: true })).toBeVisible();
-    await voterPage.goto(`${base}/propuestas_equipos.php`);
+    await voterPage.goto(`${base}/propuestas_equipos.php?match_id=${fixture.matchId}`);
     await expect(voterPage.getByRole('heading', { name: fixture.prefix, exact: true })).toBeVisible();
     await voterPage.getByRole('button', { name: 'Votar esta propuesta', exact: true }).click();
     adminPage.once('dialog', dialog => dialog.accept());

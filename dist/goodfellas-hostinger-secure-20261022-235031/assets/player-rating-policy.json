@@ -1,0 +1,165 @@
+{
+  "version": 2,
+  "regularityCenter": 3.5,
+  "regularityDivisor": 50,
+  "secondaryFit": 0.95,
+  "outsideFit": 0.9,
+  "weights": {
+    "ARQ": {
+      "goalkeeper_skill": 0.5,
+      "defense_physical": 0.1,
+      "rhythm": 0.04,
+      "stamina": 0.04,
+      "technique": 0.06,
+      "pass_vision": 0.08,
+      "teamwork": 0.08,
+      "mentality": 0.1
+    },
+    "DEF": {
+      "defense_physical": 0.36,
+      "stamina": 0.12,
+      "rhythm": 0.12,
+      "technique": 0.08,
+      "pass_vision": 0.1,
+      "teamwork": 0.1,
+      "mentality": 0.1,
+      "attack": 0.02
+    },
+    "LAT": {
+      "rhythm": 0.2,
+      "defense_physical": 0.22,
+      "stamina": 0.18,
+      "pass_vision": 0.14,
+      "technique": 0.1,
+      "teamwork": 0.08,
+      "attack": 0.04,
+      "mentality": 0.04
+    },
+    "MED": {
+      "pass_vision": 0.28,
+      "technique": 0.2,
+      "teamwork": 0.14,
+      "rhythm": 0.1,
+      "stamina": 0.1,
+      "mentality": 0.08,
+      "defense_physical": 0.06,
+      "attack": 0.04
+    },
+    "DEL": {
+      "attack": 0.36,
+      "rhythm": 0.16,
+      "technique": 0.16,
+      "pass_vision": 0.08,
+      "teamwork": 0.08,
+      "stamina": 0.06,
+      "mentality": 0.08,
+      "defense_physical": 0.02
+    }
+  },
+  "anchors": [
+    [
+      1,
+      35
+    ],
+    [
+      2.5,
+      54
+    ],
+    [
+      3,
+      64
+    ],
+    [
+      3.2,
+      69
+    ],
+    [
+      3.5,
+      74
+    ],
+    [
+      3.8,
+      79
+    ],
+    [
+      4,
+      81
+    ],
+    [
+      4.4,
+      86
+    ],
+    [
+      4.5,
+      87
+    ],
+    [
+      5,
+      92
+    ],
+    [
+      5.2,
+      93
+    ],
+    [
+      5.3,
+      94
+    ],
+    [
+      6,
+      99
+    ]
+  ],
+  "legacyWeights": {
+    "ARQ": {
+      "goalkeeper_skill": 0.36,
+      "defense_physical": 0.12,
+      "rhythm": 0.08,
+      "stamina": 0.08,
+      "technique": 0.08,
+      "pass_vision": 0.06,
+      "teamwork": 0.12,
+      "mentality": 0.1
+    },
+    "DEF": {
+      "defense_physical": 0.25,
+      "stamina": 0.17,
+      "rhythm": 0.14,
+      "technique": 0.12,
+      "pass_vision": 0.1,
+      "teamwork": 0.1,
+      "mentality": 0.08,
+      "attack": 0.04
+    },
+    "LAT": {
+      "rhythm": 0.2,
+      "defense_physical": 0.18,
+      "stamina": 0.16,
+      "pass_vision": 0.14,
+      "technique": 0.12,
+      "teamwork": 0.12,
+      "attack": 0.06,
+      "mentality": 0.02
+    },
+    "MED": {
+      "pass_vision": 0.22,
+      "technique": 0.18,
+      "teamwork": 0.16,
+      "rhythm": 0.14,
+      "stamina": 0.12,
+      "mentality": 0.1,
+      "defense_physical": 0.05,
+      "attack": 0.03
+    },
+    "DEL": {
+      "attack": 0.28,
+      "rhythm": 0.18,
+      "technique": 0.14,
+      "pass_vision": 0.1,
+      "teamwork": 0.1,
+      "stamina": 0.08,
+      "mentality": 0.08,
+      "defense_physical": 0.04
+    }
+  }
+}

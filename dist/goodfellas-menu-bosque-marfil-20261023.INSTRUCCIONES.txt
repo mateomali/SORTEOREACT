@@ -1,0 +1,16 @@
+MENU BOSQUE Y MARFIL - 23/10/2026
+
+Extraer goodfellas-menu-bosque-marfil-20261023.zip en la carpeta /sorteo/ del sitio existente en Hostinger.
+Conservar previamente una copia de los dos archivos que se reemplazan:
+  assets/tailwind.css
+  includes/header.php
+
+El menu utiliza fondo bosque, opciones marfil y seleccion verde clara con marca de verificacion.
+Iniciar sesion es la primera opcion directa para visitantes sin sesion iniciada.
+Se conservan las opciones correspondientes a cada rol y el acceso al perfil.
+El CSS tambien incluye la correccion previa del selector de premios.
+
+No incluye configuracion, SQL ni fotos. No requiere modificar la base de datos.
+Cerrar y volver a abrir la APK para cargar la actualizacion del sitio.
+No es necesario reinstalar la APK para este cambio.
+El paquete esta preparado localmente; no se subio automaticamente al hosting.

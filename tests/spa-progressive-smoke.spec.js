@@ -50,9 +50,9 @@ function captureBrowserErrors(page) {
 
 async function adminLogin(page, next = 'editar_partidos.php') {
   await page.goto(`${BASE_URL}/login.php?next=${encodeURIComponent(next)}`, { waitUntil: 'domcontentloaded' });
-  await page.locator('#login-admin').evaluate((node) => { node.open = true; });
+  await page.getByRole('button', { name: 'Administrador', exact: true }).click();
   await page.locator('#adminPassword').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: /Entrar como admin|Ingresar/i }).click();
+  await page.getByRole('button', { name: 'Entrar como admin', exact: true }).click();
   const nextPath = `/${next.split('?')[0]}`;
   await page.waitForURL((url) => url.pathname.endsWith(nextPath), { timeout: 10000 });
   await page.waitForSelector('main.content');

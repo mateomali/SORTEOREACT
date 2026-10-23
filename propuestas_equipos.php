@@ -37,16 +37,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     redirect('propuestas_equipos.php' . ($matchId > 0 ? '?match_id=' . $matchId : ''));
 }
-$match = $matchId > 0 ? repo_match_by_id($matchId) : director_proposal_latest_match();
+$match = $matchId > 0 ? repo_match_by_id($matchId) : director_proposal_next_match();
 $matchId = (int) ($match['id'] ?? 0);
-$title = 'Propuestas próximo partido | ' . APP_NAME;
+$title = 'Próximo partido | ' . APP_NAME;
 $activePage = 'propuestas_equipos.php';
 require __DIR__ . '/includes/header.php';
 ?>
 <section class="card proposal-page">
 
   <?php if (!$match): ?>
-    <h1>Propuestas próximo partido</h1>
+    <h1>Próximo partido</h1>
     <p>No hay un próximo partido presentado. El administrador debe crear la fecha y completar la convocatoria.</p>
   <?php else:
     $options = multiple_draw_options($matchId);
@@ -66,10 +66,39 @@ require __DIR__ . '/includes/header.php';
     $maxVotes = $options ? max(array_column($options, 'vote_count')) : 0;
   ?>
     <header class="proposal-page-head">
-      <a class="proposal-back" href="propuestas_equipos.php">Propuestas próximo partido</a>
+      <a class="proposal-back" href="propuestas_equipos.php">Próximo partido</a>
       <h1><?= h((string) ($match['title'] ?: 'Fecha #' . $matchId)) ?></h1>
       <p class="proposal-match-time">Partido: <?= h(date('d/m/Y H:i', strtotime((string) $match['match_date']))) ?></p>
     </header>
+    <?php
+      $calledPlayers = repo_match_participants($matchId);
+      $officialTeams = repo_match_teams($matchId);
+      $teamsPublished = $officialTeams && repo_match_teams_are_public($match);
+      $expectedPlayers = (int) $match['num_teams'] * (int) $match['players_per_team'];
+    ?>
+    <section class="card" aria-labelledby="next-match-roster">
+      <h2 id="next-match-roster">Jugadores convocados</h2>
+      <p><?= count($calledPlayers) ?> convocados · <?= (int) $match['num_teams'] ?> equipos de <?= (int) $match['players_per_team'] ?> jugadores.</p>
+      <?php if (!$calledPlayers): ?>
+        <p>La convocatoria todavía no tiene jugadores cargados.</p>
+      <?php else: ?>
+        <?php if (count($calledPlayers) < $expectedPlayers): ?>
+          <p>Convocatoria en preparación: faltan <?= $expectedPlayers - count($calledPlayers) ?> jugadores para completar los equipos.</p>
+        <?php endif; ?>
+        <ul class="next-match-roster-list" style="list-style: none; padding: 0; margin: 0; display: grid; gap: 8px;">
+          <?php foreach ($calledPlayers as $calledPlayer): ?>
+            <li class="selected-player-item">
+              <strong><?= h((string) $calledPlayer['name']) ?></strong>
+              <span><?= h((string) $calledPlayer['positions']) ?><?php if ($teamsPublished && $calledPlayer['team_number'] !== null): ?> · Equipo <?= (int) $calledPlayer['team_number'] ?><?php endif; ?></span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+      <p><?= $teamsPublished ? 'Los equipos oficiales ya están publicados.' : ($officialTeams ? 'Los equipos están en preparación y todavía no fueron publicados.' : 'Todavía no se armaron los equipos oficiales.') ?></p>
+      <?php if ($teamsPublished): ?>
+        <a class="btn" href="historial.php?match_id=<?= $matchId ?>">Ver equipos y formaciones</a>
+      <?php endif; ?>
+    </section>
     <p>Los directivos preparan sus equipos para esta fecha. El administrador puede habilitar la votación en cualquier momento y definir su duración. Al cerrar, la propuesta ganadora será la formación oficial del partido.</p>
     <?php if ($open): ?>
       <p>Votación habilitada · Tiempo restante: <strong data-proposal-countdown="<?= multiple_draw_deadline($match) ?>">Calculando…</strong></p>

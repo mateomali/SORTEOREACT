@@ -199,6 +199,41 @@ body.page-jugadores2 .player-award h4 { margin: 0; font-size: 13px; font-weight:
 body.page-jugadores2 .player-award p { margin: 4px 0; font-size: 11px; line-height: 1.6; font-weight: 400; color: #657169; }
 body.page-jugadores2 .player-award div > span { font-size: 11px; color: #657169; }
 body.page-jugadores2 .player-award > strong { font-size: 18px; color: #063d2b; }
+body.page-jugadores2 .player-award p.player-award-ranking { font-size: 14px; color: #063d2b; line-height: 1.4; }
+body.page-jugadores2 .player-award-ranking-shared { overflow-wrap: anywhere; }
+body.page-jugadores2 .player-award-ranking-block { padding: 8px 0; margin: 6px 0 10px; border-bottom: 1px solid #d7e6df; }
+body.page-jugadores2 .player-info-modal { grid-template-rows: auto auto minmax(0, 1fr); }
+body.page-jugadores2 .player-profile-tabs { display: flex; border-bottom: 1px solid #d7e6df; padding: 0 12px; background: #fff; }
+body.page-jugadores2 .player-profile-tabs button { flex: 1; min-height: 48px; padding: 10px 4px; border: 0; border-bottom: 3px solid transparent !important; border-radius: 0 !important; box-shadow: none !important; background: transparent; color: #526b62; font-size: 13px; font-weight: 700; cursor: pointer; }
+body.page-jugadores2 .player-profile-tabs button[aria-selected="true"] { border-bottom-color: #063d2b !important; background: #edf7f1 !important; color: #063d2b; }
+body.page-jugadores2 .player-profile-tabs button:focus-visible { outline: 2px solid #063d2b; outline-offset: -4px; }
+body.page-jugadores2 .player-profile-panel { display: grid; gap: 16px; }
+body.page-jugadores2 .player-profile-content > [hidden] { display: none; }
+body.page-jugadores2 .players-directory > [hidden] { display: none; }
+body.page-jugadores2 .directory-main-panel, body.page-jugadores2 .directory-awards-overview { display: grid; gap: 20px; min-width: 0; }
+body.page-jugadores2 .directory-awards-overview h2 { margin: 0; font-size: 20px; font-weight: 700; }
+body.page-jugadores2 .directory-awards-overview p { margin: 6px 0 16px; font-size: 13px; color: #526b62; }
+body.page-jugadores2 .directory-awards-podiums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+body.page-jugadores2 .directory-category-ranking { min-width: 0; padding: 16px; border: 1px solid #d7e6df; border-radius: 8px; background: #fff; }
+body.page-jugadores2 .directory-category-ranking h3 { margin: 0; font-size: 16px; font-weight: 700; }
+body.page-jugadores2 .directory-category-ranking table { width: 100%; border-collapse: collapse; font-size: 13px; }
+body.page-jugadores2 .directory-category-ranking th, body.page-jugadores2 .directory-category-ranking td { padding: 10px 6px; text-align: left; border-bottom: 1px solid #d7e6df; overflow-wrap: anywhere; }
+body.page-jugadores2 .directory-category-ranking th:first-child { width: 96px; }
+body.page-jugadores2 .directory-category-ranking td:last-child, body.page-jugadores2 .directory-category-ranking th:last-child { text-align: right; }
+body.page-jugadores2 .directory-category-ranking summary { padding-top: 14px; font-size: 13px; color: #063d2b; cursor: pointer; }
+body.page-jugadores2 .directory-ranking-tie { display: block; margin-top: 3px; font-size: 11px; color: #526b62; }
+body.page-jugadores2 button.directory-award-player-link { padding: 0 !important; min-height: 32px; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: #063d2b; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+body.page-jugadores2 button.directory-award-player-link:focus-visible { outline: 2px solid #247955; outline-offset: 3px; }
+body.page-jugadores2 .directory-ranking-place + .directory-ranking-place tr:first-child td { border-top: 3px solid #adc8bb; }
+body.page-jugadores2 .directory-ranking-place-1 { background: #edf7f1; }
+body.page-jugadores2 .directory-ranking-place-1 td { font-weight: 700; color: #063d2b; }
+body.page-jugadores2 .directory-ranking-place-2 { background: #f5f6f5; }
+body.page-jugadores2 .directory-ranking-place-3 { background: #fcf8f1; }
+body.page-jugadores2 .directory-ranking-place-label { display: block; margin-top: 4px; font-size: 11px; font-weight: 700; line-height: 1.4; white-space: nowrap; }
+body.page-jugadores2 .directory-points-explanation { margin: 10px 0 16px; }
+body.page-jugadores2 .directory-points-explanation p { margin: 4px 0; }
+body.page-jugadores2 .directory-points-explanation ul { display: flex; flex-wrap: wrap; gap: 4px 20px; list-style: none; padding: 0; margin: 6px 0; font-size: 13px; color: #38483f; }
+@media (max-width: 700px) { body.page-jugadores2 .directory-awards-podiums { grid-template-columns: minmax(0, 1fr); } }
 body.page-jugadores2 .player-awards-empty { margin: 0; padding: 16px; background: #f7f8f7; font-size: 13px; color: #657169; }
 @media (max-width:640px) {
  body.page-jugadores2 .player-awards-grid { grid-template-columns: minmax(0,1fr); }
@@ -208,7 +243,7 @@ body.page-jugadores2 .player-awards-empty { margin: 0; padding: 16px; background
  body.page-jugadores2 .player-story, body.page-jugadores2 .player-annual-awards { padding: 14px; }
 }
 body.page-jugadores2 .player-info-modal button[aria-label^="Ver radar completo"] { align-self: start; padding: 10px; }
-body.page-jugadores2 .player-annual-results { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-bottom: 12px; }
+body.page-jugadores2 .player-annual-results { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; margin-bottom: 12px; }
 body.page-jugadores2 .player-annual-results article { padding: 14px 16px; border: 1px solid #dfe3e0; border-radius: 8px; background: #fafbfa; }
 body.page-jugadores2 .player-annual-results article > span:first-child { font-size: 13px; color: #526158; font-weight: 500; }
 body.page-jugadores2 .player-annual-results article > strong { display: block; margin: 4px 0 10px; font-family: 'Barlow Condensed',sans-serif; font-size: 36px; line-height: 1; color: #063d2b; }
@@ -223,3 +258,16 @@ body.page-jugadores2 .player-delete-action button { min-height: 44px; padding: 1
 body.page-jugadores2 .player-delete-action button:hover { background: #fff3f3; }
 body.page-jugadores2 .player-remove-photo { min-height: 40px; border: 1px solid #d9baba; border-radius: 6px; padding: 8px 12px; background: #fff; color: #a12828 !important; font-size: 12px; font-weight: 600; box-shadow: none; }
 body.page-jugadores2 .player-remove-photo:hover { background: #fff3f3; }
+body.page-jugadores2 button.player-award { width: 100%; min-width: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; box-shadow: none; }
+body.page-jugadores2 button.player-award:hover { border-color: #83ac98; background: #f1f7f3; }
+body.page-jugadores2 button.player-award:focus-visible { outline: 2px solid #247955; outline-offset: 3px; }
+body.page-jugadores2 .player-award-history { width: min(640px,calc(100% - 32px)); max-height: calc(100dvh - 48px); margin: auto; padding: 20px; overflow: auto; border: 1px solid #adc8bb; border-radius: 8px; background: #fff; color: #07130f; }
+body.page-jugadores2 .player-award-history::backdrop { background: rgb(0 0 0 / .55); }
+body.page-jugadores2 .player-award-history header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+body.page-jugadores2 .player-award-history h3 { margin: 0; font-size: 18px; font-weight: 700; }
+body.page-jugadores2 .player-award-history p { margin: 8px 0 16px; color: #526158; font-size: 13px; line-height: 1.6; font-weight: 400; }
+body.page-jugadores2 .player-award-history table { width: 100%; border-collapse: collapse; font-size: 13px; }
+body.page-jugadores2 .player-award-history th, body.page-jugadores2 .player-award-history td { padding: 12px 8px; border-bottom: 1px solid #dfe6e0; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+body.page-jugadores2 .player-award-history th { font-weight: 600; }
+body.page-jugadores2 .player-award-history td:first-child { white-space: nowrap; }
+@media (min-width:641px) and (max-width:900px) { body.page-jugadores2 .player-annual-results { grid-template-columns: repeat(3,minmax(0,1fr)); } }

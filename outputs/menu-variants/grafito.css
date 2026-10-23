@@ -1,0 +1,17 @@
+
+html body .app-shell > header {background:#1c1c1e!important}
+html body #mainNav{background:#1c1c1e!important;color:#f2f2f7!important;border-color:#68686d!important;gap:8px!important}
+html body #mainNav > details{background:#1c1c1e!important;border-color:#68686d!important;border-radius:6px!important}
+html body #mainNav > details > summary{background:#303033!important;color:#f2f2f7!important;min-height:48px!important;font-size:15px!important;font-weight:600!important;border-color:#68686d!important;box-shadow:none!important}
+html body #mainNav > details[open] > summary{background:#303033!important;border-bottom:1px solid #68686d!important}
+html body #mainNav > details > summary > span:last-child{color:#f2f2f7!important}
+html body #mainNav > details > div{background:#1c1c1e!important}
+html body #mainNav a{background:#1c1c1e!important;color:#f2f2f7!important;min-height:46px!important;font-size:15px!important;font-weight:500!important;border-color:transparent!important;box-shadow:none!important}
+html body #mainNav a:hover{background:#353538!important;color:#f2f2f7!important}
+html body #mainNav a.gf-nav-current{background:#d9f99d!important;color:#1c2810!important;font-weight:700!important;border-color:#d9f99d!important}
+html body #mainNav a.gf-nav-current::after{content:'✓';margin-left:auto;padding-left:12px;font-weight:700}
+html body #mainNav > a{border-bottom-color:#68686d!important}
+html body #mainNav a[href='logout.php']{background:#342326!important;color:#ffb4ab!important}
+html body #mainNav :is(a,summary):focus-visible{outline:3px solid #d9f99d!important;outline-offset:-3px!important}
+html body #menuToggle{background:#1c1c1e!important;color:#f2f2f7!important;border-color:#68686d!important;min-height:44px!important;font-size:14px!important}
+@media(min-width:761px){html body #mainNav{padding:8px!important;border-radius:6px!important}html body #mainNav > details > div{border:1px solid #68686d!important}html body #mainNav > details{border:0!important}html body #mainNav > a{border-bottom:0!important}}

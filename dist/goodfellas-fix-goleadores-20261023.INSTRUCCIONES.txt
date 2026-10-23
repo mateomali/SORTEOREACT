@@ -1,0 +1,19 @@
+CORRECCION DE GUARDADO DE PREMIOS Y REVISION DE GOLEADORES
+
+Archivo: goodfellas-fix-goleadores-20261023.zip
+
+Aplicar sobre el sitio existente en la carpeta /sorteo/ de Hostinger.
+Guardar antes una copia de assets/tailwind.css y goodfellas.apk del servidor.
+Extraer el ZIP en /sorteo/ conservando la carpeta assets y reemplazar los dos archivos incluidos:
+
+  assets/tailwind.css
+  goodfellas.apk
+
+No contiene SQL ni configuracion ni fotos. No requiere migracion de base.
+El CSS corrige el desplazamiento del boton Guardar premios al cerrar el selector de jugadores.
+La APK incluida es la version 1.2 firmada con la misma clave anterior.
+
+Cerrar y volver a abrir la app tras subir el parche para cargar el CSS actualizado.
+La APK carga el sitio publicado: instalarla sin subir el CSS no aplica este cambio al sitio.
+
+Este paquete fue preparado localmente; no fue subido automaticamente al hosting.

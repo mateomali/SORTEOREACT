@@ -1,0 +1,26 @@
+[
+  {
+    "palette": "1. Grafito y blanco",
+    "normal": 15.26,
+    "group": 11.45,
+    "active": 12.04,
+    "exit": 6.98,
+    "links": 13
+  },
+  {
+    "palette": "2. Bosque y marfil",
+    "normal": 12.61,
+    "group": 10.43,
+    "active": 9.84,
+    "exit": 6.96,
+    "links": 13
+  },
+  {
+    "palette": "3. Cafe y arena",
+    "normal": 13.48,
+    "group": 10.55,
+    "active": 9.81,
+    "exit": 6.96,
+    "links": 13
+  }
+]

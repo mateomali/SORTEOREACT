@@ -7,6 +7,7 @@ require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/sorteo_multiple.php';
 require_once __DIR__ . '/lib/admin_config.php';
+require_once __DIR__ . '/lib/goal_corrections.php';
 
 ensure_auth_schema();
 ensure_control_schema();
@@ -679,6 +680,8 @@ $stmt = db()->prepare(
 );
 $stmt->execute(['player_id' => $playerId]);
 $summary = $stmt->fetch() ?: ['partidos' => 0, 'goles' => 0, 'promedio' => null, 'pg' => 0, 'pe' => 0, 'pp' => 0];
+$personalGoalCorrection = goal_corrections()[$playerId] ?? 0;
+$summary['goles'] = max(0, (int) $summary['goles'] + $personalGoalCorrection);
 
 $rankingCourtJoinFilter = $profileRankingCourtId > 0 ? ' AND m.rental_court_id = :court_id' : '';
 $rankingParams = $profileRankingCourtId > 0 ? ['court_id' => $profileRankingCourtId] : [];
@@ -707,6 +710,7 @@ $rankingStmt = db()->prepare(
 );
 $rankingStmt->execute($rankingParams);
 $rankingRows = $rankingStmt->fetchAll();
+if ($profileRankingCourtId === 0) $rankingRows = apply_goal_corrections($rankingRows, 'goles', null, true);
 
 $sortRankingRows = static function (array $rows, string $metric, string $direction = 'desc', array $tieBreakers = []): array {
     usort($rows, static function (array $a, array $b) use ($metric, $direction, $tieBreakers): int {
@@ -1046,6 +1050,7 @@ ob_start();
       <span class="value"><?= h((string) ((int) $summary['goles'])) ?></span>
     </summary>
     <div class="profile-summary-panel-body">
+      <?php if ($personalGoalCorrection !== 0): ?><p class="small-muted">El total incluye una corrección del acumulado de 2026 según la tabla de goleadores confirmada. El detalle por fecha conserva los goles registrados.</p><?php endif; ?>
       <?php if ($profileGoalDetails): ?>
         <div class="profile-detail-list">
           <?php foreach ($profileGoalDetails as $detail): ?>

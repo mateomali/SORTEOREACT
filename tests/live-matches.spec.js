@@ -154,9 +154,8 @@ test('live scoring, persisted clock, bulk attribution, conflicts and closing fro
       await page.locator('.live-fixture-game').first().screenshot({ path: `outputs/live-fixture-hierarchy-${width}.png` });
     }
     await page.getByRole('button', { name: 'Corregir resultado', exact: true }).first().click();
-    await page.getByRole('button', { name: 'Guardar corrección', exact: true }).click();
-    await expect(page.getByRole('dialog').getByRole('alert')).toContainText('En empate');
-    await page.getByRole('dialog').getByRole('radio').first().check();
+    // A closed date retains its fixture; correcting a score needs no new tie priority.
+    await expect(page.getByRole('dialog').getByRole('radio')).toHaveCount(0);
     await page.getByRole('button', { name: 'Guardar corrección', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}&edit_details=1`);

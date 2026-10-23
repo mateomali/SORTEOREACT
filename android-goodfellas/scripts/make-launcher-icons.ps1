@@ -4,7 +4,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$sourcePath = Resolve-Path (Join-Path $PSScriptRoot $Source)
+$sourcePath = if ([System.IO.Path]::IsPathRooted($Source)) { Resolve-Path -LiteralPath $Source } else { Resolve-Path (Join-Path $PSScriptRoot $Source) }
 $res = Join-Path $root "app\src\main\res"
 $drawable = Join-Path $res "drawable"
 $drawableNoDpi = Join-Path $res "drawable-nodpi"
@@ -32,7 +32,7 @@ function New-ContainedPng {
     $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
     $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
     $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-    $graphics.Clear([System.Drawing.Color]::FromArgb(255, 7, 19, 15))
+    $graphics.Clear([System.Drawing.Color]::White)
 
     $scale = [Math]::Min($Size / $Image.Width, $Size / $Image.Height) * $Padding
     $drawWidth = [int]($Image.Width * $scale)
@@ -53,7 +53,7 @@ try {
     if (Test-Path $oldVector) {
         Remove-Item -LiteralPath $oldVector
     }
-    New-ContainedPng -Image $image -Size 432 -Path (Join-Path $drawableNoDpi "ic_launcher_foreground.png") -Padding 0.92
+    New-ContainedPng -Image $image -Size 432 -Path (Join-Path $drawableNoDpi "ic_launcher_foreground.png") -Padding 0.62
 
     foreach ($entry in $sizes.GetEnumerator()) {
         $dir = Join-Path $res $entry.Key

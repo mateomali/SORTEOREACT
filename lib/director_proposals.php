@@ -23,6 +23,12 @@ function director_proposal_latest_match(): ?array
     return $id > 0 ? repo_match_by_id($id) : null;
 }
 
+function director_proposal_next_match(): ?array
+{
+    $id = (int) db()->query('SELECT id FROM matches WHERE status != "finalizado" AND match_date >= NOW() ORDER BY match_date ASC, id ASC LIMIT 1')->fetchColumn();
+    return $id > 0 ? repo_match_by_id($id) : null;
+}
+
 function director_proposal_open_voting(int $matchId, int $minutes): void
 {
     ensure_director_proposals_schema();

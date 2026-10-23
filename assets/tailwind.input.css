@@ -25290,16 +25290,54 @@ html body .sorteo-react-page .gf-drag-feedback {
 
 @media (max-width: 760px) { .sorteo-react-page .gf-desktop-draw-actions { display: none; } }
 
+/* Mobile navigation: group headers, links and current destination have distinct tones. */
+@media (max-width: 760px) {
+  #mainNav { background: #f8fbf9 !important; border-color: #adc8bb !important; padding: 16px 14px max(18px, env(safe-area-inset-bottom)) !important; gap: 10px !important; color: #132e23; }
+  #mainNav > details { padding: 0 !important; border: 1px solid #cbdcd2 !important; border-radius: 8px !important; background: #fff !important; overflow: hidden; }
+  #mainNav > details > summary { min-height: 48px; margin: 0; padding: 12px 14px !important; border: 0 !important; border-radius: 0 !important; background: #e9f1ec !important; color: #163c2b !important; font-size: 15px; font-weight: 800; box-shadow: none !important; }
+  #mainNav > details[open] > summary { border-bottom: 1px solid #cbdcd2 !important; background: #dcebe1 !important; }
+  #mainNav > details > summary > span:last-child { color: #476653; }
+  #mainNav > details > div { padding: 6px !important; margin: 0 !important; gap: 3px !important; background: #fff !important; }
+  #mainNav a { min-height: 46px; border: 1px solid transparent !important; border-radius: 6px !important; background: #fff !important; color: #263e32 !important; box-shadow: none !important; font-size: 14px; font-weight: 600; padding: 12px 14px !important; }
+  #mainNav a:hover { background: #edf5ef !important; color: #063d2b !important; }
+  #mainNav a.gf-nav-current { background: #063d2b !important; color: #fff !important; font-weight: 800; border-color: #063d2b !important; }
+  #mainNav a[href="logout.php"] { color: #a52f2f !important; background: #fff4f2 !important; }
+  #mainNav :is(a, summary):focus-visible { outline: 2px solid #247955; outline-offset: -3px; }
+  #menuToggle { min-height: 40px; padding: 9px 14px; border: 1px solid #cbdcd2 !important; border-radius: 8px !important; background: #f2f7f3 !important; color: #063d2b !important; font-size: 13px; font-weight: 800; box-shadow: none !important; }
+  #menuToggle[aria-expanded="true"] { background: #dcebe1 !important; }
+}
+
 @layer utilities {
   .award-field[data-award-positions] { display: block; }
 }
 @layer utilities {
+  .award-player-picker { position: relative; }
   .award-player-control { display: flex; align-items: stretch; }
   .award-player-control input { width: 100%; min-width: 0; flex: 1; border-radius: 8px 0 0 8px; }
   .award-player-control button { flex: 0 0 44px; min-height: 44px; border: 1px solid #a8c2b7; border-left: 0; border-radius: 0 8px 8px 0; background: #edf3ed; color: #063d2b; font-size: 20px; }
-  .award-player-options { max-height: 220px; overflow-y: auto; border: 1px solid #8da99a; border-radius: 6px; margin-top: 4px; background: white; }
+  .award-player-options { position: absolute; top: 100%; left: 0; right: 0; z-index: 30; max-height: 220px; overflow-y: auto; border: 1px solid #8da99a; border-radius: 6px; margin-top: 4px; background: white; }
   .award-player-options[hidden] { display: none; }
   .award-player-options [role="option"] { display: block; width: 100%; min-height: 44px; text-align: left; padding: 8px 12px; border: 0; border-bottom: 1px solid #e1e9e3; border-radius: 0; background: white; color: #10271e; font-size: 14px; overflow-wrap: anywhere; }
   .award-player-options [role="option"]:hover, .award-player-options [aria-selected="true"] { background: #edf5e9; }
   .award-player-options p { margin: 0; padding: 12px; color: #526b62; font-size: 13px; }
 }
+
+/* Goodfellas navigation: selected Bosque y marfil palette, shared by mobile and desktop. */
+
+html body .app-shell > header {background:#102c20!important}
+html body #mainNav{background:#102c20!important;color:#203329!important;border-color:#61806c!important;gap:8px!important}
+html body #mainNav > details{background:#102c20!important;border-color:#61806c!important;border-radius:6px!important}
+html body #mainNav > details > summary{background:#204735!important;color:#ffffff!important;min-height:48px!important;font-size:15px!important;font-weight:600!important;border-color:#61806c!important;box-shadow:none!important}
+html body #mainNav > details[open] > summary{background:#204735!important;border-bottom:1px solid #61806c!important}
+html body #mainNav > details > summary > span:last-child{color:#ffffff!important}
+html body #mainNav > details > div{background:#faf8f1!important}
+html body #mainNav a{background:#faf8f1!important;color:#203329!important;min-height:46px!important;font-size:15px!important;font-weight:500!important;border-color:transparent!important;box-shadow:none!important}
+html body #mainNav a:hover{background:#eaeedf!important;color:#203329!important}
+html body #mainNav a.gf-nav-current{background:#dcebcf!important;color:#173c25!important;font-weight:700!important;border-color:#dcebcf!important}
+html body #mainNav .gf-nav-current-mark{margin-left:auto;padding-left:12px;font-weight:700}
+html body #mainNav > a{border-bottom-color:#61806c!important}
+html body #mainNav a[href='logout.php']{background:#fff1ed!important;color:#9f2323!important}
+html body #mainNav a:focus-visible{outline:3px solid #237343!important;outline-offset:-3px!important}
+html body #mainNav summary:focus-visible{outline:3px solid #dcebcf!important;outline-offset:-3px!important}
+html body #menuToggle{background:#faf8f1!important;color:#203329!important;border-color:#61806c!important;min-height:44px!important;font-size:14px!important}
+@media(min-width:761px){html body #mainNav{padding:8px!important;border-radius:6px!important}html body #mainNav > details > div{border:1px solid #61806c!important}html body #mainNav > details{border:0!important}html body #mainNav > a{border-bottom:0!important}}

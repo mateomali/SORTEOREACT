@@ -8,34 +8,24 @@ for (const mode of ['awards', 'ratings', 'both', 'round_robin']) {
   test(`finalization requires all scorers and displays them: ${mode}`, async ({ page, context }) => {
     const fixture = JSON.parse(php(`
       $pdo = db(); $pdo->beginTransaction();
-      function copy_row($table, $row) {
-        unset($row['id']);
-        $columns = implode(',', array_map(fn($key) => '\\x60'.$key.'\\x60', array_keys($row)));
-        $columns = str_replace('\\x60', chr(96), $columns);
-        db()->prepare('INSERT INTO '.$table.' ('.$columns.') VALUES ('.implode(',', array_fill(0,count($row),'?')).')')->execute(array_values($row));
-      }
-      $row = repo_match_by_id(243); $row['title'] = 'Temporary scorer validation';
-      $row['status']='sorteado'; $row['finalized_at']=null; $row['result_saved_at']=null;
-      $row['valuation_mode']='${mode === 'round_robin' ? 'both' : mode}'; $row['match_date']=date('Y-m-d H:i:s');
-      copy_row('matches',$row); $id=(int)$pdo->lastInsertId();
-      foreach (['match_players','match_teams'] as $table) {
-        foreach ($pdo->query('SELECT * FROM '.$table.' WHERE match_id=243')->fetchAll() as $row) {
-          $row['match_id']=$id; $row['goals']=0;
-          if ($table==='match_players') $row['rating']=null;
-          copy_row($table,$row);
+      $pdo->prepare("INSERT INTO matches (title, match_date, status, num_teams, players_per_team, draw_mode, dynamic_fixture, teams_published_at, valuation_mode) VALUES ('Temporary scorer validation', NOW(), 'sorteado', ?, 2, 'manual', 0, NOW(), ?)")->execute([${mode === 'round_robin' ? 3 : 2}, '${mode === 'round_robin' ? 'both' : mode}']);
+      $id=(int)$pdo->lastInsertId();
+      $playerIds=[];
+      for ($team=1; $team<=${mode === 'round_robin' ? 3 : 2}; $team++) {
+        $pdo->prepare('INSERT INTO match_teams (match_id, team_number, team_name, color_name) VALUES (?, ?, ?, ?)')->execute([$id, $team, 'Equipo '.$team, ['NEGRO','BLANCO','VERDE'][$team-1]]);
+        foreach (['ARQ','DEL'] as $index=>$position) {
+          $pdo->prepare('INSERT INTO players (name, positions, skill) VALUES (?, ?, 4)')->execute(['Temporary scorer player '.$id.'-'.$team.'-'.$index, $position]);
+          $playerId=(int)$pdo->lastInsertId(); $playerIds[]=$playerId;
+          $pdo->prepare('INSERT INTO match_players (match_id, player_id, team_number, is_goalkeeper, assigned_position) VALUES (?, ?, ?, ?, ?)')->execute([$id, $playerId, $team, $index===0 ? 1 : 0, $position]);
         }
       }
-      ${mode === 'round_robin' ? `
-      $pdo->prepare('UPDATE matches SET num_teams=3 WHERE id=?')->execute([$id]);
-      $row=repo_match_teams($id)[1]; $row['team_number']=3; $row['color_name']='VERDE'; copy_row('match_teams',$row);
-      $pdo->prepare('UPDATE match_players SET team_number=3 WHERE match_id=? AND team_number=2 ORDER BY player_id DESC LIMIT 2')->execute([$id]);
-      ` : ''}
       $pdo->commit(); $_SESSION['is_admin']=true;
-      echo json_encode(['id'=>$id,'session'=>session_id(),'players'=>repo_match_participants($id)]); session_write_close();
+      echo json_encode(['id'=>$id,'session'=>session_id(),'players'=>repo_match_participants($id),'playerIds'=>$playerIds]); session_write_close();
     `));
     try {
+      await page.setViewportSize({ width: 390, height: 844 });
       await context.addCookies([{ name: 'PHPSESSID', value: fixture.session, url: BASE }]);
-      const url = `${BASE}/finalizar_partido.php?match_id=${fixture.id}`;
+      const url = `${BASE}/finalizar_partido.php?match_id=${fixture.id}&edit_details=1`;
       const scorer = fixture.players.find(player => Number(player.team_number) === 1);
       let scoreForm = { action:'save_score', match_id:String(fixture.id), 'team_goals[1]':'2', 'team_goals[2]':'0' };
       if (mode === 'round_robin') {
@@ -61,34 +51,46 @@ for (const mode of ['awards', 'ratings', 'both', 'round_robin']) {
       const scoreResponse = await page.request.post(url, { form:scoreForm });
       if(mode === 'round_robin') { const payload=await scoreResponse.json(); expect(payload,payload.message).toMatchObject({ok:true}); }
       expect(php(`echo repo_match_by_id(${fixture.id})['status'];`)).toBe('finalizado');
+      expect(php(`$q=db()->prepare('SELECT goals FROM match_players WHERE match_id=? AND player_id=?'); $q->execute([${fixture.id},${scorer.id}]); echo $q->fetchColumn();`)).toBe('2');
       expect(php(`require "lib/directivos.php"; echo directive_voting_is_open(repo_match_by_id(${fixture.id})) ? 'open' : 'closed';`)).toBe('open');
       await page.goto(url);
-      await expect(page.getByRole('heading', {name:'Goles', exact:true})).toBeVisible();
+      await expect(page.getByRole('heading', {name:mode === 'round_robin' ? 'Goles y fixture' : 'Goles', exact:true})).toBeVisible();
+      if (mode === 'round_robin') await expect(page.getByRole('link', {name:'Abrir partidos en vivo', exact:true})).toHaveAttribute('href', `partidos_en_vivo.php?match_id=${fixture.id}`);
       await expect(page.getByRole('link', {name:/Ver formaciones/})).toHaveCount(0);
       if (mode !== 'round_robin') await expect(page.getByRole('heading', {name:'Resultado del partido', exact:true})).toBeVisible();
       const valuations = page.locator('#valoraciones');
       await expect(valuations).not.toHaveAttribute('open', '');
       await expect(page.getByRole('heading', {name:mode === 'ratings' ? 'Puntajes' : 'Premios', exact:true})).toBeVisible();
-      await expect(page.getByRole('button', {name:'Finalizar fecha', exact:true})).toBeVisible();
+      const saveButton = page.getByRole('button', {name:mode === 'round_robin' ? 'Guardar premios' : 'Finalizar fecha', exact:true});
+      await expect(saveButton).toBeVisible();
       await valuations.locator('summary').click();
       await expect(valuations).toHaveAttribute('open', '');
       await expect(page.locator('.finish-ratings-menu')).toHaveCount(0);
       await expect(page.locator('input[name^="rating["]')).toHaveCount(0);
-      await expect(page.locator('#valoraciones input[name^="awards["]')).toHaveCount(mode === 'ratings' ? 0 : 17);
-      await expect(page.locator('input[name^="goals["]')).toHaveCount(fixture.players.length);
+      expect(await page.locator('#valoraciones input[name^="awards["]').evaluateAll(inputs => new Set(inputs.map(input => input.name.match(/^awards\[([^\]]+)\]/)[1])).size)).toBe(mode === 'ratings' ? 0 : 17);
+      await expect(page.locator('input[name^="goals["]')).toHaveCount(mode === 'round_robin' ? 0 : fixture.players.length);
       if (mode !== 'ratings') {
+        const buttonTop = await saveButton.evaluate(button => button.getBoundingClientRect().top + window.scrollY);
         await page.locator('#award-player_of_match').fill(`${scorer.name} (#${scorer.id})`);
+        await expect(page.locator('#award-player_of_match-options')).toBeVisible();
+        const buttonTopWithOptions = await saveButton.evaluate(button => button.getBoundingClientRect().top + window.scrollY);
+        expect(Math.abs(buttonTopWithOptions - buttonTop)).toBeLessThan(1);
         page.on('dialog', dialog => dialog.accept());
-        await page.getByRole('button', {name:'Finalizar fecha', exact:true}).click();
+        await Promise.all([
+          page.waitForResponse(response => response.request().method() === 'POST' && response.url().includes('finalizar_partido.php')),
+          saveButton.click(),
+        ]);
         await expect.poll(() => php(`require "lib/awards.php"; echo repo_match_awards(${fixture.id})['player_of_match']['player_id'] ?? 0;`)).toBe(String(scorer.id));
+        await expect(page.locator('.flash-success')).toContainText(mode === 'round_robin' ? 'Premios guardados' : 'Fecha finalizada');
       }
       await page.locator('#resultado').screenshot({path:`outputs/finalization-goals-${mode}.png`});
       await page.locator('#valoraciones').screenshot({path:`outputs/finalization-awards-${mode}.png`});
       for (const route of ['index.php', 'historial.php']) {
         await page.goto(`${BASE}/${route}?match_id=${fixture.id}`);
-        const badge = page.locator('.formation-scorer-badge').filter({ hasText: 'x2' }).first();
+        const card = page.locator('.gf-public-player-slot').filter({ has: page.getByRole('button', { name: `Ver ficha de ${scorer.name}`, exact: true, includeHidden: true }) }).first();
+        const badge = card.locator('[title="Goles del partido"]');
         await expect(badge).toHaveCount(1);
-        await expect(badge).toHaveAttribute('aria-label', `${scorer.name}: 2 goles`);
+        await expect(badge).toContainText('x2');
         const courtMarkup = await badge.evaluate(node => node.closest('.public-teams').outerHTML);
         await page.evaluate(markup => {
           const main = document.createElement('main'); main.className='content'; main.innerHTML=markup;
@@ -96,19 +98,17 @@ for (const mode of ['awards', 'ratings', 'both', 'round_robin']) {
         }, courtMarkup);
         await page.setViewportSize({ width:390, height:844 });
         await badge.evaluate(node => { for(let parent=node.parentElement;parent;parent=parent.parentElement) if(parent.tagName==='DETAILS') parent.open=true; });
-        const card = badge.locator('..');
-        const geometry = await card.evaluate(node => {
-          const badge=node.querySelector('.formation-scorer-badge').getBoundingClientRect();
-          const card=node.getBoundingClientRect();
-          const photo=node.querySelector('.formation-card-photo').getBoundingClientRect();
-          return {right:badge.right, cardRight:card.right, bottom:badge.bottom, photoTop:photo.top};
+        const geometry = await badge.evaluate(node => {
+          const badge=node.getBoundingClientRect();
+          const pitch=node.closest('.team-formation').getBoundingClientRect();
+          return {left:badge.left, right:badge.right, pitchLeft:pitch.left, pitchRight:pitch.right};
         });
-        expect(geometry.right).toBeLessThanOrEqual(geometry.cardRight+1);
-        expect(geometry.bottom).toBeLessThanOrEqual(geometry.photoTop+1);
+        expect(geometry.left).toBeGreaterThanOrEqual(geometry.pitchLeft-1);
+        expect(geometry.right).toBeLessThanOrEqual(geometry.pitchRight+1);
         await page.locator('.team-formation').first().screenshot({path:`outputs/scorers-${mode}-${route}.png`});
       }
     } finally {
-      php(`$id=${fixture.id}; foreach (['match_awards','match_round_robin_results','match_players','match_teams'] as $table) db()->prepare('DELETE FROM '.$table.' WHERE match_id=?')->execute([$id]); db()->prepare('DELETE FROM matches WHERE id=?')->execute([$id]);`);
+      php(`$id=${fixture.id}; foreach (['match_awards','match_round_robin_results','match_players','match_teams'] as $table) db()->prepare('DELETE FROM '.$table.' WHERE match_id=?')->execute([$id]); db()->prepare('DELETE FROM matches WHERE id=?')->execute([$id]); foreach (${JSON.stringify(fixture.playerIds)} as $playerId) db()->prepare('DELETE FROM players WHERE id=? AND name LIKE ?')->execute([$playerId, 'Temporary scorer player '.$id.'-%']);`);
     }
   });
 }

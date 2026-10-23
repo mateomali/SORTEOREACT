@@ -1231,6 +1231,28 @@
   };
   window.goodfellasHydrateDynamicContent = hydrateDynamicContent;
 
+  const loadPageStyles = async (nextDocument) => {
+    const styles = Array.from(nextDocument.head.querySelectorAll('link[rel="stylesheet"]'));
+    const existing = new Map(Array.from(document.head.querySelectorAll('link[rel="stylesheet"]'))
+      .map((link) => [link.href, link]));
+    await Promise.all(styles.map((style, index) => {
+      if (existing.has(style.href)) return;
+      const link = document.importNode(style, true);
+      const loaded = new Promise((resolve, reject) => {
+        link.addEventListener('load', resolve, { once: true });
+        link.addEventListener('error', () => {
+          link.remove();
+          reject(new Error(`Could not load stylesheet: ${link.href}`));
+        }, { once: true });
+      });
+      // Keep page overrides in the same cascade order as a full page load.
+      const following = styles.slice(index + 1).map((item) => existing.get(item.href)).find(Boolean);
+      document.head.insertBefore(link, following || null);
+      existing.set(link.href, link);
+      return loaded;
+    }));
+  };
+
   const partialNavigate = async (url, { replace = false, source = null, scroll = true } = {}) => {
     const content = getMainContent();
     if (!content) {
@@ -1263,6 +1285,7 @@
       const nextContent = nextDocument.querySelector('main.content');
       if (!nextContent) throw new Error('Missing partial content');
 
+      await loadPageStyles(nextDocument);
       document.title = nextDocument.title || document.title;
       document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
       updatePageChrome(nextDocument);

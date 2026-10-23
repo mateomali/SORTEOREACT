@@ -1,0 +1,26 @@
+[
+  {
+    "palette": "1. Blanco y verde",
+    "normal": 15.26,
+    "group": 12.62,
+    "active": 9.11,
+    "exit": 6.98,
+    "links": 13
+  },
+  {
+    "palette": "2. Grafito y lima",
+    "normal": 15.25,
+    "group": 11.79,
+    "active": 13.22,
+    "exit": 8.74,
+    "links": 13
+  },
+  {
+    "palette": "3. Marfil y bosque",
+    "normal": 14.31,
+    "group": 11.89,
+    "active": 9.49,
+    "exit": 6.58,
+    "links": 13
+  }
+]

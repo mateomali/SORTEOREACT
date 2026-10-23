@@ -1,0 +1,230 @@
+﻿{
+    "year": 2026,
+    "applied": true,
+    "players": [
+        {
+            "id": 1,
+            "name": "MARCELO",
+            "recorded": 9,
+            "verified": 2,
+            "difference": -7
+        },
+        {
+            "id": 2,
+            "name": "RODRI SUAREZ",
+            "recorded": 0,
+            "verified": 1,
+            "difference": 1
+        },
+        {
+            "id": 5,
+            "name": "JAVI",
+            "recorded": 2,
+            "verified": 7,
+            "difference": 5
+        },
+        {
+            "id": 6,
+            "name": "PELA",
+            "recorded": 42,
+            "verified": 32,
+            "difference": -10
+        },
+        {
+            "id": 8,
+            "name": "NICO",
+            "recorded": 19,
+            "verified": 5,
+            "difference": -14
+        },
+        {
+            "id": 9,
+            "name": "AUGUSTO",
+            "recorded": 19,
+            "verified": 10,
+            "difference": -9
+        },
+        {
+            "id": 10,
+            "name": "BRIAN",
+            "recorded": 20,
+            "verified": 16,
+            "difference": -4
+        },
+        {
+            "id": 11,
+            "name": "MANU",
+            "recorded": 10,
+            "verified": 6,
+            "difference": -4
+        },
+        {
+            "id": 12,
+            "name": "VIKINGO",
+            "recorded": 19,
+            "verified": 18,
+            "difference": -1
+        },
+        {
+            "id": 13,
+            "name": "ANIBAL",
+            "recorded": 10,
+            "verified": 22,
+            "difference": 12
+        },
+        {
+            "id": 14,
+            "name": "PABLO",
+            "recorded": 5,
+            "verified": 3,
+            "difference": -2
+        },
+        {
+            "id": 15,
+            "name": "MAURI",
+            "recorded": 41,
+            "verified": 40,
+            "difference": -1
+        },
+        {
+            "id": 17,
+            "name": "CESAR",
+            "recorded": 5,
+            "verified": 6,
+            "difference": 1
+        },
+        {
+            "id": 18,
+            "name": "GUILLE",
+            "recorded": 3,
+            "verified": 4,
+            "difference": 1
+        },
+        {
+            "id": 22,
+            "name": "ISMA",
+            "recorded": 12,
+            "verified": 9,
+            "difference": -3
+        },
+        {
+            "id": 31,
+            "name": "ALEXIS",
+            "recorded": 2,
+            "verified": 9,
+            "difference": 7
+        },
+        {
+            "id": 32,
+            "name": "CAMILO",
+            "recorded": 0,
+            "verified": 13,
+            "difference": 13
+        },
+        {
+            "id": 34,
+            "name": "ELIAN",
+            "recorded": 0,
+            "verified": 2,
+            "difference": 2
+        },
+        {
+            "id": 36,
+            "name": "FRANCO COMOLLI",
+            "recorded": 13,
+            "verified": 57,
+            "difference": 44
+        },
+        {
+            "id": 38,
+            "name": "MARIAN",
+            "recorded": 50,
+            "verified": 62,
+            "difference": 12
+        },
+        {
+            "id": 41,
+            "name": "PABLO GARCIA",
+            "recorded": 1,
+            "verified": 1,
+            "difference": 0
+        },
+        {
+            "id": 43,
+            "name": "RODRI CHAVEZ",
+            "recorded": 8,
+            "verified": 7,
+            "difference": -1
+        },
+        {
+            "id": 47,
+            "name": "MAXI",
+            "recorded": 1,
+            "verified": 4,
+            "difference": 3
+        },
+        {
+            "id": 57,
+            "name": "PABLO K",
+            "recorded": 1,
+            "verified": 3,
+            "difference": 2
+        },
+        {
+            "id": 61,
+            "name": "FRANCO",
+            "recorded": 0,
+            "verified": 2,
+            "difference": 2
+        },
+        {
+            "id": 64,
+            "name": "SANTI",
+            "recorded": 0,
+            "verified": 1,
+            "difference": 1
+        },
+        {
+            "id": 65,
+            "name": "JUAN PRECE",
+            "recorded": 0,
+            "verified": 11,
+            "difference": 11
+        },
+        {
+            "id": 66,
+            "name": "CRIS PODESTÁ",
+            "recorded": 0,
+            "verified": 2,
+            "difference": 2
+        },
+        {
+            "id": 68,
+            "name": "URIEL",
+            "recorded": 0,
+            "verified": 7,
+            "difference": 7
+        },
+        {
+            "id": 70,
+            "name": "CRIS MAZZA",
+            "recorded": 0,
+            "verified": 4,
+            "difference": 4
+        },
+        {
+            "id": 71,
+            "name": "LUCAS RAYO",
+            "recorded": 0,
+            "verified": 4,
+            "difference": 4
+        },
+        {
+            "id": 72,
+            "name": "EZE VILLALBA",
+            "recorded": 0,
+            "verified": 1,
+            "difference": 1
+        }
+    ]
+}

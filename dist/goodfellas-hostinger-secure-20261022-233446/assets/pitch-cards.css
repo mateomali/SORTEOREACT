@@ -1,0 +1,710 @@
+/* ==========================================================================
+   Cancha: cartas 20% mas grandes.
+
+   Se carga despues de tailwind.css y contrast-overrides.css, que definen los
+   tamanos de carta. Aqui no se reescriben esos valores: se escalan, para que
+   cada breakpoint siga su proporcion original.
+
+   Por que zoom y no width:
+     Los anchos de carta estan fijados en px en ~65 declaraciones de escritorio
+     y ~205 de movil, repartidas en 5 breakpoints (90/96/100/102/104/124/132px
+     en escritorio; 64/96/124px y mas en movil). Multiplicarlas una por una
+     seria fragil y se desincronizaria con cada cambio de diseno. zoom escala
+     el tamano usado del elemento, asi que 1.2 vale para todos los breakpoints.
+     Es seguro con el arrastre existente porque ningun script usa
+     offsetLeft/offsetTop/offsetWidth/offsetHeight: solo getBoundingClientRect()
+     y elementFromPoint(), que si respetan zoom.
+     html2canvas (exportacion a imagen) solo se carga en la cancha React del
+     sorteo, que se ajusta mas abajo sin zoom.
+
+   Para cambiar la magnitud, ajustar solo --gf-pitch-card-scale.
+   Para desactivar todo, poner --gf-pitch-card-scale: 1.
+
+   --------------------------------------------------------------------------
+   Sobre la divisoria entre posiciones (NO se agrega en las canchas PHP)
+   --------------------------------------------------------------------------
+   Las canchas renderizadas en PHP ya tienen su propia divisoria, dibujada en
+   ::before y centrada en el hueco entre lineas:
+
+     .team-formation:not(.gf-formation) .formation-line + .formation-line::before
+       (generica, con las variables --gf-pitch-row-gap / --gf-pitch-label-width)
+
+     body.page-capitanes .content .captain-formation-line + ...::before
+       (capitanes, left: 60px)
+
+     body.page-index / .page-historial / .page-perfil / .home-captain-live-teams
+       (variante con gradiente al 72% de opacidad)
+
+   Agregar otra linea encima dibujaba una segunda raya: en capitanes coincidia
+   exactamente con la existente y sumaba las opacidades, y en el resto quedaba
+   corrida unos pixeles. Por eso aca no se toca ninguna de esas vistas.
+
+   La unica cancha sin divisoria es la del sorteo (React): en tailwind.input.css,
+   .sorteo-react-page .gf-formation .gf-formation-row fija border: 0 (anulando
+   el border-b declarado en el JSX) y .formation-line::before { content: none }.
+   Ahi si se agrega, con el mismo tratamiento que usan las demas para que no
+   parezca un estilo nuevo.
+   ========================================================================== */
+
+:root {
+  --gf-pitch-card-scale: 1.2;
+}
+
+/* --------------------------------------------------------------------------
+   Cartas de cancha 20% mas grandes (vistas renderizadas en PHP)
+   Cubre inicio, historial, perfil, capitanes y sorteo multiple. Quedan fuera
+   a proposito:
+     - la galeria de la pagina de previews de carta, que no es una cancha;
+     - el preview de finalizar partido: sus cartas usan otra clase
+       (.sorteo-static-player-card, 90px) dentro de un .line-players con
+       flex-nowrap + overflow-hidden y alto fijo de 680px, asi que crecerlas
+       20% recortaria cartas en vez de agrandar la cancha. Para incluirlo hay
+       que ajustar antes la geometria de .finish-formation-pitch-preview.
+   -------------------------------------------------------------------------- */
+
+:is(.team-formation, .captain-formation-field, .captain-editor-field,
+    .multi-draw-pitch-view)
+  :is(.formation-player, .captain-formation-player) {
+  zoom: var(--gf-pitch-card-scale);
+}
+
+/* --------------------------------------------------------------------------
+   Cancha React del sorteo: divisoria entre posiciones
+   Las filas son adyacentes (margin y gap en 0), asi que la linea va en el
+   borde inferior de cada fila menos la ultima. Mismo gradiente y misma sombra
+   que la divisoria de capitanes y de inicio/historial/perfil, para que las
+   cuatro se vean iguales.
+   -------------------------------------------------------------------------- */
+
+.sorteo-react-page .gf-formation .gf-formation-row:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(245, 216, 103, 0.72) 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Cancha React del sorteo: tamano de carta
+   La carta toma su ancho de .gf-player-slot:
+     min(100%, calc((100cqw - 12px) / var(--gf-line-capacity)))
+   El tope lo fija la capacidad de la linea (minimo 4), asi que en el caso
+   habitual la carta queda mas chica que su celda y sobra verde. Se amplia el
+   tope por --gf-pitch-card-scale.
+
+   Nota: en las lineas que si llegan a la capacidad, el ancho lo limita la
+   celda de la fila, asi que ahi el crecimiento es menor. Ampliarlo mas
+   requeriria cambiar la geometria del campo (columna de etiquetas o padding),
+   que no se toca para no alterar el marco de la cancha.
+   -------------------------------------------------------------------------- */
+
+.sorteo-react-page .gf-formation .gf-player-slot {
+  width: min(100%, calc((100cqw - 12px) / var(--gf-line-capacity) * var(--gf-pitch-card-scale)));
+}
+
+/* La separacion entre cartas tambien cuenta como verde aprovechable. */
+.sorteo-react-page .gf-formation .gf-line-players {
+  gap: 2px;
+}
+
+@layer properties {
+/* Shared current field surface: Sorteo, Inicio and Formaciones. */
+.team-formation.gf-current-pitch {
+  --gf-gutter: 0px !important; display: grid !important; grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+  width: 100% !important; min-width: 0 !important; min-height: 0 !important; height: auto !important; aspect-ratio: auto !important;
+  padding: 12px 10px !important; gap: 0 !important; border: 0 !important; border-radius: 0 !important; overflow: visible !important;
+  background: radial-gradient(ellipse at 50% 48%, rgba(19, 121, 91, .22), transparent 65%),
+    repeating-linear-gradient(90deg, rgba(116,255,229,.015) 0 1px, transparent 1px 24px),
+    linear-gradient(135deg, #042820, #06382d 50%, #031713) !important;
+}
+.team-formation.gf-current-pitch::before {
+  content: '' !important; position: absolute !important; inset: 12px 10px !important; border-radius: 0 !important;
+  background: repeating-linear-gradient(0deg, transparent 0 24.9%, rgba(80,170,146,.035) 25% 49.9%, transparent 50% 74.9%, rgba(80,170,146,.035) 75% 100%) !important;
+}
+.gf-current-pitch .gf-premium-pitch-markings {
+  position: absolute !important; inset: 20px 16px !important; border: 1px solid var(--gf-pitch-ink) !important;
+  pointer-events: none !important; z-index: 0 !important;
+}
+.gf-current-pitch .gf-premium-pitch-markings i { position: absolute !important; display: block !important; border: 1px solid var(--gf-pitch-ink) !important; }
+.gf-current-pitch .gf-premium-midline { left: 0 !important; right: 0 !important; top: 50% !important; height: 0 !important; border-bottom: 0 !important; }
+.gf-current-pitch .gf-premium-circle { width: 32% !important; aspect-ratio: 1 !important; left: 34% !important; top: 50% !important; transform: translateY(-50%) !important; border-radius: 50% !important; }
+.gf-current-pitch .gf-premium-center { width: 4px !important; height: 4px !important; left: calc(50% - 2px) !important; top: calc(50% - 2px) !important; border-radius: 50% !important; background: #7ac6b8 !important; }
+.gf-current-pitch .gf-premium-area { left: 22% !important; width: 56% !important; height: 15% !important; }
+.gf-current-pitch .gf-premium-area-top { top: -1px !important; }
+.gf-current-pitch .gf-premium-area-bottom { bottom: -1px !important; }
+.gf-current-pitch .gf-premium-six { left: 36% !important; width: 28% !important; height: 6% !important; }
+.gf-current-pitch .gf-premium-six-top { top: -1px !important; }
+.gf-current-pitch .gf-premium-six-bottom { bottom: -1px !important; }
+.gf-current-pitch .gf-premium-goal { left: 44% !important; width: 12% !important; height: 8px !important; }
+.gf-current-pitch .gf-premium-goal-top { top: -12px !important; }
+.gf-current-pitch .gf-premium-goal-bottom { bottom: -9px !important; }
+
+html body .content .team-formation.gf-current-pitch { position:relative !important; container-type:inline-size !important; isolation:isolate !important; --gf-pitch-ink:rgba(116,255,229,.30) !important; }
+.gf-current-pitch .gf-pitch-direction { position:absolute !important; right:10px !important; bottom:4px !important; z-index:2 !important; color:#fff !important; font-size:10px !important; pointer-events:none !important; }
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch > .formation-line { position:relative !important; display:grid !important; grid-template-columns:minmax(0,1fr) !important; align-items:stretch !important; min-height:clamp(125px, calc(100cqw / var(--gf-line-capacity, 3) + 48px), 180px) !important; padding:42px 6px 10px !important; margin:0 !important; border:0 !important; gap:0 !important; background:transparent !important; z-index:1 !important; box-shadow:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-line + .formation-line::before { content:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-label { position:absolute !important; left:4px !important; top:4px !important; width:auto !important; min-width:0 !important; min-height:26px !important; padding:0 6px !important; display:flex !important; align-items:center !important; border:1px solid rgba(120,255,220,.22) !important; border-radius:7px !important; background:rgba(0,16,18,.78) !important; color:#bfe8df !important; font-size:10px !important; text-shadow:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players { display:grid !important; grid-template-columns:repeat(var(--gf-player-count, 1),minmax(0,1fr)) !important; align-items:center !important; justify-items:center !important; align-content:center !important; gap:6px !important; height:100% !important; min-width:0 !important; padding:0 !important; overflow:visible !important; background:transparent !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-player { zoom:1 !important; width:min(100%,126px) !important; min-width:0 !important; max-width:100% !important; margin:0 !important; }
+@media (max-width:760px) {
+ html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players:is([data-player-count='3'],[data-player-count='4'],[data-player-count='5']) { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:12px 6px !important; }
+ html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players:is([data-player-count='3'],[data-player-count='5']) > :last-child { grid-column:1 / -1 !important; }
+}
+
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch::after { content:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-line::after { content:none !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players { grid-column:1 / -1 !important; width:100% !important; flex-wrap:wrap !important; }
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .formation-player:not(.empty-slot) { height:auto !important; aspect-ratio:1000 / 940 !important; justify-self:center !important; }
+
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch {
+ background:radial-gradient(ellipse at 50% 48%,rgba(19,121,91,.22),transparent 65%),repeating-linear-gradient(90deg,rgba(116,255,229,.015) 0 1px,transparent 1px 24px),linear-gradient(135deg,#042820,#06382d 50%,#031713) !important;
+ border:0 !important; border-radius:0 !important; padding:12px 10px !important; height:auto !important; aspect-ratio:auto !important; gap:0 !important;
+}
+html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch::before {
+ content:'' !important; inset:12px 10px !important; border:0 !important; border-radius:0 !important;
+ background:repeating-linear-gradient(0deg,transparent 0 24.9%,rgba(80,170,146,.035) 25% 49.9%,transparent 50% 74.9%,rgba(80,170,146,.035) 75% 100%) !important;
+}
+
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players { border:0 !important; box-shadow:none !important; border-radius:0 !important; }
+
+/* Match the React court geometry without letting legacy compact-card selectors
+   constrain the cards to 86px or a fixed height. Keep result overlays intact. */
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-sin-stat.formation-card-compacta {
+  width: min(100%, 126px, calc((100cqw - 40px) / var(--gf-line-capacity, 3))) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  aspect-ratio: 1000 / 980 !important;
+  background-size: 100% 100% !important;
+  zoom: 1 !important;
+  container-type: inline-size;
+  overflow: visible !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-card-photo {
+  left: 40% !important;
+  right: 6% !important;
+  top: 10% !important;
+  width: auto !important;
+  height: 53% !important;
+  aspect-ratio: auto !important;
+  align-items: center !important;
+  border: 0 !important;
+  border-radius: 36% 36% 30% 30% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-card-photo img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  object-position: center !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-card-photo.is-custom img {
+  object-fit: cover !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-player-name {
+  left: 9% !important;
+  right: 9% !important;
+  top: 66% !important;
+  bottom: 16% !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  font-size: clamp(7px, 11cqw, 14px) !important;
+  line-height: 1 !important;
+}
+html body:is(.page-index, .page-historial) main.content .public-teams .team-formation.gf-current-pitch .formation-player.formation-card-compacta .formation-player-match-rating {
+  top: 84.8% !important;
+  bottom: auto !important;
+  height: 6.8% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players {
+  gap: clamp(6px, 2cqw, 14px) !important;
+}
+@media (max-width: 760px) {
+  html body:is(.page-index, .page-historial) .content .gf-current-pitch .line-players:is([data-player-count='3'], [data-player-count='4'], [data-player-count='5']) {
+    gap: 12px 6px !important;
+  }
+}
+@container (max-width: 230px) {
+  html body:is(.page-index, .page-historial) .content .team-formation.gf-current-pitch > .formation-line {
+    min-height: 180px !important;
+  }
+}
+
+}
+
+/* Public match cards: projected fullbacks must not enlarge all four field rows.
+   Scope by the component so the root URL works without a page-index body class. */
+@layer properties {
+.public-teams-uniform .team-formation > .formation-line {
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+.public-teams-uniform .team-formation .formation-line > .line-players {
+  min-height: 0 !important;
+  padding: 0 !important;
+  align-items: center !important;
+}
+.public-teams-uniform .team-formation .formation-line.is-projected-defense [data-assigned-position="LAT"] {
+  transform: translateY(10px) !important;
+}
+}
+
+/* Inicio: projected fullbacks share the same row geometry as every other team. */
+@layer properties {
+html body.page-index .content .public-teams .team-formation:is(.gf-current-pitch, .is-base-formation) .formation-line > .line-players {
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+html body.page-index .content .public-teams .team-formation:is(.gf-current-pitch, .is-base-formation) .formation-line.is-projected-defense > .line-players {
+  align-items: center !important;
+  align-content: center !important;
+}
+html body.page-index .content .public-teams .team-formation:is(.gf-current-pitch, .is-base-formation) .formation-line.is-projected-defense [data-assigned-position="LAT"] {
+  transform: translateY(12px) !important;
+}
+}
+
+@layer properties {
+html body.page-index .content .public-teams .team-formation.is-base-formation:not(.gf-current-pitch) {
+  grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+}
+html body.page-index .content .public-teams .team-formation.is-base-formation:not(.gf-current-pitch) > .formation-line {
+  min-height: 90px !important;
+  margin: 0 !important;
+}
+}
+
+@layer properties {
+html body.page-index .content .public-teams .formation-player .gf-player-injury-icon {
+  position: absolute !important;
+  right: 9% !important;
+  top: 48% !important;
+  z-index: 35 !important;
+  display: block !important;
+  width: clamp(12px, 18cqw, 24px) !important;
+  aspect-ratio: 1;
+}
+html body.page-index .content .public-teams .gf-player-injury-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+}
+
+/* Scorers sit just above the card, leaving the photo, rating and awards clear. */
+@layer properties {
+html body:is(.page-index, .page-historial) .content .public-teams .formation-player .formation-scorer-badge {
+  position: absolute !important;
+  z-index: 8 !important;
+  top: -12px !important;
+  right: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 4px !important;
+  border: 1px solid #adc8bb !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+  color: #173c2e !important;
+  -webkit-text-fill-color: #173c2e !important;
+  font-size: clamp(9px, 10cqw, 12px) !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  text-shadow: none !important;
+  pointer-events: none;
+}
+}
+
+@layer base {
+/* Anonymous proposals: give each pair of courts enough width for its lineup. */
+.proposal-teams { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.proposal-teams > .team-card { min-width: 0; }
+@media (min-width: 900px) {
+  .proposal-teams { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+html body .content .team-formation.director-proposal-pitch {
+  display: grid !important;
+  grid-template-rows: repeat(4, minmax(120px, auto)) !important;
+  height: auto !important;
+  min-height: 560px !important;
+  padding: 12px 8px !important;
+  gap: 0 !important;
+  container-type: inline-size;
+}
+html body .content .team-formation.director-proposal-pitch > .formation-line:not(.gf-formation-row) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-content: center !important;
+  min-height: 120px !important;
+  padding: 28px 4px 12px !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  position: relative;
+}
+html body .content .director-proposal-pitch .line-label {
+  position: absolute !important;
+  top: 6px !important;
+  left: 4px !important;
+  width: auto !important;
+  min-width: 34px;
+  text-align: center;
+  margin: 0 !important;
+}
+html body .content .team-formation.director-proposal-pitch .formation-line .line-players {
+  display: grid !important;
+  grid-template-columns: repeat(var(--proposal-player-count), minmax(0, 1fr)) !important;
+  align-items: center !important;
+  justify-items: center !important;
+  gap: 12px 6px !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+html body .content .director-proposal-pitch .formation-player.formation-card-compacta {
+  width: min(100%, 100px) !important;
+  min-width: 0 !important;
+  max-width: 100px !important;
+  height: auto !important;
+  aspect-ratio: 1.25 !important;
+  zoom: 1 !important;
+  margin: 0 !important;
+}
+@container (max-width: 360px) {
+  html body .content .team-formation.director-proposal-pitch .formation-line .line-players:is([data-player-count='4'], [data-player-count='5'], [data-player-count='6']) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+}
+
+@layer base {
+.director-home { display: grid; gap: 24px; }
+.director-home-section > h2 { margin-bottom: 16px; }
+.director-home-section > p { margin: 10px 0; }
+.director-home-proposal-list { display: grid; gap: 24px; margin: 16px 0; }
+.director-home-proposal { min-width: 0; padding-top: 16px; border-top: 1px solid #c5d9ce; }
+html body .content .team-formation.director-proposal-pitch > .formation-line:not(.gf-formation-row):not(#gf-proposal-layout),
+html body .content .team-formation.director-proposal-pitch .line-players:not(#gf-proposal-layout) {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+}
+
+@layer base {
+html body main.content .proposal-page { padding: 24px !important; }
+.proposal-page-head { display: grid; gap: 8px; margin-bottom: 24px; }
+html body main.content .proposal-page h1 { font-size: 24px !important; line-height: 1.2 !important; margin: 0 !important; }
+.proposal-back { font-size: 13px; color: #526b62; text-decoration: none; }
+html body main.content .proposal-option-heading:not(#gf-contrast-lock) {
+  margin: 0 !important; padding: 16px 18px !important;
+  font-size: 21px !important; line-height: 1.25 !important; font-weight: 800 !important;
+  background: #063d2b !important; color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border-bottom: 3px solid #b5d9c5;
+}
+.multi-draw-option[id] { scroll-margin-top: 100px; }
+.proposal-jump-nav {
+  position: sticky; top: 8px; z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 16px 0; padding: 12px; border: 1px solid #adc8bb;
+  border-radius: 8px; background: #fff;
+}
+.proposal-jump-nav strong { font-size: 14px; margin-right: 8px; }
+html body main.content .proposal-jump-nav a {
+  display: inline-flex; align-items: center; min-height: 40px;
+  padding: 8px 12px; border: 1px solid #adc8bb; border-radius: 6px;
+  background: #eef7f1 !important; color: #063d2b !important;
+  font-size: 14px; font-weight: 700; text-decoration: none;
+}
+.proposal-jump-nav a:hover { border-color: #063d2b; }
+.proposal-jump-nav a:focus-visible { outline: 3px solid #88bca3; outline-offset: 2px; }
+.proposal-mobile-summary { display: none; }
+html body main.content .multi-draw-option.is-selected:not(#gf-contrast-lock) {
+  border: 3px solid #087443 !important;
+  background: #f1faf4 !important;
+}
+html body main.content .proposal-selected-label:not(#gf-contrast-lock) {
+  margin: 0 !important; padding: 10px 14px !important;
+  background: #d8f0df !important; color: #064a2e !important;
+  -webkit-text-fill-color: #064a2e !important;
+  font-size: 15px !important; font-weight: 800 !important;
+  border-bottom: 1px solid #91c7a3;
+}
+html body main.content .home-dashboard-head:not(#gf-contrast-lock) {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+  padding: 16px 0 !important; margin-bottom: 8px !important;
+}
+html body main.content .home-dashboard-head .home-app-download:not(#gf-contrast-lock) {
+  background: #fff !important; color: #063d2b !important; -webkit-text-fill-color: #063d2b !important;
+  border: 1px solid #adc8bb !important; box-shadow: none !important;
+}
+.home-dashboard-section { margin: 0 0 32px; padding: 0; min-width: 0; }
+html body main.content .home-dashboard-section > h2:not(#gf-contrast-lock) {
+  font-size: 24px !important; line-height: 1.3 !important; font-weight: 800 !important;
+  margin: 0 0 16px !important; padding-bottom: 10px; border-bottom: 2px solid #adc8bb;
+  color: #063d2b !important; -webkit-text-fill-color: #063d2b !important;
+}
+.home-upcoming-section { padding: 18px; border: 1px solid #adc8bb; border-radius: 8px; background: #fff; }
+html body main.content .home-upcoming-section > .home-next-card:not(#gf-contrast-lock),
+html body main.content .home-upcoming-section > .home-multi-draw-card:not(#gf-contrast-lock) {
+  border: 0 !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important;
+}
+html body main.content .home-upcoming-section .home-multi-draw-card:not(#gf-contrast-lock) { margin-top: 20px !important; padding-top: 20px !important; border-top: 1px solid #d7e6df !important; }
+html body main.content .home-upcoming-section .home-multi-draw-head:not(#gf-contrast-lock) { background: transparent !important; border: 0 !important; padding: 0 !important; }
+html body main.content .home-upcoming-section .match-detail-toggle-btn:not(#gf-contrast-lock),
+html body main.content .home-last-section .match-detail-toggle-btn:not(#gf-contrast-lock) { background: #fff !important; color: #063d2b !important; -webkit-text-fill-color: #063d2b !important; border: 1px solid #adc8bb !important; box-shadow: none !important; }
+html body main.content .home-upcoming-section .match-detail-toggle-btn span:not(#gf-contrast-lock),
+html body main.content .home-last-section .match-detail-toggle-btn span:not(#gf-contrast-lock) { color: #063d2b !important; -webkit-text-fill-color: #063d2b !important; }
+@media (max-width: 760px) {
+  .home-upcoming-section { padding: 12px; }
+  html body main.content .home-dashboard-head:not(#gf-contrast-lock) { flex-wrap: wrap; }
+  html body main.content .home-dashboard-head .home-page-actions { width: auto; }
+  html body main.content .home-dashboard-section > h2:not(#gf-contrast-lock) { font-size: 22px !important; }
+}
+.proposal-summary-swatch { display: inline-block; width: 12px; height: 12px; margin-right: 6px; border: 1px solid #adc8bb; background: #e5e7eb !important; }
+.proposal-summary-swatch[data-kit="ROSA"] { background: #f9a8d4 !important; }
+.proposal-summary-swatch[data-kit="AZUL"] { background: #2563eb !important; }
+.proposal-summary-swatch[data-kit="NARANJA"] { background: #fb923c !important; }
+.proposal-summary-swatch[data-kit="NEGRO"] { background: #111827 !important; }
+.proposal-summary-swatch[data-kit="VERDE"] { background: #15803d !important; }
+.proposal-summary-swatch[data-kit="CAMISADO"] { background: #fff !important; }
+.proposal-summary-swatch[data-kit="DESCAMISADO"] { background: #d6d3d1 !important; }
+.proposal-inline-vote { padding: 12px; }
+@media (max-width: 760px) {
+  .proposal-mobile-summary { display: grid; gap: 10px; padding: 12px; }
+  html body main.content .proposal-mobile-summary p { margin: 0 !important; font-size: 14px !important; line-height: 1.5; }
+  html body main.content .proposal-summary-own { background: #f0f7ce !important; padding: 10px; border-left: 4px solid #063d2b; }
+  .proposal-summary-companions { overflow-wrap: anywhere; }
+  .multi-draw-option:has(.proposal-mobile-summary):not(.is-mobile-details-open) [data-multi-draw-list-view] { display: none !important; }
+  .proposal-mobile-details-toggle { min-height: 44px; }
+  .proposal-inline-vote .btn, .director-proposals > .card > form .btn { width: 100%; min-height: 44px; }
+}
+html body main.content .multi-draw-player-row.is-current-player:not(#gf-contrast-lock) {
+  background: #f0f7ce !important;
+  border-left: 4px solid #063d2b !important;
+}
+html body main.content .multi-draw-player-row.is-current-player .multi-draw-player-name:not(#gf-contrast-lock) {
+  color: #063d2b !important; -webkit-text-fill-color: #063d2b !important;
+  font-weight: 900 !important;
+}
+html body main.content .multi-draw-player-row.is-current-player .multi-draw-player-name em:not(#gf-contrast-lock) {
+  background: #063d2b !important; color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+.proposal-match-time { margin: 0; color: #526b62; font-size: 14px; }
+.proposal-action-bar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 0; border-top: 1px solid #d7e6df; border-bottom: 1px solid #d7e6df; }
+.proposal-action-bar p { margin: 0; }
+.proposal-action-bar p + p { margin-top: 6px; font-size: 14px; color: #526b62; }
+html body main.content .proposal-page .proposal-state { font-size: 17px !important; font-weight: 700 !important; color: #07130f !important; }
+html body main.content .proposal-page .proposal-primary:not(#gf-contrast-lock) {
+  display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 12px !important;
+  min-height: 46px !important; padding: 12px 18px !important; border: 1px solid #063d2b !important; border-radius: 8px !important;
+  background: #063d2b !important; color: #fff !important; font-size: 14px !important; font-weight: 700 !important;
+  text-decoration: none !important; white-space: nowrap; box-shadow: none !important;
+}
+html body main.content .proposal-page .proposal-primary:not(#gf-contrast-lock):hover { background: #052f22 !important; }
+html body main.content .proposal-page .proposal-primary:not(#gf-contrast-lock):focus-visible { outline: 3px solid #88bca3; outline-offset: 3px; }
+html body main.content .proposal-page .proposal-primary span { color: inherit !important; }
+.proposal-schedule { display: flex; flex-wrap: wrap; gap: 20px 48px; margin: 20px 0 0; }
+.proposal-schedule dt { font-size: 13px; color: #526b62; }
+.proposal-schedule dd { margin: 5px 0 0; font-size: 15px; font-weight: 700; color: #07130f; }
+.proposal-timezone { margin: 8px 0 20px; font-size: 12px; color: #526b62; }
+.proposal-availability { margin: 20px 0 !important; font-size: 14px; color: #526b62; }
+.proposal-rules { margin-top: 20px; padding-top: 16px; border-top: 1px solid #d7e6df; font-size: 13px; color: #526b62; }
+.proposal-rules summary { cursor: pointer; }
+.proposal-rules p { margin: 10px 0; }
+@media (max-width: 600px) {
+  html body main.content .proposal-page { padding: 18px !important; }
+  .proposal-action-bar { align-items: stretch; flex-direction: column; gap: 16px; }
+  .proposal-schedule { flex-direction: column; gap: 14px; }
+}
+}
+
+@layer base {
+.proposal-page-head { min-width: 0; }
+html body main.content .proposal-page h1 { overflow-wrap: anywhere !important; max-width: 100%; }
+}
+
+/* Public match presentation uses the same current surface and card components as Sorteo. */
+@layer properties {
+html body main.content .public-teams-uniform > .team-card {
+  min-width: 0; padding: 0 !important; overflow: visible !important;
+  border: 1px solid #28675d !important; border-radius: 10px !important;
+  background: #fff !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-head {
+  display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important; gap: 4px 12px !important; margin: 0 !important;
+  padding: 14px 12px !important; border-radius: 9px 9px 0 0 !important;
+  border-bottom: 1px solid #28675d !important;
+  background: linear-gradient(125deg, #080d19, #031917 72%, #062823) !important;
+  color: #f2fffc !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-head h4 {
+  grid-column: 1; margin: 0 !important; color: #fff !important;
+  -webkit-text-fill-color: #fff !important; font-size: clamp(16px, 2vw, 23px) !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-head .small-muted {
+  grid-column: 1; color: #b9d7d0 !important; -webkit-text-fill-color: #b9d7d0 !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-score {
+  grid-column: 2; grid-row: 1 / 3; display: grid !important; justify-items: center;
+  padding: 6px 12px !important; border: 1px solid #278b83; border-radius: 8px;
+  background: rgba(0, 10, 12, .65); color: #fff;
+}
+html body main.content .public-teams-uniform .gf-public-team-score strong {
+  font-size: 36px !important; line-height: 1 !important; font-weight: 900;
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+}
+html body main.content .public-teams-uniform .gf-public-team-score > span {
+  font-size: 11px !important; color: #74ffe5 !important; -webkit-text-fill-color: #74ffe5 !important;
+}
+html body main.content .public-teams-uniform .formation-title-row { margin: 0 !important; padding: 8px !important; }
+html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch {
+  container-type: inline-size !important; position: relative !important; isolation: isolate;
+  grid-template-rows: repeat(4, minmax(0, 1fr)) !important; height: auto !important;
+  padding: 12px 10px !important; gap: 0 !important;
+}
+html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch > .formation-line {
+  position: relative !important; display: grid !important; grid-template-columns: minmax(0, 1fr) !important;
+  min-height: clamp(145px, 30cqw, 180px) !important; padding: 34px 6px 12px !important;
+  margin: 0 !important; gap: 0 !important; border: 0 !important;
+  background: transparent !important; box-shadow: none !important;
+}
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .formation-line::before,
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .formation-line::after { content: none !important; }
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-label {
+  position: absolute !important; top: 4px !important; left: 4px !important;
+  display: flex !important; align-items: center; width: auto !important; min-width: 0 !important;
+  min-height: 24px !important; padding: 0 6px !important; font-size: 10px !important;
+  border: 1px solid rgba(120,255,220,.22) !important; border-radius: 5px !important;
+  background: rgba(0,16,18,.78) !important; color: #bfe8df !important;
+}
+html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-players {
+  display: grid !important; grid-template-columns: repeat(var(--gf-player-count, 1), minmax(0, 1fr)) !important;
+  align-items: center !important; justify-items: center !important; align-content: center !important;
+  grid-column: 1 / -1 !important; gap: 8px !important; padding: 0 !important;
+  min-width: 0 !important; min-height: 0 !important; width: 100% !important; height: auto !important;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+}
+html body main.content .public-teams-uniform .gf-public-player-slot {
+  position: relative; width: min(100%, 112px, calc((100cqw - 40px) / var(--gf-line-capacity, 3)));
+  min-width: 0; margin: 0; padding: 0; align-self: center; justify-self: center;
+}
+html body main.content .public-teams-uniform .gf-public-player-slot[data-assigned-position="LAT"] { transform: translateY(10px); }
+html body main.content .public-teams-uniform .gf-player-card {
+  position: relative !important; display: block !important; width: 100% !important;
+  min-height: 0 !important; height: auto !important; aspect-ratio: 1000 / 980 !important;
+  container-type: inline-size !important; padding: 0 !important; margin: 0 !important;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+  cursor: pointer !important;
+}
+.public-teams-uniform .gf-player-card:focus-visible { outline: 2px solid #d9f99d !important; outline-offset: 3px; }
+.gf-public-match-indicators {
+  position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 3px;
+  font: 700 10px/1.3 Poppins, sans-serif; color: #fff; min-height: 16px;
+}
+.gf-public-match-indicators > span { background: #092a23; border: 1px solid #52756a; border-radius: 3px; padding: 1px 3px; }
+html body main.content .public-teams-uniform .team-card > :last-child { margin: 8px !important; }
+html body .gf-public-player-dialog {
+  position: fixed !important; inset: 0 !important; width: min(850px, calc(100vw - 24px)) !important;
+  max-height: calc(100dvh - 24px); margin: auto !important; padding: 20px !important;
+  border: 1px solid #28675d !important; border-radius: 10px !important; background: #071b16 !important;
+  color: #fff !important; overflow: auto;
+}
+.gf-public-player-dialog::backdrop { background: rgba(0,0,0,.76); }
+.gf-public-player-detail { display: grid; grid-template-columns: 220px minmax(0,1fr); gap: 24px; align-items: center; }
+.gf-public-full-card { display: grid; place-items: center; min-height: 385px; }
+.gf-public-full-card > article { transform: scale(1.3); }
+.gf-public-player-detail aside { display: grid; gap: 12px; }
+html body .gf-public-player-detail h3 { color: #fff !important; margin: 0 !important; font-size: 20px !important; }
+html body .gf-public-player-detail p { color: #b9d7d0 !important; margin: 0 !important; font-size: 12px !important; }
+.gf-public-position-ratings { display: grid; gap: 8px; }
+.gf-public-position-ratings > div { display: grid; grid-template-columns: 38px minmax(0,1fr) 36px; align-items: center; gap: 8px; padding: 8px; border: 1px solid #36554a; border-radius: 6px; }
+.gf-public-position-ratings [data-active="true"] { border-color: #d9f99d; background: #d9f99d15; }
+.gf-public-position-ratings meter { width: 100%; accent-color: #d9f99d; }
+html body .gf-public-player-detail aside > button { min-height: 42px; border: 1px solid #52756a !important; border-radius: 6px; color: #fff !important; background: #153b2e !important; }
+html body .gf-public-player-dialog [data-sorteo-full-card-text] { color: var(--sorteo-card-text) !important; -webkit-text-fill-color: var(--sorteo-card-text) !important; }
+@media (max-width: 600px) {
+  .gf-public-player-detail { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .gf-public-full-card { min-height: 300px; }
+  .gf-public-full-card > article { transform: none; }
+}
+@container (max-width: 230px) {
+  html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-players { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  html body main.content .public-teams-uniform.public-teams .gf-current-pitch .line-players > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch > .formation-line { min-height: 210px !important; }
+}
+}
+
+@layer properties {
+/* Neutralize legacy mobile wrapping when these rows contain the shared cards. */
+html body main.content .public-teams-uniform.public-teams .team-formation.gf-current-pitch .line-players > .gf-public-player-slot:nth-child(n) {
+  grid-column: auto !important;
+}
+}
+
+@layer properties {
+/* Public-page contrast rules must preserve each shared card's tier palette. */
+html body main.content .public-teams-uniform .gf-player-card [data-sorteo-card-text],
+html body main.content .public-teams-uniform .gf-player-card [data-sorteo-card-text] :is(strong, span) {
+  color: var(--sorteo-card-text) !important;
+  -webkit-text-fill-color: var(--sorteo-card-text) !important;
+}
+html body main.content .public-teams-uniform .gf-player-card [data-sorteo-card-position] {
+  color: var(--sorteo-card-position) !important;
+  -webkit-text-fill-color: var(--sorteo-card-position) !important;
+}
+}
+
+@layer properties {
+html body main.content .public-final-standings {
+  grid-column: 1 / -1; flex-basis: 100%; width: 100%; min-width: 0;
+  margin: 12px 0; padding: 0; color: #173c2e;
+}
+html body main.content .public-final-standings h3 { margin: 16px 0 8px !important; font-size: 18px !important; color: #173c2e !important; }
+html body main.content .public-final-winner {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  border: 1px solid #759d63; border-left: 4px solid #537c36; border-radius: 8px;
+  background: #eef6e6; color: #233e19;
+}
+.public-final-winner > span { font-size: 26px; }
+.public-final-winner > div { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.public-final-winner > div > span { font-size: 12px; }
+html body main.content .public-final-winner strong { color: #233e19 !important; -webkit-text-fill-color: #233e19 !important; }
+.public-final-winner > strong { white-space: nowrap; }
+.public-final-table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid #c5d9ce; border-radius: 6px; }
+html body main.content .public-final-standings table { width: 100% !important; min-width: 540px; margin: 0 !important; border-collapse: collapse; font-size: 13px !important; }
+html body main.content .public-final-standings :is(th,td) { padding: 10px 8px !important; text-align: center; border-bottom: 1px solid #d7e6df; white-space: nowrap; }
+html body main.content .public-final-standings th[scope="row"] { text-align: left; }
+html body main.content .public-final-standings thead { background: #f1f6f3; }
+html body main.content .public-final-standings tr.is-date-winner > :is(th,td) { background: #e6f2dc !important; color: #233e19 !important; font-weight: 800; }
+html body main.content .public-final-standings p { margin: 8px 0 0 !important; font-size: 11px !important; color: #526b62 !important; }
+html body main.content .public-teams-uniform > .team-card.is-date-winner { border: 2px solid #91b563 !important; }
+html body main.content .public-winner-label { grid-column: 1; color: #d9f99d !important; -webkit-text-fill-color: #d9f99d !important; font-size: 12px !important; font-weight: 800; }
+html body main.content .public-teams-uniform .is-date-winner .gf-public-team-score { grid-row: 1 / 4; }
+}

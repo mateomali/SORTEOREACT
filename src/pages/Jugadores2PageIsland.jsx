@@ -22,6 +22,9 @@ function parsePayload(root) {
   try {
     const parsed = JSON.parse(root.dataset.payload || '{}');
     return {
+      awardYear: parsed.awardYear,
+      awardLeaderboards: Array.isArray(parsed.awardLeaderboards) ? parsed.awardLeaderboards : [],
+      scorers: Array.isArray(parsed.scorers) ? parsed.scorers : [],
       players: Array.isArray(parsed.players) ? parsed.players : [],
       positions: Array.isArray(parsed.positions) ? parsed.positions : [],
       summary: parsed.summary || { active: 0, average: 0, top: 0 },
@@ -535,17 +538,55 @@ function PlayerStory({ player }) {
   return <section className="player-story" aria-label="Lectura del jugador"><h3>Perfil de juego</h3><p>{sentences.join(' ')}</p><span className="player-story-source">Lectura basada en los atributos de la ficha.</span></section>;
 }
 
+function AwardRanking({ award }) {
+  if (!award.ranking) return null;
+  const names = (award.ranking.sharedWith || []).map(player => player.name);
+  const sharedNames = names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names.at(-1)}` : names[0];
+  return <div className="player-award-ranking-block"><p className="player-award-ranking"><b>{award.ranking.position}.º en el ranking de {award.label}</b></p>{names.length ? <p className="player-award-ranking-shared">Puesto compartido con {sharedNames}.</p> : null}</div>;
+}
+
+function AwardHistoryDialog({ award, onClose }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const trigger = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog.showModal();
+    return () => { dialog.close(); trigger?.focus(); };
+  }, []);
+  return <dialog ref={dialogRef} className="player-award-history" aria-label={`Fechas de ${award.label}`}
+    onCancel={event => { event.preventDefault(); onClose(); }}
+    onKeyDown={event => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); }
+    }}>
+    <header><div><h3>{award.icon} {award.label}</h3><p>{award.count} {award.count === 1 ? 'reconocimiento' : 'reconocimientos'}{award.position > 0 && award.code !== 'monthly' ? ` · Premio recibido: ${award.position}.º puesto en la fecha` : ''}</p></div>
+      <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar fechas del premio">×</button>
+    </header>
+    <p>{award.description}</p>
+    {award.playerName ? <p><b>{award.playerName}</b> · {award.totalPoints} {award.usesPoints ? 'puntos' : 'premios'} acumulados</p> : null}
+    <AwardRanking award={award} />
+    {award.ranking ? <><p>{award.ranking.count} de {award.ranking.totalAwards} premios entregados en esta categoría{award.ranking.usesPoints ? ` · ${award.ranking.points} puntos acumulados` : ''}.</p><p>Ranking anual entre quienes recibieron este premio. Los premios con podio suman 3 puntos por primer puesto, 2 por segundo y 1 por tercero; un único ganador suma 3. Los demás se ordenan por cantidad recibida. Igual puntaje o cantidad comparte posición. Jugador del mes suma todas las canchas.</p></> : null}
+    {award.matches?.length ? <table>
+      <thead><tr><th scope="col">{award.code === 'monthly' ? 'Período' : 'Fecha'}</th><th scope="col">{award.code === 'monthly' ? 'Reconocimiento' : 'Nombre de la fecha'}</th>{award.playerName ? <th scope="col">{award.usesPoints ? 'Puesto y puntos' : 'Premios'}</th> : null}</tr></thead>
+      <tbody>{award.matches.map((match, index) => <tr key={`${match.id || match.date}-${index}`}>
+        <td><time dateTime={match.date}>{match.dateLabel}</time></td><td>{match.title}</td>
+        {award.playerName ? <td>{award.usesPoints ? <>{match.awardedPosition || 1}.º puesto<br /><b>{match.points} {match.points === 1 ? 'punto' : 'puntos'}</b></> : 1}</td> : null}
+      </tr>)}</tbody>
+    </table> : <p>No hay fechas disponibles para este premio.</p>}
+  </dialog>;
+}
+
 function PlayerAwards({ player }) {
+  const [selectedAward, setSelectedAward] = useState(null);
   const awards = player.annualAwards || [];
   const count = awards.reduce((sum, award) => sum + award.count, 0);
-  const results = player.annualResults || { played: 0, won: 0, drawn: 0, lost: 0, ranks: {}, totalPlayers: 0 };
+  const results = player.annualResults || { played: 0, won: 0, drawn: 0, lost: 0, goals: 0, ranks: {}, totalPlayers: 0 };
   return <section className="player-annual-awards" aria-label={`Premios de ${player.awardYear}`}>
     <div className="player-awards-heading"><h3>Premios {player.awardYear}</h3><span>{count} reconocimientos</span></div>
     <p className="player-awards-period">Desde el 1 de enero · Partidos finalizados</p>
     <div className="player-annual-results" aria-label={`Partidos y rankings de ${player.awardYear}`}>
-      {[['played', 'Jugados', 'Más partidos'], ['won', 'Ganados', 'Más victorias'], ['drawn', 'Empatados', 'Más empates'], ['lost', 'Perdidos', 'Menos derrotas']].map(([metric, label, ranking]) => (
+      {[['played', 'Jugados', 'Más partidos'], ['won', 'Ganados', 'Más victorias'], ['drawn', 'Empatados', 'Más empates'], ['lost', 'Perdidos', 'Menos derrotas'], ['goals', 'Goles del año', 'Ranking de goleadores']].map(([metric, label, ranking]) => (
         <article key={metric}>
-          <span>{label}</span><strong>{results[metric]}</strong>
+          <span>{label}</span><strong>{results[metric] ?? 0}</strong>
           <p>{results.ranks[metric] ? <><b>{results.ranks[metric]}&#176;</b> de {results.totalPlayers}</> : 'Sin ranking'}</p>
           <span className="annual-ranking-label">{ranking}</span>
         </article>
@@ -553,9 +594,10 @@ function PlayerAwards({ player }) {
     </div>
     <p className="annual-ranking-context">Rankings del año entre jugadores con partidos finalizados, en todas las canchas. Desempates según partidos jugados, promedio y nombre.</p>
     {results.played > results.won + results.drawn + results.lost ? <p className="annual-ranking-context">{results.played - results.won - results.drawn - results.lost} partidos sin marcador completo: cuentan como jugados, sin resultado asignado.</p> : null}
-    {awards.length ? <div className="player-awards-grid">{awards.map((award, index) => <article key={`${award.code}-${index}`} className={`player-award ${award.type === 'bad' ? 'is-special' : ''}`}>
-      <span className="player-award-icon" aria-hidden="true">{award.icon}</span><div><h4>{award.label}</h4><p>{award.description}</p>{award.detail ? <p>{award.detail}</p> : award.position > 0 ? <span>{award.position}&#176; puesto</span> : null}</div><strong aria-label={`${award.count} veces`}>×{award.count}</strong>
-    </article>)}</div> : <p className="player-awards-empty">Todavía no tiene premios registrados en {player.awardYear}.</p>}
+    {awards.length ? <div className="player-awards-grid">{awards.map((award, index) => <button type="button" key={`${award.code}-${index}`} className={`player-award ${award.type === 'bad' ? 'is-special' : ''}`} onClick={() => setSelectedAward(award)} aria-haspopup="dialog" aria-label={`Ver fechas de ${award.label}${award.position > 0 && award.code !== 'monthly' ? `, ${award.position}.º puesto` : ''}`}>
+      <span className="player-award-icon" aria-hidden="true">{award.icon}</span><div><h4>{award.label}</h4><AwardRanking award={award} /><p>{award.description}</p>{award.detail ? <p>{award.detail}</p> : award.position > 0 ? <span className="player-award-date-position">Premio recibido: {award.position}.º puesto en la fecha</span> : null}</div><strong aria-label={`${award.count} veces`}>×{award.count}</strong>
+    </button>)}</div> : <p className="player-awards-empty">Todavía no tiene premios registrados en {player.awardYear}.</p>}
+    {selectedAward ? <AwardHistoryDialog award={selectedAward} onClose={() => setSelectedAward(null)} /> : null}
   </section>;
 }
 
@@ -567,7 +609,6 @@ function ReadonlyProfile({ player, onRadarOpen }) {
           <RadarSvg stats={player.allStats} />
         </button>
           <div className="grid content-start gap-3">
-            <PlayerStory player={player} />
             <div className="grid gap-2 sm:grid-cols-3">
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Promedio</span><strong className="block text-lg font-black text-[#07130f]">{player.overall}</strong></article>
             <article className="rounded-lg border border-[#d7e6df] bg-white p-3"><span className="text-xs font-extrabold text-[#526b62]">Fuerte</span><strong className="block text-sm font-black text-[#07130f]">{player.bestStat?.label || '-'}</strong></article>
@@ -912,7 +953,14 @@ function CreatePlayerPanel({ positions, statLabels, statHelp, defaultOpen }) {
 }
 
 function PlayerModal({ player, isAdmin, deleteToken, showInactive, positions, onClose, onRadarOpen, positionRatingsPreview, onOverallPreviewChange }) {
+  const [activeTab, setActiveTab] = useState('description');
+  const contentRef = useRef(null);
+  useEffect(() => { setActiveTab('description'); }, [player?.id]);
+  useEffect(() => { if (contentRef.current) contentRef.current.scrollTop = 0; }, [activeTab, player?.id]);
   if (!player) return null;
+  const tabs = [['description', 'Descripción y estadísticas'], ['awards', 'Premios']];
+  const tabId = key => `player-${player.id}-tab-${key}`;
+  const panelId = key => `player-${player.id}-panel-${key}`;
   const headerRatings = positionRatingsPreview?.length ? positionRatingsPreview : player.positionRatings;
   return (
     <>
@@ -927,7 +975,19 @@ function PlayerModal({ player, isAdmin, deleteToken, showInactive, positions, on
           <PositionRatingSummary ratings={headerRatings} />
           <button className={modalCloseButtonClass} type="button" onClick={onClose} aria-label="Cerrar ficha">x</button>
         </header>
-        <div className="grid gap-4 overflow-auto p-4">
+        <nav className="player-profile-tabs" role="tablist" aria-label="Secciones de la ficha">
+          {tabs.map(([key, label], index) => <button key={key} id={tabId(key)} type="button" role="tab" aria-selected={activeTab === key} aria-controls={panelId(key)} tabIndex={activeTab === key ? 0 : -1} onClick={() => setActiveTab(key)} onKeyDown={event => {
+            let next;
+            if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+            if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+            if (event.key === 'Home') next = 0;
+            if (event.key === 'End') next = tabs.length - 1;
+            if (next !== undefined) { event.preventDefault(); setActiveTab(tabs[next][0]); document.getElementById(tabId(tabs[next][0]))?.focus(); }
+          }}>{label}</button>)}
+        </nav>
+        <div ref={contentRef} className="player-profile-content grid gap-4 overflow-auto p-4">
+          <div className="player-profile-panel" role="tabpanel" id={panelId('description')} aria-labelledby={tabId('description')} hidden={activeTab !== 'description'} tabIndex={0}>
+            <PlayerStory player={player} />
           {isAdmin ? (
             <AdminEditForm key={player.id} player={player} positions={positions} onOverallPreviewChange={onOverallPreviewChange} />
           ) : (
@@ -941,8 +1001,6 @@ function PlayerModal({ player, isAdmin, deleteToken, showInactive, positions, on
             <input type="hidden" name="delete_token" value={deleteToken} />
             <input type="hidden" name="show_inactive" value={showInactive ? '1' : '0'} />
           </form> : null}
-          {isAdmin ? <PlayerStory player={player} /> : null}
-          <PlayerAwards player={player} />
           <details className="rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3">
             <summary className="cursor-pointer text-sm font-black text-[#07130f]">Ver ayuda de stats</summary>
             <p className="m-0 mt-2 text-sm font-semibold text-slate-600">La ficha muestra el radar, la lectura general y la explicacion de cada stat.</p>
@@ -957,6 +1015,10 @@ function PlayerModal({ player, isAdmin, deleteToken, showInactive, positions, on
             <p>Si tiene historial, se conserva como inactivo.</p>
             <button type="submit">Eliminar jugador</button>
           </form> : null}
+          </div>
+          <div role="tabpanel" id={panelId('awards')} aria-labelledby={tabId('awards')} hidden={activeTab !== 'awards'} tabIndex={0}>
+            <PlayerAwards player={player} />
+          </div>
           <button className={modalSecondaryButtonClass} type="button" onClick={onClose}>Cerrar</button>
         </div>
       </section>
@@ -1044,8 +1106,35 @@ function DirectoryRatings({ player }) {
   ))}</div>;
 }
 
+function AwardsOverview({ payload }) {
+  const [selectedAward, setSelectedAward] = useState(null);
+  const rankingTable = (entries, valueKey, valueLabel, label, category = null) => <table aria-label={label}>
+    <thead><tr><th scope="col">Puesto</th><th scope="col">Jugador</th><th scope="col">{valueLabel}</th></tr></thead>
+    {[...new Set(entries.map(entry => entry.position))].map(position => <tbody key={position} className={`directory-ranking-place directory-ranking-place-${position}`} aria-label={`${position}.º puesto`}>
+      {entries.filter(entry => entry.position === position).map((entry, index) => <tr key={entry.id}><td>{entry.position}.º{index === 0 && position <= 3 ? <span className="directory-ranking-place-label">{['', 'Primer puesto', 'Segundo puesto', 'Tercer puesto'][position]}</span> : null}</td><td>{category ? <button type="button" className="directory-award-player-link" aria-haspopup="dialog" aria-label={`Ver premios de ${entry.name} en ${category.label}`} onClick={() => setSelectedAward({ ...category, count: entry.count, matches: entry.matches, playerName: entry.name, totalPoints: entry.points })}>{entry.position === 1 ? <strong>{entry.name}</strong> : entry.name}</button> : entry.position === 1 ? <strong>{entry.name}</strong> : entry.name}{entries.some(other => other.id !== entry.id && other.position === entry.position) ? <span className="directory-ranking-tie">Puesto compartido</span> : null}</td><td>{entry.position === 1 ? <strong>{entry[valueKey]}</strong> : entry[valueKey]}</td></tr>)}
+    </tbody>)}
+  </table>;
+  return <div className="directory-awards-overview">
+    <header><h2>Premios {payload.awardYear}</h2><p>Podios anuales por categoría. Los empates comparten puesto, incluidos los jugadores inactivos.</p></header>
+    <div className="directory-awards-podiums">{(payload.awardLeaderboards || []).map(category => <section key={category.code} className="directory-category-ranking" aria-label={`Podio de ${category.label}`}>
+      <h3><span aria-hidden="true">{category.icon}</span> {category.label}</h3>
+      {category.description ? <p className="directory-award-description">{category.description}</p> : null}
+      {category.usesPoints ? <div className="directory-points-explanation"><p>Por cada premio recibido en una fecha:</p><ul><li><b>1.º puesto:</b> 3 puntos</li><li><b>2.º puesto:</b> 2 puntos</li><li><b>3.º puesto:</b> 1 punto</li></ul><p>El ranking suma esos puntos durante el año.</p></div> : <p>Ordenado por cantidad de premios recibidos.</p>}
+      {rankingTable(category.entries.filter(entry => entry.position <= 3), category.usesPoints ? 'points' : 'count', category.usesPoints ? 'Puntos' : 'Premios', `Podio de ${category.label}`, category)}
+      <details><summary>Ver ranking completo ({category.entries.length})</summary>{rankingTable(category.entries, category.usesPoints ? 'points' : 'count', category.usesPoints ? 'Puntos' : 'Premios', `Ranking completo de ${category.label}`, category)}</details>
+    </section>)}</div>
+    {!payload.awardLeaderboards?.length ? <p>Todavía no hay premios registrados este año.</p> : null}
+    <section className="directory-category-ranking" aria-label="Tabla de goleadores">
+      <h2>Goleadores {payload.awardYear}</h2><p>Goles acumulados del año, en todas las canchas.</p>
+      {payload.scorers?.length ? rankingTable(payload.scorers, 'goals', 'Goles', 'Tabla de goleadores') : <p>Todavía no hay goles registrados este año.</p>}
+    </section>
+    {selectedAward ? <AwardHistoryDialog award={selectedAward} onClose={() => setSelectedAward(null)} /> : null}
+  </div>;
+}
+
 export function Jugadores2PageIsland({ root }) {
   const payload = useMemo(() => parsePayload(root), [root]);
+  const [directoryTab, setDirectoryTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'awards' ? 'awards' : 'players');
   const [query, setQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
   const [sortConfig, setSortConfig] = useState({ field: 'name', direction: 'asc' });
@@ -1113,6 +1202,16 @@ export function Jugadores2PageIsland({ root }) {
         </div>
       </section>
 
+      <nav className="player-profile-tabs" role="tablist" aria-label="Secciones de jugadores">
+        {[['players', 'Jugadores'], ['awards', 'Premios']].map(([key, label], index) => <button key={key} type="button" role="tab" id={`directory-tab-${key}`} aria-controls={`directory-panel-${key}`} aria-selected={directoryTab === key} tabIndex={directoryTab === key ? 0 : -1} onClick={() => setDirectoryTab(key)} onKeyDown={event => {
+          if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
+            event.preventDefault();
+            const next = event.key === 'Home' ? 'players' : event.key === 'End' ? 'awards' : index === 0 ? 'awards' : 'players';
+            setDirectoryTab(next); document.getElementById(`directory-tab-${next}`)?.focus();
+          }
+        }}>{label}</button>)}
+      </nav>
+      <div className="directory-main-panel" role="tabpanel" id="directory-panel-players" aria-labelledby="directory-tab-players" hidden={directoryTab !== 'players'}>
       <section className="players-directory-toolbar grid gap-2 rounded-lg border border-[#adc8bb] bg-[#f8fbfa] p-3 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_auto]" aria-label="Controles de jugadores">
         <div className="players-directory-search grid grid-cols-[minmax(0,1fr)_44px] gap-2">
           <input className="min-h-10 w-full rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none placeholder:text-[#6f837a] focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60 sm:min-h-11" type="search" placeholder="Buscar jugador, posicion o stat" aria-label="Buscar jugador" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -1238,6 +1337,10 @@ export function Jugadores2PageIsland({ root }) {
         </table>
       </section>
 
+      </div>
+      <div role="tabpanel" id="directory-panel-awards" aria-labelledby="directory-tab-awards" hidden={directoryTab !== 'awards'}>
+        <AwardsOverview payload={payload} />
+      </div>
       <CardPreviewModal player={cardPlayer} onClose={() => setCardId(null)} />
       <PlayerModal player={activePlayer} isAdmin={payload.isAdmin} deleteToken={payload.deleteToken} showInactive={payload.showInactive} positions={payload.positions} onClose={closePlayerModal} onRadarOpen={(player) => setRadarId(player.id)} positionRatingsPreview={activePositionRatings} onOverallPreviewChange={handleOverallPreviewChange} />
       <RadarOverlay player={radarPlayer} onClose={() => setRadarId(null)} />

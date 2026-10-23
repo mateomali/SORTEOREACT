@@ -1,0 +1,19 @@
+PROXIMO PARTIDO Y ORDEN DEL MENU - 23/10/2026
+
+Subir el contenido del ZIP goodfellas-proximo-partido-20261023.zip a /sorteo/ del sitio existente, conservando las carpetas.
+Guardar previamente una copia de los cuatro archivos que se reemplazan:
+  assets/tailwind.css
+  includes/header.php
+  lib/director_proposals.php
+  propuestas_equipos.php
+
+Incluye Bosque y marfil y la correccion anterior del selector de premios.
+Orden para visitantes: Inicio, Iniciar sesion, Jugadores, Fechas.
+Fechas contiene Proximo partido e Historial. Se conservan los controles adicionales de cada rol.
+Proximo partido muestra fecha/hora, convocados, convocatoria incompleta y estado de los equipos sin requerir votacion ni formaciones.
+La entrada sin match_id busca la fecha futura sin finalizar mas cercana por su fecha de juego.
+Las propuestas y votaciones existentes siguen disponibles en esa misma pagina.
+
+No contiene SQL, configuracion ni fotos. No requiere cambiar la base de datos ni reinstalar la APK.
+Despues de subirlo, cerrar y volver a abrir la APK para cargar el sitio actualizado.
+Este paquete fue preparado localmente; no se publico automaticamente.

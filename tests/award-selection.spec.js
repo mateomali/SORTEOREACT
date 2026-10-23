@@ -52,18 +52,18 @@ for (const mode of ['both', 'awards', 'ratings']) {
     }
     await expect(page.locator('[name^="awards["]')).toHaveCount(17);
     await expect(page.locator('#award-player_of_match')).toHaveValue('Jugador Uno (#1)');
-    await expect(page.getByRole('button', { name: /^Quitar selección de / })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: /^Quitar puesto 1 de / })).toHaveCount(1);
     await page.locator('#award-pelusa').fill('Jugador');
-    await expect(page.getByRole('button', { name: 'Quitar selección de Pelusa', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Quitar puesto 1 de Pelusa', exact: true })).toBeVisible();
     await page.locator('#award-pelusa').fill('Jugador Uno (#1)');
-    await expect(page.getByRole('button', { name: 'Quitar selección de Pelusa', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Quitar selección de Man of the Match', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Quitar puesto 1 de Pelusa', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Quitar puesto 1 de Man of the Match', exact: true }).click();
     await expect(page.locator('#award-player_of_match')).toHaveValue('');
-    await expect(page.getByRole('button', { name: 'Quitar selección de Man of the Match', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Quitar puesto 1 de Man of the Match', exact: true })).toHaveCount(0);
     await expect(page.locator('#award-pelusa')).toHaveValue('Jugador Uno (#1)');
     const values = await page.locator('form[data-junta-vote-submit]').evaluate((form) => Object.fromEntries(new FormData(form)));
-    expect(values['awards[player_of_match]']).toBe('');
-    expect(values['awards[pelusa]']).toBe('Jugador Uno (#1)');
+    expect(values['awards[player_of_match][0]']).toBe('');
+    expect(values['awards[pelusa][0]']).toBe('Jugador Uno (#1)');
     await page.locator('#award-player_of_match').fill('Jugador Uno (#1)');
     await expect(page.locator('#award-player_of_match')).toHaveValue('Jugador Uno (#1)');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
