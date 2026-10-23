@@ -50,17 +50,15 @@ test('live scoring, persisted clock, bulk attribution, conflicts and closing fro
     await expect(page.getByRole('heading', { name: 'Partido 1', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Comenzar partido', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pausar', exact: true })).toBeVisible();
-    fixture('overtime', data.id);
     await page.reload();
-    await expect(page.getByRole('timer')).toContainText('−00:');
-    await expect(page.getByText('Tiempo extra', { exact: true })).toBeVisible();
+    await expect(page.getByRole('timer')).toContainText('09:');
     await page.getByRole('button', { name: 'Pausar', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Reanudar', exact: true })).toBeVisible();
     const paused = await page.getByRole('timer').textContent();
     await page.waitForTimeout(1100);
     expect(await page.getByRole('timer').textContent()).toBe(paused);
     await page.getByRole('button', { name: 'Fixture', exact: true }).click();
-    await expect(page.getByRole('timer')).toContainText('−00:');
+    await expect(page.getByRole('timer')).toContainText('09:');
     await page.getByRole('button', { name: 'Ir al partido', exact: true }).click();
     await page.getByRole('button', { name: '+ Agregar gol', exact: true }).first().click();
     await page.getByRole('dialog').getByText('Gol en contra', { exact: true }).click();
@@ -260,4 +258,120 @@ test('an open scoring dialog cannot overwrite changes received from another scre
     expect(state.games[0].goals).toHaveLength(1);
     expect(state.games[0].goals[0].team).toBe(2);
   } finally { fixture('delete', data.id); }
+});
+for (const count of [2, 3, 4]) {
+  test(`public live alerts, permissions and automatic endings with ${count} teams`, async ({ page, browser }) => {
+    const data = JSON.parse(fixture('create', count));
+    const spectator = await browser.newContext();
+    try {
+      await login(page);
+      await page.goto(`${BASE}/partidos_en_vivo.php?match_id=${data.id}`);
+      await page.getByRole('button', { name: 'Preparar primer partido' }).click();
+      await page.getByRole('button', { name: 'Comenzar partido', exact: true }).click();
+      fixture('near-alert', data.id);
+      const viewer = await spectator.newPage();
+      await viewer.addInitScript(() => { window.__liveSpoken = []; window.speechSynthesis.speak = value => window.__liveSpoken.push(value.text); });
+      await viewer.goto(`${BASE}/partidos_en_vivo.php?match_id=${data.id}`);
+      await expect(viewer.getByRole('timer')).toBeVisible();
+      await expect(viewer.getByRole('button', { name: 'Pausar', exact: true })).toBeDisabled();
+      await expect(viewer.getByRole('button', { name: '+ Agregar gol', exact: true }).first()).toBeDisabled();
+      await expect(viewer.getByRole('alert')).toContainText(count === 2 ? 'PRÓXIMA PELOTA AFUERA CAMBIO!!' : 'ÚLTIMO MINUTO', { timeout: 8000 });
+      expect(await viewer.evaluate(async id => (await fetch(`partidos_en_vivo.php?match_id=${id}&api=1`, { method: 'POST', body: JSON.stringify({ action: 'pause' }) })).status, data.id)).toBe(403);
+      await viewer.getByRole('button', { name: 'Activar avisos sonoros' }).click();
+      await expect.poll(() => viewer.evaluate(() => window.__liveSpoken)).toContain(count === 2 ? 'PR\u00d3XIMA PELOTA AFUERA CAMBIO!!' : '\u00daLTIMO MINUTO');
+      await page.reload();
+      const result = await page.evaluate(async ({ id }) => {
+        const payload = JSON.parse(document.querySelector('[data-react-island="live_matches"]').dataset.payload);
+        const endpoint = `partidos_en_vivo.php?match_id=${id}&api=1`;
+        for (let i = 0; i < 3; i++) {
+          const latest = await (await fetch(endpoint)).json();
+          const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': payload.csrf }, body: JSON.stringify({ action: 'goal', team: 1, revision: latest.session.revision }) });
+          if (!response.ok) throw new Error(await response.text());
+        }
+        return (await (await fetch(endpoint)).json()).session.state.games[0];
+      }, { id: data.id });
+      expect(result.status).toBe(count === 2 ? 'playing' : 'finished');
+      if (count > 2) expect(result.finish_reason).toBe('three_goals');
+      if (count > 2) {
+        await page.reload();
+        await page.getByRole('button', { name: 'Preparar próximo partido', exact: true }).click();
+        await page.getByRole('button', { name: 'Comenzar partido', exact: true }).click();
+      }
+      fixture('overtime', data.id);
+      await viewer.reload();
+      await expect(viewer.getByRole('timer')).toContainText('00:00');
+      await expect(viewer.getByText('Partido finalizado: se cumplió el tiempo acordado.', { exact: true })).toBeVisible();
+      const saved = JSON.parse(fixture('inspect', data.id));
+      expect(saved.session.state.games.at(-1).status).toBe('finished');
+      expect(saved.session.state.games.at(-1).elapsed).toBe(count === 2 ? 3600 : 600);
+      expect(saved.teams.reduce((sum, t) => sum + Number(t.goals), 0)).toBe(3);
+    } finally { await spectator.close(); fixture('delete', data.id); }
+  });
+}
+
+test('two-team result editors preserve live state and support aggregate entry', async ({ page }) => {
+  const data = JSON.parse(fixture('create', 2));
+  try {
+    await login(page);
+    await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}`);
+    await expect(page).toHaveURL(new RegExp(`partidos_en_vivo.php\\?match_id=${data.id}`));
+    await page.getByRole('link', { name: 'Cargar goles y premios', exact: true }).click();
+    await expect(page.locator('[name="direct_result"]')).toHaveValue('1');
+    await page.locator('[name="team_goals[1]"]').fill('2');
+    await page.locator('[name="team_goals[2]"]').fill('1');
+    await page.locator(`[name="goals[${data.players.find(p => Number(p.team_number) === 1).id}]"]`).fill('2');
+    await page.locator(`[name="goals[${data.players.find(p => Number(p.team_number) === 2).id}]"]`).fill('1');
+    page.on('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: 'Finalizar fecha con goles y premios', exact: true }).click();
+    await expect.poll(() => JSON.parse(fixture('inspect', data.id)).session.state.closed).toBe(true);
+    const saved = JSON.parse(fixture('inspect', data.id));
+    expect(saved.session.state.summary.team_goals).toMatchObject({ 1: 2, 2: 1 });
+    expect(saved.teams.map(team => Number(team.goals))).toEqual([2, 1]);
+    await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}&edit_details=1`);
+    await expect(page.getByRole('link', { name: 'Abrir partidos en vivo' })).toBeVisible();
+    await expect(page.locator('[name="team_goals[1]"]')).toHaveCount(0);
+    await page.goto(`${BASE}/partidos_en_vivo.php?match_id=${data.id}`);
+    await expect(page.getByRole('heading', { name: 'Resultado general de la fecha' })).toBeVisible();
+  } finally { fixture('delete', data.id); }
+});
+
+test('expired bulk draw asks for the first scorer and old two-team writes cannot replace live scores', async ({ page }) => {
+  for (const count of [2, 3, 4]) {
+    const data = JSON.parse(fixture('create', count));
+    try {
+      await login(page);
+      await page.goto(`${BASE}/partidos_en_vivo.php?match_id=${data.id}`);
+      const send = async (action, input = {}) => page.evaluate(async ({ action, input }) => {
+        const payload = JSON.parse(document.querySelector('[data-react-island="live_matches"]').dataset.payload);
+        const url = `partidos_en_vivo.php?match_id=${payload.matchId}&api=1`;
+        const latest = await (await fetch(url)).json();
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': payload.csrf }, body: JSON.stringify({ action, ...input, revision: latest.session.revision }) });
+        return { status: response.status, data: await response.json() };
+      }, { action, input });
+      expect((await send('next', { teams: [1, 2] })).status).toBe(200);
+      if (count > 2) expect((await send('set_score', { scores: { 1: 3, 2: 3 } })).status).toBe(422);
+      expect((await send('set_score', { scores: { 1: 1, 2: 1 } })).status).toBe(200);
+      expect((await send('start')).status).toBe(200);
+      fixture('overtime', data.id);
+      await page.reload();
+      if (count > 2) {
+        expect((await send('next')).status).toBe(422);
+        await expect(page.getByText(/Empate:.*primer gol/)).toBeVisible();
+        await page.locator('.live-notice').filter({ hasText: /Empate:.*primer gol/ }).getByRole('button').last().click();
+        await expect.poll(() => JSON.parse(fixture('inspect', data.id)).session.state.games[0].tie_choice).toBe(2);
+        const next = await send('next');
+        expect(next.status).toBe(200);
+        if (count === 3) expect(next.data.session.state.games[1].teams).toContain(2);
+      } else {
+        expect((await send('correct_game', { game: 0, scores: { 1: 0, 2: 0 } })).status).toBe(200);
+        const before = JSON.parse(fixture('inspect', data.id));
+        await page.request.post(`${BASE}/finalizar_partido.php`, { form: { action: 'save_score', match_id: String(data.id), 'team_goals[1]': '9', 'team_goals[2]': '9' } });
+        const after = JSON.parse(fixture('inspect', data.id));
+        expect(after.session).toEqual(before.session);
+        expect(after.teams.map(team => Number(team.goals))).toEqual([0, 0]);
+        await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}&direct_result=1`);
+        await expect(page).toHaveURL(new RegExp(`partidos_en_vivo.php\\?match_id=${data.id}`));
+      }
+    } finally { fixture('delete', data.id); }
+  }
 });

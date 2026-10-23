@@ -22,7 +22,7 @@ function ensure_live_match_schema(): void
 
 function live_initial_state(array $match): array
 {
-    return ['duration' => (int) $match['game_duration_minutes'] * 60, 'games' => [], 'closed' => false];
+    return ['duration' => ((int) $match['num_teams'] === 2 ? 3600 : (int) $match['game_duration_minutes'] * 60), 'games' => [], 'closed' => false];
 }
 
 function live_load_session(array $match): array
@@ -100,4 +100,29 @@ function live_sync_totals(int $matchId, array $state, array $teams, array $parti
     foreach ($teamGoals as $t => $count) $stmt->execute([$count, $matchId, $t]);
     $stmt = $pdo->prepare('UPDATE match_players SET goals = ? WHERE match_id = ? AND player_id = ?');
     foreach ($playerGoals as $p => $count) $stmt->execute([$count, $matchId, $p]);
+}
+
+// Serialize automatic expiry with director actions using the same parent lock.
+function live_refresh_session(array $match, array $teams, array $participants): array
+{
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $lock = $pdo->prepare('SELECT * FROM matches WHERE id = ? FOR UPDATE');
+        $lock->execute([(int) $match['id']]);
+        $match = $lock->fetch();
+        $session = live_load_session($match);
+        $state = live_expire($session['state']);
+        if ($state !== $session['state']) {
+            $session = ['state' => $state, 'revision' => $session['revision'] + 1];
+            live_store_session((int) $match['id'], $state, $session['revision']);
+            live_sync_totals((int) $match['id'], $state, $teams, $participants);
+            $pdo->prepare('UPDATE matches SET result_saved_at = NOW() WHERE id = ?')->execute([(int) $match['id']]);
+        }
+        $pdo->commit();
+        return $session;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
 }

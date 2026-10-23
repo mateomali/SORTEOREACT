@@ -29,7 +29,7 @@ if (is_admin() || is_directivo()) {
     ensure_live_match_schema();
     $liveMatchId = (int) ($_POST['match_id'] ?? $_GET['match_id'] ?? 0);
     $liveMatch = $liveMatchId > 0 ? repo_match_by_id($liveMatchId) : null;
-    $usesLiveFixture = $liveMatch && in_array((int) $liveMatch['num_teams'], [3, 4], true) && (!empty($liveMatch['dynamic_fixture']) || $liveMatch['status'] === 'finalizado');
+    $usesLiveFixture = $liveMatch && in_array((int) $liveMatch['num_teams'], [2, 3, 4], true) && ((int) $liveMatch['num_teams'] === 2 || !empty($liveMatch['dynamic_fixture']) || $liveMatch['status'] === 'finalizado');
     $scoreActions = ['save_result', 'save_score', 'save_round_robin_scores', 'calculate_round_robin_winner', 'finalize_round_robin_date'];
     $isScorePost = $_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action'] ?? ''), $scoreActions, true);
     $isDirectScorePost = $directResultMode && ($_POST['action'] ?? '') === 'save_score';
@@ -895,7 +895,7 @@ function finish_save_optional_awards(array $match, array $participants): void
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_live_awards') {
     $awardMatch = repo_match_by_id((int) ($_POST['match_id'] ?? 0));
     try {
-        if (!$awardMatch || !in_array((int) $awardMatch['num_teams'], [3, 4], true)) throw new RuntimeException('Fecha inválida.');
+        if (!$awardMatch || !in_array((int) $awardMatch['num_teams'], [2, 3, 4], true)) throw new RuntimeException('Fecha inválida.');
         finish_save_optional_awards($awardMatch, repo_match_participants((int) $awardMatch['id']));
         flash('success', 'Premios guardados. Un jugador puede recibir varios premios distintos.');
     } catch (Throwable $error) { flash('error', $error->getMessage()); }
@@ -943,7 +943,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $lock = $pdo->prepare('SELECT * FROM matches WHERE id = ? FOR UPDATE');
             $lock->execute([$matchId]);
             $match = $lock->fetch();
-            if (!$match || !in_array((int) $match['num_teams'], [3, 4], true) || !in_array($match['status'], ['sorteado', 'finalizado'], true) || !repo_match_teams_are_public($match)) throw new RuntimeException('La fecha debe estar publicada y tener sus equipos completos.');
+            if (!$match || !in_array((int) $match['num_teams'], [2, 3, 4], true) || !in_array($match['status'], ['sorteado', 'finalizado'], true) || !repo_match_teams_are_public($match)) throw new RuntimeException('La fecha debe estar publicada y tener sus equipos completos.');
             $teams = repo_match_teams($matchId);
             if (count($teams) !== (int) $match['num_teams']) throw new RuntimeException('Faltan equipos.');
             $directSession = live_load_session($match);
@@ -1100,7 +1100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((string) ($_POST['action']
 }
 
 $selectedMatch = $matchId > 0 ? repo_match_by_id($matchId) : null;
-$directResultMode = $directResultMode && $selectedMatch && in_array((int) $selectedMatch['num_teams'], [3, 4], true);
+$directResultMode = $directResultMode && $selectedMatch && in_array((int) $selectedMatch['num_teams'], [2, 3, 4], true);
 if ($directResultMode) {
     $_SESSION['live_csrf'] ??= bin2hex(random_bytes(32));
     $directSessionForForm = live_load_session($selectedMatch);

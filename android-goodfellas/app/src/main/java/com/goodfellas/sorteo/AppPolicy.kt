@@ -5,6 +5,8 @@ import java.net.URI
 object AppPolicy {
     const val MAX_BYTES = 32 * 1024 * 1024
     val origins = setOf("https://www.sudokumerlo.com", "https://sudokumerlo.com")
+    fun isLivePage(url: String?): Boolean = isTrusted(url) &&
+        URI(url).path == "/sorteo/partidos_en_vivo.php"
     fun isTrusted(url: String?): Boolean = try {
         val uri = URI(url ?: "")
         uri.scheme == "https" && uri.host in setOf("www.sudokumerlo.com", "sudokumerlo.com") &&

@@ -11,7 +11,7 @@ $pdo = db();
 $action = $argv[1] ?? '';
 if ($action === 'create') {
     $count = (int) ($argv[2] ?? 3);
-    if (!in_array($count, [3, 4], true)) throw new RuntimeException('Invalid team count');
+    if (!in_array($count, [2, 3, 4], true)) throw new RuntimeException('Invalid team count');
     $pdo->beginTransaction();
     try {
         $pdo->prepare("INSERT INTO matches (title, match_date, status, num_teams, players_per_team, draw_mode, dynamic_fixture, teams_published_at, valuation_mode) VALUES ('Temporary live matches validation', NOW(), 'sorteado', ?, 2, 'manual', 1, NOW(), 'both')")->execute([$count]);
@@ -51,10 +51,10 @@ if ($action === 'legacy') {
     session_write_close();
 } elseif ($action === 'inspect') {
     echo json_encode(['match' => $match, 'session' => live_load_session($match), 'teams' => repo_match_teams($id), 'players' => repo_match_participants($id), 'awards' => repo_match_awards($id)]);
-} elseif ($action === 'overtime') {
+} elseif (in_array($action, ['overtime', 'near-alert'], true)) {
     $session = live_load_session($match);
     $index = count($session['state']['games']) - 1;
-    $session['state']['games'][$index]['running_since'] = microtime(true) - 605;
+    $session['state']['games'][$index]['running_since'] = microtime(true) - ($action === 'overtime' ? (int) $session['state']['games'][$index]['duration'] + 5 : 539);
     $pdo->prepare('UPDATE match_live_sessions SET revision = revision + 1, state_json = ? WHERE match_id = ?')->execute([json_encode($session['state']), $id]);
 } elseif ($action === 'award-test') {
     $participant = repo_match_participants($id)[0];

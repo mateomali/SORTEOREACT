@@ -76,6 +76,9 @@ require __DIR__ . '/includes/header.php';
       $teamsPublished = $officialTeams && repo_match_teams_are_public($match);
       $expectedPlayers = (int) $match['num_teams'] * (int) $match['players_per_team'];
     ?>
+    <?php if ($teamsPublished && in_array((int) $match['num_teams'], [2, 3, 4], true) && (!empty($match['dynamic_fixture']) || (int) $match['num_teams'] === 2)): ?>
+      <a class="btn btn-primary" href="partidos_en_vivo.php?match_id=<?= $matchId ?>">Seguir partido en vivo</a>
+    <?php endif; ?>
     <section class="card" aria-labelledby="next-match-roster">
       <h2 id="next-match-roster">Jugadores convocados</h2>
       <p><?= count($calledPlayers) ?> convocados · <?= (int) $match['num_teams'] ?> equipos de <?= (int) $match['players_per_team'] ?> jugadores.</p>

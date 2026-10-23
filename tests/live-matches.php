@@ -50,19 +50,19 @@ $players = [['id' => 10, 'team_number' => 1], ['id' => 20, 'team_number' => 2], 
 $s = ['games' => [], 'duration' => 600, 'closed' => false];
 $s = live_apply_action($s, 'next', ['teams' => [1, 2]], [1, 2, 3], $players, 1000);
 $s = live_apply_action($s, 'start', [], [1, 2, 3], $players, 1000);
-check(live_elapsed($s['games'][0], 1615) === 615.0, 'Overtime must continue');
+check(live_elapsed($s['games'][0], 1515) === 515.0, 'Elapsed clock uses server timestamps');
 rejects(fn() => live_apply_action($s, 'start', [], [1, 2, 3], $players, 1100), 'Duplicate start');
-$s = live_apply_action($s, 'pause', [], [1, 2, 3], $players, 1615);
-check(live_elapsed($s['games'][0], 3000) === 615.0, 'Pause must freeze time');
+$s = live_apply_action($s, 'pause', [], [1, 2, 3], $players, 1515);
+check(live_elapsed($s['games'][0], 3000) === 515.0, 'Pause must freeze time');
 $s = live_apply_action($s, 'start', [], [1, 2, 3], $players, 3000);
-check(live_elapsed($s['games'][0], 3010) === 625.0, 'Resume must preserve elapsed time');
+check(live_elapsed($s['games'][0], 3010) === 525.0, 'Resume must preserve elapsed time');
 rejects(fn() => live_apply_action($s, 'goal', ['team' => 1, 'player' => 20], [1, 2, 3], $players), 'Scorer from wrong team');
 check(live_validate_goal(1, ['player' => 30, 'own' => true], $s['games'][0], $players)['player'] === null, 'Own goal does not require or retain a scorer');
 $s = live_apply_action($s, 'goal', ['team' => 1, 'player' => 20, 'own' => true], [1, 2, 3], $players, 3010);
 $s = live_apply_action($s, 'goal', ['team' => 2], [1, 2, 3], $players, 3011);
 check(live_winner($s['games'][0]) === 1, 'First goal wins tied priority including own goal');
 $s = live_apply_action($s, 'finish', [], [1, 2, 3], $players, 3012);
-check($s['games'][0]['running_since'] === null && live_elapsed($s['games'][0], 4000) === 627.0, 'Finish stops clock');
+check($s['games'][0]['running_since'] === null && live_elapsed($s['games'][0], 4000) === 527.0, 'Finish stops clock');
 $table = live_standings($s, [1, 2, 3]);
 check($table[0]['points'] === 1 && $table[1]['points'] === 1, 'Tiebreak priority must not award a win');
 $s = live_apply_action($s, 'edit_goal', ['game' => 0, 'goal' => 1, 'player' => 20], [1, 2, 3], $players);
@@ -86,3 +86,58 @@ $s = live_apply_action($s, 'finish', ['tie_choice' => $s['games'][1]['teams'][0]
 $s = live_apply_action($s, 'close', [], [1, 2, 3], $players);
 rejects(fn() => live_apply_action($s, 'next', [], [1, 2, 3], $players), 'Closed dates cannot add matches');
 echo "OK: {$paths} exhaustive three-team paths, 180 four-team sequences, clocks, attribution and guards.\n";
+
+foreach ([3, 4] as $count) {
+    $teams = range(1, $count);
+    $s = ['games' => [live_new_game([1, 2], 600, '')], 'duration' => 600, 'closed' => false];
+    $s = live_apply_action($s, 'start', [], $teams, [], 1000);
+    for ($i = 0; $i < 3; $i++) $s = live_apply_action($s, 'goal', ['team' => 1], $teams, [], 1360);
+    check($s['games'][0]['status'] === 'finished' && $s['games'][0]['elapsed'] === 360.0, 'Third goal ends game with four minutes remaining');
+    check($s['games'][0]['finish_reason'] === 'three_goals', 'Goal limit reason');
+    $timed = ['games' => [live_new_game([1, 2], 600, '')], 'duration' => 600, 'closed' => false];
+    $timed = live_apply_action($timed, 'start', [], $teams, [], 1000);
+    $timed = live_expire(json_decode(json_encode($timed), true), 2500);
+    check($timed['games'][0]['status'] === 'finished' && $timed['games'][0]['elapsed'] === 600, 'Reconnect caps clock and ends game');
+    rejects(fn() => live_apply_action($timed, 'next', [], $teams, [], 2501), 'Goalless first game requires priority before next');
+    $timed = live_apply_action($timed, 'tie_priority', ['tie_choice' => 2], $teams, [], 2501);
+    check(count(live_apply_action($timed, 'next', [], $teams, [], 2501)['games']) === 2, 'Priority enables next pairing');
+}
+$s = ['games' => [], 'duration' => 600, 'closed' => false];
+$s = live_apply_action($s, 'next', ['teams' => [1, 2]], [1, 2], [], 1000);
+check($s['games'][0]['duration'] === 3600, 'Two teams play sixty minutes');
+$s = live_apply_action($s, 'start', [], [1, 2], [], 1000);
+for ($i = 0; $i < 3; $i++) $s = live_apply_action($s, 'goal', ['team' => 1], [1, 2], [], 1200);
+check($s['games'][0]['status'] === 'playing', 'Third goal does not end two-team game');
+$s = live_apply_action($s, 'pause', [], [1, 2], [], 1540);
+check(live_elapsed($s['games'][0], 9000) === 540.0, 'Substitution time freezes while paused');
+$s = live_apply_action($s, 'start', [], [1, 2], [], 9000);
+check(live_elapsed($s['games'][0], 9540) === 1080.0, 'Substitution clock resumes');
+$s = live_expire($s, 15000);
+check($s['games'][0]['elapsed'] === 3600 && $s['games'][0]['status'] === 'finished', 'Two teams stop at sixty minutes');
+echo "OK: automatic time and goal limits, recovery, priority and two-team substitutions.\n";
+
+// Regression: only the first multi-team game needs the first scorer in a draw.
+foreach ([3, 4] as $count) {
+    $teams = range(1, $count);
+    $s = ['games' => [live_new_game([1, 2], 600, '')], 'duration' => 600, 'closed' => false];
+    rejects(fn() => live_apply_action($s, 'set_score', ['scores' => [1 => 3, 2 => 3]], $teams, [], 1000), 'Cannot load 3-3 under sudden finish');
+    $s = live_apply_action($s, 'set_score', ['scores' => [1 => 1, 2 => 1]], $teams, [], 1000);
+    $s = live_apply_action($s, 'start', [], $teams, [], 1000);
+    $s = live_expire($s, 1601);
+    check(live_winner($s['games'][0]) === 0, 'Bulk score must not invent first scorer');
+    rejects(fn() => live_apply_action($s, 'next', [], $teams, [], 1602), 'Unknown first goal blocks next pairing');
+    $s = live_apply_action($s, 'tie_priority', ['tie_choice' => 2], $teams, [], 1602);
+    $s = live_apply_action($s, 'next', [], $teams, [], 1602);
+    if ($count === 3) check(in_array(2, $s['games'][1]['teams'], true), 'First scoring team stays');
+    $s = live_apply_action($s, 'set_score', ['scores' => array_fill_keys($s['games'][1]['teams'], 1)], $teams, [], 1602);
+    $s = live_apply_action($s, 'finish', [], $teams, [], 1602);
+    check(count(live_apply_action($s, 'next', [], $teams, [], 1602)['games']) === 3, 'Later draw needs no first scorer');
+}
+$s = ['games' => [live_new_game([1, 2], 3600, '')], 'duration' => 3600, 'closed' => false];
+$s = live_apply_action($s, 'goal', ['team' => 1], [1, 2], [], 1000);
+$s = live_apply_action($s, 'finish', [], [1, 2], [], 1000);
+$removed = live_apply_action($s, 'remove_goal', ['goal' => 0], [1, 2], [], 1000);
+check(live_score($removed['games'][0]) === [1 => 0, 2 => 0], 'Two-team removal to draw needs no priority');
+$s = live_apply_action($s, 'correct_game', ['game' => 0, 'scores' => [1 => 1, 2 => 1]], [1, 2], [], 1000);
+check(live_score($s['games'][0]) === [1 => 1, 2 => 1], 'Two-team correction to draw needs no priority');
+echo "OK: first-goal priority, later draws, two-team corrections and invalid 3-3 regression tests.\n";

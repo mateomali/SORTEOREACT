@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Message
 import android.print.PrintManager
+import android.speech.tts.TextToSpeech
 import android.util.Base64
 import android.view.View
 import android.view.WindowManager
@@ -24,6 +25,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import java.util.Locale
 
 class MainActivity : Activity() {
     private lateinit var webView: WebView
@@ -36,6 +38,8 @@ class MainActivity : Activity() {
     private var exportBusy = false
     private var lastFailedUrl = startUrl
     private var bridgeReady = false
+    private var speech: TextToSpeech? = null
+    private var speechReady = false
     private val bridgeScript by lazy { assets.open("native-bridge.js").bufferedReader().use { it.readText() } }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -47,6 +51,12 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
         webView = findViewById(R.id.webView)
         errorView = findViewById(R.id.errorView)
+        speech = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS && !isDestroyed) {
+                val language = speech?.setLanguage(Locale.forLanguageTag("es-AR"))
+                speechReady = language != null && language >= TextToSpeech.LANG_AVAILABLE
+            }
+        }
         webView.settings.apply {
             javaScriptEnabled = true; domStorageEnabled = true; loadsImagesAutomatically = true
             useWideViewPort = true; loadWithOverviewMode = true
@@ -55,7 +65,7 @@ class MainActivity : Activity() {
             allowContentAccess = true // Document-picker uploads use content:// URIs.
             setSupportMultipleWindows(true)
             javaScriptCanOpenWindowsAutomatically = false
-            userAgentString += " GoodfellasAndroid/1.2"
+            userAgentString += " GoodfellasAndroid/1.3"
         }
         CookieManager.getInstance().setAcceptCookie(true)
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
@@ -110,9 +120,11 @@ class MainActivity : Activity() {
                 return true
             }
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                webView.keepScreenOn = false
                 errorView.visibility = View.GONE; webView.visibility = View.VISIBLE
             }
             override fun onPageFinished(view: WebView, url: String) {
+                view.keepScreenOn = AppPolicy.isLivePage(url)
                 if (AppPolicy.isTrusted(url) && bridgeReady) view.evaluateJavascript(bridgeScript, null)
                 CookieManager.getInstance().flush()
             }
@@ -148,6 +160,15 @@ class MainActivity : Activity() {
                         .put("error", if (cancelled) "Operación cancelada" else "No se pudo completar la operación. Intentá de nuevo.").toString())
                 }
                 when (data.optString("action")) {
+                    "speak" -> {
+                        val text = data.optString("text")
+                        val allowed = text in setOf("PRÓXIMA PELOTA AFUERA CAMBIO!!", "ÚLTIMO MINUTO")
+                        done(allowed && speechReady && speech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "live-alert") == TextToSpeech.SUCCESS, false)
+                    }
+                    "live_screen" -> {
+                        webView.keepScreenOn = data.optBoolean("enabled")
+                        done(true, false)
+                    }
                     "save" -> prepareFile(data, false, done)
                     "share" -> if (data.has("data")) prepareFile(data, true, done) else shareText(data, done)
                     "download" -> download(data.getString("url"), data.optString("name"), done)
@@ -286,14 +307,22 @@ class MainActivity : Activity() {
         } catch (_: Exception) { toast("No hay una aplicación disponible para abrir este enlace.") }
     }
     private fun showError(url: String) {
+        webView.keepScreenOn = false
         lastFailedUrl = url.takeIf { AppPolicy.isTrusted(it) } ?: startUrl
         webView.visibility = View.GONE; errorView.visibility = View.VISIBLE; errorView.text = getString(R.string.load_error)
     }
     private fun toast(message: String) { if (!isDestroyed) Toast.makeText(this, message, Toast.LENGTH_LONG).show() }
     override fun onSaveInstanceState(outState: Bundle) { webView.saveState(outState); super.onSaveInstanceState(outState) }
-    override fun onPause() { CookieManager.getInstance().flush(); super.onPause() }
+    override fun onResume() {
+        super.onResume()
+        if (::webView.isInitialized) {
+            webView.onResume()
+            webView.evaluateJavascript("window.dispatchEvent(new Event('goodfellas:resume'))", null)
+        }
+    }
+    override fun onPause() { CookieManager.getInstance().flush(); speech?.stop(); webView.onPause(); super.onPause() }
     @Deprecated("Back navigation compatible with Android 8+")
     override fun onBackPressed() { if (webView.canGoBack()) webView.goBack() else super.onBackPressed() }
-    override fun onDestroy() { uploadCallback?.onReceiveValue(null); webView.destroy(); worker.shutdown(); super.onDestroy() }
+    override fun onDestroy() { speechReady = false; speech?.stop(); speech?.shutdown(); uploadCallback?.onReceiveValue(null); webView.destroy(); worker.shutdown(); super.onDestroy() }
     companion object { private const val UPLOAD = 10; private const val SAVE = 11 }
 }

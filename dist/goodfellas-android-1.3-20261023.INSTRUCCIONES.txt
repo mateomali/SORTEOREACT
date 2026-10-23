@@ -1,0 +1,33 @@
+GOODFELLAS ANDROID 1.3 - PARTIDOS EN VIVO
+23/10/2026
+
+APK: goodfellas-android-1.3-20261023.apk
+Paquete: com.goodfellas.sorteo - versionCode 4.
+Firma verificada: coincide con la APK anterior.
+
+Instalar sobre la app existente; no desinstalarla para conservar la sesión.
+También se actualizó goodfellas.apk en la raíz local del sitio.
+
+Cambios:
+- Pantalla encendida mientras se usa Partidos en vivo.
+- Sincronización al regresar desde otra app o una llamada.
+- Voz nativa de Android para avisos, además del pitido y aviso visual.
+
+ANTES DE USAR EN UN PARTIDO REAL
+1. Publicar en Hostinger los cambios del sistema en vivo y los assets React
+   generados. La APK abre el sitio de producción; no contiene el código PHP.
+   Esta tarea no publicó archivos en Hostinger.
+2. Instalar esta APK y actualizar Android System WebView desde Play Store.
+3. Abrir el partido y pulsar Activar avisos sonoros. Comprobar el volumen
+   multimedia y la voz en español en el teléfono que se usará en la cancha.
+4. Mantener la app visible para recibir los avisos. No se garantiza sonido
+   con la app cerrada, en segundo plano o con el teléfono bloqueado.
+   El tiempo del partido continúa guardado en el servidor.
+
+Validación: emulador Android 11 con WebView 124, partidos de 2/3/4 equipos,
+reloj, pausa, regreso, recarga, avisos, pérdida de conexión, goles y cierre.
+18 pruebas de navegador/puente, pruebas de reglas, unitarias Android y
+lintRelease sin errores. No se realizó una prueba auditiva en teléfono físico.
+
+SHA256 APK:
+966441C34A3BC5E9AC6023C952499B33A48D7A802EC58CE92AB106990CA12E22

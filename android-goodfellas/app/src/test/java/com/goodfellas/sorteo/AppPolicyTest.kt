@@ -4,6 +4,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AppPolicyTest {
+    @Test fun onlyTrustedLivePagesKeepScreenAwake() {
+        assertTrue(AppPolicy.isLivePage("https://www.sudokumerlo.com/sorteo/partidos_en_vivo.php?match_id=12"))
+        assertFalse(AppPolicy.isLivePage("https://evil.com/sorteo/partidos_en_vivo.php"))
+        assertFalse(AppPolicy.isLivePage("https://www.sudokumerlo.com/sorteo/index.php"))
+    }
     @Test fun trustedAppOnly() {
         listOf("https://www.sudokumerlo.com/sorteo/", "https://sudokumerlo.com/sorteo", "https://www.sudokumerlo.com/sorteo/exportar_fecha.php?id=4").forEach {
             assertTrue(it, AppPolicy.isTrusted(it))

@@ -91,15 +91,58 @@ export function LiveMatchesIsland({ root }) {
   const games = state.games;
   const game = games.at(-1);
   const completed = games.filter((g) => g.status === 'finished').length;
-  const target = payload.teams.length * (payload.teams.length - 1);
+  const target = payload.teams.length === 2 ? 1 : payload.teams.length * (payload.teams.length - 1);
   const active = game && game.status !== 'finished';
   const canEdit = payload.canPlay && !state.closed;
   const label = (id) => payload.teams.find((t) => t.id === id)?.label || `Equipo ${id}`;
   const identity = (id) => <TeamIdentity team={payload.teams.find((t) => t.id === id)} />;
   const score = game ? scoreOf(game) : {};
-  const elapsed = game ? game.elapsed + (game.running_since === null ? 0 : Math.max(0, now - game.running_since)) : 0;
+  const elapsed = game ? Math.min(game.status === 'finished' ? Infinity : game.duration, game.elapsed + (game.running_since === null ? 0 : Math.max(0, now - game.running_since))) : 0;
   const remaining = game ? game.duration - elapsed : state.duration;
   const rows = standingsOf(games, payload.teams);
+
+  const [notice, setNotice] = useState('');
+  const [sound, setSound] = useState(false);
+  const audioRef = useRef(null);
+  const lastAlert = useRef(null);
+  const substitution = Math.floor(elapsed / 540);
+  const alertKey = !active || game.status === 'ready' ? null : payload.teams.length === 2
+    ? (substitution > 0 && elapsed < game.duration ? `change-${substitution}` : null)
+    : (remaining > 0 && remaining <= 60 ? 'last-minute' : null);
+  useEffect(() => {
+    if (!alertKey) { setNotice(''); return; }
+    const key = `${payload.matchId}-${games.length}-${alertKey}`;
+    if (lastAlert.current === key) return;
+    lastAlert.current = key;
+    const message = payload.teams.length === 2 ? 'PRÓXIMA PELOTA AFUERA CAMBIO!!' : 'ÚLTIMO MINUTO';
+    setNotice(message);
+    let heard = false;
+    try { heard = sessionStorage.getItem(key) === 'heard'; } catch {}
+    if (sound && !heard) {
+      try {
+        const ctx = audioRef.current;
+        if (ctx?.state === 'running') {
+          for (let i = 0; i < 3; i++) {
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            oscillator.frequency.value = 880;
+            gain.gain.value = 0.15;
+            oscillator.connect(gain); gain.connect(ctx.destination);
+            oscillator.start(ctx.currentTime + i * 0.4);
+            oscillator.stop(ctx.currentTime + i * 0.4 + 0.2);
+          }
+        }
+        if (typeof window.goodfellasSpeak === 'function') {
+          window.goodfellasSpeak(message).catch(() => {});
+        } else if ('speechSynthesis' in window) {
+          const voice = new SpeechSynthesisUtterance(message);
+          voice.lang = 'es-AR'; window.speechSynthesis.speak(voice);
+        }
+        sessionStorage.setItem(key, 'heard');
+      } catch {}
+    }
+  }, [alertKey, sound, games.length, payload.matchId]);
+  useEffect(() => () => { audioRef.current?.close(); }, []);
 
   function receive(data) {
     anchor.current = { server: data.server_now, local: performance.now() };
@@ -125,15 +168,16 @@ export function LiveMatchesIsland({ root }) {
       } catch (e) { if (alive && e.name !== 'AbortError') setConnection('Sin conexión. Las acciones requieren conexión; el reloj sigue contando.'); }
     };
     const poll = setInterval(sync, 4000);
-    const stop = () => { alive = false; controller.abort(); clearInterval(tick); clearInterval(poll); document.removeEventListener('visibilitychange', sync); window.removeEventListener('online', sync); };
+    const stop = () => { alive = false; controller.abort(); clearInterval(tick); clearInterval(poll); document.removeEventListener('visibilitychange', sync); window.removeEventListener('online', sync); window.removeEventListener('goodfellas:resume', sync); };
     document.addEventListener('visibilitychange', sync);
     window.addEventListener('online', sync);
+    window.addEventListener('goodfellas:resume', sync);
     document.addEventListener('goodfellas:before-partial-render', stop, { once: true });
     return () => { stop(); document.removeEventListener('goodfellas:before-partial-render', stop); };
   }, [endpoint]);
 
   async function act(action, input = {}, revision = sessionRef.current.revision) {
-    if (working.current) return false;
+    if (working.current || !payload.canManage) return false;
     working.current = true;
     setBusy(true);
     setError('');
@@ -157,9 +201,21 @@ export function LiveMatchesIsland({ root }) {
 
   return <div className="live-matches">
     <header className="live-page-header"><div><h1>Partidos en vivo</h1><p>{payload.title}</p></div><a className="live-button" href="editar_partidos.php">Volver a fechas</a></header>
-    <div className="live-progress"><span><strong>{completed}</strong> / {target} partidos del ida y vuelta{completed > target ? ` · ${completed - target} adicionales` : ''}</span><span role="status">{connection}</span></div>
+    <div className="live-progress"><span><strong>{completed}</strong> / {target} {payload.teams.length === 2 ? 'partidos' : 'partidos del ida y vuelta'}{completed > target ? ` · ${completed - target} adicionales` : ''}</span><span role="status">{connection}</span></div>
+    <div className="live-actions"><button className="live-button" type="button" onClick={async () => {
+      if (sound) { setSound(false); return; }
+      try {
+        const Audio = window.AudioContext || window.webkitAudioContext;
+        if (Audio) { audioRef.current ||= new Audio(); await audioRef.current.resume(); }
+        lastAlert.current = null; setSound(true);
+      } catch { setError('No se pudo activar el sonido en este dispositivo.'); }
+    }}>{sound ? 'Desactivar avisos sonoros' : 'Activar avisos sonoros'}</button></div>
+    {notice && <div className="live-notice" role="alert"><strong>{notice}</strong> <button className="live-button" onClick={() => setNotice('')}>Entendido</button></div>}
+    {payload.teams.length === 2 && active && <p className="live-rotation-note">Próximo cambio en {clockText(Math.min(game.duration, (substitution + 1) * 540) - elapsed)} · un suplente, cambios cada 9 minutos efectivos.</p>}
+    {game?.finish_reason && <p className="live-notice">{game.finish_reason === 'three_goals' ? 'Partido finalizado automáticamente: un equipo llegó a 3 goles.' : 'Partido finalizado: se cumplió el tiempo acordado.'}</p>}
+    {canEdit && games.length === 1 && !active && payload.teams.length > 2 && !game.tie_choice && score[game.teams[0]] === score[game.teams[1]] && (!game.goals.length || !game.first_goal_known) && <div className="live-notice"><p>{game.goals.length ? 'Empate: indicá qué equipo marcó el primer gol para definir el siguiente cruce.' : 'Empate 0–0: elegí quién tiene prioridad para el siguiente cruce.'}</p>{game.teams.map(t => <button className="live-button" key={t} disabled={busy} onClick={() => act('tie_priority', { tie_choice: t })}>{label(t)}</button>)}</div>}
     {error && <div className="live-error" role="alert">{error}</div>}
-    {!payload.canPlay && !state.closed && <p className="live-notice">Publicá la fecha y completá sus equipos para comenzar.</p>}
+    {payload.canManage && !payload.canPlay && !state.closed && <p className="live-notice">Publicá la fecha y completá sus equipos para comenzar.</p>}
     {state.closed && <div className="live-notice"><strong>Fecha finalizada.</strong> Los resultados y goleadores ya están guardados.{payload.isAdmin && <> <a href={`finalizar_partido.php?match_id=${payload.matchId}&edit_details=1#valoraciones`}>Ver premios y formaciones</a></>} <a href="junta_votaciones.php">Ir a votaciones</a></div>}
     {payload.canCorrect && <section className="live-panel live-result-options">
       <div><h2>{state.closed ? 'Corregir fecha finalizada' : 'Carga de resultados'}</h2><p className="live-muted">{state.closed ? 'Podés agregar o quitar partidos y corregir sus goles y goleadores. La fecha permanece finalizada; las posiciones y estadísticas se actualizan.' : 'Si no registraste los partidos, podés cargar los goles por equipo y sus autores al cerrar la fecha.'}</p></div>
@@ -169,7 +225,7 @@ export function LiveMatchesIsland({ root }) {
       </div>
     </section>}
     {state.summary && <section className="live-panel"><h2>Resultado general de la fecha</h2><p className="live-muted">Se cargaron los totales sin detallar cruces. Para calcular posiciones hace falta registrar los partidos.</p><div className="live-pair-progress">{payload.teams.map(team => <div key={team.id}><TeamIdentity team={team} /><strong>{state.summary.team_goals[team.id] || 0} goles</strong><span>{payload.players.filter(player => player.team === team.id && state.summary.player_goals[player.id] > 0).map(player => `${player.name}: ${state.summary.player_goals[player.id]}`).join(' · ') || 'Sin goleadores'}</span></div>)}</div></section>}
-    {state.pending_scorers && <details className="live-panel live-legacy-scorers"><summary>Goleadores generales cargados antes del registro por partido</summary><p className="live-muted">Estos goles conservan sus autores en las estadísticas, pero todavía no tienen un partido asignado. Al asignar uno de ellos al mismo jugador en un partido, se descuenta de esta lista. Ajustá estas cantidades antes de quitar partidos si sus goles quedarían por debajo del total atribuido.</p><form data-no-partial key={session.revision} onSubmit={async event => { event.preventDefault(); const data = new FormData(event.currentTarget); await act('set_pending_scorers', { goals: Object.fromEntries(payload.players.map(player => [player.id, Number(data.get(String(player.id)))])) }, Number(data.get('revision'))); }}><input type="hidden" name="revision" value={session.revision} /><div className="live-setup-fields">{payload.players.map(player => <label key={player.id}>{player.name}<span className="live-muted">{label(player.team)}</span><input type="number" min="0" max="24000" name={String(player.id)} defaultValue={state.pending_scorers[player.id] || 0} required /></label>)}</div><button className="live-button" disabled={busy}>Guardar goleadores generales</button></form></details>}
+    {payload.canCorrect && state.pending_scorers && <details className="live-panel live-legacy-scorers"><summary>Goleadores generales cargados antes del registro por partido</summary><p className="live-muted">Estos goles conservan sus autores en las estadísticas, pero todavía no tienen un partido asignado. Al asignar uno de ellos al mismo jugador en un partido, se descuenta de esta lista. Ajustá estas cantidades antes de quitar partidos si sus goles quedarían por debajo del total atribuido.</p><form data-no-partial key={session.revision} onSubmit={async event => { event.preventDefault(); const data = new FormData(event.currentTarget); await act('set_pending_scorers', { goals: Object.fromEntries(payload.players.map(player => [player.id, Number(data.get(String(player.id)))])) }, Number(data.get('revision'))); }}><input type="hidden" name="revision" value={session.revision} /><div className="live-setup-fields">{payload.players.map(player => <label key={player.id}>{player.name}<span className="live-muted">{label(player.team)}</span><input type="number" min="0" max="24000" name={String(player.id)} defaultValue={state.pending_scorers[player.id] || 0} required /></label>)}</div><button className="live-button" disabled={busy}>Guardar goleadores generales</button></form></details>}
     <nav className="live-tabs" aria-label="Vista de la fecha">{[['match', 'Partido'], ['fixture', 'Fixture'], ['table', 'Tabla']].map(([id, text]) => <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>{text}</button>)}</nav>
     {tab !== 'match' && active && <div className="live-current-strip"><div><strong role="timer" aria-label="Tiempo restante">{clockText(remaining)}</strong><span>{game.teams.map((t) => `${label(t)} ${score[t]}`).join(' / ')}{game.status === 'paused' ? ' · Pausado' : remaining < 0 ? ' · Tiempo extra' : ''}</span></div><button className="live-button" onClick={() => setTab('match')}>Ir al partido</button></div>}
 
@@ -188,10 +244,10 @@ export function LiveMatchesIsland({ root }) {
         </section>
         <section className="live-panel live-events"><h2>Goles del partido</h2>{!active && canEdit && <><p className="live-muted">Podés corregir los goles antes de preparar el próximo partido.</p><button className="live-button" disabled={busy} onClick={() => { setError(''); setConfirm({ type: 'correct', index: games.length - 1 }); }}>Corregir resultado</button></>}{goalList(game, games.length - 1)}</section>
       </div>}
-      {canEdit && !active && <section className="live-between"><form data-no-partial onSubmit={(e) => { e.preventDefault(); act('duration', { minutes: Number(minutes) }); }}><label>Duración de los próximos partidos<div className="live-duration-input"><input aria-label="Duración en minutos" type="number" min="1" max="120" value={minutes} onChange={(e) => setMinutes(e.target.value)} required /><span>min</span><button className="live-button" disabled={busy || Number(minutes) * 60 === state.duration}>Guardar</button></div></label></form>{completed > 0 && <button className="live-button" disabled={busy} onClick={() => setConfirm({ type: 'close' })}>Finalizar fecha</button>}</section>}
+      {canEdit && !active && <section className="live-between"><form data-no-partial onSubmit={(e) => { e.preventDefault(); act('duration', { minutes: Number(minutes) }); }}><label>Duración de los próximos partidos<div className="live-duration-input"><input aria-label="Duración en minutos" type="number" min={payload.teams.length === 2 ? 60 : 1} max={payload.teams.length === 2 ? 60 : 120} value={minutes} onChange={(e) => setMinutes(e.target.value)} required /><span>min</span><button className="live-button" disabled={busy || Number(minutes) * 60 === state.duration}>Guardar</button></div></label></form>{completed > 0 && <button className="live-button" disabled={busy} onClick={() => setConfirm({ type: 'close' })}>Finalizar fecha</button>}</section>}
     </>}
 
-    {tab === 'fixture' && <section className="live-panel"><h2>Fixture y resultados</h2><p className="live-muted">{payload.teams.length === 3 ? 'Se priorizan los cruces pendientes para que cada pareja juegue dos veces. Ningún equipo juega tres partidos seguidos.' : 'Juegan los dos primeros, luego los dos que descansan. Siguen ganador contra perdedor y los cruces restantes. La vuelta repite el orden.'}</p>{games.length ? <ol className="live-fixture-list">{games.map((g, i) => { const s = scoreOf(g); return <li key={i} className="live-fixture-game"><header className="live-fixture-game-header"><h3>Partido {i + 1}</h3><span className="live-fixture-status">{g.status === 'finished' ? 'Finalizado' : 'Actual'}</span></header><div className="live-fixture-result"><span>{identity(g.teams[0])}</span><strong>{s[g.teams[0]]} – {s[g.teams[1]]}</strong><span>{identity(g.teams[1])}</span></div><section className="live-fixture-scorers" aria-label={`Goleadores del partido ${i + 1}`}><h4>Goleadores</h4><div className="live-fixture-goal-columns">{g.teams.map(t => <div key={t} className="live-fixture-team-goals"><h5>{identity(t)}</h5>{state.closed && payload.canCorrect && <button type="button" className="live-button" disabled={busy} onClick={() => setEditor({ game: g, gameIndex: i, team: t })}>Agregar gol a {label(t)}</button>}{goalList(g, i, false, false, t)}</div>)}</div></section>{g.status === 'finished' && payload.canCorrect && <footer className="live-fixture-game-footer"><button className="live-text-button" disabled={busy} onClick={() => { setError(''); setConfirm({ type: 'correct', index: i }); }}>Corregir resultado</button>{state.closed && <button type="button" className="live-text-button live-delete-game" disabled={busy} onClick={() => setConfirm({ type: 'delete_game', index: i })}>Quitar partido</button>}</footer>}</li>; })}</ol> : <p>Elegí los dos primeros equipos en la pestaña Partido.</p>}<h3>Cruces del ida y vuelta</h3><div className="live-pair-progress">{payload.teams.flatMap((a, i) => payload.teams.slice(i + 1).map((b) => { const n = games.filter((g) => g.status === 'finished' && g.teams.includes(a.id) && g.teams.includes(b.id)).length; return <div key={`${a.id}-${b.id}`}><span>{a.label} / {b.label}</span><strong>{Math.min(n, 2)} / 2{n > 2 ? ` + ${n - 2} extra` : ''}</strong></div>; }))}</div></section>}
+    {tab === 'fixture' && <section className="live-panel"><h2>Fixture y resultados</h2><p className="live-muted">{payload.teams.length === 2 ? 'Un partido de 60 minutos, con cambios cada 9 minutos efectivos.' : payload.teams.length === 3 ? 'Se priorizan los cruces pendientes para que cada pareja juegue dos veces. Ningún equipo juega tres partidos seguidos.' : 'Juegan los dos primeros, luego los dos que descansan. Siguen ganador contra perdedor y los cruces restantes. La vuelta repite el orden.'}</p>{games.length ? <ol className="live-fixture-list">{games.map((g, i) => { const s = scoreOf(g); return <li key={i} className="live-fixture-game"><header className="live-fixture-game-header"><h3>Partido {i + 1}</h3><span className="live-fixture-status">{g.status === 'finished' ? 'Finalizado' : 'Actual'}</span></header><div className="live-fixture-result"><span>{identity(g.teams[0])}</span><strong>{s[g.teams[0]]} – {s[g.teams[1]]}</strong><span>{identity(g.teams[1])}</span></div><section className="live-fixture-scorers" aria-label={`Goleadores del partido ${i + 1}`}><h4>Goleadores</h4><div className="live-fixture-goal-columns">{g.teams.map(t => <div key={t} className="live-fixture-team-goals"><h5>{identity(t)}</h5>{state.closed && payload.canCorrect && <button type="button" className="live-button" disabled={busy} onClick={() => setEditor({ game: g, gameIndex: i, team: t })}>Agregar gol a {label(t)}</button>}{goalList(g, i, false, false, t)}</div>)}</div></section>{g.status === 'finished' && payload.canCorrect && <footer className="live-fixture-game-footer"><button className="live-text-button" disabled={busy} onClick={() => { setError(''); setConfirm({ type: 'correct', index: i }); }}>Corregir resultado</button>{state.closed && <button type="button" className="live-text-button live-delete-game" disabled={busy} onClick={() => setConfirm({ type: 'delete_game', index: i })}>Quitar partido</button>}</footer>}</li>; })}</ol> : <p>Elegí los dos primeros equipos en la pestaña Partido.</p>}<h3>{payload.teams.length === 2 ? 'Cruce de la fecha' : 'Cruces del ida y vuelta'}</h3><div className="live-pair-progress">{payload.teams.flatMap((a, i) => payload.teams.slice(i + 1).map((b) => { const n = games.filter((g) => g.status === 'finished' && g.teams.includes(a.id) && g.teams.includes(b.id)).length; return <div key={`${a.id}-${b.id}`}><span>{a.label} / {b.label}</span><strong>{Math.min(n, payload.teams.length === 2 ? 1 : 2)} / {payload.teams.length === 2 ? 1 : 2}{n > (payload.teams.length === 2 ? 1 : 2) ? ` + ${n - (payload.teams.length === 2 ? 1 : 2)} extra` : ''}</strong></div>; }))}</div></section>}
 
     {tab === 'table' && <section className="live-panel"><h2>Tabla de posiciones</h2><p className="live-muted">Incluye partidos finalizados y adicionales. Victoria: 3 puntos; empate: 1. La prioridad para seguir jugando no cambia los puntos.</p><div className="live-table-scroll"><table className="live-table"><thead><tr><th>Equipo</th><th title="Partidos jugados">PJ</th><th title="Goles a favor">GF</th><th title="Goles en contra">GC</th><th title="Diferencia de gol">DG</th><th>Puntos</th></tr></thead><tbody>{rows.map((r) => <tr key={r.id}><th><TeamIdentity team={r} /></th><td>{r.played}</td><td>{r.gf}</td><td>{r.ga}</td><td>{r.gf - r.ga}</td><td><strong>{r.points}</strong></td></tr>)}</tbody></table></div><button className="live-button" onClick={() => setConfirm({ type: 'winner' })}>Calcular ganador</button></section>}
 
@@ -212,12 +268,12 @@ export function LiveMatchesIsland({ root }) {
       <p>Se quitará este partido junto con sus goles y goleadores. Se recalcularán las posiciones y estadísticas; los demás partidos, premios y puntajes se conservan.</p>
     </ConfirmDialog>}
     {editor && <GoalDialog key={`${editor.gameIndex}-${editor.goalIndex ?? 'new'}`} editor={editor} teams={payload.teams} players={payload.players} busy={busy} error={error} onClose={() => setEditor(null)} onSave={async (data) => { const ok = await act(editor.goal ? 'edit_goal' : editor.game.status === 'finished' ? 'add_finished_goal' : 'goal', { ...data, team: editor.team, game: editor.gameIndex, goal: editor.goalIndex }, editor.revision); if (ok) setEditor(null); }} />}
-    {confirm?.type === 'finish' && <ConfirmDialog title="Finalizar partido" confirm="Guardar y finalizar" busy={busy} error={error} onClose={() => setConfirm(null)} onConfirm={async (data) => { if (await act('finish', { tie_choice: Number(data.get('tie_choice')) }, confirm.revision)) setConfirm(null); }}><p>{label(game.teams[0])} <strong>{score[game.teams[0]]} – {score[game.teams[1]]}</strong> {label(game.teams[1])}</p>{games.length === 1 && score[game.teams[0]] === score[game.teams[1]] && (!game.goals.length || !game.first_goal_known) ? <fieldset><legend>{game.goals.length ? '¿Qué equipo marcó primero?' : payload.teams.length === 3 ? 'Empate 0–0: ¿quién sigue jugando? Se respeta el límite de dos partidos.' : 'Empate 0–0: ¿quién toma el lugar del ganador para el cruce?'}</legend>{game.teams.map((t) => <label className="live-radio" key={t}><input type="radio" name="tie_choice" value={t} required />{identity(t)}</label>)}</fieldset> : <p className="live-muted">Se guarda el resultado y se detiene el cronómetro. Podés completar los goleadores después.</p>}</ConfirmDialog>}
-    {confirm?.type === 'remove' && <ConfirmDialog title="Quitar gol" confirm="Quitar gol" busy={busy} error={error} onClose={() => setConfirm(null)} onConfirm={async (data) => { if (await act('remove_goal', { game: confirm.gameIndex, goal: confirm.goal, tie_choice: Number(data.get('tie_choice')) }, confirm.revision)) setConfirm(null); }}><p>Se descontará este gol del marcador y se actualizará el resultado guardado.</p>{!state.closed && games.length === 1 && game.status === 'finished' && <fieldset><legend>Si queda empatado, indicá quién marcó primero; con 0–0, quién tiene prioridad.</legend>{game.teams.map((t) => <label className="live-radio" key={t}><input type="radio" name="tie_choice" value={t} />{identity(t)}</label>)}</fieldset>}</ConfirmDialog>}
+    {confirm?.type === 'finish' && <ConfirmDialog title="Finalizar partido" confirm="Guardar y finalizar" busy={busy} error={error} onClose={() => setConfirm(null)} onConfirm={async (data) => { if (await act('finish', { tie_choice: Number(data.get('tie_choice')) }, confirm.revision)) setConfirm(null); }}><p>{label(game.teams[0])} <strong>{score[game.teams[0]]} – {score[game.teams[1]]}</strong> {label(game.teams[1])}</p>{payload.teams.length > 2 && games.length === 1 && score[game.teams[0]] === score[game.teams[1]] && (!game.goals.length || !game.first_goal_known) ? <fieldset><legend>{game.goals.length ? '¿Qué equipo marcó primero?' : payload.teams.length === 3 ? 'Empate 0–0: ¿quién sigue jugando? Se respeta el límite de dos partidos.' : 'Empate 0–0: ¿quién toma el lugar del ganador para el cruce?'}</legend>{game.teams.map((t) => <label className="live-radio" key={t}><input type="radio" name="tie_choice" value={t} required />{identity(t)}</label>)}</fieldset> : <p className="live-muted">Se guarda el resultado y se detiene el cronómetro. Podés completar los goleadores después.</p>}</ConfirmDialog>}
+    {confirm?.type === 'remove' && <ConfirmDialog title="Quitar gol" confirm="Quitar gol" busy={busy} error={error} onClose={() => setConfirm(null)} onConfirm={async (data) => { if (await act('remove_goal', { game: confirm.gameIndex, goal: confirm.goal, tie_choice: Number(data.get('tie_choice')) }, confirm.revision)) setConfirm(null); }}><p>Se descontará este gol del marcador y se actualizará el resultado guardado.</p>{payload.teams.length > 2 && !state.closed && games.length === 1 && game.status === 'finished' && <fieldset><legend>Si queda empatado, indicá quién marcó primero; con 0–0, quién tiene prioridad.</legend>{game.teams.map((t) => <label className="live-radio" key={t}><input type="radio" name="tie_choice" value={t} />{identity(t)}</label>)}</fieldset>}</ConfirmDialog>}
     {confirm?.type === 'close' && <ConfirmDialog title="Finalizar fecha" confirm="Finalizar fecha" busy={busy} error={error} onClose={() => setConfirm(null)} onConfirm={async () => { if (await act('close', {}, confirm.revision)) setConfirm(null); }}><p>Se guardarán los resultados y las estadísticas de {completed} partidos.</p>{completed < target && <p className="live-notice">Todavía quedan {target - completed} partidos para completar el ida y vuelta.</p>}{games.some((g) => g.goals.some((goal) => goal.player === null && !goal.own)) && <p>Hay goles sin autor identificado. Completalos antes de finalizar si querés que cuenten en las estadísticas personales.</p>}<p>Después del cierre se habilitan las valoraciones según las reglas de esta fecha.</p></ConfirmDialog>}
     {confirm?.type === 'correct' && <ConfirmDialog title={`Corregir partido ${confirm.index + 1}`} confirm="Guardar corrección" busy={busy} error={error} onClose={() => setConfirm(null)} onConfirm={async (data) => { const edited = games[confirm.index]; if (await act('correct_game', { game: confirm.index, scores: Object.fromEntries(edited.teams.map((t) => [t, Number(data.get(String(t)))])), tie_choice: Number(data.get('tie_choice')) }, confirm.revision)) setConfirm(null); }}>
       <div className="live-setup-fields">{games[confirm.index].teams.map((t) => <label key={t}>{identity(t)}<input type="number" min="0" max="100" name={String(t)} defaultValue={scoreOf(games[confirm.index])[t]} required /></label>)}</div>
-      {!state.closed && confirm.index === 0 && <fieldset><legend>Si queda empatado: ¿quién marcó primero? Con 0–0, ¿quién tiene prioridad?</legend>{games[confirm.index].teams.map((t) => <label className="live-radio" key={t}><input type="radio" name="tie_choice" value={t} />{identity(t)}</label>)}</fieldset>}
+      {payload.teams.length > 2 && !state.closed && confirm.index === 0 && <fieldset><legend>Si queda empatado: ¿quién marcó primero? Con 0–0, ¿quién tiene prioridad?</legend>{games[confirm.index].teams.map((t) => <label className="live-radio" key={t}><input type="radio" name="tie_choice" value={t} />{identity(t)}</label>)}</fieldset>}
       <p className="live-muted">Si bajás el marcador, se quitarán los últimos goles del equipo. Los nuevos goles quedan sin autor hasta que los asignes. Los cruces ya armados conservan sus equipos.</p>
     </ConfirmDialog>}
     {confirm?.type === 'winner' && <ConfirmDialog title="Resultado de la fecha" confirm="Aceptar" busy={false} onClose={() => setConfirm(null)} onConfirm={() => setConfirm(null)}>{completed ? <><p><strong>{rows.filter((r) => r.points === rows[0].points && r.gf - r.ga === rows[0].gf - rows[0].ga && r.gf === rows[0].gf).map((r) => r.label).join(' / ')}</strong></p><p>{completed < target ? 'Lidera provisionalmente. ' : ''}Criterio: puntos, diferencia de gol y goles a favor. Si coinciden los tres valores, comparten el puesto.</p></> : <p>Todavía no hay partidos finalizados.</p>}</ConfirmDialog>}

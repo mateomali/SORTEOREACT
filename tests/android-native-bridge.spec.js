@@ -6,9 +6,11 @@ async function setup(page, cancelled = false) {
   await page.route('https://www.sudokumerlo.com/sorteo/test', route => route.fulfill({ contentType: 'text/html', body: '<html><body>Goodfellas</body></html>' }));
   await page.addInitScript(({ cancelled }) => {
     window.nativeRequests = [];
+    window.nativeLiveScreens = [];
     window.GoodfellasNative = { postMessage(raw) {
       const message = JSON.parse(raw);
-      window.nativeRequests.push(message);
+      if (message.action === 'live_screen') window.nativeLiveScreens.push(message.enabled);
+      else window.nativeRequests.push(message);
       setTimeout(() => window.GoodfellasNative.onmessage({ data: JSON.stringify({ id: message.id, ok: !cancelled, cancelled, error: 'Cancelado' }) }), 0);
     }};
   }, { cancelled });
@@ -81,8 +83,11 @@ test('actual mobile team exporter delivers a valid JPG and team text to Android'
     await page.setViewportSize({ width: 390, height: 900 });
     await page.addInitScript(() => {
       window.nativeRequests = [];
+      window.nativeLiveScreens = [];
       window.GoodfellasNative = { postMessage(raw) {
-        const message = JSON.parse(raw); window.nativeRequests.push(message);
+        const message = JSON.parse(raw);
+        if (message.action === 'live_screen') window.nativeLiveScreens.push(message.enabled);
+        else window.nativeRequests.push(message);
         setTimeout(() => window.GoodfellasNative.onmessage({ data: JSON.stringify({ id: message.id, ok: true }) }), 0);
       }};
     });
@@ -107,4 +112,19 @@ test('actual mobile team exporter delivers a valid JPG and team text to Android'
     const text = await page.evaluate(() => window.nativeRequests.find(r => r.name?.endsWith('.txt')));
     expect(Buffer.from(text.data, 'base64').toString().toUpperCase()).toContain('TEMPORARY POT PLAYER');
   } finally { fixture('delete', id); }
+});
+
+test('live match screen stays awake across partial navigation and releases on leaving', async ({ page }) => {
+  await setup(page);
+  await expect.poll(() => page.evaluate(() => window.nativeLiveScreens)).toEqual([false]);
+  await page.evaluate(() => { const live = document.createElement('div'); live.dataset.reactIsland = 'live_matches'; document.body.append(live); });
+  await expect.poll(() => page.evaluate(() => window.nativeLiveScreens)).toEqual([false, true]);
+  await page.evaluate(() => document.querySelector('[data-react-island="live_matches"]').remove());
+  await expect.poll(() => page.evaluate(() => window.nativeLiveScreens)).toEqual([false, true, false]);
+});
+
+test('spoken match alerts use the native bridge without browser speech support', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(async () => { await window.goodfellasSpeak('ÚLTIMO MINUTO'); });
+  expect(await page.evaluate(() => window.nativeRequests)).toEqual([expect.objectContaining({ action: 'speak', text: 'ÚLTIMO MINUTO' })]);
 });

@@ -20,13 +20,28 @@ function live_elapsed(array $game, ?float $now = null): float
     return $game['elapsed'] + ($game['running_since'] === null ? 0 : max(0, ($now ?? microtime(true)) - $game['running_since']));
 }
 
+// Derived from server timestamps, so closing every client never loses playing time.
+function live_expire(array $state, ?float $now = null): array
+{
+    $i = count($state['games']) - 1;
+    if ($i < 0) return $state;
+    $g = &$state['games'][$i];
+    if ($g['status'] !== 'finished' && $g['running_since'] !== null && live_elapsed($g, $now) >= $g['duration']) {
+        $g['elapsed'] = $g['duration'];
+        $g['running_since'] = null;
+        $g['status'] = 'finished';
+        $g['finish_reason'] = 'time';
+    }
+    return $state;
+}
+
 function live_winner(array $game, bool $useFirstGoal = true): int
 {
     [$a, $b] = $game['teams'];
     $score = live_score($game);
     if ($score[$a] !== $score[$b]) return $score[$a] > $score[$b] ? $a : $b;
     if (!$useFirstGoal) return $game['teams'][0];
-    return (int) ($game['tie_choice'] ?? ($game['goals'][0]['team'] ?? 0));
+    return (int) ($game['tie_choice'] ?? (!empty($game['first_goal_known']) ? ($game['goals'][0]['team'] ?? 0) : 0));
 }
 
 function live_new_game(array $pair, int $duration, string $reason): array
@@ -37,6 +52,7 @@ function live_new_game(array $pair, int $duration, string $reason): array
 
 function live_apply_action(array $state, string $action, array $input, array $teams, array $participants, ?float $now = null): array
 {
+    $state = live_expire($state, $now);
     $next = live_apply_action_internal($state, $action, $input, $teams, $participants, $now);
     live_validate_pending_scorers($next, $participants);
     return $next;
@@ -118,12 +134,12 @@ function live_apply_action_internal(array $state, string $action, array $input, 
         $minutes = filter_var($input['minutes'] ?? null, FILTER_VALIDATE_INT);
         if ($minutes === false || $minutes < 1 || $minutes > 120) throw new RuntimeException('La duración debe estar entre 1 y 120 minutos.');
         if ($index >= 0 && $games[$index]['status'] !== 'finished') throw new RuntimeException('Cambia la duración entre partidos.');
-        $state['duration'] = $minutes * 60;
+        $state['duration'] = count($teams) === 2 ? 3600 : $minutes * 60;
         return $state;
     }
     if ($action === 'next') {
         if ($index >= 0 && $games[$index]['status'] !== 'finished') throw new RuntimeException('Finaliza el partido actual antes de continuar.');
-        $target = count($teams) * (count($teams) - 1);
+        $target = count($teams) === 2 ? 1 : count($teams) * (count($teams) - 1);
         if (count($games) >= $target && empty($input['extra'])) throw new RuntimeException('Confirma que querés agregar un partido adicional.');
         if (count($games) >= 240) throw new RuntimeException('Se alcanzó el máximo de partidos por fecha.');
         if (!$games) {
@@ -131,9 +147,10 @@ function live_apply_action_internal(array $state, string $action, array $input, 
             if (count($pair) !== 2 || $pair[0] === $pair[1] || array_diff($pair, $teams)) throw new RuntimeException('Elegí dos equipos distintos para comenzar.');
             $next = ['pair' => $pair, 'reason' => 'Primer cruce elegido para la fecha.'];
         } else {
-            $next = count($teams) === 4 ? live_four_next($state, $teams) : live_three_next($state, $teams);
+            if (count($teams) > 2 && live_winner($games[0]) === 0) throw new RuntimeException('Indicá quién tiene prioridad en el empate del primer partido.');
+            $next = count($teams) === 2 ? ['pair' => $teams, 'reason' => 'Partido entre dos equipos.'] : (count($teams) === 4 ? live_four_next($state, $teams) : live_three_next($state, $teams));
         }
-        $games[] = live_new_game($next['pair'], $state['duration'], $next['reason']);
+        $games[] = live_new_game($next['pair'], count($teams) === 2 ? 3600 : $state['duration'], $next['reason']);
         return $state;
     }
     if ($action === 'close') {
@@ -161,7 +178,7 @@ function live_apply_action_internal(array $state, string $action, array $input, 
         $edited['first_goal_known'] = false;
         $edited['tie_choice'] = null;
         [$a, $b] = $edited['teams'];
-        if (!$state['closed'] && $editIndex === 0 && (int) $scores[$a] === (int) $scores[$b]) {
+        if (count($teams) > 2 && !$state['closed'] && $editIndex === 0 && (int) $scores[$a] === (int) $scores[$b]) {
             $choice = (int) ($input['tie_choice'] ?? 0);
             if (!in_array($choice, $edited['teams'], true)) throw new RuntimeException('En empate, indicá el primer equipo en marcar; con 0–0, quién tiene prioridad.');
             $edited['tie_choice'] = $choice;
@@ -189,11 +206,17 @@ function live_apply_action_internal(array $state, string $action, array $input, 
         array_splice($game['goals'], $goalIndex, 1);
         $game['tie_choice'] = null;
         $score = live_score($game);
-        if ($index === 0 && $score[$game['teams'][0]] === $score[$game['teams'][1]] && (!$game['goals'] || !$game['first_goal_known'])) {
+        if (count($teams) > 2 && $index === 0 && $score[$game['teams'][0]] === $score[$game['teams'][1]] && (!$game['goals'] || !$game['first_goal_known'])) {
             $choice = (int) ($input['tie_choice'] ?? 0);
             if (!in_array($choice, $game['teams'], true)) throw new RuntimeException('En empate, indicá el primer equipo en marcar; con 0–0, quién tiene prioridad.');
             $game['tie_choice'] = $choice;
         }
+        return $state;
+    }
+    if ($action === 'tie_priority') {
+        $choice = (int) ($input['tie_choice'] ?? 0);
+        if (count($teams) <= 2 || $index !== 0 || $game['status'] !== 'finished' || live_score($game)[$game['teams'][0]] !== live_score($game)[$game['teams'][1]] || !in_array($choice, $game['teams'], true)) throw new RuntimeException('Prioridad inválida.');
+        $game['tie_choice'] = $choice;
         return $state;
     }
     if ($game['status'] === 'finished') throw new RuntimeException('El partido ya terminó. Podés completar sus goleadores.');
@@ -219,9 +242,11 @@ function live_apply_action_internal(array $state, string $action, array $input, 
         $game['tie_choice'] = null;
     } elseif ($action === 'set_score') {
         $scores = $input['scores'] ?? [];
+        if (count($teams) > 2 && (int) ($scores[$game['teams'][0]] ?? 0) >= 3 && (int) ($scores[$game['teams'][1]] ?? 0) >= 3) throw new RuntimeException('El partido termina cuando el primer equipo llega a 3 goles; no puede terminar 3–3.');
         foreach ($game['teams'] as $t) {
             $value = filter_var($scores[$t] ?? null, FILTER_VALIDATE_INT);
             if ($value === false || $value < 0 || $value > 100) throw new RuntimeException('Los goles deben ser números enteros entre 0 y 100.');
+            if (count($teams) > 2 && $value > 3) throw new RuntimeException('El partido termina cuando un equipo llega a 3 goles.');
             $current = live_score($game)[$t];
             if ($value < $current) throw new RuntimeException('Para bajar el resultado, quitá el gol correspondiente del historial.');
             for ($i = $current; $i < $value; $i++) $game['goals'][] = ['team' => $t, 'player' => null, 'own' => false, 'at' => null];
@@ -231,7 +256,7 @@ function live_apply_action_internal(array $state, string $action, array $input, 
     } elseif ($action === 'finish') {
         $score = live_score($game);
         [$a, $b] = $game['teams'];
-        if ($index === 0 && $score[$a] === $score[$b] && (!$game['goals'] || !$game['first_goal_known'])) {
+        if (count($teams) > 2 && $index === 0 && $score[$a] === $score[$b] && (!$game['goals'] || !$game['first_goal_known'])) {
             $choice = (int) ($input['tie_choice'] ?? 0);
             if (!in_array($choice, $game['teams'], true)) throw new RuntimeException($game['goals'] ? 'Indicá qué equipo marcó el primer gol.' : 'El partido terminó 0–0. Elegí quién sigue o toma el lugar del ganador.');
             $game['tie_choice'] = $choice;
@@ -240,6 +265,12 @@ function live_apply_action_internal(array $state, string $action, array $input, 
         $game['running_since'] = null;
         $game['status'] = 'finished';
     } else throw new RuntimeException('Acción desconocida.');
+    if (count($teams) > 2 && in_array($action, ['goal', 'set_score'], true) && max(live_score($game)) >= 3) {
+        $game['elapsed'] = live_elapsed($game, $now);
+        $game['running_since'] = null;
+        $game['status'] = 'finished';
+        $game['finish_reason'] = 'three_goals';
+    }
     return $state;
 }
 

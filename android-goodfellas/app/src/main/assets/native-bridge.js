@@ -18,6 +18,21 @@
     try { bridge.postMessage(JSON.stringify({ ...payload, id })); }
     catch (error) { pending.delete(id); reject(error); }
   });
+  window.goodfellasSpeak = text => send({ action: 'speak', text: String(text) });
+  // SPA navigation does not call WebView.onPageFinished. Follow the live island too.
+  let liveScreen;
+  const updateLiveScreen = () => {
+    const enabled = !!document.querySelector('[data-react-island="live_matches"]');
+    if (enabled === liveScreen) return;
+    liveScreen = enabled;
+    send({ action: 'live_screen', enabled }).catch(() => {});
+  };
+  const watchLiveScreen = () => {
+    updateLiveScreen();
+    new MutationObserver(updateLiveScreen).observe(document.documentElement, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchLiveScreen, { once: true });
+  else watchLiveScreen();
   const encode = blob => new Promise((resolve, reject) => {
     if (blob.size > 32 * 1024 * 1024) return reject(new Error('El archivo supera 32 MB.'));
     const reader = new FileReader();

@@ -2,6 +2,8 @@ charset = utf-8
 
 # Project Rules
 
+- In live multi-team fixtures, only the first match uses the first-scoring team to resolve a draw for the next pairing. If its score was entered without goal order, ask which team scored first; never infer it from bulk-entry order. For an opening 0–0, ask who has priority. First-goal order is irrelevant in later matches. Two-team matches do not need tie priority.
+
 - Historical matches were played on Wednesdays before the schedule changed to Fridays. During historical data reconciliation, do not infer or change a match date solely from the current weekday schedule; resolve contradictions using the source records and user confirmation.
 
 - The Goodfellas award may be assigned to any player in the players roster, including players who were not called up for that match. Receiving this award must not create a match participation or imply that the player played.

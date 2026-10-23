@@ -78,6 +78,15 @@ $target = Join-Path $OutDir $name
 $zipPath = Join-Path $OutDir "$name.zip"
 $zipTemp = Join-Path $OutDir "$name.building.zip"
 
+function Assert-BundleArtifactPath {
+    param([string] $Path)
+    $resolvedPath = [System.IO.Path]::GetFullPath($Path)
+    $allowedRoot = [System.IO.Path]::GetFullPath($OutDir).TrimEnd('\') + '\'
+    if (-not $resolvedPath.StartsWith($allowedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Ruta de artefacto fuera de la carpeta de salida: $resolvedPath"
+    }
+}
+
 trap {
     # Un build fallido no debe dejar nada desplegable: ni ZIP ni carpeta.
     foreach ($artifact in @($zipTemp, $zipPath)) {
@@ -86,6 +95,7 @@ trap {
         }
     }
     if ($target -and (Test-Path -LiteralPath $target)) {
+        Assert-BundleArtifactPath -Path $target
         Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue
     }
     break
@@ -474,6 +484,8 @@ if ($entryNames | Where-Object { $_ -like '*hostinger_diag.php' }) { throw 'El Z
 if ($entryNames -contains 'assets/tailwind.input.css') { throw 'El ZIP contiene el origen de Tailwind. Abortado.' }
 
 # Superadas todas las verificaciones, el ZIP temporal recibe su nombre final.
+Assert-BundleArtifactPath -Path $zipTemp
+Assert-BundleArtifactPath -Path $zipPath
 Move-Item -LiteralPath $zipTemp -Destination $zipPath -Force
 Write-Ok "ZIP publicado como $name.zip"
 
@@ -537,6 +549,19 @@ QUE ES ESTE BUNDLE
 ------------------
 Actualizacion de codigo de la aplicacion. NO es una instalacion desde cero:
 no trae configuracion, ni base de datos, ni fotos de jugadores.
+
+PARTIDOS EN VIVO Y ANDROID
+-------------------------
+Incluye el sistema en vivo actualizado y goodfellas.apk version 1.3.
+Con 3 o 4 equipos se finaliza al llegar a 3 goles o al vencer el tiempo.
+Con 2 equipos no rige el limite de 3 goles; el partido dura 60 minutos.
+Solo el empate del primer partido usa el equipo que marco primero para
+definir prioridad. Con 0-0 inicial se solicita elegir la prioridad.
+Instalar la APK sobre la app anterior, sin desinstalar. Actualizar Android
+System WebView, activar los avisos sonoros y comprobar volumen y voz en
+espanol en el telefono. Mantener la app visible para recibir los avisos.
+La pantalla se mantiene encendida en Partidos en vivo y el reloj se
+resincroniza al regresar a la app. No se garantiza sonido en segundo plano.
 
 NO INCLUYE (a proposito)
 ------------------------

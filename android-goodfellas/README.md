@@ -2,7 +2,15 @@
 
 APK Android que carga `https://www.sudokumerlo.com/sorteo/` dentro de una WebView.
 
-## Version 1.2
+## Version 1.3
+
+- Mantiene la pantalla encendida al abrir Partidos en vivo, también al navegar sin recargar la página. Al salir de esa pantalla, vuelve al comportamiento normal.
+- Resincroniza el partido al volver a la aplicación. El reloj del servidor continúa durante llamadas, cambios de aplicación y cierres.
+- Los avisos de último minuto y cambios usan la voz nativa de Android al activar el sonido. Requiere un motor de voz con español disponible; el pitido y el aviso visual se conservan.
+- Los avisos están pensados para la aplicación visible. No se garantiza sonido con la aplicación cerrada o el teléfono bloqueado.
+- Es necesario mantener Android System WebView actualizado: una WebView antigua puede impedir cargar los controles React.
+
+## Funciones conservadas de la version 1.2
 
 - Dialogos nativos para avisos, confirmaciones y entrada de texto del sitio. Las acciones que requieren confirmar pueden aceptarse o cancelarse desde Android.
 
@@ -25,7 +33,7 @@ powershell -ExecutionPolicy Bypass -File android-goodfellas/scripts/build-apk.ps
 
 El script usa la clave local original en `.tmp/signing/`; no la incluye en la APK ni en el ZIP del sitio. Se pueden especificar otras rutas con `-SigningStore` y `-SigningPasswordFile`. Conservar esa clave y su contraseña fuera del hosting. La APK resultante se encuentra en `app/build/outputs/apk/release/app-release.apk`.
 
-Instalar la APK 1.2 sobre la anterior conserva los datos de la aplicacion siempre que se mantengan la firma y el identificador `com.goodfellas.sorteo`. La version nueva lleva `versionCode=3`. No se requiere migrar la base de datos.
+Instalar la APK 1.3 sobre la anterior conserva los datos de la aplicacion siempre que se mantengan la firma y el identificador `com.goodfellas.sorteo`. La version nueva lleva `versionCode=4`. No se requiere migrar la base de datos.
 
 ## Verificacion
 
