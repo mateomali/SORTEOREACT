@@ -213,6 +213,7 @@ $sorteoLegacyPayload = [
     'pots' => draw_pots_template(),
     'potsCsrf' => draw_pots_csrf(),
     'generatedPots' => !$proposalMode && $legacyMatch ? json_decode((string) ($legacyMatch['draw_pots_json'] ?? 'null'), true) : null,
+    'positionRatingDiscount' => (int) ($legacyMatch['position_rating_discount'] ?? 1) === 1,
     'matchId' => (int) $legacyMatchId,
     'match' => $legacyMatch ? [
         'id' => (int) $legacyMatch['id'],

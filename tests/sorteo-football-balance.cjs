@@ -7,6 +7,7 @@ function load(file) {
   const source = fs.readFileSync(file, 'utf8');
   const helpers = source.slice(0, source.indexOf('function iconPath('))
     .replace(/^import .*;\r?\n/gm, '')
+  .replace(/^export /gm, '')
     .replace(/function TeamRadar\([\s\S]*?(?=const LINE_STRENGTH_BALANCE_WEIGHTS)/, '');
   let seed = 562;
   const math = Object.create(Math);

@@ -5,9 +5,9 @@ test('creation preview uses the current policy and survives partial navigation',
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${BASE_URL}/login.php?next=jugadores.php`);
-  await page.locator('#login-admin').evaluate(node => { node.open = true; });
+  await page.getByRole('button', { name: 'Administrador', exact: true }).click();
   await page.locator('#adminPassword').fill(process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026');
-  await page.getByRole('button', { name: /Entrar como admin|Ingresar/i }).click();
+  await page.getByRole('button', { name: 'Entrar como admin', exact: true }).click();
   await page.waitForURL(url => url.pathname.endsWith('/jugadores.php'));
   const form = page.locator('.react-player-create-form');
   await expect(form).toHaveCount(1);

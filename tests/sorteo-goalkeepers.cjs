@@ -8,6 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../src/pages/SorteoLegacyPa
 const context = vm.createContext({ console });
 const helperSource = source.slice(0, source.indexOf('function iconPath('))
   .replace(/^import .*;\r?\n/gm, '')
+  .replace(/^export /gm, '')
   .replace(/function TeamRadar\([\s\S]*?(?=const LINE_STRENGTH_BALANCE_WEIGHTS)/, '');
 vm.runInContext(fs.readFileSync('assets/player-rating.js', 'utf8'), context);
 context.GoodfellasRating.configure(JSON.parse(fs.readFileSync('assets/player-rating-policy.json', 'utf8')));

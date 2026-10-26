@@ -150,7 +150,9 @@ const pitchLineLabelClasses = {
 function parsePayload(root) {
   try {
     const parsed = JSON.parse(root.dataset.payload || '{}');
+    const withPositionRule = (player) => ({ ...player, position_rating_discount: parsed.positionRatingDiscount !== false });
     return {
+      positionRatingDiscount: parsed.positionRatingDiscount !== false,
       mode: String(parsed.mode || 'sorteo'),
       proposalMode: parsed.proposalMode === true,
       proposalCsrf: String(parsed.proposalCsrf || ''),
@@ -159,8 +161,8 @@ function parsePayload(root) {
       generatedPots: Array.isArray(parsed.generatedPots) ? parsed.generatedPots : null,
       matchId: Number(parsed.matchId || 0),
       match: parsed.match || null,
-      players: Array.isArray(parsed.players) ? parsed.players : [],
-      initialTeams: Array.isArray(parsed.initialTeams) ? parsed.initialTeams : [],
+      players: Array.isArray(parsed.players) ? parsed.players.map(withPositionRule) : [],
+      initialTeams: Array.isArray(parsed.initialTeams) ? parsed.initialTeams.map(team => Array.isArray(team) ? team.map(withPositionRule) : []) : [],
       teamColors: Array.isArray(parsed.teamColors) ? parsed.teamColors : [],
       pairHistory: parsed.pairHistory || {},
       drawBalanceWeights: parsed.drawBalanceWeights || {},
@@ -430,7 +432,7 @@ function isLowRhythmPlayer(player) {
 }
 
 function isIrregularPlayer(player) {
-  return playerCardRating(statValue(player, 'regularidad')) < 70;
+  return globalThis.GoodfellasRating.balanceCard(statValue(player, 'regularidad')) < 70;
 }
 
 function applyRegularityAdjustment(rating, player) {
@@ -449,6 +451,14 @@ function positionBaseRating(player, assignedPosition) {
 
 const playerRatingCache = new WeakMap();
 function adjustedPositionRating(player, assignedPosition, options = {}) {
+  if (player.position_rating_discount === false) {
+    const cache = playerRatingCache.get(player) || {};
+    if (!Object.hasOwn(cache, 'general')) {
+      cache.general = bestNaturalPlayerRating({ ...player, position_rating_discount: true });
+      playerRatingCache.set(player, cache);
+    }
+    return cache.general;
+  }
   const position = String(assignedPosition || getPrimaryPlayerPosition(player)).toUpperCase();
   const key = `${position}:${options.ignorePositionFit === true}`;
   const cache = playerRatingCache.get(player) || {};
@@ -465,6 +475,7 @@ export function adjustedPositionRatingForTeamSize(player, assignedPosition, team
 }
 
 function positionPenaltyPercent(player, assignedPosition, teamSize = null) {
+  if (player.position_rating_discount === false) return 0;
   const position = String(assignedPosition || '').toUpperCase();
   if (!position || position === getPrimaryPlayerPosition(player)) return 0;
   const natural = getOrderedPlayerPositions(player).includes(position);
@@ -494,7 +505,7 @@ function playerCardRating(value) {
 }
 
 function playerCardTier(value) {
-  const overall = playerCardRating(value);
+  const overall = globalThis.GoodfellasRating.balanceCard(value);
   if (overall >= 88) return 'supreme';
   if (overall >= 84) return 'elite';
   if (overall >= 76) return 'gold';
@@ -576,6 +587,16 @@ function maxFieldPlayersPerLine(teamSize) {
   const fieldPlayers = Math.max(0, Number(teamSize || 0) - 1);
   if (Number(teamSize) < 10) return fieldPlayers;
   return fieldPlayers > 0 ? Math.max(1, Math.floor(fieldPlayers / 2)) : 0;
+}
+
+// Automatic draws should resemble a team, even when extreme line counts remain
+// available in the manual formation editor. DEF and LAT share one pitch line.
+function automaticShapePenalty(counts, teamSize) {
+  if (teamSize < 8) return 0;
+  const pitch = pitchLineCountsFromLogical(counts);
+  const maximum = Math.floor((teamSize - 1) / 2);
+  return Math.max(0, 2 - pitch.MED)
+    + REQUIRED_FIELD_LINES.reduce((sum, line) => sum + Math.max(0, pitch[line] - maximum), 0);
 }
 
 function maxDefLatPlayersPerPosition(teamSize) {
@@ -812,7 +833,8 @@ function buildTeamAssignmentImpl(team, assignmentOverrides = {}) {
       + Math.max(0, count - (rules?.[REQUIRED_FIELD_LINES[index]]?.maximum ?? maxFieldPlayersPerLine(team.length))), 0);
     const excessAdaptation = state.adaptedLines.reduce((sum, count, index) => sum + (count > 0 ? Math.max(0, state.counts[index] - (rules?.[REQUIRED_FIELD_LINES[index]]?.minimum || 1)) : 0), 0);
     const invalid = violations + (rules?.speedAdaptation ? 0 : excessAdaptation);
-    if (!best || invalid < best.violations || (invalid === best.violations && (state.adaptations < best.adaptations || (state.adaptations === best.adaptations && (state.changes < best.changes || (state.changes === best.changes && state.rating > best.rating)))))) best = { ...state, violations: invalid };
+    const shapePenalty = automaticShapePenalty(Object.fromEntries(REQUIRED_FIELD_LINES.map((line, index) => [line, state.counts[index]])), team.length);
+    if (!best || invalid < best.violations || (invalid === best.violations && (shapePenalty < best.shapePenalty || (shapePenalty === best.shapePenalty && (state.adaptations < best.adaptations || (state.adaptations === best.adaptations && (state.changes < best.changes || (state.changes === best.changes && state.rating > best.rating)))))))) best = { ...state, violations: invalid, shapePenalty };
   }
   const normalized = normalizeCompactDefenseAssignments(team, best?.assignment || {});
   for (const player of team) {
@@ -1033,7 +1055,7 @@ function lineStrengthSummary(players, assignments = {}, teamSize = players.lengt
   ), 0);
   const count = players.length;
   const average = count ? total / count : 0;
-  return { total, count, average, quality: count ? playerCardRating(average) : 0 };
+  return { total, count, average, quality: count ? globalThis.GoodfellasRating.balanceCard(average) : 0 };
 }
 
 function profileDistributionPenalty(teams) {
@@ -1242,6 +1264,7 @@ function scoreTeams(teams, pairHistory, assignmentOverrides = {}, weights = {}, 
   const potExchangePenalty = potExchangeDistancePenalty(teams, potReferenceTeams, pots);
   return {
     ...enduranceBalance(teams),
+    shapePenalty: teams.reduce((sum, team, index) => sum + automaticShapePenalty(teamLineCounts(team, assignments[index]), team.length), 0),
     potExchangePenalty,
     potAdjustedDiff: diff + potExchangePenalty * 0.25,
     potCompensationCost: potCompensationCost(teams, pots, assignments),
@@ -1265,7 +1288,7 @@ function buildAutomaticDrawPots(players, numTeams, maxGeneralGap = 5, existingPo
   for (const player of players) {
     const position = player.manualGoalkeeper ? 'ARQ' : getPrimaryPlayerPosition(player);
     const rating = Number(player.base_puntuacion ?? player.puntuacion ?? 3);
-    const entry = { player, rating, general: playerCardRating(rating) };
+    const entry = { player, rating, general: globalThis.GoodfellasRating.balanceCard(rating) };
     if (!byPosition.has(position)) byPosition.set(position, []);
     byPosition.get(position).push(entry);
   }
@@ -1586,6 +1609,8 @@ function isBetterDraw(evaluation, best) {
   if (!best) return true;
   const hardDifference = Number(evaluation.hardViolations || 0) - Number(best.hardViolations || 0);
   if (hardDifference) return hardDifference < 0;
+  const shapeDifference = Number(evaluation.shapePenalty || 0) - Number(best.shapePenalty || 0);
+  if (shapeDifference) return shapeDifference < 0;
   // Pace is the first balancing priority, ahead of endurance and total rating.
   const paceDifference = Number(evaluation.paceExcess || 0) - Number(best.paceExcess || 0);
   if (paceDifference) return paceDifference < 0;
@@ -1604,6 +1629,7 @@ function isBetterDraw(evaluation, best) {
 // Diversity is allowed only inside this documented, small quality envelope.
 function drawsAreNear(evaluation, best) {
   return evaluation.hardViolations === best.hardViolations
+    && Number(evaluation.shapePenalty || 0) === Number(best.shapePenalty || 0)
     && JSON.stringify(evaluation.enduranceTierGaps || []) === JSON.stringify(best.enduranceTierGaps || [])
     && Number(evaluation.fastCountSpread || 0) === Number(best.fastCountSpread || 0)
     && Math.abs(Number(evaluation.enduranceGap || 0) - Number(best.enduranceGap || 0)) <= 1e-6
@@ -2224,6 +2250,7 @@ function mostBalancedFormations(teams, currentAssignments = {}, lockedPositions 
       if (seen.has(signature)) return false;
       seen.add(signature);
       return fieldLineCountsFitLimits(teamLineCounts(team, candidate.assignments), team.length)
+        && automaticShapePenalty(teamLineCounts(team, candidate.assignments), team.length) <= automaticShapePenalty(teamLineCounts(team, base), team.length)
         && team.every(player => !lockedPositions[playerKey(player)] || candidate.assignments[playerKey(player)] === lockedPositions[playerKey(player)])
         && assignmentPositionUseStats(team, candidate.assignments).outOfPositionCount <= maximumAdaptations;
     }).map(candidate => ({
@@ -2604,7 +2631,7 @@ export function CompactPlayerCard({ player, assignedPosition, teamSize = null, t
           </span>
         </span>
       ) : null}
-      <span className="sorteo-compact-rating absolute left-[8%] top-[9%] z-20 grid justify-items-start gap-px rounded bg-black/45 p-[3%]">
+      <span className="sorteo-compact-rating absolute left-[12%] top-[20%] z-20 grid justify-items-start gap-px rounded bg-black/45 p-[2%]">
         <strong
           className={`block font-black leading-none ${palette.text} ${textShadow}`}
           style={{ fontSize: 'clamp(5px, 22cqw, 26px)' }}
@@ -2647,8 +2674,8 @@ export function CompactPlayerCard({ player, assignedPosition, teamSize = null, t
       </span>
       <PositionPenaltyBubble percent={positionPenalty} />
       <strong
-        className={`gf-player-name absolute left-[9%] right-[9%] top-[66%] bottom-[12%] z-30 flex items-center justify-center text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
-        style={{ fontSize: player.nombre.length > 18 ? 'clamp(5px, 9cqw, 12px)' : 'clamp(7px, 13cqw, 14px)' }}
+        className={`gf-player-name absolute left-[13%] right-[13%] top-[70%] bottom-[17%] z-30 flex items-center justify-center text-center font-black uppercase leading-none ${palette.text} ${textShadow}`}
+        style={{ margin: 0, padding: 0, lineHeight: 1, textAlign: 'center', fontSize: player.nombre.length > 18 ? 'clamp(5px, 9cqw, 12px)' : 'clamp(7px, 13cqw, 14px)' }}
         data-sorteo-card-text="1"
       >
         <span className="gf-player-name-text">{player.nombre}</span>
@@ -3377,6 +3404,7 @@ export function SorteoLegacyPageIsland({ root }) {
   const [numTeams] = useState(payload.numTeams);
   const [maxDiff, setMaxDiff] = useState(0.7);
   const [drawMode, setDrawMode] = useState('standard');
+  const [positionRatingDiscount, setPositionRatingDiscount] = useState(payload.positionRatingDiscount !== false);
   const [drawPots, setDrawPots] = useState(payload.pots);
   const [savedPots, setSavedPots] = useState(() => JSON.stringify(payload.pots));
   const [savingPots, setSavingPots] = useState(false);
@@ -3796,7 +3824,8 @@ export function SorteoLegacyPageIsland({ root }) {
   const generateTeams = useCallback(async () => {
     setError('');
     setSuccess('');
-    const rawSelected = lockedMatch ? players.slice() : players.filter((player) => player.selected);
+    const rawSelected = (lockedMatch ? players.slice() : players.filter((player) => player.selected))
+      .map(player => ({ ...player, position_rating_discount: positionRatingDiscount }));
     const naturalGoalkeepers = rawSelected.filter((player) => getPrimaryPlayerPosition(player) === 'ARQ');
     const requiredNaturalKeys = new Set(naturalGoalkeepers.length === numTeams ? naturalGoalkeepers.map(playerKey) : []);
     const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true || requiredNaturalKeys.has(playerKey(player))).map(playerKey));
@@ -3913,7 +3942,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setGenerationStage('');
       setGenerationProgress(0);
     }
-  }, [applyDefaultFormationVariants, drawMode, drawPots, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
+  }, [applyDefaultFormationVariants, positionRatingDiscount, drawMode, drawPots, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
 
   useEffect(() => {
     const previous = window.generarEquipos;
@@ -5494,6 +5523,7 @@ export function SorteoLegacyPageIsland({ root }) {
           proposal_mode: Boolean(payload.proposalMode),
           proposal_csrf: payload.proposalCsrf || '',
           match_id: payload.matchId,
+          position_rating_discount: teams[0]?.[0]?.position_rating_discount !== false,
           num_teams: numTeams,
           redraw_increment: redrawsUsedThisSession,
           teams: teamsPayload,
@@ -5821,6 +5851,17 @@ export function SorteoLegacyPageIsland({ root }) {
         )}
       </div>
 
+      {!isFormationEditor ? (
+              <label className="gf-position-rule grid w-full gap-2 text-sm font-bold text-[#07130f]" htmlFor="draw-position-rating-discount">
+                Cambio de posición
+                <select id="draw-position-rating-discount" className="min-h-11 w-full rounded-md border border-[#adc8bb] bg-white px-3 text-sm sm:max-w-md" value={positionRatingDiscount ? '1' : '0'} onChange={event => setPositionRatingDiscount(event.target.value === '1')} disabled={generating || savingDraw || payload.proposalMode} aria-describedby="draw-position-rating-help">
+                  <option value="1">Restar puntos por cambio de posición</option>
+                  <option value="0">No restar puntos por cambio de posición</option>
+                </select>
+                <span id="draw-position-rating-help" className="text-xs font-normal text-[#526b62]">Se aplica al próximo sorteo. Se mantienen las reglas de posiciones y arqueros.</span>
+              </label>
+      ) : null}
+
       <div className={`grid gap-4 ${isFormationEditor ? '' : 'gf-workflow-body'}`}>
         {!isFormationEditor && !payload.proposalMode ? (
         <aside className={`grid content-start gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm gf-player-preparation`}>
@@ -6030,7 +6071,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 </>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="gf-generate-actions flex flex-wrap items-center gap-2">
               {drawReadiness.issues.length || drawReadiness.warnings.length ? (
                 <div className="grid w-full gap-1.5">
                   {drawReadiness.issues.map((item) => (
@@ -6045,6 +6086,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   )) : null}
                 </div>
               ) : null}
+
               <button className={`${secondaryButtonClass} w-full justify-center text-base sm:w-auto ${generateDisabled ? 'opacity-80' : ''}`} id="generateTeamsButton" type="button" onClick={generateTeams} disabled={generateDisabled || savingDraw}>
                 <Icon name="dice" className="h-5 w-5" />
                 {generating ? 'Generando...' : generateButtonLabel}

@@ -120,6 +120,11 @@ function live_sync_totals(int $matchId, array $state, array $teams, array $parti
     foreach ($state['pending_scorers'] ?? [] as $player => $goals) {
         if (array_key_exists($player, $playerGoals)) $playerGoals[$player] += (int) $goals;
     }
+    // Aggregate entry owns date totals; recorded games still own the detailed fixture.
+    if (isset($state['summary'])) {
+        foreach ($teamGoals as $team => $_) $teamGoals[$team] = (int) ($state['summary']['team_goals'][$team] ?? 0);
+        foreach ($playerGoals as $player => $_) $playerGoals[$player] = (int) ($state['summary']['player_goals'][$player] ?? 0);
+    }
     $stmt = $pdo->prepare('UPDATE match_teams SET goals = ?, updated_at = NOW() WHERE match_id = ? AND team_number = ?');
     foreach ($teamGoals as $t => $count) $stmt->execute([$count, $matchId, $t]);
     $stmt = $pdo->prepare('UPDATE match_players SET goals = ? WHERE match_id = ? AND player_id = ?');

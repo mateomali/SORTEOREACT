@@ -309,13 +309,68 @@ for (const count of [2, 3, 4]) {
   });
 }
 
+for (const count of [2, 3, 4]) test(`direct closure and aggregate correction preserve ${count}-team live history`, async ({ page }) => {
+  const data = JSON.parse(fixture('create', count));
+  try {
+    await page.setViewportSize({ width: count === 2 ? 390 : 1440, height: 1000 });
+    await login(page);
+    await expect(page.locator(`a[href="finalizar_partido.php?match_id=${data.id}&direct_result=1"]:visible`).first()).toHaveText('Cargar resultados y premios');
+    await page.goto(`${BASE}/partidos_en_vivo.php?match_id=${data.id}`);
+    const send = (action, input = {}) => page.evaluate(async ({ action, input }) => {
+      const payload = JSON.parse(document.querySelector('[data-react-island="live_matches"]').dataset.payload);
+      const url = `partidos_en_vivo.php?match_id=${payload.matchId}&api=1`;
+      const latest = await (await fetch(url)).json();
+      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': payload.csrf }, body: JSON.stringify({ action, ...input, revision: latest.session.revision }) });
+      return { status: response.status, data: await response.json() };
+    }, { action, input });
+    const scorer = data.players.find(player => Number(player.team_number) === 1);
+    expect((await send('next', { teams: [1, 2] })).status).toBe(200);
+    expect((await send('goal', { team: 1, player: Number(scorer.id) })).status).toBe(200);
+    expect((await send('start')).status).toBe(200);
+    await page.getByRole('link', { name: 'Finalizar fecha', exact: true }).click();
+    await expect(page.locator(`[name="goals[${scorer.id}]"]`)).toHaveValue('1');
+    await expect(page.locator('[name="team_goals[1]"]')).toHaveValue('1');
+    await page.locator('[name="team_goals[1]"]').fill('3');
+    await page.locator(`[name="goals[${scorer.id}]"]`).fill('3');
+    await page.locator(`[name="rating[${scorer.id}]"]`).fill('8.5');
+    await page.locator('[name="awards[player_of_match][0]"]').fill(`${scorer.name} (#${scorer.id})`);
+    await page.screenshot({ path: `outputs/direct-results-${count}-teams.png`, fullPage: true });
+    page.on('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: 'Finalizar fecha con goles y premios', exact: true }).click();
+    await expect.poll(() => JSON.parse(fixture('inspect', data.id)).match.status).toBe('finalizado');
+    let saved = JSON.parse(fixture('inspect', data.id));
+    expect(saved.session.state.games).toHaveLength(1);
+    expect(saved.session.state.games[0].goals).toHaveLength(1);
+    expect(saved.session.state.games[0].running_since).toBeNull();
+    expect(saved.session.state.summary.team_goals['1']).toBe(3);
+    expect(Number(saved.players.find(player => player.id === scorer.id).rating)).toBe(8.5);
+    expect(saved.awards.player_of_match).toBeTruthy();
+    await page.goto(`${BASE}/editar_partidos.php`);
+    const correct = page.locator(`a[href="finalizar_partido.php?match_id=${data.id}&direct_result=1"]:visible`).first();
+    await expect(correct).toHaveText('Corregir fecha');
+    await correct.click();
+    await expect(page.locator(`[name="goals[${scorer.id}]"]`)).toHaveValue('3');
+    await page.locator('[name="team_goals[1]"]').fill('4');
+    await page.locator(`[name="goals[${scorer.id}]"]`).fill('4');
+    await page.getByRole('button', { name: 'Guardar goles y premios', exact: true }).click();
+    await expect.poll(() => JSON.parse(fixture('inspect', data.id)).session.state.summary.team_goals['1']).toBe(4);
+    saved = JSON.parse(fixture('inspect', data.id));
+    expect(saved.session.state.games[0].goals).toHaveLength(1);
+    expect(Number(saved.players.find(player => player.id === scorer.id).goals)).toBe(4);
+    await page.goto(`${BASE}/partidos_en_vivo.php?match_id=${data.id}`);
+    await expect(page.getByRole('link', { name: 'Corregir totales y premios' })).toBeVisible();
+    expect((await send('correct_game', { game: 0, scores: { 1: 2, 2: 1 } })).status).toBe(422);
+    expect(JSON.parse(fixture('inspect', data.id)).session.state.summary.team_goals['1']).toBe(4);
+  } finally { fixture('delete', data.id); }
+});
+
 test('two-team result editors preserve live state and support aggregate entry', async ({ page }) => {
   const data = JSON.parse(fixture('create', 2));
   try {
     await login(page);
     await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}`);
     await expect(page).toHaveURL(new RegExp(`partidos_en_vivo.php\\?match_id=${data.id}`));
-    await page.getByRole('link', { name: 'Cargar goles y premios', exact: true }).click();
+    await page.getByRole('link', { name: 'Cargar resultados y premios', exact: true }).click();
     await expect(page.locator('[name="direct_result"]')).toHaveValue('1');
     await page.locator('[name="team_goals[1]"]').fill('2');
     await page.locator('[name="team_goals[2]"]').fill('1');
@@ -370,7 +425,8 @@ test('expired bulk draw asks for the first scorer and old two-team writes cannot
         expect(after.session).toEqual(before.session);
         expect(after.teams.map(team => Number(team.goals))).toEqual([0, 0]);
         await page.goto(`${BASE}/finalizar_partido.php?match_id=${data.id}&direct_result=1`);
-        await expect(page).toHaveURL(new RegExp(`partidos_en_vivo.php\\?match_id=${data.id}`));
+        await expect(page.locator('[name="direct_result"]')).toHaveValue('1');
+        await expect(page.locator('[name="team_goals[1]"]')).toHaveValue('0');
       }
     } finally { fixture('delete', data.id); }
   }
@@ -396,9 +452,10 @@ for (const count of [3, 4]) {
       await viewer.reload();
       await expect(viewer.locator(`main a[href="${link}"]`).filter({ hasText: 'Seguimiento en vivo' })).toBeVisible();
       await viewer.locator('#menuToggle').click();
-      await viewer.locator('#mainNav summary').filter({ hasText: /^Fechas/ }).click();
+      await viewer.locator('#mainNav summary').filter({ hasText: /Fechas/ }).click();
       await expect(viewer.locator('#mainNav a[href="seguimiento_en_vivo.php"]')).toBeVisible();
       await viewer.locator('#mainNav a[href="seguimiento_en_vivo.php"]').click();
+      await viewer.waitForURL(url => url.href.includes(link) || url.pathname.endsWith('/seguimiento_en_vivo.php'));
       if (!viewer.url().includes(link)) await viewer.locator(`a[href="${link}"]`).filter({ hasText: /Temporary/ }).click();
       await expect(viewer.getByRole('timer')).toBeVisible();
       await expect(viewer.getByRole('button', { name: 'Pausar', exact: true })).toBeDisabled();
@@ -417,7 +474,7 @@ for (const count of [3, 4]) {
       await directorPage.getByRole('button', { name: 'Pausar', exact: true }).click();
       await expect(directorPage.getByRole('button', { name: 'Reanudar', exact: true })).toBeVisible();
       await page.goto(`${BASE}/index.php`);
-      await page.locator('#mainNav summary').filter({ hasText: /^Fechas/ }).click();
+      await page.locator('#mainNav summary').filter({ hasText: /Fechas/ }).click();
       await expect(page.locator('#mainNav a[href="seguimiento_en_vivo.php"]')).toBeVisible();
       await viewer.goto(`${BASE}/index.php`);
       await expect(viewer.locator(`main a[href="${link}"]`).filter({ hasText: 'Seguimiento en vivo' })).toBeVisible();

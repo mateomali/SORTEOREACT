@@ -1169,6 +1169,7 @@ function admin_match_list_item_payload(
             'captains' => 'capitanes.php?match_id=' . $matchId,
             'manual' => 'equipos_manual.php?match_id=' . $matchId,
             'formations' => 'finalizar_partido.php?match_id=' . $matchId . '&edit_formations=1#formaciones',
+            'directResults' => is_admin() ? 'finalizar_partido.php?match_id=' . $matchId . '&direct_result=1' : '',
             'finish' => (!empty($match['dynamic_fixture']) || (int) $match['num_teams'] === 2) ? 'partidos_en_vivo.php?match_id=' . $matchId : 'finalizar_partido.php?match_id=' . $matchId . '&show_score=1#resultado',
             'valuations' => is_directivo() ? 'junta_votaciones.php?match_id=' . $matchId : 'finalizar_partido.php?match_id=' . $matchId . '&edit_details=1#valoraciones',
             'view' => 'finalizar_partido.php?match_id=' . $matchId,

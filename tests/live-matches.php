@@ -141,3 +141,14 @@ check(live_score($removed['games'][0]) === [1 => 0, 2 => 0], 'Two-team removal t
 $s = live_apply_action($s, 'correct_game', ['game' => 0, 'scores' => [1 => 1, 2 => 1]], [1, 2], [], 1000);
 check(live_score($s['games'][0]) === [1 => 1, 2 => 1], 'Two-team correction to draw needs no priority');
 echo "OK: first-goal priority, later draws, two-team corrections and invalid 3-3 regression tests.\n";
+
+$summaryState = $s;
+$summaryState['closed'] = true;
+$summaryState['summary'] = ['team_goals' => [1 => 9, 2 => 8], 'player_goals' => []];
+rejects(fn() => live_apply_action($summaryState, 'correct_game', ['game' => 0, 'scores' => [1 => 2, 2 => 1]], [1, 2], [], 1000), 'Detailed correction requires confirmation before replacing aggregate totals');
+$corrected = live_apply_action($summaryState, 'correct_game', ['game' => 0, 'scores' => [1 => 2, 2 => 1], 'replace_summary' => true], [1, 2], [], 1000);
+check(!isset($corrected['summary']), 'Explicit detailed correction clears aggregate authority');
+check(live_score($corrected['games'][0]) === [1 => 2, 2 => 1], 'Detailed history remains editable after confirmation');
+check(isset($summaryState['summary']), 'Original aggregate state is not mutated');
+check(live_expire($summaryState, 999999) === $summaryState, 'Closed aggregate dates are stable during polling');
+echo "OK: aggregate corrections require confirmation and preserve historical detail.\n";

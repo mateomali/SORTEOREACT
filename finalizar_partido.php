@@ -892,6 +892,22 @@ function finish_save_optional_awards(array $match, array $participants): void
     repo_save_match_awards((int) $match['id'], $parsed, $allowed);
 }
 
+function finish_save_optional_ratings(array $match, array $participants): void
+{
+    if (!match_valuation_includes_ratings(match_valuation_mode($match)) || !isset($_POST['rating'])) return;
+    if (valuations_locked_after_deadline($match)) throw new RuntimeException('Los puntajes de esta fecha están bloqueados.');
+    if (!is_array($_POST['rating'])) throw new RuntimeException('Puntajes inválidos.');
+    $stmt = db()->prepare('UPDATE match_players SET rating = ? WHERE match_id = ? AND player_id = ?');
+    foreach ($participants as $player) {
+        if ($player['team_number'] === null || !array_key_exists($player['id'], $_POST['rating'])) continue;
+        $raw = $_POST['rating'][$player['id']];
+        if (!is_scalar($raw)) throw new RuntimeException('Puntaje inválido.');
+        $rating = trim((string) $raw) === '' ? null : filter_var($raw, FILTER_VALIDATE_FLOAT);
+        if ($rating !== null && ($rating === false || $rating < 1 || $rating > 10 || abs($rating * 2 - round($rating * 2)) > 0.0001)) throw new RuntimeException('Los puntajes deben estar entre 1 y 10, en pasos de 0,5.');
+        $stmt->execute([$rating, (int) $match['id'], (int) $player['id']]);
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_live_awards') {
     $awardMatch = repo_match_by_id((int) ($_POST['match_id'] ?? 0));
     try {
@@ -948,9 +964,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             if (count($teams) !== (int) $match['num_teams']) throw new RuntimeException('Faltan equipos.');
             $directSession = live_load_session($match);
             if (filter_var($_POST['live_revision'] ?? null, FILTER_VALIDATE_INT) !== $directSession['revision']) throw new RuntimeException('Otra pantalla actualizó la fecha. Recargá y revisá los resultados antes de guardar.');
-            $recorded = $pdo->prepare('SELECT COUNT(*) FROM match_round_robin_results WHERE match_id = ? AND home_goals IS NOT NULL AND away_goals IS NOT NULL');
-            $recorded->execute([$matchId]);
-            if ($directSession['state']['games'] || (int) $recorded->fetchColumn() > 0) throw new RuntimeException('Ya hay partidos registrados. Corregí sus resultados y goleadores desde el fixture para mantener las estadísticas consistentes.');
             foreach ($teams as $team) {
                 $value = filter_var($teamGoalsData[(int) $team['team_number']] ?? null, FILTER_VALIDATE_INT);
                 if ($value === false || $value < 0 || $value > 24000) throw new RuntimeException('Los totales deben ser enteros entre 0 y 24000.');
@@ -962,10 +975,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         foreach ($scorerGoals as $pid => $goals) $saveScorer->execute(['goals' => $goals, 'mid' => $matchId, 'pid' => $pid]);
         finish_save_optional_awards($match, repo_match_participants($matchId));
         if ($directResultMode) {
+            finish_save_optional_ratings($match, repo_match_participants($matchId));
             $directState = $directSession['state'];
             $directState['closed'] = true;
+            foreach ($directState['games'] as &$recordedGame) {
+                if ($recordedGame['status'] !== 'finished') {
+                    $recordedGame['elapsed'] = live_elapsed($recordedGame);
+                    $recordedGame['running_since'] = null;
+                    $recordedGame['status'] = 'finished';
+                    $recordedGame['finish_reason'] = 'date_closed';
+                }
+            }
+            unset($recordedGame);
             $directState['summary'] = ['team_goals' => array_map('intval', $teamGoalsData), 'player_goals' => $scorerGoals];
             live_store_session($matchId, $directState, $directSession['revision'] + 1);
+            live_sync_totals($matchId, $directState, array_map('intval', array_column($teams, 'team_number')), repo_match_participants($matchId));
         }
         $stmt = $pdo->prepare('UPDATE matches SET status = :status, finalized_at = COALESCE(finalized_at, NOW()), result_saved_at = NOW(), teams_published_at = COALESCE(teams_published_at, NOW()) WHERE id = :id');
         $stmt->execute(['status' => 'finalizado', 'id' => $matchId]);
@@ -1104,17 +1128,24 @@ $directResultMode = $directResultMode && $selectedMatch && in_array((int) $selec
 if ($directResultMode) {
     $_SESSION['live_csrf'] ??= bin2hex(random_bytes(32));
     $directSessionForForm = live_load_session($selectedMatch);
-    $hasRecordedGames = count(array_filter(repo_round_robin_results($matchId), static fn(array $row): bool => $row['home_goals'] !== null && $row['away_goals'] !== null)) > 0;
-    if ($directSessionForForm['state']['games'] || $hasRecordedGames) {
-        flash('info', 'Esta fecha ya tiene partidos. Corregí los goles y goleadores desde sus resultados.');
-        redirect((!empty($selectedMatch['dynamic_fixture']) || $selectedMatch['status'] === 'finalizado' ? 'partidos_en_vivo.php' : 'finalizar_partido.php') . '?match_id=' . $matchId);
-    }
 }
 $selectedValuationMode = $selectedMatch ? match_valuation_mode($selectedMatch) : 'both';
 $valuationsIncludeRatings = match_valuation_includes_ratings($selectedValuationMode);
 $valuationsIncludeAwards = match_valuation_includes_awards($selectedValuationMode);
 $valuationsScopeText = match_valuation_scope_text($selectedValuationMode);
 $participants = $selectedMatch ? repo_match_participants((int) $selectedMatch['id']) : [];
+if ($directResultMode && !isset($directSessionForForm['state']['summary']) && $directSessionForForm['state']['games']) {
+    $recordedPlayerGoals = $directSessionForForm['state']['pending_scorers'] ?? [];
+    $recordedTeamGoals = [];
+    foreach ($directSessionForForm['state']['games'] as $recordedGame) {
+        foreach (live_score($recordedGame) as $team => $count) $recordedTeamGoals[$team] = ($recordedTeamGoals[$team] ?? 0) + $count;
+        foreach ($recordedGame['goals'] as $goal) {
+            if ($goal['player'] !== null && !$goal['own']) $recordedPlayerGoals[$goal['player']] = ($recordedPlayerGoals[$goal['player']] ?? 0) + 1;
+        }
+    }
+    foreach ($participants as &$player) $player['goals'] = $recordedPlayerGoals[$player['id']] ?? 0;
+    unset($player);
+}
 $groupedTeams = $selectedMatch ? repo_grouped_team_players((int) $selectedMatch['id']) : [];
 $awardDefinitions = award_definitions();
 $awardDescriptions = award_descriptions();
@@ -1146,7 +1177,7 @@ require __DIR__ . '/includes/header.php';
 <?php if (!$formationOnlyView): ?>
   <section class="page-head finish-page-header">
     <div>
-      <h1>Finalizar fecha</h1>
+      <h1><?= $directResultMode ? ($selectedMatch['status'] === 'finalizado' ? 'Corregir fecha' : 'Resultados y premios') : 'Finalizar fecha' ?></h1>
       <p class="small-muted">Carga los goles para finalizar. Los premios son opcionales y pueden cargarse luego desde Directivo.</p>
     </div>
     <a class="btn btn-muted" href="<?= h($backUrl) ?>">Volver</a>
@@ -1298,7 +1329,7 @@ require __DIR__ . '/includes/header.php';
               <input type="hidden" name="direct_result" value="1">
               <input type="hidden" name="live_csrf" value="<?= h($_SESSION['live_csrf']) ?>">
               <input type="hidden" name="live_revision" value="<?= (int) $directSessionForForm['revision'] ?>">
-              <p class="flash flash-info">Carga general sin partidos: ingresá los goles de cada equipo y sus autores. Los premios son opcionales y respetan la configuración de esta fecha. La tabla de posiciones estará disponible cuando registres los cruces.</p>
+              <p class="flash flash-info">Resultados y premios: cargá los goles totales de la fecha por equipo y jugador. No hace falta completar cada partido. Los premios y puntajes respetan la configuración de la fecha. El detalle ya registrado se conserva; la tabla refleja solamente esos partidos.</p>
             <?php endif; ?>
             <?php if ($editFormations): ?>
               <input type="hidden" name="return_to_formations" value="1">
@@ -1311,7 +1342,7 @@ require __DIR__ . '/includes/header.php';
             </div>
             <?php
               $scoreGoalsByTeam = [];
-              foreach ($matchTeams as $team) $scoreGoalsByTeam[(int) $team['team_number']] = (int) ($team['goals'] ?? 0);
+              foreach ($matchTeams as $team) $scoreGoalsByTeam[(int) $team['team_number']] = (int) ($recordedTeamGoals[(int) $team['team_number']] ?? $team['goals'] ?? 0);
               match_render_scorers($participants, $teamLabels, true, $scoreGoalsByTeam);
             ?>
           </form>
@@ -1555,7 +1586,7 @@ require __DIR__ . '/includes/header.php';
 
       <?php if (!$formationOnlyView): ?>
       <details class="card finish-valuations finish-valuations-disclosure" id="valoraciones" <?= $detailFormError !== '' || $directResultMode ? 'open' : '' ?>>
-        <summary><h3><?= $valuationsIncludeAwards ? 'Premios' : 'Puntajes' ?></h3><span class="finish-valuations-toggle" aria-hidden="true"></span></summary>
+        <summary><h3><?= $directResultMode && $valuationsIncludeRatings && $valuationsIncludeAwards ? 'Premios y puntajes' : ($valuationsIncludeAwards ? 'Premios' : 'Puntajes') ?></h3><span class="finish-valuations-toggle" aria-hidden="true"></span></summary>
         <div class="finish-valuations-content">
         <datalist id="matchAwardPlayers">
           <?php foreach ($participants as $player): ?>
@@ -1575,6 +1606,21 @@ require __DIR__ . '/includes/header.php';
           <?php endforeach; ?>
         </datalist>
 
+        <?php if ($directResultMode && $valuationsIncludeRatings && !$valuationsLocked): ?>
+          <section class="finish-ratings">
+            <h4>Puntajes de la fecha</h4>
+            <p class="small-muted">Opcionales, del 1 al 10 en pasos de 0,5. También pueden completarse desde Directivo &gt; Mis valoraciones.</p>
+            <div class="grid cols-2">
+              <?php foreach ($participants as $player): ?>
+                <?php if ($player['team_number'] === null) continue; ?>
+                <label class="finish-scorer-row flex items-center justify-between gap-2 mt-2">
+                  <span><?= h($player['name']) ?></span>
+                  <input class="finish-number-input" style="width:72px" form="finish-score-form" type="number" min="1" max="10" step="0.5" name="rating[<?= (int) $player['id'] ?>]" value="<?= h((string) ($player['rating'] ?? '')) ?>" aria-label="Puntaje de <?= h($player['name']) ?>">
+                </label>
+              <?php endforeach; ?>
+            </div>
+          </section>
+        <?php endif; ?>
         <?php if ($valuationsIncludeAwards && !$valuationsLocked): ?>
             <section class="finish-awards finish-awards-panel">
           <p class="small-muted">Opcional. Puedes cargarlos ahora o luego desde Directivo &gt; Mis valoraciones.</p>

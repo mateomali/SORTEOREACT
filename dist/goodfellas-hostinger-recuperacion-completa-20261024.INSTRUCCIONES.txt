@@ -1,0 +1,23 @@
+RECUPERACION DE ARCHIVOS - HOSTINGER
+
+Extrae el ZIP dentro de public_html (o en la carpeta original de la app).
+index.php, config.php y .htaccess deben quedar directamente alli.
+Activa Mostrar archivos ocultos para comprobar .htaccess.
+
+Incluye codigo actual, assets, APK, config.php LOCAL y los 72 archivos
+locales de uploads/, incluido uploads/.htaccess.
+Si cambiaste las credenciales MySQL en Hostinger, ajusta config.php.
+Las fotos que estaban solo en el servidor requieren un backup de Hostinger.
+
+NO incluye ni importa la base de datos. Si solo borraste archivos, conserva
+la base existente. NO importes database.sql ni una base vieja encima.
+Si tambien borraste la base, restaura el backup mas reciente de Hostinger.
+
+Usa PHP 8.0 o superior. Comprueba inicio, login, fotos, jugadores, encuentros,
+estadisticas, perfil, valoraciones y Partidos en vivo.
+Elimina el ZIP del servidor despues de extraerlo: contiene credenciales.
+Conserva la copia local en privado.
+
+Incluye el comportamiento actual de reconciliacion de goles: al abrir
+jugadores, estadisticas o perfil puede crear player_goal_corrections con
+las correcciones previstas por esta version. No restaura datos borrados.

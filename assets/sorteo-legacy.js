@@ -429,7 +429,7 @@ function isLowRhythmPlayer(jugador) {
 }
 
 function isIrregularPlayer(jugador) {
-  return playerCardRating(statValue(jugador, 'regularidad')) < 70;
+  return globalThis.GoodfellasRating.balanceCard(statValue(jugador, 'regularidad')) < 70;
 }
 
 function teamAverage(equipo, campo) {
@@ -512,7 +512,7 @@ function playerCardPhotoHtml(jugador) {
 }
 
 function playerCardTier(value) {
-  const overall = playerCardRating(value);
+  const overall = globalThis.GoodfellasRating.balanceCard(value);
   if (overall >= 88) return 'supreme';
   if (overall >= 84) return 'elite';
   if (overall >= 76) return 'gold';

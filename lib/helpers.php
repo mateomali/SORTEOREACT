@@ -418,6 +418,10 @@ function player_overall_rating(array $player): float
 
 function player_position_rating(array $player, string $position, bool $ignorePositionFit = false): float
 {
+    if (isset($player['position_rating_discount']) && !(bool) $player['position_rating_discount']) {
+        unset($player['position_rating_discount']);
+        return player_best_natural_rating($player);
+    }
     $position = strtoupper(trim($position));
     $weights = $position === 'ARQ' ? player_goalkeeper_stat_weights() : player_field_stat_weights($position);
     $total = 0.0;

@@ -24521,7 +24521,7 @@ body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  aspect-ratio: 1000 / 980;
+  aspect-ratio: 1000 / 1080;
 }
 .sorteo-react-page .gf-player-name {
   overflow-wrap: anywhere;
@@ -25320,6 +25320,143 @@ html body .sorteo-react-page .gf-drag-feedback {
   .award-player-options [role="option"] { display: block; width: 100%; min-height: 44px; text-align: left; padding: 8px 12px; border: 0; border-bottom: 1px solid #e1e9e3; border-radius: 0; background: white; color: #10271e; font-size: 14px; overflow-wrap: anywhere; }
   .award-player-options [role="option"]:hover, .award-player-options [aria-selected="true"] { background: #edf5e9; }
   .award-player-options p { margin: 0; padding: 12px; color: #526b62; font-size: 13px; }
+}
+
+/* Draw hierarchy: retain the formation editor and every existing control. */
+body.page-sorteo-legacy .gf-draw-workflow {
+  gap: 20px;
+  --draw-border: #cbd9cf;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-flow-intro {
+  padding: 20px;
+  border: 1px solid var(--draw-border);
+  border-top: 4px solid #204735;
+  border-radius: 8px;
+  gap: 20px;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-header { gap: 12px; }
+body.page-sorteo-legacy .gf-draw-workflow .gf-heading-row h1 {
+  font-size: clamp(23px, 3vw, 30px);
+  line-height: 1.2;
+  letter-spacing: -.025em;
+}
+body.page-sorteo-legacy .gf-draw-workflow [data-draw-status] {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #e5efdf;
+  color: #204735;
+  font-size: 13px;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-progress {
+  gap: 12px;
+  padding-top: 16px;
+  border-color: var(--draw-border);
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-progress li {
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e1e7e2;
+  font-size: 13px;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-progress li[data-complete="true"] { border-color: #99b596; }
+body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-progress li[aria-current="step"] { border-color: #204735; }
+body.page-sorteo-legacy .gf-draw-workflow .gf-position-rule {
+  padding: 16px 20px;
+  border: 1px solid #c4d5b7;
+  border-radius: 6px;
+  background: #eef3e7;
+  font-size: 15px;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-position-rule select { max-width: 440px; font-weight: 500; }
+body.page-sorteo-legacy .gf-draw-workflow :is(.gf-player-preparation, .gf-generation-panel) {
+  padding: 20px;
+  border: 1px solid var(--draw-border);
+  border-radius: 8px;
+  background: white;
+  gap: 16px;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-player-preparation > div:first-child {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e1e7e2;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-player-preparation h2 { font-size: 18px; }
+body.page-sorteo-legacy .gf-draw-workflow :is(.gf-player-preparation, .gf-goalkeeper-preparation) > div:first-child p {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+}
+body.page-sorteo-legacy .gf-draw-workflow [data-draw-pots] { padding: 0; border: 0; background: transparent; }
+body.page-sorteo-legacy .gf-draw-workflow .draw-pots-setup { padding: 0; border: 0; background: transparent; }
+body.page-sorteo-legacy .gf-draw-workflow .draw-pots-section-title {
+  font-size: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e1e7e2;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-goalkeeper-preparation {
+  padding: 16px;
+  background: #f4f6f2;
+  border: 1px solid #dce4d8;
+  border-radius: 6px;
+}
+body.page-sorteo-legacy .gf-draw-workflow .gf-goalkeeper-preparation h3 { font-size: 16px; }
+body.page-sorteo-legacy .gf-draw-workflow .gf-generate-actions {
+  padding-top: 16px;
+  border-top: 1px solid #e1e7e2;
+  gap: 12px;
+}
+body.page-sorteo-legacy .gf-draw-workflow #generateTeamsButton {
+  min-height: 48px;
+  padding-inline: 24px;
+  background: #204735 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border-color: #204735 !important;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: none;
+}
+body.page-sorteo-legacy .gf-draw-workflow #generateTeamsButton:hover:not(:disabled) { background: #102c20 !important; }
+body.page-sorteo-legacy .gf-draw-workflow #generateTeamsButton:disabled { opacity: .55; }
+body.page-sorteo-legacy .gf-draw-workflow #generateTeamsButton svg { color: inherit !important; }
+body.page-sorteo-legacy .gf-draw-workflow :is(button, select, input):focus-visible { outline: 2px solid #237343; outline-offset: 3px; }
+body.page-sorteo-legacy .gf-draw-workflow [data-sorteo-matchup-title] {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--draw-border);
+  font-size: 20px;
+}
+body.page-sorteo-legacy .gf-draw-workflow [data-sorteo-team-card] > .team-head {
+  padding: 12px;
+  border: 1px solid var(--draw-border);
+  border-radius: 6px;
+  background: #f4f6f2;
+}
+body.page-sorteo-legacy .gf-draw-workflow #download-controls {
+  padding: 20px;
+  border: 1px solid var(--draw-border);
+  border-radius: 8px;
+  background: #eef3e7;
+}
+@media (min-width: 1100px) {
+  body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-body:has(> .gf-player-preparation) {
+    grid-template-columns: 300px minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+  }
+  body.page-sorteo-legacy .gf-draw-workflow .gf-player-preparation > div:first-child { align-items: start; }
+  body.page-sorteo-legacy .gf-draw-workflow .gf-player-preparation h2 { line-height: 1.4; }
+  body.page-sorteo-legacy .gf-draw-workflow .gf-position-rule {
+    grid-template-columns: 180px minmax(0, 440px) minmax(180px, 1fr);
+    gap: 20px;
+    align-items: center;
+  }
+}
+@media (max-width: 760px) {
+  body.page-sorteo-legacy .gf-draw-workflow { gap: 14px; }
+  body.page-sorteo-legacy .gf-draw-workflow :is(.gf-flow-intro, .gf-player-preparation, .gf-generation-panel) { padding: 14px; }
+  body.page-sorteo-legacy .gf-draw-workflow .gf-position-rule { padding: 14px; }
+  body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-progress { gap: 6px; }
+  body.page-sorteo-legacy .gf-draw-workflow .gf-workflow-progress li { font-size: 11px; }
+  body.page-sorteo-legacy .gf-draw-workflow .gf-goalkeeper-preparation { padding: 12px; }
+  body.page-sorteo-legacy .gf-draw-workflow [data-sorteo-team-card] > .team-head { padding: 8px; }
 }
 
 /* Goodfellas navigation: selected Bosque y marfil palette, shared by mobile and desktop. */

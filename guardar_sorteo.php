@@ -66,7 +66,7 @@ function normalize_assigned_position_legacy(?string $assigned, array $player): s
 
 function position_base_rating_legacy(array $player, string $assigned): float
 {
-    if ($assigned === 'ARQ' && !in_array('ARQ', parse_positions_legacy((string) ($player['positions'] ?? '')), true)) {
+    if ((bool) ($player['position_rating_discount'] ?? true) && $assigned === 'ARQ' && !in_array('ARQ', parse_positions_legacy((string) ($player['positions'] ?? '')), true)) {
         return 2.0;
     }
 
@@ -240,9 +240,13 @@ if ($redrawIncrement > 0) {
     }
 }
 
+$positionRatingDiscount = !$proposalMode && array_key_exists('position_rating_discount', $data)
+    ? (int) (bool) $data['position_rating_discount']
+    : (int) ($match['position_rating_discount'] ?? 1);
 $participants = repo_match_participants_basic($matchId);
 $participantsById = [];
 foreach ($participants as $p) {
+    $p['position_rating_discount'] = $positionRatingDiscount;
     $participantsById[(int) $p['id']] = $p;
 }
 
@@ -524,7 +528,7 @@ try {
 
     $updMatch = $pdo->prepare(
         'UPDATE matches
-         SET status = :status, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
+         SET status = :status, position_rating_discount = :position_rating_discount, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
              draw_mode = :draw_mode, draw_started_at = COALESCE(draw_started_at, NOW()), draw_completed_at = NOW(),
              teams_published_at = NULL,
              draw_audit_snapshot = :draw_audit_snapshot,
@@ -534,6 +538,7 @@ try {
     );
     $updMatch->execute([
         'status' => 'sorteado',
+        'position_rating_discount' => $positionRatingDiscount,
         'num_teams' => $numTeams,
         'players_per_team' => $teamSize,
         'max_diff' => $maxDiff,

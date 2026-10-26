@@ -52,8 +52,8 @@ function shared_profile_player_fifa_overall(float $value): int
 
 function shared_profile_fifa_overall_to_rating(float|int|string|null $value): float
 {
-    $overall = (float) ($value ?? 64);
-    $overall = max(35.0, min(99.0, $overall));
+    $overall = (float) ($value ?? shared_profile_player_fifa_overall(3.0));
+    $overall = max((float) player_rating_policy()['anchors'][0][1], min(99.0, $overall));
     $anchors = player_rating_policy()['anchors'];
     for ($i = 0, $count = count($anchors) - 1; $i < $count; $i++) {
         [$fromRating, $fromOverall] = $anchors[$i];

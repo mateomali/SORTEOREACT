@@ -718,7 +718,7 @@ function draw_position_balance_penalty(array $teams): float
 function draw_player_card_overall(float $rating): int
 {
     $rating = max(1.0, min(6.0, $rating));
-    $anchors = player_rating_policy()['anchors'];
+    $anchors = player_rating_policy()['balanceAnchors'] ?? player_rating_policy()['anchors'];
     $last = count($anchors) - 1;
     for ($i = 0; $i < $last; $i++) {
         [$fromRating, $fromOverall] = $anchors[$i];

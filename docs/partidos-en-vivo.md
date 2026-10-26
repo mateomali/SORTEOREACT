@@ -19,6 +19,10 @@ Las fechas creadas desde esta versión guardan `dynamic_fixture = 1`. Con tres o
 
 ## Persistencia y acceso
 
+La administración ofrece dos accesos para fechas publicadas: «Partidos en vivo» y «Cargar resultados y premios». Dentro del seguimiento, «Finalizar fecha» abre la carga general y precarga los goles registrados, incluyendo el partido actual. El cierre ocurre al guardar el formulario, que permite cargar goles totales por equipo y jugador, premios y puntajes según la configuración de la fecha. Se conservan los permisos y plazos existentes.
+
+En fechas finalizadas, «Corregir fecha» abre esos mismos totales sin exigir completar los cruces. La carga general se guarda en `state.summary`; no elimina los partidos ni sus goles. Las estadísticas personales y los goles de equipos usan los totales generales; fixture y tabla siguen reflejando solamente el detalle registrado. Al corregir después un partido, se requiere confirmación para sustituir los totales generales por la suma del detalle. El cierre detiene el reloj y cada guardado comprueba la revisión bajo bloqueo de la fecha.
+
 `match_live_sessions` contiene el registro de partidos, goles y reloj. El reloj usa tiempo del servidor y se sincroniza al recargar o cambiar de dispositivo. Cada escritura bloquea la fecha y comprueba la revisión; una revisión desactualizada devuelve HTTP 409 sin duplicar la acción. Los cambios requieren una sesión de administrador o directivo y token CSRF. No hay guardado de acciones sin conexión.
 
 Al terminar partidos o corregir datos, se actualizan en la misma transacción `match_round_robin_results`, `match_teams.goals` y `match_players.goals`, para conservar el historial y las estadísticas existentes. Cerrar la fecha actualiza su estado y fecha de finalización. Reiniciar el sorteo desde la administración elimina la sesión de juego asociada.

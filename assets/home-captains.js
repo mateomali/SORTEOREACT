@@ -52,7 +52,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
       return `<span class="formation-card-regularity is-${escapeHtml(form)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
     };
     const playerCardTier = (value) => {
-      const overall = playerCardRating(value);
+      const overall = globalThis.GoodfellasRating.balanceCard(value);
       if (overall >= 88) return 'supreme';
       if (overall >= 84) return 'elite';
       if (overall >= 76) return 'gold';

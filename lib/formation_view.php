@@ -214,7 +214,7 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
         : '';
 
     $laneRole = $position === 'LAT' ? ' data-lane-role="lateral"' : '';
-    $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-player-skill="' . h((string) $rating) . '"' . $laneRole . '>';
+    $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-position-rating-discount="' . h((string) (int) ($player['position_rating_discount'] ?? 1)) . '" data-player-skill="' . h((string) $rating) . '"' . $laneRole . '>';
     $html .= '<span class="player-card-rating" title="Puntaje general"><strong>' . h((string) formation_view_card_rating($rating)) . '</strong><span>GEN</span></span>';
     $html .= '<span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>';
     $html .= '<span class="formation-card-photo' . h($photoClass) . '" aria-hidden="true"><img src="' . h($photoPath) . '" alt=""' . $photoStyle . '></span>';

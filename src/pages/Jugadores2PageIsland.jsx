@@ -135,7 +135,7 @@ function normalizeSix(value, fallback = 3) {
 
 function sixFromOverall(value) {
   const anchors = globalThis.GoodfellasRating.policy().anchors;
-  const overall = Math.max(35, Math.min(99, Math.round(Number(value) || 64)));
+  const overall = Math.max(globalThis.GoodfellasRating.policy().anchors[0][1], Math.min(99, Math.round(Number(value) || globalThis.GoodfellasRating.card(3))));
   for (let index = 0; index < anchors.length - 1; index += 1) {
     const [fromRating, fromOverall] = anchors[index];
     const [toRating, toOverall] = anchors[index + 1];
@@ -675,7 +675,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
   }, [hasPreviewPhoto, photoPosition]);
 
   const setOverall = (field, value) => {
-    const next = Math.max(35, Math.min(99, Math.round(Number(value) || 64)));
+    const next = Math.max(globalThis.GoodfellasRating.policy().anchors[0][1], Math.min(99, Math.round(Number(value) || globalThis.GoodfellasRating.card(3))));
     setOverallValues((current) => ({ ...current, [field]: next }));
   };
 
@@ -849,7 +849,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
             const overall = overallValues[field] || Number(stat.overall) || 64;
             const dirty = overall !== initialOveralls[field];
             const tone = statTone(overall);
-            const percent = Math.max(0, Math.min(100, ((overall - 35) / 64) * 100));
+            const percent = Math.max(0, Math.min(100, ((overall - globalThis.GoodfellasRating.policy().anchors[0][1]) / (99 - globalThis.GoodfellasRating.policy().anchors[0][1])) * 100));
             return (
               <label key={field} className={`grid gap-2 rounded-lg border p-3 ${dirty ? `${tone.border} ${tone.bg}` : 'border-[#d7e6df] bg-white'}`}>
                 <span className="grid gap-1">
@@ -858,7 +858,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
                 </span>
                 <input type="hidden" name={field} value={sixFromOverall(overall).toFixed(1)} />
                 <div className="grid grid-cols-[70px_minmax(0,1fr)_32px] items-center gap-3">
-                  <input className={numberControlClass} type="number" name={`${field}_overall`} min="35" max="99" step="1" inputMode="numeric" value={overall} onChange={(event) => setOverall(field, event.target.value)} aria-label={`${stat.label} en escala 1 a 99`} />
+                  <input className={numberControlClass} type="number" name={`${field}_overall`} min={globalThis.GoodfellasRating.policy().anchors[0][1]} max="99" step="1" inputMode="numeric" value={overall} onChange={(event) => setOverall(field, event.target.value)} aria-label={`${stat.label} en escala 1 a 99`} />
                   <span className="relative grid h-10 items-center">
                     <span className="pointer-events-none absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 bg-slate-200">
                       <span className="block h-full" style={{ width: `${percent}%`, backgroundColor: tone.color }} />
@@ -867,7 +867,7 @@ function AdminEditForm({ player, positions, onOverallPreviewChange }) {
                       className="relative z-10 h-10 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 [accent-color:var(--stat-color)] [&::-moz-range-progress]:h-2 [&::-moz-range-progress]:bg-[var(--stat-color)] [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-[var(--stat-color)] [&::-moz-range-track]:h-2 [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-[var(--stat-color)] [&::-webkit-slider-thumb]:shadow-[0_1px_3px_rgba(7,19,15,.22)]"
                       style={{ '--stat-color': tone.color }}
                       type="range"
-                      min="35"
+                      min={globalThis.GoodfellasRating.policy().anchors[0][1]}
                       max="99"
                       step="1"
                       value={overall}

@@ -7,6 +7,7 @@ function readCard(host) {
   const data = host.dataset;
   const player = {
     id: data.staticPlayerKey,
+    position_rating_discount: data.positionRatingDiscount !== '0',
     nombre: host.querySelector('.formation-player-name')?.textContent.trim() || 'Jugador',
     posicion: data.playerPositions || data.assignedPosition,
     puntuacion: Number(data.playerSkill),

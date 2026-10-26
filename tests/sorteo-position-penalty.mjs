@@ -15,14 +15,14 @@ const server = await createServer({
     enforce: 'pre',
     transform(code, id) {
       if (id.replaceAll('\\', '/').endsWith('/src/pages/SorteoLegacyPageIsland.jsx')) {
-        return `${code}\nexport { positionPenaltyPercent, CompactPlayerCard, fieldLineMinimum, fieldLineCountsFitLimits, getFormationCandidates };`;
+        return `${code}\nexport { positionPenaltyPercent, fieldLineMinimum, fieldLineCountsFitLimits, getFormationCandidates };`;
       }
     },
   }],
 });
 
 try {
-  const { positionPenaltyPercent, CompactPlayerCard, fieldLineMinimum, fieldLineCountsFitLimits } = await server.ssrLoadModule('/src/pages/SorteoLegacyPageIsland.jsx');
+  const { positionPenaltyPercent, CompactPlayerCard, fieldLineMinimum, fieldLineCountsFitLimits, adjustedPositionRatingForTeamSize } = await server.ssrLoadModule('/src/pages/SorteoLegacyPageIsland.jsx');
   assert.equal(fieldLineMinimum('MED', 6), 1);
   assert.equal(fieldLineMinimum('MED', 7), 1);
   assert.equal(fieldLineCountsFitLimits({ ARQ: 1, DEF: 2, LAT: 0, MED: 1, DEL: 2 }, 6), true);
@@ -40,6 +40,13 @@ try {
   assert.equal(positionPenaltyPercent(player, 'DEF', 6), 10, 'Out-of-position discount applies in small teams too');
   assert.equal(positionPenaltyPercent(player, '', 9), 0, 'Missing position has no discount');
   assert.equal(positionPenaltyPercent({ ...player, ataque: 6, pase_vision: 1 }, 'DEL', 9), 0, 'A stronger secondary position has no discount');
+
+  const noDiscount = { ...player, position_rating_discount: false, ataque: 6, solidez: 1 };
+  const unchanged = adjustedPositionRatingForTeamSize(noDiscount, 'MED', 9);
+  for (const role of ['ARQ', 'DEF', 'LAT', 'MED', 'DEL']) {
+    assert.equal(adjustedPositionRatingForTeamSize(noDiscount, role, 9), unchanged, `Disabled rule preserves general in ${role}`);
+    assert.equal(positionPenaltyPercent(noDiscount, role, 9), 0);
+  }
 
   const { createElement } = await import('react');
   const { renderToStaticMarkup } = await import('react-dom/server');

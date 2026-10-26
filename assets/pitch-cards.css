@@ -618,7 +618,7 @@ html body main.content .public-teams-uniform .gf-public-player-slot {
 html body main.content .public-teams-uniform .gf-public-player-slot[data-assigned-position="LAT"] { transform: translateY(10px); }
 html body main.content .public-teams-uniform .gf-player-card {
   position: relative !important; display: block !important; width: 100% !important;
-  min-height: 0 !important; height: auto !important; aspect-ratio: 1000 / 980 !important;
+  min-height: 0 !important; height: auto !important; aspect-ratio: 1000 / 1080 !important;
   container-type: inline-size !important; padding: 0 !important; margin: 0 !important;
   background: transparent !important; border: 0 !important; box-shadow: none !important;
   cursor: pointer !important;

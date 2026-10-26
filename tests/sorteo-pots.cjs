@@ -6,6 +6,7 @@ const { performance } = require('node:perf_hooks');
 const source = fs.readFileSync('src/pages/SorteoLegacyPageIsland.jsx', 'utf8');
 const helpers = source.slice(0, source.indexOf('function iconPath('))
   .replace(/^import .*;\r?\n/gm, '')
+  .replace(/^export /gm, '')
   .replace(/function TeamRadar\([\s\S]*?(?=const LINE_STRENGTH_BALANCE_WEIGHTS)/, '');
 let seed = 12851;
 const math = Object.create(Math);

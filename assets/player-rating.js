@@ -38,9 +38,8 @@
   function position(stats, role, positions = [role], ignore = false, weights) {
     return Math.round(regularity(base(stats, role, weights), stats) * fit(positions, role, ignore) * 10) / 10;
   }
-  function card(value) {
+  function card(value, anchors = policy().anchors) {
     const rating = clamp(Number(value) || 1);
-    const anchors = policy().anchors;
     for (let i = 0; i < anchors.length - 1; i++) {
       const [x, y] = anchors[i];
       const [nextX, nextY] = anchors[i + 1];
@@ -48,7 +47,10 @@
     }
     return 99;
   }
-  const api = { configure: value => { configured = value; }, policy, stat, fit, base, regularity, position, card };
+  function balanceCard(value) {
+    return card(value, policy().balanceAnchors || policy().anchors);
+  }
+  const api = { configure: value => { configured = value; }, policy, stat, fit, base, regularity, position, card, balanceCard };
   root.GoodfellasRating = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);

@@ -61,7 +61,7 @@ const goodfellasInitCaptains = () => {
         return `<span class="formation-card-photo${photoClass}" aria-hidden="true"><img src="${escapeHtml(path)}" alt=""></span>`;
       };
       const playerCardTier = (value) => {
-        const overall = playerCardRating(value);
+        const overall = globalThis.GoodfellasRating.balanceCard(value);
         if (overall >= 88) return 'supreme';
         if (overall >= 84) return 'elite';
         if (overall >= 76) return 'gold';

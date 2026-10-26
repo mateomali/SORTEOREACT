@@ -222,11 +222,12 @@ function MatchActions({ match, compact = false }) {
 
       <ActionSection label={followUpLabel} tone={match.canFinalize || match.needsValuations ? 'primary' : 'neutral'} contentClassName={singleActionGrid}>
         {match.canFinalize && match.teamsPublished ? (
-          <a className={`${primaryAction} w-full px-2`} href={match.links.finish}>{match.usesLiveFixture ? 'Partidos en vivo' : 'Finalizar'}</a>
+          <><a className={`${primaryAction} w-full px-2`} href={match.links.finish}>{match.usesLiveFixture ? 'Partidos en vivo' : 'Finalizar'}</a>{match.links.directResults && <a className={`${primaryAction} w-full px-2`} href={match.links.directResults}>Cargar resultados y premios</a>}</>
         ) : match.isFinalized ? (
           <>
             {match.needsValuations ? <a className={`${strongAction} w-full px-2`} href={match.links.valuations}>Valoraciones</a> : null}
             <a className={`${mutedAction} w-full px-2`} href={match.links.view}>Ver</a>
+            {match.links.directResults && <a className={`${primaryAction} w-full px-2`} href={match.links.directResults}>Corregir fecha</a>}
             {match.links.correctResults && <a className={`${primaryAction} w-full px-2`} href={match.links.correctResults}>Corregir resultados</a>}
           </>
         ) : (
@@ -333,12 +334,14 @@ function MobileMatchActions({ match }) {
                 <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs lg:col-span-1`}>Publicada</span>
               )}
               <UndoForm match={match} className={`${undoAction} min-h-9 w-full px-2 py-1.5 text-xs`} />
+              {match.teamsPublished && match.links.directResults ? <MobileActionLink className={primaryAction} href={match.links.directResults}>Cargar resultados y premios</MobileActionLink> : null}
               {match.teamsPublished ? <MobileActionLink className={primaryAction} href={match.links.finish}>{match.usesLiveFixture ? 'Partidos en vivo' : 'Finalizar'}</MobileActionLink> : <span className={`${disabledAction} col-span-2 min-h-9 w-full px-2 py-1.5 text-xs`} aria-disabled="true" title="Primero publica la fecha">Finalizar</span>}
             </>
           ) : match.isFinalized ? (
             <>
               {match.needsValuations ? <MobileActionLink className={strongAction} href={match.links.valuations}>Valoraciones</MobileActionLink> : null}
               <MobileActionLink className={mutedAction} href={match.links.view}>Ver</MobileActionLink>
+              {match.links.directResults && <MobileActionLink className={primaryAction} href={match.links.directResults}>Corregir fecha</MobileActionLink>}
               {match.links.correctResults && <MobileActionLink className={primaryAction} href={match.links.correctResults}>Corregir resultados</MobileActionLink>}
             </>
           ) : (

@@ -23,6 +23,7 @@ function live_elapsed(array $game, ?float $now = null): float
 // Derived from server timestamps, so closing every client never loses playing time.
 function live_expire(array $state, ?float $now = null): array
 {
+    if (!empty($state['closed'])) return $state;
     $i = count($state['games']) - 1;
     if ($i < 0) return $state;
     $g = &$state['games'][$i];
@@ -80,6 +81,10 @@ function live_validate_pending_scorers(array $state, array $participants): void
 function live_apply_action_internal(array $state, string $action, array $input, array $teams, array $participants, ?float $now = null): array
 {
     $now ??= microtime(true);
+    if (isset($state['summary']) && in_array($action, ['edit_goal', 'correct_game', 'remove_goal', 'add_finished_goal', 'add_finished_game', 'delete_game', 'set_pending_scorers'], true)) {
+        if (($input['replace_summary'] ?? false) !== true) throw new RuntimeException('Confirmá el reemplazo de los totales generales por los partidos detallados.');
+        unset($state['summary']);
+    }
     if ($state['closed'] && !in_array($action, ['edit_goal', 'correct_game', 'remove_goal', 'add_finished_goal', 'add_finished_game', 'delete_game', 'set_pending_scorers'], true)) throw new RuntimeException('La fecha ya está finalizada.');
     $games = &$state['games'];
     $index = count($games) - 1;
