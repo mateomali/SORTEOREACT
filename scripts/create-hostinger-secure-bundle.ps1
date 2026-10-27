@@ -550,6 +550,17 @@ QUE ES ESTE BUNDLE
 Actualizacion de codigo de la aplicacion. NO es una instalacion desde cero:
 no trae configuracion, ni base de datos, ni fotos de jugadores.
 
+COMPARATIVA DE JUGADORES EN EL SORTEO
+-----------------------------------
+En el generador de sorteo y en el editor de formaciones, el boton
+"Analizar equipos" muestra equivalencias jugador por jugador entre equipos,
+considerando posicion, sector y puntaje efectivo, sin repetir jugadores.
+Incluye diferencias por pareja y saldo acumulado para explicar el equilibrio.
+Se actualiza al mover jugadores. Es una lectura del resultado del sorteo,
+no una reconstruccion del orden de seleccion. No requiere importar SQL.
+Despues de subir, recargar con Ctrl+F5 y verificar el boton debajo de las
+canchas, la comparativa y los movimientos en escritorio y celular.
+
 PARTIDOS EN VIVO Y ANDROID
 -------------------------
 Incluye el sistema en vivo actualizado y goodfellas.apk version 1.3.

@@ -1,6 +1,7 @@
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toJpeg } from 'html-to-image';
 import { DrawPotsEditor } from './DrawPotsEditor';
+import { comparePlayers } from '../player-equivalents.mjs';
 
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
 const PITCH_LINES = ['ARQ', 'DEF', 'MED', 'DEL'];
@@ -3348,6 +3349,39 @@ function Message({ id, tone, children }) {
   );
 }
 
+function PlayerEquivalents({ teams, assignments, teamName }) {
+  const describe = (team) => {
+    const positions = buildTeamAssignment(team, assignments);
+    return team.map(player => {
+      const position = positions[playerKey(player)] || getPrimaryPlayerPosition(player);
+      return { name: player.nombre, position, line: pitchLineForPosition(position), rating: adjustedPositionRatingForTeamSize(player, position, team.length) };
+    });
+  };
+  const balance = (value, a, b) => Math.abs(value) < 0.05 ? 'Parejos' : `${value > 0 ? a : b} +${Math.abs(value).toFixed(1)}`;
+  return <div className="grid min-w-0 gap-3" data-player-equivalents="1">
+    <h4 className="m-0 text-sm font-black text-[#07130f]">Comparativa jugador por jugador</h4>
+    <p className="m-0 text-xs text-[#526b62]">Equivalencias sin repetir jugadores: se busca la mejor combinación entre posición, sector y puntaje efectivo. El saldo muestra cómo se compensan las diferencias al sumar cada cruce. Es una lectura del resultado, no el orden de elección del sorteo.</p>
+    {teams.flatMap((team, i) => teams.slice(i + 1).map((other, offset) => {
+      const j = i + offset + 1, a = teamName(i), b = teamName(j);
+      const rows = comparePlayers(describe(team), describe(other));
+      return <details key={`${i}-${j}`} open={teams.length === 2} className="min-w-0 rounded border border-[#d7e6df] p-2">
+        <summary className="cursor-pointer text-sm font-bold">{a} vs. {b} · {balance(rows.at(-1)?.cumulative || 0, a, b)}</summary>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs" style={{ minWidth: 440 }}>
+            <thead><tr><th className="p-2">{a}</th><th className="p-2">{b}</th><th className="p-2">Por qué / diferencia</th><th className="p-2">Saldo acumulado</th></tr></thead>
+            <tbody>{rows.map((row, index) => <tr key={index} className="border-t border-[#d7e6df]">
+              {[row.left, row.right].map((player, side) => <td key={side} className="p-2">{player ? <><strong>{player.name}</strong><br />{player.position} · {player.rating.toFixed(1)} pts</> : 'Sin equivalente'}</td>)}
+              <td className="p-2">{!row.left || !row.right ? 'Jugador adicional' : row.left.position === row.right.position ? 'Misma posición' : row.left.line === row.right.line ? 'Mismo sector' : 'Distinto sector: compensación global'}<br />{balance(row.difference, a, b)}</td>
+              <td className="p-2">{balance(row.cumulative, a, b)}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="mb-0 text-xs text-[#526b62]">Puntaje efectivo según la posición y los ajustes vigentes. Las equivalencias no garantizan estilos de juego idénticos.</p>
+      </details>;
+    }))}
+  </div>;
+}
+
 function TeamStrengthComparison({ views, teamName, revision }) {
   const values = views.map(view => ({ ...view.lineStrengths, TOTAL: view.lineStrengthTotal }));
   const signature = JSON.stringify(values);
@@ -6596,6 +6630,10 @@ export function SorteoLegacyPageIsland({ root }) {
           </div>
 
           {!isFormationEditor && teams && drawAnalysis ? (
+            <>
+            <button className={secondaryButtonClass} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>
+              {analysisVisible ? 'Ocultar análisis' : 'Analizar equipos'}
+            </button>
             <details className="gf-quick-analysis gf-analysis-compact" aria-label="Análisis de equipos">
               <summary>Análisis de equipos <span>{drawAnalysis.ruleChecks.filter(rule => !rule.ok).length ? `${drawAnalysis.ruleChecks.filter(rule => !rule.ok).length} aspectos para revisar` : 'Sin alertas'}</span></summary>
               <p>{actionAnalysis?.balance}</p>
@@ -6603,6 +6641,7 @@ export function SorteoLegacyPageIsland({ root }) {
               <ul>{drawAnalysis.comparisons.slice(0, 3).map(item => <li key={item.field}>{item.label}: {item.highTeam} +{item.diff.toFixed(1)}</li>)}</ul>
               {drawAnalysis.summaries.filter(item => item.adaptedPlayers.length).map(item => <p key={item.name}>{item.name}: fuera de posición natural: {item.adaptedPlayers.join(', ')}.</p>)}
             </details>
+            </>
           ) : null}
 
           <div id="download-controls" data-save-state={displayedSaveState} className={`${teams ? 'grid' : 'hidden'} gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-3`}>
@@ -6669,7 +6708,7 @@ export function SorteoLegacyPageIsland({ root }) {
             </div>
           ) : null}
 
-          {teams && isFormationEditor && analysisVisible && drawAnalysis ? (
+          {teams && analysisVisible && drawAnalysis ? (
             <section className="sorteo-analysis-panel grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm lg:col-span-2 lg:row-start-4" data-sorteo-analysis="1" aria-label="Analisis de equipos">
               <div className="grid gap-2 border-b border-[#d7e6df] pb-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div>
@@ -6682,6 +6721,8 @@ export function SorteoLegacyPageIsland({ root }) {
                   Dif. {drawAnalysis.diff.toFixed(1)}
                 </span>
               </div>
+
+              <PlayerEquivalents teams={teams} assignments={assignments} teamName={getTeamDisplayName} />
 
               {actionAnalysis ? (
                 <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3">
