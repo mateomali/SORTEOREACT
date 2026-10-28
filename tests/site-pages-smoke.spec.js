@@ -10,7 +10,7 @@ const publicPages = [
   ['jugadores2.php', 'Jugadores'],
   ['jugadores-card-preview.php', 'Preview tarjetas'],
   ['login.php', 'Iniciar'],
-  ['propuestas_equipos.php', 'Propuestas próximo partido'],
+  ['propuestas_equipos.php', 'Próximo partido'],
 ];
 
 const adminPages = [

@@ -1320,11 +1320,12 @@
   };
   window.goodfellasPartialNavigate = partialNavigate;
 
-  const replaceMainContentFromDocument = (nextDocument) => {
+  const replaceMainContentFromDocument = async (nextDocument) => {
     const content = getMainContent();
     const nextContent = nextDocument.querySelector('main.content');
     if (!content || !nextContent) throw new Error('Missing partial content');
 
+    await loadPageStyles(nextDocument);
     document.title = nextDocument.title || document.title;
     document.dispatchEvent(new CustomEvent('goodfellas:before-partial-render'));
     updatePageChrome(nextDocument);
@@ -1413,7 +1414,7 @@
 
       const html = await response.text();
       const nextDocument = new DOMParser().parseFromString(html, 'text/html');
-      const nextContent = replaceMainContentFromDocument(nextDocument);
+      const nextContent = await replaceMainContentFromDocument(nextDocument);
       const nextUrl = response.url || action.toString();
       window.history.replaceState({ partial: true }, '', nextUrl);
 
@@ -1469,7 +1470,7 @@
 
       const html = await response.text();
       const nextDocument = new DOMParser().parseFromString(html, 'text/html');
-      const nextContent = replaceMainContentFromDocument(nextDocument);
+      const nextContent = await replaceMainContentFromDocument(nextDocument);
       const importPanel = nextContent.querySelector('#importar-listado');
       importPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       showToast('Listado actualizado', 'success');

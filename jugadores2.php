@@ -464,7 +464,7 @@ foreach ($overallRatings as $rating) {
 
 $title = 'Jugadores | ' . APP_NAME;
 $activePage = 'jugadores2.php';
-$bodyClass = 'page-jugadores2';
+$bodyClass = 'page-jugadores2 goodfellas-2';
 $headExtraHtml = '<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&display=swap" rel="stylesheet">';
 $headExtraHtml .= '<link rel="stylesheet" href="assets/jugadores-directory.css?v=' . (string) filemtime(__DIR__ . '/assets/jugadores-directory.css') . '">';
 $positionLabels = player_position_labels();

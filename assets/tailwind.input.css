@@ -1,5 +1,19 @@
 @import "tailwindcss" source(none);
 
+/* Goodfellas 2.0 shared palette; adopted one screen at a time. */
+@theme {
+  --color-gf2-canvas: #101513;
+  --color-gf2-surface: #19211d;
+  --color-gf2-raised: #232e27;
+  --color-gf2-border: #3b4b40;
+  --color-gf2-text: #f3f6f1;
+  --color-gf2-muted: #b8c5ba;
+  --color-gf2-primary: #80d69a;
+  --color-gf2-gold: #d6b66a;
+  --color-gf2-danger: #ff9b93;
+  --color-gf2-focus: #c4f1ce;
+}
+
 [data-draw-pots] { background: #e9ecea; border-color: #bdc6c0; padding: 16px; gap: 16px; }
 [data-draw-pots] .draw-pots-setup { display: grid; gap: 12px; padding: 16px; background: #fff; border: 1px solid #c5ccc7; border-radius: 8px; }
 [data-draw-pots] .draw-pots-section-title { margin: 0 0 4px; padding-bottom: 12px; border-bottom: 1px solid #dce1dd; font-size: 16px; color: #193e2d; }
@@ -16457,7 +16471,7 @@ body.page-index .player-card-rating {
 }
 
 /* Goodfellas sitewide visual system */
-body[class*="page-"] {
+body[class*="page-"]:where(:not(.goodfellas-2)) {
   --gf-bg: #edf5f1;
   --gf-surface: #ffffff;
   --gf-surface-soft: #f5faf7;
@@ -16479,14 +16493,14 @@ body[class*="page-"] {
   color: var(--gf-ink);
 }
 
-body[class*="page-"] .content {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content {
   background: transparent;
   color: var(--gf-ink);
 }
 
-body[class*="page-"] .content > .page-head,
-  body[class*="page-"] .content > section.page-head,
-  body[class*="page-"] .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card, .directivos-card, .usuarios-card, .profile-card, .backup-card) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card, .directivos-card, .usuarios-card, .profile-card, .backup-card) {
   border: 1px solid var(--gf-line-strong);
   border-radius: 12px;
   background: var(--gf-surface);
@@ -16495,49 +16509,49 @@ body[class*="page-"] .content > .page-head,
   box-shadow: 0 2px 8px rgba(7, 19, 15, 0.08);
 }
 
-body[class*="page-"] .content > .page-head,
-  body[class*="page-"] .content > section.page-head {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head {
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
   padding: 14px 16px;
 }
 
-body[class*="page-"] .content > .page-head::before,
-  body[class*="page-"] .content > .page-head::after,
-  body[class*="page-"] .content > section.page-head::before,
-  body[class*="page-"] .content > section.page-head::after {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head::before,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head::after,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head::before,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head::after {
   display: none;
 }
 
-body[class*="page-"] .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card):hover {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card):hover {
   border-color: var(--gf-line-strong);
   box-shadow: 0 2px 8px rgba(7, 19, 15, 0.08);
 }
 
-body[class*="page-"] .content :is(h1, h2, h3, h4, h5, strong),
-  body[class*="page-"] .content > .page-head h1,
-  body[class*="page-"] .content > section.page-head h1 {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(h1, h2, h3, h4, h5, strong),
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head h1,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head h1 {
   color: var(--gf-ink);
   -webkit-text-fill-color: var(--gf-ink);
   letter-spacing: 0;
 }
 
-body[class*="page-"] .content > .page-head h1,
-  body[class*="page-"] .content > section.page-head h1 {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head h1,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head h1 {
   margin: 0;
   font-size: clamp(1.22rem, 1.05rem + 0.65vw, 1.75rem);
   line-height: 1.1;
 }
 
-body[class*="page-"] .content :is(p, small, .small-muted, .muted, .helper-text, .form-help),
-  body[class*="page-"] .content > .page-head p,
-  body[class*="page-"] .content > section.page-head p {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(p, small, .small-muted, .muted, .helper-text, .form-help),
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head p,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head p {
   color: var(--gf-ink-soft);
   -webkit-text-fill-color: var(--gf-ink-soft);
 }
 
-body[class*="page-"] .content :is(.section-toolbar, .history-search, .encounter-history-search, .stats-player-search, .participant-search, .manual-player-search, .finish-valuation-controls, .player-list-react-controls, .btn-row, .filter-card, .filters-card, .stats-filter-bar) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.section-toolbar, .history-search, .encounter-history-search, .stats-player-search, .participant-search, .manual-player-search, .finish-valuation-controls, .player-list-react-controls, .btn-row, .filter-card, .filters-card, .stats-filter-bar) {
   border: 1px solid var(--gf-line);
   border-radius: 10px;
   background: var(--gf-surface-soft);
@@ -16546,13 +16560,13 @@ body[class*="page-"] .content :is(.section-toolbar, .history-search, .encounter-
   box-shadow: none;
 }
 
-body[class*="page-"] .content .btn-row {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content .btn-row {
   border: 0;
   background: transparent;
   padding: 0;
 }
 
-body[class*="page-"] .content :is(.form-row, .stat-form-row, .player-position-select, .team-control-group, .usuario-fields > div) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.form-row, .stat-form-row, .player-position-select, .team-control-group, .usuario-fields > div) {
   min-width: 0;
   border-color: var(--gf-line);
   background: var(--gf-surface);
@@ -16561,7 +16575,7 @@ body[class*="page-"] .content :is(.form-row, .stat-form-row, .player-position-se
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(label, .form-row > label, .stat-form-row > label, .player-position-select span, .team-control-group label) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(label, .form-row > label, .stat-form-row > label, .player-position-select span, .team-control-group label) {
   margin-bottom: 6px;
   color: #12362a;
   -webkit-text-fill-color: #12362a;
@@ -16572,7 +16586,7 @@ body[class*="page-"] .content :is(label, .form-row > label, .stat-form-row > lab
   text-transform: none;
 }
 
-body[class*="page-"] .content :is(input[type="text"], input[type="search"], input[type="password"], input[type="email"], input[type="time"], input[type="number"], input[type="datetime-local"], input[type="date"], input[type="file"], select, textarea) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(input[type="text"], input[type="search"], input[type="password"], input[type="email"], input[type="time"], input[type="number"], input[type="datetime-local"], input[type="date"], input[type="file"], select, textarea) {
   min-height: 40px;
   border: 1px solid #bfd7ce;
   border-radius: 10px;
@@ -16585,17 +16599,17 @@ body[class*="page-"] .content :is(input[type="text"], input[type="search"], inpu
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(input, textarea)::placeholder {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(input, textarea)::placeholder {
   color: #7b9188;
   -webkit-text-fill-color: #7b9188;
 }
 
-body[class*="page-"] .content :is(textarea) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(textarea) {
   min-height: 104px;
   line-height: 1.35;
 }
 
-body[class*="page-"] .content :is(input[type="text"], input[type="search"], input[type="password"], input[type="email"], input[type="time"], input[type="number"], input[type="datetime-local"], input[type="date"], input[type="file"], select, textarea):focus {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(input[type="text"], input[type="search"], input[type="password"], input[type="email"], input[type="time"], input[type="number"], input[type="datetime-local"], input[type="date"], input[type="file"], select, textarea):focus {
   border-color: var(--gf-brand-soft);
   background: var(--gf-surface);
   outline: 2px solid rgba(31, 90, 71, 0.18);
@@ -16603,11 +16617,11 @@ body[class*="page-"] .content :is(input[type="text"], input[type="search"], inpu
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(input[type="checkbox"], input[type="radio"]) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--gf-brand);
 }
 
-body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.captain-editor-line-control):not(.captain-editor-undo):not(.stat-rating-star):not([data-sorteo-drag-player]):not(button[data-card-tier]) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.captain-editor-line-control):not(.captain-editor-undo):not(.stat-rating-star):not([data-sorteo-drag-player]):not(button[data-card-tier]) {
   min-height: 40px;
   border-radius: 10px;
   background-image: none;
@@ -16616,40 +16630,40 @@ body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#me
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(.btn-primary, button[type="submit"]:not(.btn-muted):not(.btn-danger):not(.btn-warning):not([class*="bg-"])) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.btn-primary, button[type="submit"]:not(.btn-muted):not(.btn-danger):not(.btn-warning):not([class*="bg-"])) {
   border-color: var(--gf-brand);
   background: var(--gf-brand);
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
 }
 
-body[class*="page-"] .content :is(.btn-primary, button[type="submit"]:not(.btn-muted):not(.btn-danger):not(.btn-warning):not([class*="bg-"])):hover {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.btn-primary, button[type="submit"]:not(.btn-muted):not(.btn-danger):not(.btn-warning):not([class*="bg-"])):hover {
   border-color: var(--gf-brand-soft);
   background: var(--gf-brand-soft);
 }
 
-body[class*="page-"] .content :is(.btn-muted, button[type="button"]:not(.btn-primary):not(.btn-danger):not(.btn-warning):not(.captain-editor-line-control):not(.captain-editor-undo):not(.stat-rating-star):not([class*="bg-"]):not([data-sorteo-drag-player]):not(button[data-card-tier])) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.btn-muted, button[type="button"]:not(.btn-primary):not(.btn-danger):not(.btn-warning):not(.captain-editor-line-control):not(.captain-editor-undo):not(.stat-rating-star):not([class*="bg-"]):not([data-sorteo-drag-player]):not(button[data-card-tier])) {
   border-color: var(--gf-line-strong);
   background: var(--gf-surface);
   color: #12362a;
   -webkit-text-fill-color: #12362a;
 }
 
-body[class*="page-"] .content :is(.btn-danger, button.btn-danger) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.btn-danger, button.btn-danger) {
   border-color: var(--gf-danger-line);
   background: var(--gf-danger-bg);
   color: var(--gf-danger-ink);
   -webkit-text-fill-color: var(--gf-danger-ink);
 }
 
-body[class*="page-"] .content :is(.btn-warning, button.btn-warning) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.btn-warning, button.btn-warning) {
   border-color: var(--gf-warn-line);
   background: var(--gf-warn-bg);
   color: var(--gf-warn-ink);
   -webkit-text-fill-color: var(--gf-warn-ink);
 }
 
-body[class*="page-"] .content :is(.badge, .chip, .mini-chip, .player-status-pill, .stats-summary span, .participant-count, .team-stats, .count-pill, .status-pill) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.badge, .chip, .mini-chip, .player-status-pill, .stats-summary span, .participant-count, .team-stats, .count-pill, .status-pill) {
   border: 1px solid var(--gf-line-strong);
   border-radius: 8px;
   background: var(--gf-surface);
@@ -16659,27 +16673,27 @@ body[class*="page-"] .content :is(.badge, .chip, .mini-chip, .player-status-pill
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(.badge.done, .badge.ready, .is-active:not(.stat-rating-star), .status-active) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.badge.done, .badge.ready, .is-active:not(.stat-rating-star), .status-active) {
   border-color: var(--gf-good-line);
   background: var(--gf-good-bg);
   color: var(--gf-brand);
   -webkit-text-fill-color: var(--gf-brand);
 }
 
-body[class*="page-"] .content :is(.badge.warn, .badge.pending, .is-inactive, .status-pending) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.badge.warn, .badge.pending, .is-inactive, .status-pending) {
   border-color: var(--gf-warn-line);
   background: var(--gf-warn-bg);
   color: var(--gf-warn-ink);
   -webkit-text-fill-color: var(--gf-warn-ink);
 }
 
-body[class*="page-"] .content :is(table, .editable-table) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(table, .editable-table) {
   border-collapse: separate;
   border-spacing: 0;
   background: var(--gf-surface);
 }
 
-body[class*="page-"] .content :is(th, .editable-table th) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(th, .editable-table th) {
   border-color: var(--gf-line);
   background: #f2f7f4;
   color: #12362a;
@@ -16689,25 +16703,25 @@ body[class*="page-"] .content :is(th, .editable-table th) {
   letter-spacing: 0;
 }
 
-body[class*="page-"] .content :is(td, .editable-table td) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(td, .editable-table td) {
   border-color: #e4eee9;
   background: var(--gf-surface);
   color: var(--gf-ink);
   -webkit-text-fill-color: var(--gf-ink);
 }
 
-body[class*="page-"] .content :is(tbody tr:hover td, .editable-table tbody tr:hover td) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(tbody tr:hover td, .editable-table tbody tr:hover td) {
   background: #fbfdfc;
 }
 
-body[class*="page-"] .content :is(summary) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(summary) {
   color: var(--gf-ink);
   -webkit-text-fill-color: var(--gf-ink);
   font-weight: 800;
   letter-spacing: 0;
 }
 
-body[class*="page-"] .content :is(.match-scoreboard, .score-pill, .player-table-stat, .stat-form-row, .stat-box, .team-card, .award-legend-item, .match-list-item, .encounter-card, .mobile-result-team, .public-round-robin-card, .multi-draw-option, .multi-draw-team, .home-section-card) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.match-scoreboard, .score-pill, .player-table-stat, .stat-form-row, .stat-box, .team-card, .award-legend-item, .match-list-item, .encounter-card, .mobile-result-team, .public-round-robin-card, .multi-draw-option, .multi-draw-team, .home-section-card) {
   border: 1px solid var(--gf-line);
   border-radius: 10px;
   background: var(--gf-surface);
@@ -16716,7 +16730,7 @@ body[class*="page-"] .content :is(.match-scoreboard, .score-pill, .player-table-
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(.match-scoreboard .scoreboard-score, .match-detail-toggle-symbol, .player-card-rating, .stat-rating-value, .award-count-chip, .team-label-score, .formation-goals-badge) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.match-scoreboard .scoreboard-score, .match-detail-toggle-symbol, .player-card-rating, .stat-rating-value, .award-count-chip, .team-label-score, .formation-goals-badge) {
   border: 1px solid var(--gf-good-line);
   border-radius: 8px;
   background: var(--gf-good-bg);
@@ -16725,7 +16739,7 @@ body[class*="page-"] .content :is(.match-scoreboard .scoreboard-score, .match-de
   box-shadow: none;
 }
 
-body[class*="page-"] .content :is(.section-toolbar, .team-head, .multi-draw-team-head, .history-match-summary, .mobile-result-head) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.section-toolbar, .team-head, .multi-draw-team-head, .history-match-summary, .mobile-result-head) {
   border-color: var(--gf-line);
   background: var(--gf-surface-soft);
   background-image: none;
@@ -16733,22 +16747,22 @@ body[class*="page-"] .content :is(.section-toolbar, .team-head, .multi-draw-team
   -webkit-text-fill-color: var(--gf-ink);
 }
 
-body[class*="page-"] .content :is(.formation-player, .selected-player-item, .mobile-result-grid, .multi-draw-player-row) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.formation-player, .selected-player-item, .mobile-result-grid, .multi-draw-player-row) {
   border-color: var(--gf-line);
   background-color: var(--gf-surface);
   color: var(--gf-ink);
 }
 
-body[class*="page-"] .content :is(dialog, .player-edit-dialog, .player-info-dialog) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(dialog, .player-edit-dialog, .player-info-dialog) {
   border-radius: 12px;
 }
 
-body[class*="page-"] .content :is(.flash, .floating-form-alert) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.flash, .floating-form-alert) {
   border-radius: 10px;
   font-weight: 800;
 }
 
-body[class*="page-"] .content :is(.award-legend-section > summary, .card > summary[class*="text-lime-50"]) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.award-legend-section > summary, .card > summary[class*="text-lime-50"]) {
   border-color: var(--gf-line);
   background: var(--gf-surface-soft);
   background-image: none;
@@ -16756,21 +16770,21 @@ body[class*="page-"] .content :is(.award-legend-section > summary, .card > summa
   -webkit-text-fill-color: var(--gf-ink);
 }
 
-body[class*="page-"] .content .award-legend-section > summary > span {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content .award-legend-section > summary > span {
   border: 1px solid var(--gf-good-line);
   background: var(--gf-good-bg);
   color: var(--gf-brand);
   -webkit-text-fill-color: var(--gf-brand);
 }
 
-body[class*="page-"] .content [class*="text-emerald-"],
-  body[class*="page-"] .content [class*="text-lime-"] {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content [class*="text-emerald-"],
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content [class*="text-lime-"] {
   color: #12362a;
   -webkit-text-fill-color: #12362a;
 }
 
-body[class*="page-"] .content [class*="bg-emerald-950"],
-  body[class*="page-"] .content [class*="bg-emerald-900"] {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content [class*="bg-emerald-950"],
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content [class*="bg-emerald-900"] {
   border-color: var(--gf-line);
   background: var(--gf-surface);
   background-image: none;
@@ -16778,15 +16792,15 @@ body[class*="page-"] .content [class*="bg-emerald-950"],
   -webkit-text-fill-color: var(--gf-ink);
 }
 
-body[class*="page-"] .content :is(.btn-primary, .btn-primary *:not(.match-detail-toggle-symbol), button[type="submit"]:not(.btn-muted):not(.btn-danger):not(.btn-warning):not([class*="bg-"]) *:not(.match-detail-toggle-symbol)) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.btn-primary, .btn-primary *:not(.match-detail-toggle-symbol), button[type="submit"]:not(.btn-muted):not(.btn-danger):not(.btn-warning):not([class*="bg-"]) *:not(.match-detail-toggle-symbol)) {
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
 }
 
-body[class*="page-"] .content :is(a, button)[class*="bg-emerald-"],
-  body[class*="page-"] .content :is(a, button)[class*="bg-emerald-"] *,
-  body[class*="page-"] .content :is(a, button)[class*="bg-[#063d2b]"],
-  body[class*="page-"] .content :is(a, button)[class*="bg-[#063d2b]"] * {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-emerald-"],
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-emerald-"] *,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-[#063d2b]"],
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-[#063d2b]"] * {
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
 }
@@ -16821,10 +16835,10 @@ body.page-editar-partidos .content .encounter-action-menu[open] summary::after {
   content: "-";
 }
 
-body[class*="page-"] .content :is(a, button)[class*="bg-emerald-"],
-  body[class*="page-"] .content :is(a, button)[class*="bg-emerald-"] *,
-  body[class*="page-"] .content :is(a, button)[class*="bg-[#063d2b]"],
-  body[class*="page-"] .content :is(a, button)[class*="bg-[#063d2b]"] * {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-emerald-"],
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-emerald-"] *,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-[#063d2b]"],
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(a, button)[class*="bg-[#063d2b]"] * {
   border-color: var(--gf-brand);
   background: var(--gf-brand);
   background-image: none;
@@ -16886,44 +16900,44 @@ body.page-estadisticas .content :is(.stats-player-search, .stats-search-card) {
 }
 
 @media (max-width: 760px) {
-  body[class*="page-"] {
+  body[class*="page-"]:where(:not(.goodfellas-2)) {
     background: linear-gradient(180deg, #05291d 0 74px, var(--gf-bg) 74px 100%);
   }
 
-  body[class*="page-"] .content {
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content {
     padding: 8px;
   }
 
-  body[class*="page-"] .content > .page-head,
-  body[class*="page-"] .content > section.page-head {
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head {
     gap: 8px;
     padding: 10px;
   }
 
-  body[class*="page-"] .content > .page-head h1,
-  body[class*="page-"] .content > section.page-head h1 {
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head h1,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head h1 {
     font-size: 1.18rem;
     line-height: 1.15;
   }
 
-  body[class*="page-"] .content > .page-head p,
-  body[class*="page-"] .content > section.page-head p,
-  body[class*="page-"] .content .small-muted {
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head p,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head p,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content .small-muted {
     font-size: 0.78rem;
     line-height: 1.25;
   }
 
-  body[class*="page-"] .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card) {
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card) {
     border-radius: 12px;
   }
 
-  body[class*="page-"] .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.stat-rating-star) {
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(button, .btn):not(.mobile-menu-button):not(#menuToggle):not(.stat-rating-star) {
     min-height: 38px;
   }
 }
 
 /* Goodfellas density normalization */
-body[class*="page-"] {
+body[class*="page-"]:where(:not(.goodfellas-2)) {
   --gf-page-title-size: 1.18rem;
   --gf-section-title-size: 1rem;
   --gf-body-size: 0.86rem;
@@ -16935,44 +16949,44 @@ body[class*="page-"] {
   --gf-card-gap: 10px;
 }
 
-body[class*="page-"] .content {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content {
   font-size: var(--gf-body-size);
   line-height: 1.4;
 }
 
-body[class*="page-"] .content > .page-head,
-  body[class*="page-"] .content > section.page-head,
+body[class*="page-"]:where(:not(.goodfellas-2)) .content > .page-head,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > section.page-head,
   body.page-crear-partido .content .crear-partido-hero,
   body.page-crear-partido .content > section:first-of-type {
   gap: var(--gf-card-gap);
   padding: var(--gf-card-padding);
 }
 
-body[class*="page-"] .content :is(.page-head h1, section.page-head h1, .crear-partido-hero h1, .main-title),
-  body[class*="page-"] .content h1,
-  body[class*="page-"] .content > h1,
-  body[class*="page-"] .content > form > h1,
-  body[class*="page-"] .content > .card:first-child > h1 {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.page-head h1, section.page-head h1, .crear-partido-hero h1, .main-title),
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content h1,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > h1,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > form > h1,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content > .card:first-child > h1 {
   font-size: var(--gf-page-title-size);
   line-height: 1.12;
   letter-spacing: 0;
 }
 
-body[class*="page-"] .content :is(h2, h3, .card-title, .section-title, .section-toolbar h3, .player-create-summary span, .stats-collapsible summary span, .mobile-full-player-list summary span) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(h2, h3, .card-title, .section-title, .section-toolbar h3, .player-create-summary span, .stats-collapsible summary span, .mobile-full-player-list summary span) {
   font-size: var(--gf-section-title-size);
   line-height: 1.16;
   letter-spacing: 0;
 }
 
-body[class*="page-"] .content :is(p, li, td, th, label, .small-muted, .form-help, .card-description, .player-card p, .home-card p) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(p, li, td, th, label, .small-muted, .form-help, .card-description, .player-card p, .home-card p) {
   line-height: 1.38;
 }
 
-body[class*="page-"] .content :is(.small-muted, .form-help, .card-description, .page-head p, .crear-partido-hero p, .home-card p, .player-card p) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.small-muted, .form-help, .card-description, .page-head p, .crear-partido-hero p, .home-card p, .player-card p) {
   font-size: var(--gf-muted-size);
 }
 
-body[class*="page-"] .content :is(.btn, button, .button, a[class*="bg-emerald-"], a[class*="bg-[#063d2b]"]):not(.mobile-menu-button):not(#menuToggle):not(.stat-rating-star) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.btn, button, .button, a[class*="bg-emerald-"], a[class*="bg-[#063d2b]"]):not(.mobile-menu-button):not(#menuToggle):not(.stat-rating-star) {
   min-height: var(--gf-control-height);
   padding: 8px 11px;
   border-radius: 10px;
@@ -16980,13 +16994,13 @@ body[class*="page-"] .content :is(.btn, button, .button, a[class*="bg-emerald-"]
   line-height: 1.12;
 }
 
-body[class*="page-"] .content :is(input, select, textarea) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(input, select, textarea) {
   min-height: var(--gf-control-height);
   border-radius: 10px;
   font-size: 0.9rem;
 }
 
-body[class*="page-"] .content :is(.badge, .pill, .status-badge, .stats-badge, .player-status-pill, .round-status, .home-kicker, .match-status, .award-pill) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.badge, .pill, .status-badge, .stats-badge, .player-status-pill, .round-status, .home-kicker, .match-status, .award-pill) {
   min-height: 26px;
   padding: 5px 9px;
   border-radius: 999px;
@@ -16994,7 +17008,7 @@ body[class*="page-"] .content :is(.badge, .pill, .status-badge, .stats-badge, .p
   line-height: 1.05;
 }
 
-body[class*="page-"] .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.card, .table-wrap, .stats-collapsible, .player-stat-help, .player-edit-panel, .selected-panel, .stats-filter-menu, .stats-search-card, .match-history, .encounters-history, .finish-awards, .junta-vote-card, .settings-panel, details.card) {
   padding: var(--gf-card-padding);
 }
 
@@ -17065,23 +17079,23 @@ body.page-configuracion .content .settings-panel :is(input, select, textarea) {
 }
 
 /* Visual audit fixes */
-body[class*="page-"] .content :is(.flash-success, .app-toast-success) {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content :is(.flash-success, .app-toast-success) {
   border-color: var(--gf-good-line);
   background: var(--gf-good-bg);
   color: var(--gf-brand);
   -webkit-text-fill-color: var(--gf-brand);
 }
 
-body[class*="page-"] .content .match-detail-toggle-btn .match-detail-toggle-symbol,
-  body[class*="page-"] .content .btn-primary .match-detail-toggle-symbol {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content .match-detail-toggle-btn .match-detail-toggle-symbol,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content .btn-primary .match-detail-toggle-symbol {
   border-color: var(--gf-good-line);
   background: var(--gf-good-bg);
   color: var(--gf-brand);
   -webkit-text-fill-color: var(--gf-brand);
 }
 
-body[class*="page-"] .content .history-search span,
-  body[class*="page-"] .content .encounter-history-search span {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content .history-search span,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content .encounter-history-search span {
   border-color: var(--gf-line-strong);
   background: var(--gf-surface);
   color: var(--gf-brand);
@@ -17107,7 +17121,7 @@ body.page-backup .content .backup-section-list .inline-check .small-muted {
 }
 
 @media (min-width: 761px) {
-  body[class*="page-"] {
+  body[class*="page-"]:where(:not(.goodfellas-2)) {
     --gf-page-title-size: 1.35rem;
     --gf-section-title-size: 1.05rem;
     --gf-body-size: 0.92rem;
@@ -17127,8 +17141,8 @@ body.page-backup .content .backup-section-list .inline-check .small-muted {
   }
 }
 
-body[class*="page-"] .content .btn-primary .match-detail-toggle-symbol.match-detail-toggle-symbol,
-  body[class*="page-"] .content .match-detail-toggle-btn .match-detail-toggle-symbol.match-detail-toggle-symbol {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content .btn-primary .match-detail-toggle-symbol.match-detail-toggle-symbol,
+  body[class*="page-"]:where(:not(.goodfellas-2)) .content .match-detail-toggle-btn .match-detail-toggle-symbol.match-detail-toggle-symbol {
   color: #063d2b;
   -webkit-text-fill-color: #063d2b;
 }
@@ -24353,7 +24367,7 @@ body.page-finalizar-partido.page-sorteo-legacy .content .sorteo-team-card .sorte
    Las reglas base del sitio (button, .btn) fijan alto, padding y tipografia con una
    especificidad enorme, asi que el alto tactil se define aca: 44px reales y los tres
    botones alineados. */
-body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"] button {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content .sorteo-react-page [data-sorteo-mobile-actions="1"] button {
   min-height: 44px !important;
   width: 100% !important;
   min-width: 0;
@@ -24365,7 +24379,7 @@ body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"
   white-space: nowrap;
 }
 
-body[class*="page-"] .content .sorteo-react-page [data-sorteo-mobile-actions="1"] button:disabled {
+body[class*="page-"]:where(:not(.goodfellas-2)) .content .sorteo-react-page [data-sorteo-mobile-actions="1"] button:disabled {
   cursor: wait;
   opacity: 0.7;
 }
