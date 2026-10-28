@@ -9,7 +9,7 @@ function shared_profile_stat_labels(): array
         'technique' => 'Tecnica',
         'pass_vision' => 'Pase/Vision',
         'rhythm' => 'Velocidad',
-        'stamina' => 'Ida y vuelta',
+        'stamina' => 'Despliegue',
         'defense_physical' => 'Solidez',
         'attack' => 'Ataque',
         'teamwork' => 'Juego en equipo',
@@ -25,7 +25,7 @@ function shared_profile_stat_help(): array
         'technique' => 'Control, primer toque, gambeta y calidad individual con la pelota.',
         'pass_vision' => 'Pase, lectura, cambio de frente, asistencia y decision con pelota.',
         'rhythm' => 'Pique corto, aceleracion, velocidad para atacar, cerrar espacios y volver.',
-        'stamina' => 'Capacidad de sostener el ida y vuelta: seguir volviendo, presionando y marcando durante todo el partido.',
+        'stamina' => 'Participación y movilidad por toda la cancha: cuánto se ofrece, acompaña y cubre entre defensa, mediocampo y ataque. Un valor alto describe a un jugador todoterreno; uno bajo, a un jugador que tiende a mantenerse en su sector.',
         'defense_physical' => 'Marca, quite, anticipo, presion, fuerza y choque.',
         'attack' => 'Definicion, llegada al arco, desmarque y peligro ofensivo.',
         'teamwork' => 'Juego en equipo, ubicacion colectiva y generosidad para no jugar solo para uno.',
@@ -37,17 +37,7 @@ function shared_profile_stat_help(): array
 
 function shared_profile_player_fifa_overall(float $value): int
 {
-    $clamped = max(1.0, min(6.0, $value));
-    $anchors = player_rating_policy()['anchors'];
-    for ($i = 0, $count = count($anchors) - 1; $i < $count; $i++) {
-        [$fromRating, $fromOverall] = $anchors[$i];
-        [$toRating, $toOverall] = $anchors[$i + 1];
-        if ($clamped <= $toRating) {
-            $ratio = ($clamped - $fromRating) / ($toRating - $fromRating);
-            return (int) round($fromOverall + (($toOverall - $fromOverall) * $ratio));
-        }
-    }
-    return 99;
+    return player_rating_gen($value);
 }
 
 function shared_profile_fifa_overall_to_rating(float|int|string|null $value): float

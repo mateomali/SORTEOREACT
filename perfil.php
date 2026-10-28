@@ -80,7 +80,7 @@ $statLabels = [
     'technique' => 'Tecnica',
     'pass_vision' => 'Pase/Vision',
     'rhythm' => 'Velocidad',
-    'stamina' => 'Ida y vuelta',
+    'stamina' => 'Despliegue',
     'defense_physical' => 'Solidez',
     'attack' => 'Ataque',
     'teamwork' => 'Juego en equipo',
@@ -92,7 +92,7 @@ $statHelp = [
     'technique' => 'Control, primer toque, gambeta y calidad individual con la pelota.',
     'pass_vision' => 'Pase, lectura, cambio de frente, asistencia y decision con pelota.',
     'rhythm' => 'Pique corto, aceleracion, velocidad para atacar, cerrar espacios y volver.',
-    'stamina' => 'Capacidad de sostener el ida y vuelta: seguir volviendo, presionando y marcando durante todo el partido.',
+    'stamina' => 'Participación y movilidad por toda la cancha: cuánto se ofrece, acompaña y cubre entre defensa, mediocampo y ataque. Un valor alto describe a un jugador todoterreno; uno bajo, a un jugador que tiende a mantenerse en su sector.',
     'defense_physical' => 'Marca, quite, anticipo, presion, fuerza y choque.',
     'attack' => 'Definicion, llegada al arco, desmarque y peligro ofensivo.',
     'teamwork' => 'Juego en equipo, ubicacion colectiva y generosidad para no jugar solo para uno.',
@@ -523,7 +523,7 @@ function profile_render_team_characteristics(array $players): string
         <?php endif; ?>
         <span>Solidez <?= h(number_format((float) $summary['defense_physical'], 1)) ?></span>
         <span>Velocidad <?= h(number_format((float) $summary['rhythm'], 1)) ?></span>
-        <span>Ida y vuelta <?= h(number_format((float) $summary['stamina'], 1)) ?></span>
+        <span>Despliegue <?= h(number_format((float) $summary['stamina'], 1)) ?></span>
         <span>Pase/Vision <?= h(number_format((float) $summary['pass_vision'], 1)) ?></span>
         <span>Tecnica <?= h(number_format((float) $summary['technique'], 1)) ?></span>
         <span>Juego en equipo <?= h(number_format((float) $summary['teamwork'], 1)) ?></span>

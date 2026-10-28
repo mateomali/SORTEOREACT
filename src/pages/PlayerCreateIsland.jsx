@@ -82,7 +82,7 @@ function PlayerRadar({ stats, labels, hasGoalkeeper }) {
     technique: 'TEC',
     pass_vision: 'PAS',
     rhythm: 'VEL',
-    stamina: 'IDV',
+    stamina: 'DES',
     defense_physical: 'SOL',
     attack: 'ATA',
     teamwork: 'EQU',

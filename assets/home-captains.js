@@ -149,7 +149,7 @@ if (typeof window.goodfellasHomeCaptainsCleanup === 'function') {
             ${goalkeeperSkill > 0 ? `<span>Arquero ${goalkeeperSkill.toFixed(1)}</span>` : `<span>Ataque ${teamAverage(players, 'attack').toFixed(1)}</span>`}
             <span>Solidez ${teamAverage(players, 'defense_physical').toFixed(1)}</span>
             <span>Velocidad ${teamAverage(players, 'rhythm').toFixed(1)}</span>
-            <span>Ida y vuelta ${teamAverage(players, 'stamina').toFixed(1)}</span>
+            <span>Despliegue ${teamAverage(players, 'stamina').toFixed(1)}</span>
             <span>Pase/Vision ${teamAverage(players, 'pass_vision').toFixed(1)}</span>
             <span>Tecnica ${teamAverage(players, 'technique').toFixed(1)}</span>
             <span>Juego en equipo ${teamAverage(players, 'teamwork').toFixed(1)}</span>

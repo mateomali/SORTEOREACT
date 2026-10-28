@@ -849,7 +849,7 @@ function render_public_team_characteristics(array $players): string
         <?php endif; ?>
         <span>Solidez <?= h(number_format((float) $summary['defense_physical'], 1)) ?></span>
         <span>Velocidad <?= h(number_format((float) $summary['rhythm'], 1)) ?></span>
-        <span>Ida y vuelta <?= h(number_format((float) $summary['stamina'], 1)) ?></span>
+        <span>Despliegue <?= h(number_format((float) $summary['stamina'], 1)) ?></span>
         <span>Tecnica <?= h(number_format((float) $summary['technique'], 1)) ?></span>
         <span>Pase vision <?= h(number_format((float) $summary['pass_vision'], 1)) ?></span>
         <span>Juego en equipo <?= h(number_format((float) $summary['teamwork'], 1)) ?></span>

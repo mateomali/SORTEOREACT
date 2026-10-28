@@ -156,7 +156,7 @@ export_match_csv_row($out, [
     'Tecnica',
     'Pase/Vision',
     'Velocidad',
-    'Ida y vuelta',
+    'Despliegue',
     'Solidez',
     'Ataque',
     'Juego equipo',

@@ -473,8 +473,8 @@ function PlayerStory({ player }) {
       good: ['La velocidad le permite atacar espacios y responder en las transiciones.', 'Tiene piernas para sacar ventaja en el desmarque y corregir a tiempo.'],
     },
     stamina: {
-      high: ['Sostiene un despliegue intenso: puede repetir subidas, presiones y regresos sin perder presencia.', 'El ida y vuelta es una de sus grandes armas: tiene resto para seguir participando cuando el partido se alarga.'],
-      good: ['Tiene buen recorrido para acompa\u00f1ar el ataque y volver a dar una mano.', 'Puede encadenar esfuerzos y mantener su participaci\u00f3n en ambas \u00e1reas.'],
+      high: ['Es un jugador todoterreno: participa en defensa, mediocampo y ataque y ofrece relevos entre sectores.', 'Su despliegue conecta los sectores: se suma a la salida, acompaña el ataque y vuelve a cubrir.'],
+      good: ['Tiene buen despliegue para acompañar el ataque y volver a dar una mano.', 'Se desplaza entre sectores y ofrece apoyos fuera de su zona inicial.'],
     },
     defense_physical: {
       high: ['Se hace fuerte en los duelos y cuesta superarlo cuando protege su zona.', 'Combina firmeza en la marca y presencia f\u00edsica para cerrar el camino al rival.'],
@@ -508,7 +508,7 @@ function PlayerStory({ player }) {
     technique: 'Le conviene priorizar controles y pases simples bajo presi\u00f3n.',
     pass_vision: 'Necesita opciones de pase cercanas para facilitar sus decisiones.',
     rhythm: 'Conviene evitar que quede expuesto en carreras largas.',
-    stamina: 'Le conviene administrar los esfuerzos y contar con apoyo en los relevos.',
+    stamina: 'Tiende a mantenerse en su sector; conviene acompañarlo con jugadores de mayor despliegue para cubrir relevos.',
     defense_physical: 'Necesita respaldo en la marca y en los duelos f\u00edsicos.',
     attack: 'Tiene margen para mejorar la definici\u00f3n y la decisi\u00f3n cerca del arco.',
     teamwork: 'Puede mejorar su participaci\u00f3n en las asociaciones y los apoyos.',

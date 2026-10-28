@@ -7,6 +7,7 @@ require_once __DIR__ . '/lib/awards.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/match_goals.php';
 require_once __DIR__ . '/lib/draw_pots.php';
+require_once __DIR__ . '/lib/draw_separations.php';
 require_once __DIR__ . '/lib/round_robin_standings.php';
 
 $isRoundRobinAjaxRequest = $_SERVER['REQUEST_METHOD'] === 'POST'
@@ -204,7 +205,7 @@ function finish_formation_name_from_counts(array $counts): string
     ]);
 }
 
-function finish_save_match_formations(int $matchId, array $participants, array $teams, array $teamColorData, array $teamAssignments, array $positionAssignments, array $substituteAssignments = []): void
+function finish_save_match_formations(int $matchId, array $participants, array $teams, array $teamColorData, array $teamAssignments, array $positionAssignments, array $substituteAssignments = [], ?array $separatedPairs = null): void
 {
     $teamNumbers = array_map(static fn(array $team): int => (int) $team['team_number'], $teams);
     $teamNumberSet = array_flip($teamNumbers);
@@ -311,6 +312,15 @@ function finish_save_match_formations(int $matchId, array $participants, array $
             ]);
         }
 
+        if ($separatedPairs !== null) {
+            $stmt = $pdo->prepare('SELECT draw_audit_snapshot FROM matches WHERE id = ? FOR UPDATE');
+            $stmt->execute([$matchId]);
+            $audit = json_decode((string) ($stmt->fetchColumn() ?: '{}'), true);
+            if (!is_array($audit)) $audit = [];
+            if (!is_array($audit['criteria'] ?? null)) $audit['criteria'] = [];
+            $audit['criteria']['separated_pairs'] = $separatedPairs;
+            $pdo->prepare('UPDATE matches SET draw_audit_snapshot = ? WHERE id = ?')->execute([json_encode($audit, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $matchId]);
+        }
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -603,10 +613,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
     try {
         $drawPots = json_decode((string) ($match['draw_pots_json'] ?? 'null'), true);
+        $separatedPairs = isset($_POST['separated_pairs'])
+            ? draw_separations_validate(json_decode((string) $_POST['separated_pairs'], true, 512, JSON_THROW_ON_ERROR))
+            : draw_separations_from_match($match);
+        draw_separations_assert_registered($separatedPairs);
+        $teamByPlayer = [];
+        foreach ($participants as $player) $teamByPlayer[(int) $player['id']] = (int) ($teamAssignments[$player['id']] ?? $player['team_number'] ?? 0);
+        draw_separations_assert($separatedPairs, $teamByPlayer);
         if (is_array($drawPots) && !draw_pots_pairs_separated($participants, $teamAssignments, $drawPots)) {
             throw new RuntimeException('Los dos jugadores de un pote deben quedar en equipos distintos.');
         }
-        finish_save_match_formations($matchId, $participants, $teams, $teamColorData, $teamAssignments, $positionAssignments, is_array($_POST['player_substitute'] ?? null) ? $_POST['player_substitute'] : []);
+        finish_save_match_formations($matchId, $participants, $teams, $teamColorData, $teamAssignments, $positionAssignments, is_array($_POST['player_substitute'] ?? null) ? $_POST['player_substitute'] : [], $separatedPairs);
         if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => true]);
@@ -1394,6 +1411,7 @@ require __DIR__ . '/includes/header.php';
               'selected' => true,
               'is_substitute' => (int) ($p['is_substitute'] ?? 0),
               'assigned_position' => finish_player_position($p),
+              'rendimiento_historico_ajuste' => (float) ($p['rendimiento_historico_ajuste'] ?? 0),
           ], $participants);
           $formationPlayersById = [];
           foreach ($formationEditorPlayers as $playerPayload) {
@@ -1417,6 +1435,9 @@ require __DIR__ . '/includes/header.php';
           $drawBalanceWeights = player_draw_balance_weights();
           $formationEditorPayload = [
               'mode' => 'formation_editor',
+              'positionRatingMode' => (string) ($selectedMatch['position_rating_mode'] ?? 'legacy'),
+              'positionRatingDiscount' => (int) ($selectedMatch['position_rating_discount'] ?? 1) === 1,
+              'separatedPairs' => draw_separations_from_match($selectedMatch),
               'generatedPots' => json_decode((string) ($selectedMatch['draw_pots_json'] ?? 'null'), true),
               'matchId' => (int) $selectedMatch['id'],
               'match' => [

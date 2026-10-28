@@ -552,6 +552,21 @@ no trae configuracion, ni base de datos, ni fotos de jugadores.
 
 COMPARATIVA DE JUGADORES EN EL SORTEO
 -----------------------------------
+Ida y vuelta pasa a llamarse Despliegue conservando las valoraciones existentes,
+que se revisaran manualmente. Despliegue representa participacion y desplazamiento
+entre defensa, medio y ataque. No es velocidad ni habilita posiciones nuevas.
+El sorteo equilibra Despliegue y puntaje con prioridad compartida 50/50; despues
+afina ritmo, concentracion de lentitud y fuerza por linea.
+Antes del sorteo se puede elegir Puntaje general fijo, Puntaje por habilidad y
+posicion o Calculo anterior. En los dos modos nuevos, el descuento por adaptacion
+es independiente. La vista previa muestra el general por puesto y sus ponderaciones.
+La actualizacion agrega automaticamente matches.position_rating_mode con valor
+legacy para conservar el calculo de fechas anteriores. No cambia notas ni requiere
+importar SQL. El selector afecta al proximo sorteo, no a los equipos ya generados.
+Separar jugadores permite elegir parejas obligatorias que se guardan con la fecha;
+el servidor rechaza guardados que las incumplan. El analisis propone intercambios
+con su antes/despues de Despliegue, movilidad, puntaje y fuerza por linea.
+
 En el generador de sorteo y en el editor de formaciones, el boton
 "Analizar equipos" muestra equivalencias jugador por jugador entre equipos,
 considerando posicion, sector y puntaje efectivo, sin repetir jugadores.

@@ -203,7 +203,7 @@ const goodfellasInitCaptains = () => {
               ${summary.goalkeeperSkill > 0 ? `<span>Arquero ${summary.goalkeeperSkill.toFixed(1)}</span>` : `<span>Ataque ${summary.attack.toFixed(1)}</span>`}
               <span>Solidez ${summary.defensePhysical.toFixed(1)}</span>
               <span>Velocidad ${summary.rhythm.toFixed(1)}</span>
-              <span>Ida y vuelta ${summary.stamina.toFixed(1)}</span>
+              <span>Despliegue ${summary.stamina.toFixed(1)}</span>
               <span>Pase/Vision ${summary.passVision.toFixed(1)}</span>
               <span>Tecnica ${summary.technique.toFixed(1)}</span>
               <span>Juego en equipo ${summary.teamwork.toFixed(1)}</span>

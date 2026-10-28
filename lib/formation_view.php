@@ -5,19 +5,7 @@ require_once __DIR__ . '/helpers.php';
 
 function formation_view_card_rating(float $value): int
 {
-    $clamped = max(1.0, min(6.0, $value));
-    $anchors = player_rating_policy()['anchors'];
-
-    for ($i = 0, $count = count($anchors) - 1; $i < $count; $i++) {
-        [$fromRating, $fromOverall] = $anchors[$i];
-        [$toRating, $toOverall] = $anchors[$i + 1];
-        if ($clamped <= $toRating) {
-            $ratio = ($clamped - $fromRating) / ($toRating - $fromRating);
-            return (int) round($fromOverall + (($toOverall - $fromOverall) * $ratio));
-        }
-    }
-
-    return 99;
+    return player_rating_gen($value);
 }
 
 function formation_view_card_tier(float $value): string
@@ -215,6 +203,7 @@ function formation_view_render_player(array $player, int $highlightPlayerId = 0,
 
     $laneRole = $position === 'LAT' ? ' data-lane-role="lateral"' : '';
     $html = '<div class="' . h($cardClass) . '" draggable="false" data-static-formation-player data-static-player-key="' . h((string) ($player['id'] ?? ($player['name'] ?? ''))) . '" data-assigned-position="' . h($position) . '" data-position-rating-discount="' . h((string) (int) ($player['position_rating_discount'] ?? 1)) . '" data-player-skill="' . h((string) $rating) . '"' . $laneRole . '>';
+    $html = substr($html, 0, -1) . ' data-position-rating-mode="' . h((string) ($player['position_rating_mode'] ?? 'legacy')) . '" data-player-history-adjustment="' . h((string) ($player['rendimiento_historico_ajuste'] ?? 0)) . '">';
     $html .= '<span class="player-card-rating" title="Puntaje general"><strong>' . h((string) formation_view_card_rating($rating)) . '</strong><span>GEN</span></span>';
     $html .= '<span class="formation-lane-indicator" aria-hidden="true"><span></span><span></span><span></span></span>';
     $html .= '<span class="formation-card-photo' . h($photoClass) . '" aria-hidden="true"><img src="' . h($photoPath) . '" alt=""' . $photoStyle . '></span>';

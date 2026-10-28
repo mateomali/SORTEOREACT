@@ -261,7 +261,7 @@ function director_player_stat_labels(): array
         'technique' => 'Tecnica',
         'pass_vision' => 'Pase/Vision',
         'rhythm' => 'Velocidad',
-        'stamina' => 'Ida y vuelta',
+        'stamina' => 'Despliegue',
         'teamwork' => 'Equipo',
         'mentality' => 'Mentalidad',
         'regularity' => 'Regularidad',

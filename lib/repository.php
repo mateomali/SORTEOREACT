@@ -59,7 +59,7 @@ function repo_match_visible_to_current_user(array $match): bool
 function repo_match_participants(int $matchId): array
 {
     $stmt = db()->prepare(
-        'SELECT p.*, m.position_rating_discount, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.is_substitute, mp.lineup_order, mp.formation_line_order, mp.availability_percent, mp.goals, mp.rating
+        'SELECT p.*, m.position_rating_discount, m.position_rating_mode, mp.team_number, mp.assigned_position, mp.is_goalkeeper, mp.is_substitute, mp.lineup_order, mp.formation_line_order, mp.availability_percent, mp.goals, mp.rating
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
          INNER JOIN matches m ON m.id = mp.match_id
@@ -67,14 +67,14 @@ function repo_match_participants(int $matchId): array
          ORDER BY p.name ASC'
     );
     $stmt->execute(['mid' => $matchId]);
-    return $stmt->fetchAll();
+    return repo_match_rating_context($stmt->fetchAll(), $matchId);
 }
 
 function repo_match_participants_basic(int $matchId): array
 {
     $stmt = db()->prepare(
         'SELECT p.id, p.name, p.positions, p.pace, p.skill, p.preserve_stored_skill, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom,
-                m.position_rating_discount, mp.availability_percent,
+                m.position_rating_discount, m.position_rating_mode, mp.availability_percent,
                 p.technique, p.pass_vision, p.rhythm, p.stamina, p.defense_physical, p.attack, p.teamwork, p.mentality, p.regularity, p.goalkeeper_skill
          FROM match_players mp
          INNER JOIN players p ON p.id = mp.player_id
@@ -83,7 +83,18 @@ function repo_match_participants_basic(int $matchId): array
          ORDER BY p.name ASC'
     );
     $stmt->execute(['mid' => $matchId]);
-    return $stmt->fetchAll();
+    return repo_match_rating_context($stmt->fetchAll(), $matchId);
+}
+
+function repo_match_rating_context(array $players, int $matchId): array
+{
+    if (!$players || !in_array((string) ($players[0]['position_rating_mode'] ?? 'legacy'), ['skill', 'general', 'penalty'], true)) return $players;
+    static $adjustments = [];
+    $adjustments[$matchId] ??= repo_player_result_adjustments(array_column($players, 'id'), $matchId);
+    return array_map(static function (array $player) use ($adjustments, $matchId): array {
+        $player['rendimiento_historico_ajuste'] = (float) ($adjustments[$matchId][(int) $player['id']]['adjustment'] ?? 0);
+        return $player;
+    }, $players);
 }
 
 function repo_save_match_participants(int $matchId, array $playerIds): void

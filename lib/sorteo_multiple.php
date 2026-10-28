@@ -6,6 +6,7 @@ require_once __DIR__ . '/formation_view.php';
 require_once __DIR__ . '/repository.php';
 require_once __DIR__ . '/sorteo.php';
 require_once __DIR__ . '/schema.php';
+require_once __DIR__ . '/draw_separations.php';
 
 function ensure_multiple_draw_schema(): void
 {
@@ -431,6 +432,17 @@ function multiple_draw_apply_option(int $matchId, int $optionId, bool $automatic
             }
         }
         $teamSize = count($teams[0]['players'] ?? []);
+        if (isset($teams[0]['separated_pairs'])) {
+            $pairs = draw_separations_validate($teams[0]['separated_pairs']);
+            $teamByPlayer = [];
+            foreach ($teams as $index => $team) foreach ($team['players'] as $player) $teamByPlayer[(int) $player['id']] = $index + 1;
+            draw_separations_assert($pairs, $teamByPlayer);
+            $audit = json_decode((string) ($match['draw_audit_snapshot'] ?? '{}'), true);
+            if (!is_array($audit)) $audit = [];
+            if (!is_array($audit['criteria'] ?? null)) $audit['criteria'] = [];
+            $audit['criteria']['separated_pairs'] = $pairs;
+            $pdo->prepare('UPDATE matches SET draw_audit_snapshot = ? WHERE id = ?')->execute([json_encode($audit, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $matchId]);
+        }
         $pdo->prepare(
             'UPDATE matches
              SET status = "sorteado",

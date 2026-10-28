@@ -269,6 +269,7 @@ function ensure_control_schema(): array
         ['matches', 'result_notes', 'result_notes TEXT NULL AFTER notes'],
         ['matches', 'round_robin_legs', 'round_robin_legs TINYINT UNSIGNED NOT NULL DEFAULT 2 AFTER result_notes'],
         ['matches', 'position_rating_discount', 'position_rating_discount TINYINT(1) NOT NULL DEFAULT 1'],
+        ['matches', 'position_rating_mode', "position_rating_mode VARCHAR(16) NOT NULL DEFAULT 'legacy'"],
         ['matches', 'valuation_mode', "valuation_mode ENUM('both', 'ratings', 'awards') NOT NULL DEFAULT 'both' AFTER round_robin_legs"],
         ['match_teams', 'captain_player_id', 'captain_player_id INT UNSIGNED NULL AFTER team_name'],
         ['match_teams', 'formation_name', 'formation_name VARCHAR(80) NULL AFTER total_skill'],

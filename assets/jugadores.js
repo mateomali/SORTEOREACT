@@ -25,7 +25,7 @@ const goodfellasInitPlayers = () => {
       technique: 'Tecnica',
       pass_vision: 'Pase/Vision',
       rhythm: 'Velocidad',
-      stamina: 'Ida y vuelta',
+      stamina: 'Despliegue',
       defense_physical: 'Solidez',
       attack: 'Ataque',
       teamwork: 'Juego en equipo',
@@ -37,7 +37,7 @@ const goodfellasInitPlayers = () => {
       technique: 'TEC',
       pass_vision: 'PAS',
       rhythm: 'VEL',
-      stamina: 'IDV',
+      stamina: 'DES',
       defense_physical: 'SOL',
       attack: 'ATA',
       teamwork: 'EQU',
@@ -87,14 +87,14 @@ const goodfellasInitPlayers = () => {
       {
         field: 'rhythm',
         label: 'Velocidad',
-        strength: ['va en tercera aunque el partido pida autopista', 'no es una moto, pero llega si no lo hacen cruzar todo el conurbano', 'cumple el recorrido sin hacer ruido', 'tiene nafta para ir y volver sin pedir cambio', 'mete quinta y aparece donde la jugada ya parecia perdida', 'te corre todo el partido sin descanso'],
+        strength: ['va en tercera aunque el partido pida autopista', 'no es una moto, pero llega si no lo hacen cruzar todo el conurbano', 'cumple el despliegue sin hacer ruido', 'tiene nafta para ir y volver sin pedir cambio', 'mete quinta y aparece donde la jugada ya parecia perdida', 'te corre todo el partido sin descanso'],
         weakness: ['si el partido se hace largo, empieza a mirar el banco con carino', 'si lo hacen correr de lado a lado, se le prende la reserva', 'en un partido de ida y vuelta, no mantiene el ritmo de subir y bajar', 'no se cae fisicamente, pero tampoco te gana una carrera al bondi', 'por piernas casi nunca queda pagando', 'en ritmo va sobrado: al rival le conviene buscar otro camino'],
       },
       {
         field: 'stamina',
-        label: 'Ida y vuelta',
-        strength: ['aguanta el partido sin partirse en dos', 'puede repetir esfuerzos y seguir siendo util', 'cuando el partido se alarga, todavia tiene resto', 'sostiene presion, vuelta y marca sin apagarse'],
-        weakness: ['si el ida y vuelta se estira, empieza a elegir esfuerzos', 'necesita administrar mejor el aire', 'cuando toca volver muchas veces, puede llegar justo', 'en partidos largos conviene no dejarlo solo para todo el recorrido'],
+        label: 'Despliegue',
+        strength: ['recorre defensa, medio y ataque', 'ofrece relevos y apoyos en varios sectores', 'es todoterreno y conecta las lineas', 'se suma a la salida, acompana arriba y vuelve a cubrir'],
+        weakness: ['tiende a mantenerse en su sector', 'necesita apoyo para cubrir relevos entre lineas', 'participa menos fuera de su zona inicial', 'conviene acompanarlo con jugadores de mayor despliegue'],
       },
       {
         field: 'defense_physical',
@@ -518,7 +518,7 @@ const goodfellasInitPlayers = () => {
       }
       if (rhythm >= 4.5) {
         pool.push('Tiene motor de remisero en fin de mes: no para nunca y llega a todos lados.');
-        pool.push('Le sobra recorrido; si el partido pide piernas, levanta la mano primero.');
+        pool.push('Tiene gran despliegue: se ofrece, acompana jugadas y cubre relevos entre sectores.');
       }
       if (technique <= 2.5 && defense <= 2.5) {
         pool.push('Si la pelota viene dificil y encima hay roce, conviene prender una vela.');
@@ -701,7 +701,7 @@ const goodfellasInitPlayers = () => {
           `${player.name} juega con una idea bastante clara: que el otro no pase comodo, y si pasa, que se acuerde.`,
         ],
         lateral: [
-          `${player.name} por banda puede sumar recorrido si no lo dejan defendiendo solo dos canchas.`,
+          `${player.name} por banda puede sumar despliegue si cuenta con apoyo para los relevos.`,
           `A ${player.name} lo define el ida y vuelta: cerrar atras y aparecer cuando el equipo sale.`,
           `Si el partido se abre por los costados, ${player.name} necesita elegir bien cuando pasar y cuando guardarse.`,
           `${player.name} puede ser carrilero util si tiene cobertura y una salida simple cerca.`,
@@ -1089,9 +1089,9 @@ const goodfellasInitPlayers = () => {
           low: ['si el partido se abre mucho, puede quedarse lejos de la jugada', 'cuando lo hacen correr largo, empieza a pagar el esfuerzo'],
         },
         stamina: {
-          high: ['puede repetir esfuerzos sin desaparecer', 'sostiene el recorrido cuando el partido pide aire', 'llega al cierre con resto para seguir ayudando'],
+          high: ['puede repetir esfuerzos sin desaparecer', 'sostiene el despliegue cuando el partido pide aire', 'llega al cierre con resto para seguir ayudando'],
           max: ['el ida y vuelta es excelente: mantiene intensidad incluso cuando el partido se alarga'],
-          low: ['cuando el partido exige ida y vuelta, puede empezar a administrar demasiado', 'si le cargan mucho recorrido, el rendimiento cae por cansancio'],
+          low: ['cuando el partido exige ida y vuelta, puede empezar a administrar demasiado', 'si le cargan mucho despliegue, el rendimiento cae por cansancio'],
         },
         defense_physical: {
           high: ['compite fuerte en el roce y no regala metros', 'en la dividida deja claro que por ahi no se pasa gratis', 'sostiene la marca y ayuda a cerrar atras'],
@@ -1245,7 +1245,7 @@ const goodfellasInitPlayers = () => {
           ? [
             'Conclusion: puede sumar, pero el plan tiene que asumir esa alerta desde el inicio.',
             'Resumen: es util si el partido no lo obliga a vivir justo en la zona que mas le cuesta.',
-            'Cierre claro: simplificarle el recorrido y rodearlo bien cuando aparezca la dificultad.',
+            'Cierre claro: simplificarle el despliegue y rodearlo bien cuando aparezca la dificultad.',
           ]
           : [
             'Conclusion: buen perfil de uso si la consigna es clara y no se le pide jugar contra su naturaleza.',

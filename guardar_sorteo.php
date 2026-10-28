@@ -6,6 +6,7 @@ require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/schema.php';
 require_once __DIR__ . '/lib/sorteo.php';
 require_once __DIR__ . '/lib/draw_pots.php';
+require_once __DIR__ . '/lib/draw_separations.php';
 
 require_once __DIR__ . '/lib/director_proposals.php';
 require_directivo_or_admin();
@@ -66,7 +67,7 @@ function normalize_assigned_position_legacy(?string $assigned, array $player): s
 
 function position_base_rating_legacy(array $player, string $assigned): float
 {
-    if ((bool) ($player['position_rating_discount'] ?? true) && $assigned === 'ARQ' && !in_array('ARQ', parse_positions_legacy((string) ($player['positions'] ?? '')), true)) {
+    if (($player['position_rating_mode'] ?? 'legacy') === 'legacy' && (bool) ($player['position_rating_discount'] ?? true) && $assigned === 'ARQ' && !in_array('ARQ', parse_positions_legacy((string) ($player['positions'] ?? '')), true)) {
         return 2.0;
     }
 
@@ -243,10 +244,19 @@ if ($redrawIncrement > 0) {
 $positionRatingDiscount = !$proposalMode && array_key_exists('position_rating_discount', $data)
     ? (int) (bool) $data['position_rating_discount']
     : (int) ($match['position_rating_discount'] ?? 1);
+$positionRatingMode = !$proposalMode && array_key_exists('position_rating_mode', $data)
+    ? (string) $data['position_rating_mode'] : (string) ($match['position_rating_mode'] ?? 'legacy');
+if (!in_array($positionRatingMode, ['legacy', 'general', 'penalty', 'skill'], true)) {
+    http_response_code(422); echo json_encode(['ok' => false, 'message' => 'Modo de puntuación inválido.']); exit;
+}
 $participants = repo_match_participants_basic($matchId);
+$positionRatingDiscount = $positionRatingMode === 'legacy' ? $positionRatingDiscount : (int) ($positionRatingMode === 'penalty');
+$ratingAdjustments = in_array($positionRatingMode, ['skill', 'general', 'penalty'], true) ? repo_player_result_adjustments(array_column($participants, 'id'), $matchId) : [];
 $participantsById = [];
 foreach ($participants as $p) {
     $p['position_rating_discount'] = $positionRatingDiscount;
+    $p['position_rating_mode'] = $positionRatingMode;
+    if ($ratingAdjustments) $p['rendimiento_historico_ajuste'] = (float) ($ratingAdjustments[(int) $p['id']]['adjustment'] ?? 0);
     $participantsById[(int) $p['id']] = $p;
 }
 
@@ -308,6 +318,21 @@ if ($teamColorError !== null) {
 if (count($allIds) !== count($participantsById)) {
     http_response_code(422);
     echo json_encode(['ok' => false, 'message' => 'Deben incluirse todos los convocados en el sorteo']);
+    exit;
+}
+
+try {
+    $separatedPairs = array_key_exists('separated_pairs', $data)
+        ? draw_separations_validate($data['separated_pairs']) : draw_separations_from_match($match);
+    draw_separations_assert_registered($separatedPairs);
+    $teamByPlayer = [];
+    foreach ($teams as $index => $team) foreach ($team as $player) $teamByPlayer[(int) $player['id']] = $index + 1;
+    draw_separations_assert($separatedPairs, $teamByPlayer);
+    if (!is_array($auditSnapshot['criteria'] ?? null)) $auditSnapshot['criteria'] = [];
+    $auditSnapshot['criteria']['separated_pairs'] = $separatedPairs;
+} catch (InvalidArgumentException $error) {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'message' => $error->getMessage()], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -448,6 +473,7 @@ if ($proposalMode) {
                 'color_name' => normalize_team_color_name_legacy((string) $teamMeta[$idx]['color_name']),
                 'total_skill' => $teamScores[$idx], 'formation_name' => team_formation_summary_legacy($team), 'players' => $rows];
         }
+        if ($proposalTeams) $proposalTeams[0]['separated_pairs'] = $separatedPairs;
         director_proposal_publish($matchId, $proposalTeams, $maxDiff);
         unset($_SESSION['proposal_manual_drafts'][current_user_id()][$matchId]);
         echo json_encode(['ok' => true, 'message' => 'Propuesta guardada para votacion.']);
@@ -528,7 +554,7 @@ try {
 
     $updMatch = $pdo->prepare(
         'UPDATE matches
-         SET status = :status, position_rating_discount = :position_rating_discount, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
+         SET status = :status, position_rating_discount = :position_rating_discount, position_rating_mode = :position_rating_mode, num_teams = :num_teams, players_per_team = :players_per_team, max_diff = :max_diff,
              draw_mode = :draw_mode, draw_started_at = COALESCE(draw_started_at, NOW()), draw_completed_at = NOW(),
              teams_published_at = NULL,
              draw_audit_snapshot = :draw_audit_snapshot,
@@ -539,6 +565,7 @@ try {
     $updMatch->execute([
         'status' => 'sorteado',
         'position_rating_discount' => $positionRatingDiscount,
+        'position_rating_mode' => $positionRatingMode,
         'num_teams' => $numTeams,
         'players_per_team' => $teamSize,
         'max_diff' => $maxDiff,

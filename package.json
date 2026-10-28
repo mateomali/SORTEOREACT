@@ -23,6 +23,8 @@
     "test:spa": "playwright test tests/spa-progressive-smoke.spec.js",
     "watch:css": "tailwindcss -i ./assets/tailwind.input.css -o ./assets/tailwind.css --watch",
     "test:rating": "node tests/player-rating.cjs",
+    "test:mobility": "node tests/sorteo-mobility.cjs && php tests/draw-separations.php && playwright test tests/sorteo-mobility.spec.js tests/player-equivalents.spec.js --workers=1",
+    "test:recorrido": "node tests/recorrido-skill-rating.cjs && playwright test tests/recorrido-scoring.spec.js tests/sorteo-mobility.spec.js --workers=1",
     "test:live": "php tests/live-matches.php && playwright test tests/live-matches.spec.js --workers=1",
     "test:awards": "playwright test tests/award-podium.spec.js --workers=1",
     "test:formations": "node tests/small-team-formations.cjs",

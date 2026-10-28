@@ -246,7 +246,8 @@ test('reiniciar solo la propuesta propia y mostrar propuestas por decision del a
       await page.goto(`${base}/crear_propuesta.php?match_id=${fixture.matchId}`);
       await page.getByRole('button', { name: 'Por sorteo', exact: true }).click();
       const payload = JSON.parse(await page.locator('[data-react-island="sorteo_legacy_page"]').getAttribute('data-payload'));
-      const saved = await context.request.post(`${base}/guardar_sorteo.php`, { data: { proposal_mode: true, proposal_csrf: payload.proposalCsrf, match_id: fixture.matchId, num_teams: 2, teams: fixture.teams } });
+      const separatedPair = [String(fixture.teams[0].players[0].id), String(fixture.teams[1].players[0].id)].sort();
+      const saved = await context.request.post(`${base}/guardar_sorteo.php`, { data: { proposal_mode: true, proposal_csrf: payload.proposalCsrf, match_id: fixture.matchId, num_teams: 2, teams: fixture.teams, separated_pairs: [separatedPair] } });
       expect(await saved.json()).toMatchObject({ ok: true });
     }
     const page = await contexts[0].newPage();
@@ -309,6 +310,9 @@ test('reiniciar solo la propuesta propia y mostrar propuestas por decision del a
     await expect(voterPage.getByRole('heading', { name: 'Formación oficial del próximo partido', exact: true })).toBeVisible();
     await expect(voterPage.locator('main.content')).toContainText('Propuesta 2 ganadora');
     await expect(voterPage.locator('[data-proposal-countdown]')).toHaveCount(0);
+    await adminPage.goto(`${base}/finalizar_partido.php?match_id=${fixture.matchId}&edit_formations=1`);
+    const officialPayload = JSON.parse(await adminPage.locator('[data-react-island="sorteo_legacy_page"]').getAttribute('data-payload'));
+    expect(officialPayload.separatedPairs).toEqual([[String(fixture.teams[0].players[0].id), String(fixture.teams[1].players[0].id)].sort()]);
   } finally {
     for (const context of contexts) await context.close().catch(() => {});
     execFileSync('php', [fixturePath, 'cleanup', JSON.stringify(fixture)], { encoding: 'utf8' });

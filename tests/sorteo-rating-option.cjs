@@ -32,15 +32,15 @@ const assert = require('node:assert/strict');
         }
       });
       await page.goto('http://fixture.test/');
-      const choice = page.locator('#draw-position-rating-discount');
-      await choice.selectOption('0');
+      const choice = page.locator('#draw-rating-mode');
+      await choice.selectOption('general');
       const generate = page.locator('#generateTeamsButton');
       assert.ok((await choice.boundingBox()).y < (await generate.boundingBox()).y, 'Choice must precede the draw button');
       await generate.click();
       await page.locator('[data-sorteo-team-card]').first().waitFor({ timeout: 120000 });
       assert.equal(await page.locator('.sorteo-position-penalty').count(), 0, 'Disabled adjustment must show no penalties');
       // Changing the next-draw choice must not alter the already generated teams or their saved rule.
-      await choice.selectOption('1');
+      await choice.selectOption('penalty');
       const save = width < 760
         ? page.getByRole('button', { name: 'Guardar', exact: true }).first()
         : page.getByRole('button', { name: 'Guardar equipos y continuar', exact: true });

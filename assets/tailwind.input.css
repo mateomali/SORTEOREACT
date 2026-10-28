@@ -25478,3 +25478,33 @@ html body #mainNav a:focus-visible{outline:3px solid #237343!important;outline-o
 html body #mainNav summary:focus-visible{outline:3px solid #dcebcf!important;outline-offset:-3px!important}
 html body #menuToggle{background:#faf8f1!important;color:#203329!important;border-color:#61806c!important;min-height:44px!important;font-size:14px!important}
 @media(min-width:761px){html body #mainNav{padding:8px!important;border-radius:6px!important}html body #mainNav > details > div{border:1px solid #61806c!important}html body #mainNav > details{border:0!important}html body #mainNav > a{border-bottom:0!important}}
+
+/* Draw configuration: controls first, explanations on demand. */
+.sorteo-react-page :is(.gf-scoring-settings, .gf-separation-settings) {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  padding: 16px; border: 1px solid #cbdcd2; border-radius: 6px;
+  background: #fff; color: #173c2e; font-size: 13px;
+}
+.sorteo-react-page .gf-settings-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.sorteo-react-page .gf-settings-heading :is(h2,h3) { margin: 0; font-size: 15px; line-height: 1.4; font-weight: 800; }
+.sorteo-react-page .gf-settings-heading > span { color: #526b62; font-size: 12px; }
+.sorteo-react-page .gf-scoring-fields { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.sorteo-react-page :is(.gf-scoring-fields, .gf-separation-fields) > label { min-width: 0; font-size: 12px; }
+.sorteo-react-page :is(.gf-scoring-fields, .gf-separation-fields) select { width: 100%; min-width: 0; max-width: none; min-height: 42px; padding: 6px 10px; font-size: 13px; font-weight: 500; border-radius: 6px; }
+.sorteo-react-page .gf-balance-summary { margin: 0; color: #526b62; font-size: 12px; }
+.sorteo-react-page .gf-balance-summary strong { color: #173c2e; font-weight: 600; }
+.sorteo-react-page .gf-scoring-help { min-width: 0; border-top: 1px solid #e0e9e3; padding-top: 8px; }
+.sorteo-react-page .gf-scoring-help > summary { cursor: pointer; min-height: 28px; align-content: center; font-size: 12px; font-weight: 600; }
+.sorteo-react-page .gf-scoring-help-body { display: grid; gap: 12px; padding-top: 12px; max-width: 900px; }
+.sorteo-react-page .gf-scoring-help-body > p { margin: 0; line-height: 1.5; }
+.sorteo-react-page .gf-scoring-help > p { font-size: 12px; line-height: 1.5; color: #526b62; margin: 8px 0 0; }
+.sorteo-react-page .gf-separation-fields { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; align-items: end; gap: 8px; }
+.sorteo-react-page .gf-separation-fields > button { min-height: 42px; font-size: 12px; }
+@media (max-width: 600px) {
+  .sorteo-react-page :is(.gf-scoring-settings, .gf-separation-settings) { padding: 12px; gap: 8px; }
+  .sorteo-react-page .gf-scoring-fields { grid-template-columns: minmax(0,1fr); gap: 8px; }
+  .sorteo-react-page .gf-separation-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .sorteo-react-page .gf-separation-fields > button { grid-column: 1 / -1; min-height: 36px; }
+  .sorteo-react-page .gf-scoring-help-body { gap: 10px; }
+  .sorteo-react-page .gf-scoring-help-body table { font-size: 11px; }
+}

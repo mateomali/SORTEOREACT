@@ -98,7 +98,7 @@ async function generate(players, n, avoid = []) {
   report.push({scenario:'Cross-line cancellation',before:{DEF:context.badEval.lineBalance.details.DEF.gap,MED:context.badEval.lineBalance.details.MED.gap,total:context.badEval.totalBalance},
     after:{DEF:balanced.result.evaluation.lineBalance.details.DEF.gap,MED:balanced.result.evaluation.lineBalance.details.MED.gap,total:balanced.result.evaluation.totalBalance},ms:balanced.ms});
 
-  // Pace takes precedence over line strength and primary-position preference.
+  // With the shared Recorrido/general indicator tied, pace precedes line preferences.
   run(`
     globalThis.paceBad = {...goodEval, paceExcess: 1, adaptationCount: 0, lineQualityCost: 0};
     globalThis.paceGood = {...goodEval, paceExcess: 0, adaptationCount: 1, lineQualityCost: 100};
@@ -108,7 +108,7 @@ async function generate(players, n, avoid = []) {
     enduranceGap: 10, enduranceVariance: 50, diff: 10};
     globalThis.paceBad = {...paceBad, enduranceTierGaps: [0, 0], fastCountSpread: 0,
     enduranceGap: 0, enduranceVariance: 0, diff: 0};`);
-  assert.equal(run('isBetterDraw(paceGood,paceBad)'), true, 'Slow-player balance outranks endurance and total ratings');
+  assert.equal(run('isBetterDraw(paceGood,paceBad)'), true, 'Pace breaks a tie in the shared first-priority indicator');
   assert.equal(run('isBetterDraw(paceBad,paceGood)'), false, 'Other improvements cannot undo pace balance');
   for (const slowTotal of [8, 9, 10]) {
     const players = run(`roster(3).map((p,i)=>({...p,

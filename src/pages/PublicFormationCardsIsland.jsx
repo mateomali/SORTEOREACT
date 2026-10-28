@@ -8,6 +8,8 @@ function readCard(host) {
   const player = {
     id: data.staticPlayerKey,
     position_rating_discount: data.positionRatingDiscount !== '0',
+    position_rating_mode: data.positionRatingMode || 'legacy',
+    rendimiento_historico_ajuste: Number(data.playerHistoryAdjustment || 0),
     nombre: host.querySelector('.formation-player-name')?.textContent.trim() || 'Jugador',
     posicion: data.playerPositions || data.assignedPosition,
     puntuacion: Number(data.playerSkill),

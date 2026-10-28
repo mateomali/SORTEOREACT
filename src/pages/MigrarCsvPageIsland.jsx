@@ -52,7 +52,7 @@ export function MigrarCsvPageIsland() {
 
         <ActionPanel
           title="Subir otro CSV"
-          description="Columnas esperadas: Nombre, Posicion, Velocidad, Puntuacion. Tambien acepta Pase vision e Ida y vuelta si vienen en el archivo."
+          description="Columnas esperadas: Nombre, Posicion, Velocidad, Puntuacion. También acepta Pase visión y Despliegue; los archivos anteriores con ida_y_vuelta siguen siendo compatibles."
         >
           <form method="post" encType="multipart/form-data" className="grid gap-3" data-no-partial>
             <input type="hidden" name="action" value="import_upload" />

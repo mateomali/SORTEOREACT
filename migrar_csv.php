@@ -47,7 +47,7 @@ function import_players_from_csv(string $csvPath): array
         'technique' => array_search('tecnica', $map, true),
         'pass_vision' => array_search('pase_vision', $map, true),
         'rhythm' => array_search('velocidad_numero', $map, true),
-        'stamina' => array_search('ida_y_vuelta', $map, true),
+        'stamina' => array_search('despliegue', $map, true) !== false ? array_search('despliegue', $map, true) : (array_search('recorrido', $map, true) !== false ? array_search('recorrido', $map, true) : array_search('ida_y_vuelta', $map, true)),
         'defense_physical' => array_search('defensa_fisico', $map, true),
         'attack' => array_search('ataque', $map, true),
         'teamwork' => array_search('juego_en_equipo', $map, true),

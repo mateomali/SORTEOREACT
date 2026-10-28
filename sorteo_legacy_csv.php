@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/draw_pots.php';
+require_once __DIR__ . '/lib/draw_separations.php';
 
 require_once __DIR__ . '/lib/director_proposals.php';
 ensure_director_proposals_schema();
@@ -211,9 +212,12 @@ $sorteoLegacyPayload = [
     'proposalMode' => $proposalMode,
     'proposalCsrf' => $proposalMode ? director_proposal_csrf() : '',
     'pots' => draw_pots_template(),
+    'separatedPairs' => $proposalMode && isset($ownProposal['teams'][0]['separated_pairs'])
+        ? draw_separations_validate($ownProposal['teams'][0]['separated_pairs']) : ($legacyMatch ? draw_separations_from_match($legacyMatch) : []),
     'potsCsrf' => draw_pots_csrf(),
     'generatedPots' => !$proposalMode && $legacyMatch ? json_decode((string) ($legacyMatch['draw_pots_json'] ?? 'null'), true) : null,
     'positionRatingDiscount' => (int) ($legacyMatch['position_rating_discount'] ?? 1) === 1,
+    'positionRatingMode' => (string) ($legacyMatch['position_rating_mode'] ?? 'legacy'),
     'matchId' => (int) $legacyMatchId,
     'match' => $legacyMatch ? [
         'id' => (int) $legacyMatch['id'],

@@ -416,9 +416,50 @@ function player_overall_rating(array $player): float
     return player_position_rating($player, player_primary_position($player));
 }
 
+function player_rating_gen(float $value): int
+{
+    if ($value <= 0) return (int) player_rating_policy()['anchors'][0][1];
+    $anchors = array_merge([[0, 0]], player_rating_policy()['anchors']);
+    $rating = max(0.0, min(6.0, $value));
+    for ($i = 0; $i < count($anchors) - 1; $i++) {
+        [$x, $y] = $anchors[$i];
+        [$nextX, $nextY] = $anchors[$i + 1];
+        if ($rating <= $nextX) return (int) round($y + ($nextY - $y) * ($rating - $x) / ($nextX - $x));
+    }
+    return 99;
+}
+
+function player_rating_from_gen(float $value): float
+{
+    $anchors = array_merge([[0, 0]], player_rating_policy()['anchors']);
+    $gen = max(0.0, min(99.0, $value));
+    for ($i = 0; $i < count($anchors) - 1; $i++) {
+        [$x, $y] = $anchors[$i];
+        [$nextX, $nextY] = $anchors[$i + 1];
+        if ($gen <= $nextY) return $x + ($nextX - $x) * ($gen - $y) / ($nextY - $y);
+    }
+    return 6.0;
+}
+
 function player_position_rating(array $player, string $position, bool $ignorePositionFit = false): float
 {
-    if (isset($player['position_rating_discount']) && !(bool) $player['position_rating_discount']) {
+    $mode = (string) ($player['position_rating_mode'] ?? 'legacy');
+    $discount = (bool) ($player['position_rating_discount'] ?? true);
+    if (in_array($mode, ['general', 'penalty', 'skill'], true)) {
+        $basePlayer = $player;
+        unset($basePlayer['position_rating_mode'], $basePlayer['position_rating_discount']);
+        $basePosition = $mode === 'skill' ? $position : player_primary_position($basePlayer);
+        $base = player_position_rating($basePlayer, $basePosition, true);
+        $history = max(-0.25, min(0.25, (float) ($player['rendimiento_historico_ajuste'] ?? 0)));
+        $general = max(1.0, min(6.0, $base + $history));
+        $positions = parse_positions_csv((string) ($player['positions'] ?? ''));
+        $position = strtoupper(trim($position));
+        $fit = $mode !== 'penalty' || $ignorePositionFit || $position === ($positions[0] ?? 'MED')
+            ? 1.0 : ($position === ($positions[1] ?? '') ? 0.95 : 0.9);
+        $general = round($general, 1);
+        return $fit === 1.0 ? $general : player_rating_from_gen(round(player_rating_gen($general) * $fit));
+    }
+    if (!$discount) {
         unset($player['position_rating_discount']);
         return player_best_natural_rating($player);
     }
@@ -429,7 +470,8 @@ function player_position_rating(array $player, string $position, bool $ignorePos
         $total += player_effective_stat($player, $field) * $weight;
     }
     $fit = $ignorePositionFit ? 1.0 : player_position_fit_factor($player, $position);
-    return round(player_apply_regularity_adjustment($total / array_sum($weights), $player) * $fit, 1);
+    $rating = player_apply_regularity_adjustment($total / array_sum($weights), $player) * $fit;
+    return round($mode === 'legacy' ? $rating : max(1.0, min(6.0, $rating)), 1);
 }
 
 function player_best_natural_position(array $player): string

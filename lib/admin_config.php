@@ -117,7 +117,7 @@ function admin_config_position_weight_labels(): array
         'goalkeeper_skill' => 'Arquero',
         'defense_physical' => 'Solidez',
         'rhythm' => 'Velocidad',
-        'stamina' => 'Ida y vuelta',
+        'stamina' => 'Despliegue',
         'technique' => 'Tecnica',
         'pass_vision' => 'Pase/Vision',
         'teamwork' => 'Equipo',
