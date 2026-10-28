@@ -3521,8 +3521,8 @@ function ScoringSettings({ players, mode, onModeChange, discount, onDiscountChan
   const columns = mode === 'legacy' ? [...modes, ['legacy', 'Guardado']] : modes;
   const score = (position, calculation) => playerCardRating(adjustedPositionRating({ ...raw, position_rating_mode: calculation, position_rating_discount: calculation === 'legacy' ? discount : calculation === 'penalty' }, position));
   const selectedStyle = { background: '#eef5f1', fontWeight: 700 };
-  return <section className="gf-scoring-settings" aria-label="Criterios del sorteo">
-    <div className="gf-settings-heading"><h2>Criterios del sorteo</h2><span>Para el próximo sorteo</span></div>
+  return <section className="gf-scoring-settings border-[#b4cbb9]! bg-white! p-3! shadow-none! sm:p-4!" aria-label="Criterios del sorteo">
+    <div className="gf-settings-heading -mx-3 -mt-3 mb-1 rounded-t-md border-b border-[#b4cbb9] bg-[#e5eee2] px-3 py-3 sm:-mx-4 sm:-mt-4 sm:px-4"><h2 className="text-[#173c2e]!">Criterios del sorteo</h2><span className="text-[#395544]!">Para el próximo sorteo</span></div>
     <label className="grid min-w-0 gap-1 text-xs font-bold">Cálculo del puntaje<select id="draw-rating-mode" className={inputClass} value={mode} disabled={disabled} onChange={event => changeMode(event.target.value)} aria-describedby="draw-position-rating-help">
       {modes.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       {mode === 'legacy' ? <option value="legacy">Configuración guardada de esta fecha</option> : null}
@@ -3571,8 +3571,8 @@ function SeparationEditor({ players, pairs, onChange, disabled, proposalMode }) 
   const [second, setSecond] = useState('');
   const names = new Map(players.map(player => [playerKey(player), player.nombre]));
   const exists = pairs.some(pair => pair.includes(first) && pair.includes(second));
-  return <section className="gf-separation-settings" aria-label="Separar jugadores">
-    <div className="gf-settings-heading"><h3>Separar jugadores</h3><span>{pairs.length ? `${pairs.length} pareja${pairs.length === 1 ? '' : 's'}` : 'Sin parejas obligatorias'}</span></div>
+  return <section className="gf-separation-settings border-[#d5c49b]! bg-[#fffdf7]! p-3! shadow-none! sm:p-4!" aria-label="Separar jugadores">
+    <div className="gf-settings-heading -mx-3 -mt-3 rounded-t-md border-b border-[#d5c49b] bg-[#f1e8d2] px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4"><h3 className="text-[#574321]!">Separar jugadores</h3><span className="text-[#695631]!">{pairs.length ? `${pairs.length} pareja${pairs.length === 1 ? '' : 's'}` : 'Sin parejas obligatorias'}</span></div>
     <div className="gf-separation-fields">
       {[['Primer jugador', first, setFirst], ['Segundo jugador', second, setSecond]].map(([label, value, setValue]) => <label key={label} className="grid min-w-0 gap-1">{label}<select aria-label={label} className="min-h-11 min-w-0 rounded border border-[#adc8bb] bg-white px-2" disabled={disabled} value={value} onChange={event => setValue(event.target.value)}><option value="">Elegir jugador</option>{players.map(player => <option key={playerKey(player)} value={playerKey(player)}>{player.nombre}</option>)}</select></label>)}
       <button className="min-h-11 rounded border border-[#adc8bb] px-3 font-bold" type="button" disabled={disabled || !first || !second || first === second || exists || pairs.length >= 100} onClick={() => { onChange(normalizeSeparatedPairs([...pairs, [first, second]])); setFirst(''); setSecond(''); }}>Agregar pareja</button>
@@ -6125,7 +6125,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
   return (
     <section
-      className={`sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5 ${!isFormationEditor ? 'gf-draw-workflow' : mobileMoveSource ? 'max-[760px]:pb-56' : teams ? 'max-[760px]:pb-32' : ''}`}
+      className={`sorteo-page sorteo-react-page mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 text-[#07130f] sm:px-5 lg:gap-4 lg:py-5 ${!isFormationEditor ? 'gf-draw-workflow rounded-lg bg-[#eef1eb] p-2! sm:p-4!' : mobileMoveSource ? 'max-[760px]:pb-56' : teams ? 'max-[760px]:pb-32' : ''}`}
       onDragOver={(event) => {
         if (!dragState) return;
         event.preventDefault();
@@ -6138,7 +6138,7 @@ export function SorteoLegacyPageIsland({ root }) {
         setDragHoverTarget(null);
       }}
     >
-      <div className={`grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4 ${!isFormationEditor ? 'gf-flow-intro' : ''}`}>
+      <div className={`grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4 ${!isFormationEditor ? 'gf-flow-intro border-[#204735]! bg-[#204735]! shadow-none! [&_.gf-workflow-header_h1]:text-white! [&_.gf-workflow-header_p]:text-[#e2ebdf]! [&_.gf-match-summary_span]:text-[#d1dfcd]! [&_[data-draw-status]]:bg-[#e5efdf]! [&_[data-draw-status]]:text-[#204735]! [&_.gf-workflow-progress]:border-[#66816c]! [&_.gf-workflow-progress_li]:border-[#66816c]! [&_.gf-workflow-progress_li]:text-[#d1dfcd]! [&_.gf-workflow-progress_li[data-complete=true]]:text-white! [&_.gf-workflow-progress_li[aria-current=step]]:border-[#dcebcf]! [&_.gf-workflow-progress_li[aria-current=step]]:text-white!' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button className={quietButtonClass} type="button" onClick={() => navigate(payload.links?.back || 'editar_partidos.php')}>
             <Icon name="arrowLeft" />
@@ -6204,11 +6204,11 @@ export function SorteoLegacyPageIsland({ root }) {
           </div>
         </header>
         ) : (
-        <header className="gf-workflow-header">
+        <header className="gf-workflow-header [&_*]:[-webkit-text-fill-color:currentColor]!">
           <div className="gf-heading-row"><h1>Generador GOODFELLAS</h1><strong data-draw-status>{teams ? saveStateLabel : drawReadiness.ready ? 'Listo para generar' : 'Revisar preparación'}</strong></div>
           {payload.match ? <p>{payload.match.title} · {payload.match.matchDate}</p> : null}
           <p className="gf-match-summary">{selectedPlayers.length} jugadores · {numTeams} equipos · {drawReadiness.teamSizeLabel}{drawAnalysis ? ` · Diferencia ${drawAnalysis.diff.toFixed(1)}` : ''} <span>· Media GEN {selectedPlayers.length ? playerCardRating(selectedAverageRating) : '—'}</span></p>
-          <ol className="gf-workflow-progress" aria-label="Progreso del sorteo">
+          <ol className="gf-workflow-progress grid-cols-2! min-[480px]:grid-cols-4!" aria-label="Progreso del sorteo">
             <li data-step="players" data-complete={selectedPlayers.length > 0}><span>{selectedPlayers.length ? '✓' : '○'}</span> Jugadores</li>
             <li data-step="goalkeepers" data-complete={selectedGoalkeepers.length === numTeams || Boolean(teams)}><span>{selectedGoalkeepers.length === numTeams || teams ? '✓' : '○'}</span> Arqueros</li>
             <li data-step="teams" aria-current={!formationsReady ? 'step' : undefined}><span>{formationsReady ? '✓' : '●'}</span> Equipos</li>
@@ -6221,14 +6221,12 @@ export function SorteoLegacyPageIsland({ root }) {
         )}
       </div>
 
-      {!isFormationEditor ? (
+      <div className={`grid gap-4 ${isFormationEditor ? '' : 'gf-workflow-body min-[1100px]:grid-cols-[340px_minmax(0,1fr)]! min-[1100px]:items-start'}`}>
+        {!isFormationEditor ? <div className="grid min-w-0 content-start gap-4" data-draw-preparation>
         <ScoringSettings players={selectedPlayers} mode={positionRatingMode} onModeChange={setPositionRatingMode} discount={positionRatingDiscount} onDiscountChange={setPositionRatingDiscount} disabled={generating || savingDraw || payload.proposalMode} />
-      ) : null}
-
-      <div className={`grid gap-4 ${isFormationEditor ? '' : 'gf-workflow-body'}`}>
         {!isFormationEditor && !payload.proposalMode ? (
-        <aside className={`grid content-start gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm gf-player-preparation`}>
-          <div className="flex items-center justify-between gap-3 border-b border-[#d7e6df] pb-3">
+        <aside className="gf-player-preparation grid content-start gap-3 rounded-lg border border-[#c5cdc4]! bg-white! p-3! shadow-none! sm:p-4!">
+          <div className="-mx-3 -mt-3 flex items-center justify-between gap-3 rounded-t-md border-b border-[#c5cdc4]! bg-[#e9ede7] px-3! py-3! sm:-mx-4 sm:-mt-4 sm:px-4!">
             <div>
               <h2 className="m-0 text-base font-black text-[#07130f]">{playersPanelCollapsed ? `✓ ${selectedPlayers.length} jugadores seleccionados` : 'Jugadores disponibles'}</h2>
               <p className="m-0 text-xs font-semibold text-slate-500">{lockedMatch ? 'Plantel de la fecha' : 'Lista editable local'}</p>
@@ -6356,17 +6354,18 @@ export function SorteoLegacyPageIsland({ root }) {
           )}
         </aside>
         ) : null}
+        </div> : null}
 
         <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'gf-workflow-main'}`}>
           <SeparationEditor players={players} pairs={separatedPairs} disabled={generating || savingDraw} proposalMode={payload.proposalMode} onChange={pairs => { setSeparatedPairs(pairs); markDrawDirty(true); }} />
           {!isFormationEditor ? (
-          <div className="grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm gf-generation-panel">
+          <div className="gf-generation-panel grid gap-4! rounded-lg border border-[#a8bfae]! bg-white! p-3! shadow-none! sm:p-4! [&_.draw-pots-section-title]:-mx-3! [&_.draw-pots-section-title]:-mt-3! [&_.draw-pots-section-title]:rounded-t-md [&_.draw-pots-section-title]:border-0! [&_.draw-pots-section-title]:bg-[#204735]! [&_.draw-pots-section-title]:p-3! [&_.draw-pots-section-title]:text-base! [&_.draw-pots-section-title]:text-white! sm:[&_.draw-pots-section-title]:-mx-4! sm:[&_.draw-pots-section-title]:-mt-4! sm:[&_.draw-pots-section-title]:px-4!">
             <DrawPotsEditor mode={drawMode} onModeChange={setDrawMode} pots={drawPots} onChange={pots => { setDrawPots(pots); setPotsMessage(''); }} onAutoBuild={gap => {
               const roster = selectedPlayers.map(player => ({ ...player, manualGoalkeeper: manualGoalkeepers[playerKey(player)] === true }));
               setDrawPots(buildAutomaticDrawPots(roster, numTeams, gap, drawPots));
               setPotsMessage('Propuesta automática lista. Podés editarla, reordenarla y guardarla.');
             }} players={selectedPlayers} numTeams={numTeams} disabled={generating || savingDraw || savingPots} onSave={savePotsTemplate} saving={savingPots} saved={JSON.stringify(drawPots) === savedPots} message={potsMessage} />
-            <div className="gf-goalkeeper-preparation grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2">
+            <div className="gf-goalkeeper-preparation grid gap-3! rounded-md border border-[#c3cebd]! bg-[#f0f3ed]! p-3!">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h3 className="m-0 text-sm font-black text-[#07130f]">{goalkeeperPanelCollapsed && preparationGoalkeepersReady ? `✓ ${numTeams} arqueros definidos` : 'Definir arqueros'}</h3>
@@ -6953,7 +6952,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <TeamStrengthComparison key={comparisonGeneration} views={teamViews} teamName={getTeamDisplayName} revision={manualActionCount} />
               </>
             ) : (
-              <div className="grid min-h-64 place-items-center rounded-lg border border-dashed border-[#adc8bb] bg-white p-8 text-center text-sm font-semibold text-slate-500">
+              <div className="grid min-h-64 place-items-center rounded-lg border border-dashed border-[#afbdab] bg-[#e5eadd] p-8 text-center text-sm font-semibold text-[#465842]">
                 Genera los equipos para ver la cancha y las cartas compactas.
               </div>
             )}

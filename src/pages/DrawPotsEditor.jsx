@@ -79,7 +79,7 @@ export function DrawPotsEditor({ mode, onModeChange, pots, onChange: updatePots,
   });
   return <section className="grid min-w-0 gap-3 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-3" aria-label="Sorteo por potes" data-draw-pots>
     <div className="draw-pots-setup">
-    <h3 className="draw-pots-section-title">Configuración del sorteo</h3>
+    <h3 className="draw-pots-section-title [-webkit-text-fill-color:currentColor]!">Configuración del sorteo</h3>
     <label className="grid gap-1 text-sm font-bold text-[#07130f]">
       Modalidad de sorteo
       <select className={control} value={mode} onChange={event => onModeChange(event.target.value)} disabled={disabled}>

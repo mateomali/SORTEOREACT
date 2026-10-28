@@ -557,9 +557,14 @@ que se revisaran manualmente. Despliegue representa participacion y desplazamien
 entre defensa, medio y ataque. No es velocidad ni habilita posiciones nuevas.
 El sorteo equilibra Despliegue y puntaje con prioridad compartida 50/50; despues
 afina ritmo, concentracion de lentitud y fuerza por linea.
-Antes del sorteo se puede elegir Puntaje general fijo, Puntaje por habilidad y
-posicion o Calculo anterior. En los dos modos nuevos, el descuento por adaptacion
-es independiente. La vista previa muestra el general por puesto y sus ponderaciones.
+Antes del sorteo, un solo selector permite elegir General fijo, General con
+adaptacion o Habilidad por puesto. General fijo conserva el puntaje en cualquier
+puesto. Adaptacion descuenta directamente sobre el puntaje general: 0% en la
+principal, 5% en la secundaria y 10% en otra (80 pasa a 76 o 72 puntos).
+Habilidad por puesto usa las ponderaciones acordadas sin descuento adicional.
+Jugador para comparar aparece cerrado y permite consultar los tres resultados
+en escala hasta 100, destacando el calculo elegido y las diferencias en puntos.
+Las habilidades que influyen en cada puesto se consultan en otro desplegable.
 La actualizacion agrega automaticamente matches.position_rating_mode con valor
 legacy para conservar el calculo de fechas anteriores. No cambia notas ni requiere
 importar SQL. El selector afecta al proximo sorteo, no a los equipos ya generados.
