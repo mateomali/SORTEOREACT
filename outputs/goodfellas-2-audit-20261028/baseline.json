@@ -1,0 +1,434 @@
+[
+  {
+    "route": "index.php",
+    "width": 320,
+    "status": 200,
+    "viewport": 320,
+    "document": 320,
+    "screenshot": "index-320.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 320,
+    "status": 200,
+    "viewport": 320,
+    "document": 320,
+    "screenshot": "jugadores2-320.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 320,
+    "status": 200,
+    "viewport": 320,
+    "document": 320,
+    "screenshot": "estadisticas-320.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 320,
+    "status": 200,
+    "viewport": 320,
+    "document": 320,
+    "screenshot": "historial-320.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 320,
+    "status": 200,
+    "viewport": 320,
+    "document": 320,
+    "screenshot": "login-320.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 320,
+    "status": 200,
+    "viewport": 320,
+    "document": 320,
+    "screenshot": "propuestas_equipos-320.png",
+    "errors": []
+  },
+  {
+    "route": "index.php",
+    "width": 360,
+    "status": 200,
+    "viewport": 360,
+    "document": 360,
+    "screenshot": "index-360.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 360,
+    "status": 200,
+    "viewport": 360,
+    "document": 360,
+    "screenshot": "jugadores2-360.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 360,
+    "status": 200,
+    "viewport": 360,
+    "document": 360,
+    "screenshot": "estadisticas-360.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 360,
+    "status": 200,
+    "viewport": 360,
+    "document": 360,
+    "screenshot": "historial-360.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 360,
+    "status": 200,
+    "viewport": 360,
+    "document": 360,
+    "screenshot": "login-360.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 360,
+    "status": 200,
+    "viewport": 360,
+    "document": 360,
+    "screenshot": "propuestas_equipos-360.png",
+    "errors": []
+  },
+  {
+    "route": "index.php",
+    "width": 390,
+    "status": 200,
+    "viewport": 390,
+    "document": 390,
+    "screenshot": "index-390.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 390,
+    "status": 200,
+    "viewport": 390,
+    "document": 390,
+    "screenshot": "jugadores2-390.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 390,
+    "status": 200,
+    "viewport": 390,
+    "document": 390,
+    "screenshot": "estadisticas-390.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 390,
+    "status": 200,
+    "viewport": 390,
+    "document": 390,
+    "screenshot": "historial-390.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 390,
+    "status": 200,
+    "viewport": 390,
+    "document": 390,
+    "screenshot": "login-390.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 390,
+    "status": 200,
+    "viewport": 390,
+    "document": 390,
+    "screenshot": "propuestas_equipos-390.png",
+    "errors": []
+  },
+  {
+    "route": "index.php",
+    "width": 430,
+    "status": 200,
+    "viewport": 430,
+    "document": 430,
+    "screenshot": "index-430.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 430,
+    "status": 200,
+    "viewport": 430,
+    "document": 430,
+    "screenshot": "jugadores2-430.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 430,
+    "status": 200,
+    "viewport": 430,
+    "document": 430,
+    "screenshot": "estadisticas-430.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 430,
+    "status": 200,
+    "viewport": 430,
+    "document": 430,
+    "screenshot": "historial-430.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 430,
+    "status": 200,
+    "viewport": 430,
+    "document": 430,
+    "screenshot": "login-430.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 430,
+    "status": 200,
+    "viewport": 430,
+    "document": 430,
+    "screenshot": "propuestas_equipos-430.png",
+    "errors": []
+  },
+  {
+    "route": "index.php",
+    "width": 768,
+    "status": 200,
+    "viewport": 768,
+    "document": 768,
+    "screenshot": "index-768.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 768,
+    "status": 200,
+    "viewport": 768,
+    "document": 768,
+    "screenshot": "jugadores2-768.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 768,
+    "status": 200,
+    "viewport": 768,
+    "document": 768,
+    "screenshot": "estadisticas-768.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 768,
+    "status": 200,
+    "viewport": 768,
+    "document": 768,
+    "screenshot": "historial-768.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 768,
+    "status": 200,
+    "viewport": 768,
+    "document": 768,
+    "screenshot": "login-768.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 768,
+    "status": 200,
+    "viewport": 768,
+    "document": 768,
+    "screenshot": "propuestas_equipos-768.png",
+    "errors": []
+  },
+  {
+    "route": "index.php",
+    "width": 1024,
+    "status": 200,
+    "viewport": 1024,
+    "document": 1024,
+    "screenshot": "index-1024.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 1024,
+    "status": 200,
+    "viewport": 1024,
+    "document": 1024,
+    "screenshot": "jugadores2-1024.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 1024,
+    "status": 200,
+    "viewport": 1024,
+    "document": 1024,
+    "screenshot": "estadisticas-1024.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 1024,
+    "status": 200,
+    "viewport": 1024,
+    "document": 1024,
+    "screenshot": "historial-1024.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 1024,
+    "status": 200,
+    "viewport": 1024,
+    "document": 1024,
+    "screenshot": "login-1024.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 1024,
+    "status": 200,
+    "viewport": 1024,
+    "document": 1024,
+    "screenshot": "propuestas_equipos-1024.png",
+    "errors": []
+  },
+  {
+    "route": "index.php",
+    "width": 1440,
+    "status": 200,
+    "viewport": 1440,
+    "document": 1440,
+    "screenshot": "index-1440.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 1440,
+    "status": 200,
+    "viewport": 1440,
+    "document": 1440,
+    "screenshot": "jugadores2-1440.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 1440,
+    "status": 200,
+    "viewport": 1440,
+    "document": 1440,
+    "screenshot": "estadisticas-1440.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 1440,
+    "status": 200,
+    "viewport": 1440,
+    "document": 1440,
+    "screenshot": "historial-1440.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 1440,
+    "status": 200,
+    "viewport": 1440,
+    "document": 1440,
+    "screenshot": "login-1440.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 1440,
+    "status": 200,
+    "viewport": 1440,
+    "document": 1440,
+    "screenshot": "propuestas_equipos-1440.png",
+    "errors": []
+  },
+  {
+    "route": "index.php",
+    "width": 1920,
+    "status": 200,
+    "viewport": 1920,
+    "document": 1920,
+    "screenshot": "index-1920.png",
+    "errors": []
+  },
+  {
+    "route": "jugadores2.php",
+    "width": 1920,
+    "status": 200,
+    "viewport": 1920,
+    "document": 1920,
+    "screenshot": "jugadores2-1920.png",
+    "errors": []
+  },
+  {
+    "route": "estadisticas.php",
+    "width": 1920,
+    "status": 200,
+    "viewport": 1920,
+    "document": 1920,
+    "screenshot": "estadisticas-1920.png",
+    "errors": []
+  },
+  {
+    "route": "historial.php",
+    "width": 1920,
+    "status": 200,
+    "viewport": 1920,
+    "document": 1920,
+    "screenshot": "historial-1920.png",
+    "errors": []
+  },
+  {
+    "route": "login.php",
+    "width": 1920,
+    "status": 200,
+    "viewport": 1920,
+    "document": 1920,
+    "screenshot": "login-1920.png",
+    "errors": []
+  },
+  {
+    "route": "propuestas_equipos.php",
+    "width": 1920,
+    "status": 200,
+    "viewport": 1920,
+    "document": 1920,
+    "screenshot": "propuestas_equipos-1920.png",
+    "errors": []
+  }
+]

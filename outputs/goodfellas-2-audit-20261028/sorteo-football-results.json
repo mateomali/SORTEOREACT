@@ -1,0 +1,187 @@
+[
+  {
+    "scenario": "2 teams",
+    "ms": 398,
+    "candidates": 72,
+    "metrics": [
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.3,
+        "midfieldStrength": 7.300000000000001,
+        "attackStrength": 4.4,
+        "totalStrength": 23,
+        "averageQuality": 3.8333333333333335,
+        "slowCount": 1
+      },
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.300000000000001,
+        "midfieldStrength": 7.3,
+        "attackStrength": 4.1,
+        "totalStrength": 22.700000000000003,
+        "averageQuality": 3.7833333333333337,
+        "slowCount": 1
+      }
+    ],
+    "gaps": {
+      "ARQ": 0,
+      "DEF": 8.881784197001252e-16,
+      "MED": 8.881784197001252e-16,
+      "DEL": 0.3000000000000007
+    },
+    "totalGap": 0.04999999999999982
+  },
+  {
+    "scenario": "3 teams",
+    "ms": 10205,
+    "candidates": 128,
+    "metrics": [
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.6000000000000005,
+        "midfieldStrength": 7.3,
+        "attackStrength": 4.7,
+        "totalStrength": 23.599999999999998,
+        "averageQuality": 3.933333333333333,
+        "slowCount": 0
+      },
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.6,
+        "midfieldStrength": 7.6,
+        "attackStrength": 4.4,
+        "totalStrength": 23.599999999999998,
+        "averageQuality": 3.933333333333333,
+        "slowCount": 1
+      },
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.6,
+        "midfieldStrength": 7.9,
+        "attackStrength": 4.1,
+        "totalStrength": 23.6,
+        "averageQuality": 3.9333333333333336,
+        "slowCount": 1
+      }
+    ],
+    "gaps": {
+      "ARQ": 0,
+      "DEF": 8.881784197001252e-16,
+      "MED": 0.6000000000000005,
+      "DEL": 0.6000000000000005
+    },
+    "totalGap": 4.440892098500626e-16
+  },
+  {
+    "scenario": "4 teams",
+    "ms": 34061,
+    "candidates": 49,
+    "metrics": [
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.9,
+        "midfieldStrength": 7.6,
+        "attackStrength": 4.7,
+        "totalStrength": 24.2,
+        "averageQuality": 4.033333333333333,
+        "slowCount": 0
+      },
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.9,
+        "midfieldStrength": 7.6,
+        "attackStrength": 5,
+        "totalStrength": 24.5,
+        "averageQuality": 4.083333333333333,
+        "slowCount": 1
+      },
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.9,
+        "midfieldStrength": 8.2,
+        "attackStrength": 4.1,
+        "totalStrength": 24.2,
+        "averageQuality": 4.033333333333333,
+        "slowCount": 1
+      },
+      {
+        "goalkeeperStrength": 4,
+        "defenseStrength": 7.8999999999999995,
+        "midfieldStrength": 8.2,
+        "attackStrength": 4.4,
+        "totalStrength": 24.5,
+        "averageQuality": 4.083333333333333,
+        "slowCount": 0
+      }
+    ],
+    "gaps": {
+      "ARQ": 0,
+      "DEF": 8.881784197001252e-16,
+      "MED": 0.5999999999999996,
+      "DEL": 0.9000000000000004
+    },
+    "totalGap": 0.04999999999999982
+  },
+  {
+    "scenario": "7 DEF / 5 MED / 6 DEL",
+    "ms": 17551,
+    "counts": {
+      "ARQ": [
+        1,
+        1,
+        1
+      ],
+      "DEF": [
+        2,
+        3,
+        2
+      ],
+      "MED": [
+        2,
+        1,
+        2
+      ],
+      "DEL": [
+        2,
+        2,
+        2
+      ]
+    }
+  },
+  {
+    "scenario": "Cross-line cancellation",
+    "before": {
+      "DEF": 6,
+      "MED": 6,
+      "total": 0
+    },
+    "after": {
+      "DEF": 0,
+      "MED": 0,
+      "total": 0
+    },
+    "ms": 181
+  },
+  {
+    "scenario": "Previous algorithm vs new algorithm; unequal keepers",
+    "before": {
+      "gaps": {
+        "ARQ": 2.8,
+        "DEF": 0.2,
+        "MED": 0.5,
+        "DEL": 0.6
+      },
+      "totalAverageGap": 0.02857142857142847
+    },
+    "after": {
+      "gaps": {
+        "ARQ": 2.8000000000000003,
+        "DEF": 0.40000000000000036,
+        "MED": 0.1999999999999993,
+        "DEL": 1.1999999999999993
+      },
+      "totalAverageGap": 0.20000000000000018
+    },
+    "ms": 834
+  }
+]
