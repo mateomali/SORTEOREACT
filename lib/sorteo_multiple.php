@@ -331,7 +331,7 @@ function multiple_draw_winning_option_id(int $matchId): int
     return (int) ($stmt->fetchColumn() ?: 0);
 }
 
-function multiple_draw_apply_option(int $matchId, int $optionId, bool $automaticTieBreak = false): void
+function multiple_draw_apply_option(int $matchId, int $optionId, bool $automaticTieBreak = false, bool $communityPublication = false): void
 {
     ensure_multiple_draw_schema();
     $match = repo_match_by_id($matchId);
@@ -353,7 +353,8 @@ function multiple_draw_apply_option(int $matchId, int $optionId, bool $automatic
     }
 
     $pdo = db();
-    $pdo->beginTransaction();
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) $pdo->beginTransaction();
     try {
         $lock = $pdo->prepare('SELECT * FROM matches WHERE id = ? FOR UPDATE');
         $lock->execute([$matchId]);
@@ -365,12 +366,12 @@ function multiple_draw_apply_option(int $matchId, int $optionId, bool $automatic
         if ($freshJson === false) throw new RuntimeException('La propuesta ya no existe. Recarga la fecha.');
         $teams = json_decode((string) $freshJson, true);
         if (!is_array($teams) || !$teams) throw new RuntimeException('Equipos invalidos.');
-        if (!empty($match['director_proposals_enabled'])) {
-            if (!empty($match['multi_draw_winner_option_id'])) { $pdo->commit(); return; }
+        if (!empty($match['director_proposals_enabled']) && !$communityPublication) {
+            if (!empty($match['multi_draw_winner_option_id'])) { if ($ownsTransaction) $pdo->commit(); return; }
             if (time() < multiple_draw_deadline($match)) throw new RuntimeException('La votacion todavia esta abierta.');
             $winner = multiple_draw_winning_option_id($matchId);
             if ($winner > 0 && $winner !== $optionId) throw new RuntimeException('Debe publicarse la propuesta mas votada.');
-            if ($winner === 0 && !is_admin() && !$automaticTieBreak) { $pdo->commit(); return; }
+            if ($winner === 0 && !is_admin() && !$automaticTieBreak) { if ($ownsTransaction) $pdo->commit(); return; }
             if ($winner === 0) {
                 $options = multiple_draw_options($matchId);
                 $maxVotes = max(array_column($options, 'vote_count'));
@@ -457,7 +458,7 @@ function multiple_draw_apply_option(int $matchId, int $optionId, bool $automatic
         )->execute(['oid' => $optionId, 'players_per_team' => $teamSize, 'mid' => $matchId]);
         $pdo->prepare('UPDATE match_draw_options SET selected_at = IF(id = :oid, NOW(), NULL) WHERE match_id = :mid')
             ->execute(['oid' => $optionId, 'mid' => $matchId]);
-        $pdo->commit();
+        if ($ownsTransaction) $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();

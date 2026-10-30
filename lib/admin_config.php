@@ -36,6 +36,7 @@ function ensure_admin_config_schema(): void
         $pdo->exec('ALTER TABLE matches ADD COLUMN rental_court_id INT UNSIGNED NULL AFTER title');
     }
     admin_config_seed_defaults();
+    $pdo->exec("UPDATE app_settings SET setting_value = '6' WHERE setting_key = 'redraw_limit_default' AND setting_value = '3'");
 }
 
 function admin_config_default_position_weights_json(): string
@@ -48,7 +49,7 @@ function admin_config_seed_defaults(): void
     $defaults = [
         'game_duration_minutes_default' => '10',
         'allow_redraw_default' => '1',
-        'redraw_limit_default' => '3',
+        'redraw_limit_default' => '6',
         'director_proposal_start_minutes' => '1440',
         'director_proposal_lock_minutes' => '120',
         'multi_draw_count_default' => '3',
@@ -97,7 +98,7 @@ function admin_config_settings(): array
     $settings = [
         'game_duration_minutes_default' => '10',
         'allow_redraw_default' => '1',
-        'redraw_limit_default' => '3',
+        'redraw_limit_default' => '6',
         'director_proposal_start_minutes' => '1440',
         'director_proposal_lock_minutes' => '120',
         'multi_draw_count_default' => '3',
@@ -144,7 +145,7 @@ function admin_config_save_settings(array $input): void
     if ($startHours === false || $closeHours === false || $startHours <= $closeHours || $startHours > 168 || $closeHours < 0 || round($startHours * 60) <= round($closeHours * 60)) throw new RuntimeException('El inicio debe ser anterior al cierre, entre 0 y 168 horas antes del partido.');
     admin_config_set_default('director_proposal_start_minutes', (string) round($startHours * 60));
     admin_config_set_default('allow_redraw_default', isset($input['allow_redraw_default']) ? '1' : '0');
-    admin_config_set_default('redraw_limit_default', (string) max(0, min(20, (int) ($input['redraw_limit_default'] ?? 3))));
+    admin_config_set_default('redraw_limit_default', (string) max(0, min(20, (int) ($input['redraw_limit_default'] ?? 6))));
     admin_config_set_default('multi_draw_count_default', (string) max(1, min(10, (int) ($input['multi_draw_count_default'] ?? 3))));
     admin_config_set_default('multi_draw_lock_minutes_default', (string) max(0, min(1440, (int) ($input['multi_draw_lock_minutes_default'] ?? 60))));
     if (isset($input['director_proposal_lock_hours'])) {

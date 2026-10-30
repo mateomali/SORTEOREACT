@@ -1,0 +1,107 @@
+DESPLIEGUE SEGURO EN HOSTINGER (sitio existente)
+================================================
+
+QUE ES ESTE BUNDLE
+------------------
+Actualizacion de codigo de la aplicacion. NO es una instalacion desde cero:
+no trae configuracion, ni base de datos, ni fotos de jugadores.
+
+COMPARATIVA DE JUGADORES EN EL SORTEO
+-----------------------------------
+Ida y vuelta pasa a llamarse Despliegue conservando las valoraciones existentes,
+que se revisaran manualmente. Despliegue representa participacion y desplazamiento
+entre defensa, medio y ataque. No es velocidad ni habilita posiciones nuevas.
+El sorteo equilibra Despliegue y puntaje con prioridad compartida 50/50; despues
+afina ritmo, concentracion de lentitud y fuerza por linea.
+Antes del sorteo, un solo selector permite elegir General fijo, General con
+adaptacion o Habilidad por puesto. General fijo conserva el puntaje en cualquier
+puesto. Adaptacion descuenta directamente sobre el puntaje general: 0% en la
+principal, 5% en la secundaria y 10% en otra (80 pasa a 76 o 72 puntos).
+Habilidad por puesto usa las ponderaciones acordadas sin descuento adicional.
+Jugador para comparar aparece cerrado y permite consultar los tres resultados
+en escala hasta 100, destacando el calculo elegido y las diferencias en puntos.
+Las habilidades que influyen en cada puesto se consultan en otro desplegable.
+La actualizacion agrega automaticamente matches.position_rating_mode con valor
+legacy para conservar el calculo de fechas anteriores. No cambia notas ni requiere
+importar SQL. El selector afecta al proximo sorteo, no a los equipos ya generados.
+Separar jugadores permite parejas, ternas para triangulares y grupos de cuatro para cuadrangulares, con un jugador por equipo. La seccion Arqueros y restricciones permite guardar ambas configuraciones juntas antes de generar equipos y recuperarlas al recargar la fecha. Se agrega automaticamente matches.draw_preparation_json sin importar SQL;
+el servidor rechaza guardados que las incumplan. El analisis propone intercambios
+con su antes/despues de Despliegue, movilidad, puntaje y fuerza por linea.
+
+En el generador de sorteo y en el editor de formaciones, el boton
+"Analizar equipos" muestra equivalencias jugador por jugador entre equipos,
+considerando posicion, sector y puntaje efectivo, sin repetir jugadores.
+Incluye diferencias por pareja y saldo acumulado para explicar el equilibrio.
+Se actualiza al mover jugadores. Es una lectura del resultado del sorteo,
+no una reconstruccion del orden de seleccion. No requiere importar SQL.
+Despues de subir, recargar con Ctrl+F5 y verificar el boton debajo de las
+canchas, la comparativa y los movimientos en escritorio y celular.
+
+PARTIDOS EN VIVO Y ANDROID
+-------------------------
+Incluye el sistema en vivo actualizado y goodfellas.apk version 1.3.
+Con 3 o 4 equipos se finaliza al llegar a 3 goles o al vencer el tiempo.
+Con 2 equipos no rige el limite de 3 goles; el partido dura 60 minutos.
+Solo el empate del primer partido usa el equipo que marco primero para
+definir prioridad. Con 0-0 inicial se solicita elegir la prioridad.
+Instalar la APK sobre la app anterior, sin desinstalar. Actualizar Android
+System WebView, activar los avisos sonoros y comprobar volumen y voz en
+espanol en el telefono. Mantener la app visible para recibir los avisos.
+La pantalla se mantiene encendida en Partidos en vivo y el reloj se
+resincroniza al regresar a la app. No se garantiza sonido en segundo plano.
+
+NO INCLUYE (a proposito)
+------------------------
+  config.php          -> tus credenciales de produccion. El servidor conserva el suyo.
+  hostinger_diag.php  -> diagnostico sin login que filtraba datos de la base y rutas.
+  scripts/            -> scripts CLI de importacion/migracion, accesibles por HTTP.
+  SQL, CSV, Markdown, package.json, vite.config.js, capturas, src/, tests/, docs/.
+
+ANTES DE SUBIR
+--------------
+1. Copia de seguridad de los archivos del servidor.
+2. Copia de seguridad de la base de datos (hPanel > Bases de datos > Exportar, o backup.php).
+3. Anota la version de PHP del hosting (debe ser 8.0 o superior).
+
+COMO SUBIR
+----------
+4. Extrae el ZIP en la carpeta actual de la aplicacion (donde esta index.php),
+   sobrescribiendo solo los archivos incluidos.
+5. NO borres la carpeta del sitio antes de subir. Se conservan:
+     config.php, uploads/, logs/, y todos los datos existentes.
+6. El ZIP incluye uploads/.htaccess con el mismo contenido que ya tenias; sirve
+   para que un despliegue en carpeta limpia tambien quede protegido. No borra fotos.
+7. El ZIP incluye goodfellas.apk para que el boton "Descarga la app" de la home
+   siga funcionando. Si tu APK del servidor es mas nuevo, no lo sobrescribas.
+
+DESPUES DE SUBIR
+----------------
+8. Verifica que config.php siga en el servidor y que uploads/ conserve las fotos.
+9. Comprueba en el navegador: inicio, login, jugadores, sorteo, capitanes,
+   encuentros, historial, estadisticas, perfil y junta de votaciones.
+10. Confirma que estos devuelven 404 (es lo esperado):
+      /hostinger_diag.php
+      /scripts/
+      /lib/helpers.php
+      /includes/header.php
+      /database.sql
+    Si /hostinger_diag.php responde con texto, borra ese archivo del servidor.
+
+ENDURECIMIENTO PENDIENTE (RECOMENDADO)
+--------------------------------------
+11. config.php en el servidor contiene DB_PASS y ADMIN_PASSWORD con valores por
+    defecto escritos en el codigo. Muevelos a variables de entorno de Hostinger
+    (GOODFELLAS_DB_PASS, GOODFELLAS_ADMIN_PASSWORD, GOODFELLAS_DB_USER) y cambia
+    esas contrasenas: tambien estan en el repositorio local.
+12. Comprueba que la contrasena del panel de admin no sea la misma que la de MySQL.
+
+ROLLBACK
+--------
+13. Si algo falla: restaura la copia de seguridad de los archivos y de la base.
+    Esta version incluye la reconciliacion de goles de 2026 confirmada por el usuario.
+    Al abrir jugadores, estadisticas o perfil, crea player_goal_corrections y guarda
+    una correccion por jugador una sola vez para los 32 nombres de la lista.
+    No cambia goles por partido, participaciones ni estados de jugadores.
+    Los jugadores fuera de la lista conservan sus goles; los goles nuevos siguen sumando.
+    La correccion afecta al acumulado general anual y al historico; no se distribuye
+    entre canchas ni intervalos de fechas. Conserva el backup de la base para rollback.

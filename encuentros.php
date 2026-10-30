@@ -580,7 +580,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $playersPerTeam = max(1, min(12, (int) ($_POST['players_per_team'] ?? 9)));
         $maxDiff = 0.7;
         $allowRedraw = (int) ($_POST['allow_redraw'] ?? ($adminSettings['allow_redraw_default'] ?? 1)) === 1 ? 1 : 0;
-        $redrawLimit = max(0, min(20, (int) ($_POST['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 3))));
+        $redrawLimit = max(0, min(20, (int) ($_POST['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 6))));
         $multiDrawCount = max(1, min(10, (int) ($_POST['multi_draw_count'] ?? ($adminSettings['multi_draw_count_default'] ?? 3))));
         $multiDrawLockMinutes = max(0, min(1440, (int) ($_POST['multi_draw_lock_minutes'] ?? ($adminSettings['multi_draw_lock_minutes_default'] ?? 60))));
         $valuationMode = normalize_match_valuation_mode($_POST['valuation_mode'] ?? match_valuation_default_mode());
@@ -834,7 +834,7 @@ $form = $editing ?: [
 ];
 $form['players_per_team'] = $form['players_per_team'] ?? 9;
 $form['allow_redraw'] = (int) ($form['allow_redraw'] ?? ($adminSettings['allow_redraw_default'] ?? 1));
-$form['redraw_limit'] = max(0, min(20, (int) ($form['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 3))));
+$form['redraw_limit'] = max(0, min(20, (int) ($form['redraw_limit'] ?? ($adminSettings['redraw_limit_default'] ?? 6))));
 $form['redraw_count'] = max(0, (int) ($form['redraw_count'] ?? 0));
 $form['multi_draw_count'] = max(1, min(10, (int) ($form['multi_draw_count'] ?? ($adminSettings['multi_draw_count_default'] ?? 3))));
 $form['multi_draw_lock_minutes'] = max(0, min(1440, (int) ($form['multi_draw_lock_minutes'] ?? ($adminSettings['multi_draw_lock_minutes_default'] ?? 60))));

@@ -568,7 +568,7 @@ Las habilidades que influyen en cada puesto se consultan en otro desplegable.
 La actualizacion agrega automaticamente matches.position_rating_mode con valor
 legacy para conservar el calculo de fechas anteriores. No cambia notas ni requiere
 importar SQL. El selector afecta al proximo sorteo, no a los equipos ya generados.
-Separar jugadores permite parejas, ternas para triangulares y grupos de cuatro para cuadrangulares, con un jugador por equipo. El boton Guardar restricciones de esta fecha permite conservarlas antes de generar equipos y reutilizarlas al recargar la fecha;
+Separar jugadores permite parejas, ternas para triangulares y grupos de cuatro para cuadrangulares, con un jugador por equipo. La seccion Arqueros y restricciones permite guardar ambas configuraciones juntas antes de generar equipos y recuperarlas al recargar la fecha. Se agrega automaticamente matches.draw_preparation_json sin importar SQL;
 el servidor rechaza guardados que las incumplan. El analisis propone intercambios
 con su antes/despues de Despliegue, movilidad, puntaje y fuerza por linea.
 
@@ -580,6 +580,37 @@ Se actualiza al mover jugadores. Es una lectura del resultado del sorteo,
 no una reconstruccion del orden de seleccion. No requiere importar SQL.
 Despues de subir, recargar con Ctrl+F5 y verificar el boton debajo de las
 canchas, la comparativa y los movimientos en escritorio y celular.
+
+EQUILIBRIO AUTOMATICO
+--------------------
+Las fechas activas con limite anterior de 3 resorteos pasan a 6; las finalizadas se conservan.
+Las invitaciones permiten una generacion inicial y 6 resorteos por apertura, sin repetir
+un reparto ya mostrado. Si no se encuentra otro reparto valido se conserva el actual.
+El control de equilibrio esta oculto para invitados y siempre funciona automaticamente.
+El equilibrio objetivo inicia en 0.0. Se elige el primer margen en pasos de 0.1
+con candidatos validos encontrados, respetando arqueros, restricciones y puestos.
+En triangulares y cuadrangulares la busqueda es heuristica y no demuestra
+el minimo global. Puede desactivarse el automatico para usar el control manual.
+
+INVITACIONES AL SORTEO
+---------------------
+El administrador puede copiar un enlace de invitacion desde la pagina del sorteo.
+Quien recibe el enlace puede editar restricciones, generar equipos, ajustar formaciones
+y exportar JPG o texto sin login. El plantel, sus datos y los arqueros definidos
+son de solo lectura en la invitacion.
+No puede guardar equipos, arqueros, restricciones, potes ni disponibilidad en la fecha.
+El enlace incluye una clave aleatoria por fecha; compartirlo concede acceso al plantel.
+Se agrega automaticamente matches.draw_invitation_token. No requiere importar SQL.
+
+PROPUESTAS Y VOTACION DE FORMACIONES
+-----------------------------------
+Los enlaces de invitacion y votacion piden elegir jugador en un popup con busqueda.
+Desde Inicio del administrador se inicia y finaliza la votacion de cada fecha.
+Los votos y sus nombres son visibles y se actualizan cada 10 segundos.
+Al cerrar, el administrador publica una de las propuestas mas votadas.
+Las tablas community_ballots, community_proposals y community_votes se crean
+al utilizar el sistema. No importar el SQL historico para instalar esta funcion.
+Comprobar ambos enlaces en una sesion sin login y revisar la vista movil.
 
 PARTIDOS EN VIVO Y ANDROID
 -------------------------

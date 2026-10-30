@@ -26,6 +26,8 @@ function draw_separations_validate($raw): array
 
 function draw_separations_from_match(array $match): array
 {
+    $preparation = json_decode((string) ($match['draw_preparation_json'] ?? '{}'), true);
+    if (isset($preparation['separated_pairs'])) return draw_separations_validate($preparation['separated_pairs']);
     $audit = json_decode((string) ($match['draw_audit_snapshot'] ?? '{}'), true);
     return draw_separations_validate($audit['criteria']['separated_pairs'] ?? []);
 }

@@ -27,6 +27,7 @@ require_once __DIR__ . '/lib/live_match_repository.php';
 $directResultMode = (string) ($_POST['direct_result'] ?? $_GET['direct_result'] ?? '') === '1';
 if (is_admin() || is_directivo()) {
     ensure_control_schema();
+    ensure_draw_pots_schema();
     ensure_live_match_schema();
     $liveMatchId = (int) ($_POST['match_id'] ?? $_GET['match_id'] ?? 0);
     $liveMatch = $liveMatchId > 0 ? repo_match_by_id($liveMatchId) : null;
@@ -319,6 +320,7 @@ function finish_save_match_formations(int $matchId, array $participants, array $
             if (!is_array($audit)) $audit = [];
             if (!is_array($audit['criteria'] ?? null)) $audit['criteria'] = [];
             $audit['criteria']['separated_pairs'] = $separatedPairs;
+    db()->prepare("UPDATE matches SET draw_preparation_json = JSON_SET(COALESCE(draw_preparation_json, '{}'), '$.separated_pairs', JSON_EXTRACT(?, '$')) WHERE id = ?")->execute([json_encode($separatedPairs), $matchId]);
             $pdo->prepare('UPDATE matches SET draw_audit_snapshot = ? WHERE id = ?')->execute([json_encode($audit, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $matchId]);
         }
         $pdo->commit();
@@ -1439,6 +1441,7 @@ require __DIR__ . '/includes/header.php';
               'positionRatingDiscount' => (int) ($selectedMatch['position_rating_discount'] ?? 1) === 1,
               'separatedPairs' => draw_separations_from_match($selectedMatch),
               'potsCsrf' => draw_pots_csrf(),
+              'savedGoalkeeperIds' => json_decode((string) ($selectedMatch['draw_preparation_json'] ?? '{}'), true)['goalkeeper_ids'] ?? null,
               'generatedPots' => json_decode((string) ($selectedMatch['draw_pots_json'] ?? 'null'), true),
               'matchId' => (int) $selectedMatch['id'],
               'match' => [

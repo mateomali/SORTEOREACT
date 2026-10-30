@@ -3,6 +3,14 @@ declare(strict_types=1);
 
 function ensure_draw_pots_schema(): void
 {
+    db()->exec("UPDATE matches SET redraw_limit = 6 WHERE redraw_limit = 3 AND status <> 'finalizado'");
+    db()->exec("UPDATE app_settings SET setting_value = '6' WHERE setting_key = 'redraw_limit_default' AND setting_value = '3'");
+    if (!schema_column_exists(db(), 'matches', 'draw_invitation_token')) {
+        db()->exec('ALTER TABLE matches ADD COLUMN draw_invitation_token VARCHAR(64) NULL');
+    }
+    if (!schema_column_exists(db(), 'matches', 'draw_preparation_json')) {
+        db()->exec('ALTER TABLE matches ADD COLUMN draw_preparation_json TEXT NULL');
+    }
     if (!schema_column_exists(db(), 'matches', 'draw_pots_json')) {
         db()->exec('ALTER TABLE matches ADD COLUMN draw_pots_json TEXT NULL');
     }

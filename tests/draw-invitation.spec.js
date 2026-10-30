@@ -1,0 +1,68 @@
+const { test, expect } = require('@playwright/test');
+const { execFileSync } = require('node:child_process');
+const fixture = (action, id) => execFileSync('php', ['tests/sorteo-workflow-fixture.php', action, ...(id ? [String(id)] : [])], { encoding:'utf8' }).trim();
+test('invitation allows anonymous generation and export without changing the date', async ({ page, browser }) => {
+  test.setTimeout(120000);
+  const id = Number(fixture('create'));
+  let guest;
+  try {
+    await page.goto(`http://127.0.0.1:8000/login.php?next=${encodeURIComponent(`sorteo_legacy_csv.php?match_id=${id}`)}`);
+    await page.getByRole('button', { name:'Administrador', exact:true }).click();
+    await page.locator('#adminPassword').fill(process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026');
+    await page.getByRole('button', { name:'Entrar como admin', exact:true }).click();
+    const adminPayload = await page.locator('[data-react-island="sorteo_legacy_page"]').evaluate(node => JSON.parse(node.dataset.payload));
+    const ids = adminPayload.players.filter(p => (p.posicion || '').split('/').includes('ARQ')).slice(0, 2).map(p => p.id);
+    const prepared = await page.request.post('http://127.0.0.1:8000/guardar_separaciones.php', { data:{ match_id:id, csrf:adminPayload.potsCsrf, separated_pairs:[], goalkeeper_ids:ids } });
+    expect((await prepared.json()).ok).toBe(true);
+    const url = await page.getByLabel('Enlace de invitación', { exact:true }).inputValue();
+    const before = fixture('inspect', id);
+    guest = await browser.newContext({ acceptDownloads:true });
+    const tab = await guest.newPage();
+    const writes = []; tab.on('request', req => { if (req.method() === 'POST') writes.push(req.url()); });
+    const invalid = await guest.request.get(url.replace(/invite=[a-f0-9]+/, 'invite=' + '0'.repeat(64)));
+    expect(invalid.status()).toBe(404);
+    await tab.goto(url);
+    await expect(tab.getByText('Sorteo de invitado:', { exact:false })).toBeVisible();
+    await expect(tab.getByRole('button', { name:/Guardar/ })).toHaveCount(0);
+    const payload = await tab.locator('[data-react-island="sorteo_legacy_page"]').evaluate(node => JSON.parse(node.dataset.payload));
+    const identity = tab.getByRole('dialog', { name:'Que jugador sos', exact:true });
+    await expect(identity).toBeVisible();
+    await identity.getByLabel('Buscar jugador').fill(payload.communityPlayers[0].name);
+    await identity.getByLabel('Que jugador sos', { exact:true }).selectOption(String(payload.communityPlayers[0].id));
+    await identity.getByRole('button', { name:'Continuar', exact:true }).click();
+    const keepers = tab.locator('.gf-goalkeeper-preparation');
+    await expect(keepers.getByRole('button', { name:'Editar', exact:true })).toHaveCount(0);
+    expect(payload.savedGoalkeeperIds).toEqual(ids);
+    for (const input of await tab.locator('#jugadores-container input').all()) await expect(input).toBeDisabled();
+    for (const button of await tab.locator('#jugadores-container button[aria-label^="Editar "]').all()) await expect(button).toBeDisabled();
+    const restrictions = tab.getByRole('region', { name:'Separar jugadores', exact:true });
+    await restrictions.getByLabel('Agregar jugador a la restricción', { exact:true }).selectOption(String(ids[0]));
+    await restrictions.getByLabel('Agregar jugador a la restricción', { exact:true }).selectOption(String(ids[1]));
+    await restrictions.getByRole('button', { name:'Agregar restricción', exact:true }).click();
+    await expect(restrictions.getByRole('button', { name:/Quitar/, includeHidden:true })).toHaveCount(1);
+    await tab.locator('#generateTeamsButton').click();
+    await expect(tab.locator('[data-sorteo-team-card]')).toHaveCount(2, { timeout:90000 });
+    await expect(tab.getByLabel('Equilibrio objetivo', { exact:true })).toHaveCount(0);
+    await expect(tab.getByText('Equilibrio autom\u00e1tico desde 0,0', { exact:true })).toHaveCount(0);
+    const fingerprint = () => tab.locator('[data-sorteo-team-card]').evaluateAll(cards => cards.map(card => Array.from(card.querySelectorAll('[data-sorteo-drag-player]')).map(node => node.dataset.playerKey).sort().join(',')).sort().join('|'));
+    const seen = new Set([await fingerprint()]);
+    for (let round = 0; round < 6; round++) {
+      await tab.locator('#generateTeamsButton').click();
+      await expect(tab.locator('#generateTeamsButton')).not.toHaveText('Generando...', { timeout:90000 });
+      const signature = await fingerprint();
+      expect(seen.has(signature)).toBe(false);
+      seen.add(signature);
+    }
+    expect(seen.size).toBe(7);
+    await expect(tab.locator('#generateTeamsButton')).toBeDisabled();
+    await tab.locator('#download-controls summary').click();
+    const downloading = tab.waitForEvent('download');
+    await tab.locator('#download-controls').getByRole('button', { name:'Descargar texto', exact:true }).click();
+    expect((await downloading).suggestedFilename()).toMatch(/\.txt$/);
+    await expect(tab.getByRole('button', { name:/Guardar/ })).toHaveCount(0);
+    const rejected = await guest.request.post('http://127.0.0.1:8000/guardar_sorteo.php', { data:{ match_id:id, invite:new URL(url).searchParams.get('invite') }, maxRedirects:0 });
+    expect([302, 303, 401, 403]).toContain(rejected.status());
+    expect(writes).toEqual([]);
+    expect(fixture('inspect', id)).toBe(before);
+  } finally { if (guest) await guest.close(); fixture('delete', id); }
+});

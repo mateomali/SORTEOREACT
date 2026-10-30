@@ -248,7 +248,7 @@ function ensure_control_schema(): array
         ['matches', 'players_per_team', 'players_per_team TINYINT UNSIGNED NOT NULL DEFAULT 9 AFTER num_teams'],
         ['matches', 'max_diff', 'max_diff DECIMAL(4,1) NOT NULL DEFAULT 0.7 AFTER players_per_team'],
         ['matches', 'allow_redraw', 'allow_redraw TINYINT(1) NOT NULL DEFAULT 1 AFTER max_diff'],
-        ['matches', 'redraw_limit', 'redraw_limit TINYINT UNSIGNED NOT NULL DEFAULT 3 AFTER allow_redraw'],
+        ['matches', 'redraw_limit', 'redraw_limit TINYINT UNSIGNED NOT NULL DEFAULT 6 AFTER allow_redraw'],
         ['matches', 'redraw_count', 'redraw_count TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER redraw_limit'],
         ['matches', 'multi_draw_count', 'multi_draw_count TINYINT UNSIGNED NOT NULL DEFAULT 3 AFTER redraw_count'],
         ['matches', 'multi_draw_lock_minutes', 'multi_draw_lock_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 60 AFTER multi_draw_count'],

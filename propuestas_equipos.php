@@ -44,6 +44,7 @@ $activePage = 'propuestas_equipos.php';
 require __DIR__ . '/includes/header.php';
 ?>
 <section class="card proposal-page">
+<a class="btn btn-primary" href="votacion_formaciones.php">Propuestas y votos de jugadores</a>
 
   <?php if (!$match): ?>
     <h1>Próximo partido</h1>

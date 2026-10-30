@@ -48,6 +48,7 @@ if (is_admin()) {
     $roleLabel = 'Admin';
     $roleMenu = [
         'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
         'crear_partido.php' => 'Crear fecha',
         'editar_partidos.php' => 'Editar fechas',
         'configuracion.php' => 'Configuración',
@@ -61,6 +62,7 @@ if (is_admin()) {
     $roleLabel = 'Directivo';
     $roleMenu = [
         'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
         'perfil.php' => 'Mi perfil',
         'editar_partidos.php' => 'Fechas',
         'junta_votaciones.php' => 'Votaciones',
@@ -71,6 +73,7 @@ if (is_admin()) {
     $roleLabel = 'Jugador';
     $roleMenu = [
         'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
         'perfil.php' => 'Mi perfil',
         'estadisticas.php' => 'Mis stats',
         'logout.php' => 'Salir',
@@ -79,6 +82,7 @@ if (is_admin()) {
     $roleLabel = 'Usuario';
     $roleMenu = [
         'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
         'perfil.php' => 'Mi perfil',
         'logout.php' => 'Salir',
     ];
@@ -86,12 +90,14 @@ if (is_admin()) {
     $roleLabel = 'Invitado';
     $roleMenu = [
         'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
         'junta_votaciones.php' => 'Votacion',
         'logout.php' => 'Salir',
     ];
 } else {
     $roleMenu = [
         'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
         'login.php' => 'Ingresar',
     ];
 }
@@ -103,6 +109,7 @@ if (is_admin()) {
     $roleMenuGroups = [
         'Fechas' => [
             'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
             'crear_partido.php' => $roleMenu['crear_partido.php'] ?? 'Crear fecha',
             'editar_partidos.php' => $roleMenu['editar_partidos.php'] ?? 'Editar fechas',
             'historial.php' => $publicMenu['historial.php'] ?? 'Historial',
@@ -144,6 +151,7 @@ if (is_admin()) {
         ],
         'Fechas' => [
             'propuestas_equipos.php' => 'Próximo partido',
+            'votacion_formaciones.php' => 'Propuestas y votos',
             'historial.php' => $publicMenu['historial.php'] ?? 'Historial',
         ],
     ];

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export function DrawPotsEditor({ mode, onModeChange, pots, onChange: updatePots, onAutoBuild, players, numTeams, disabled, onSave, saving, saved, message }) {
+export function DrawPotsEditor({ allowSave = true, mode, onModeChange, pots, onChange: updatePots, onAutoBuild, players, numTeams, disabled, onSave, saving, saved, message }) {
   const [assembly, setAssembly] = useState('automatic');
   const [maxGeneralGap, setMaxGeneralGap] = useState(5);
   const [past, setPast] = useState([]);
@@ -161,10 +161,10 @@ export function DrawPotsEditor({ mode, onModeChange, pots, onChange: updatePots,
         {players.every(player => membership.has(String(player.id))) ? <p className="m-0 pt-2 text-sm text-[#526b62]">Todos los convocados tienen pote.</p> : null}
       </div>
       <p className="m-0 text-xs text-[#526b62]">Todos los seleccionados deben tener un pote. Los jugadores ausentes conservan su grupo para próximas fechas. Eliminar un pote deja a sus jugadores sin pote.</p>
-      <div className="draw-pots-save flex flex-wrap items-center gap-2">
+      {allowSave && <div className="draw-pots-save flex flex-wrap items-center gap-2">
         <button className={button} type="button" disabled={disabled || saving || saved} onClick={onSave}>{saving ? 'Guardando…' : 'Guardar potes para próximas fechas'}</button>
         <span className="text-xs text-[#526b62]" role="status">{message || (saved ? 'Plantilla guardada' : 'Cambios sin guardar en la plantilla')}</span>
-      </div>
+      </div>}
     </> : null}
   </section>;
 }

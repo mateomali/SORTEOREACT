@@ -227,7 +227,7 @@ if ($drawMode !== 'random') {
 }
 if ($redrawIncrement > 0) {
     $allowRedraw = (int) ($match['allow_redraw'] ?? 1) === 1;
-    $redrawLimit = max(0, (int) ($match['redraw_limit'] ?? 3));
+    $redrawLimit = max(0, (int) ($match['redraw_limit'] ?? 6));
     $redrawCount = max(0, (int) ($match['redraw_count'] ?? 0));
     if (!$allowRedraw) {
         http_response_code(409);
@@ -486,6 +486,7 @@ if ($proposalMode) {
 $pdo = db();
 $pdo->beginTransaction();
 try {
+    db()->prepare("UPDATE matches SET draw_preparation_json = JSON_SET(COALESCE(draw_preparation_json, '{}'), '$.separated_pairs', JSON_EXTRACT(?, '$')) WHERE id = ?")->execute([json_encode($separatedPairs), $matchId]);
     $pdo->prepare('DELETE FROM captain_picks WHERE match_id = :mid')->execute(['mid' => $matchId]);
     $pdo->prepare('DELETE FROM captain_drafts WHERE match_id = :mid')->execute(['mid' => $matchId]);
 

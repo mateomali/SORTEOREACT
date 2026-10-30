@@ -158,9 +158,14 @@ function parsePayload(root) {
       positionRatingMode: ratingMode,
       mode: String(parsed.mode || 'sorteo'),
       proposalMode: parsed.proposalMode === true,
+      invitationMode: parsed.invitationMode === true,
+      invitationUrl: String(parsed.invitationUrl || ''),
+      communityCsrf: String(parsed.communityCsrf || ''),
+      communityPlayers: Array.isArray(parsed.communityPlayers) ? parsed.communityPlayers : [],
       proposalCsrf: String(parsed.proposalCsrf || ''),
       pots: Array.isArray(parsed.pots) ? parsed.pots : [],
       potsCsrf: String(parsed.potsCsrf || ''),
+      savedGoalkeeperIds: Array.isArray(parsed.savedGoalkeeperIds) ? parsed.savedGoalkeeperIds.map(String) : null,
       generatedPots: Array.isArray(parsed.generatedPots) ? parsed.generatedPots : null,
       separatedPairs: normalizeSeparatedPairs(parsed.separatedPairs),
       matchId: Number(parsed.matchId || 0),
@@ -171,7 +176,7 @@ function parsePayload(root) {
       pairHistory: parsed.pairHistory || {},
       drawBalanceWeights: parsed.drawBalanceWeights || {},
       allowRedraw: parsed.allowRedraw !== false,
-      redrawLimit: Math.max(0, Number(parsed.redrawLimit ?? 3)),
+      redrawLimit: Math.max(0, Number(parsed.redrawLimit ?? 6)),
       redrawCount: Math.max(0, Number(parsed.redrawCount || 0)),
       hasSavedDraw: parsed.hasSavedDraw === true,
       savedDrawSignature: typeof parsed.savedDrawSignature === 'string' ? parsed.savedDrawSignature : '',
@@ -198,7 +203,7 @@ function parsePayload(root) {
       pairHistory: {},
       drawBalanceWeights: {},
       allowRedraw: true,
-      redrawLimit: 3,
+      redrawLimit: 6,
       redrawCount: 0,
       hasSavedDraw: false,
       savedDrawSignature: '',
@@ -1806,10 +1811,23 @@ function selectTopDraw(pool, best, avoidSignatures) {
   return near[Math.floor(Math.random() * near.length)];
 }
 
-function collectTopDraw(pool, item) {
+function collectTopDraw(pool, item, best = null, options = {}) {
   if (!pool.some(candidate => drawSignature(candidate.teams) === drawSignature(item.teams))) pool.push(item);
   pool.sort((a, b) => isBetterDraw(a.evaluation, b.evaluation) ? -1 : isBetterDraw(b.evaluation, a.evaluation) ? 1 : 0);
-  return pool.slice(0, 64);
+  if (!options.autoBalance) return pool.slice(0, 64);
+  const closest = pool.slice().sort((a, b) => a.evaluation.diff - b.evaluation.diff).slice(0, 32);
+  return [...new Map([...pool.slice(0, 32), ...closest].map(candidate => [drawSignature(candidate.teams), candidate])).values()];
+}
+
+function selectAutomaticBalanceDraw(pool, avoidSignatures = new Set()) {
+  const valid = pool.filter(item => item.evaluation.valid && !avoidSignatures.has(drawSignature(item.teams)));
+  if (!valid.length) return null;
+  const minimum = Math.min(...valid.map(item => item.evaluation.diff));
+  // Equivalent to testing 0.0, 0.1, ...; avoid repeating the full search.
+  const usedMaxDiff = Math.max(0, Math.ceil((minimum - 1e-6) * 10) / 10);
+  const eligible = valid.filter(item => item.evaluation.diff <= usedMaxDiff + 1e-6);
+  const selected = selectTopDraw(eligible, eligible[0], avoidSignatures);
+  return selected ? { ...selected, usedMaxDiff } : null;
 }
 
 async function refineDrawFormations(pool, pairHistory, weights, avoidSignatures, options) {
@@ -1829,6 +1847,7 @@ async function refineDrawFormations(pool, pairHistory, weights, avoidSignatures,
   }
   if (!refined.length) return null;
   refined.sort((a, b) => isBetterDraw(a.evaluation, b.evaluation) ? -1 : isBetterDraw(b.evaluation, a.evaluation) ? 1 : 0);
+  if (options.autoBalance) return selectAutomaticBalanceDraw(refined, avoidSignatures);
   return selectTopDraw(refined, refined[0], avoidSignatures);
 }
 
@@ -1974,7 +1993,7 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
         best = teams;
         bestEval = evaluation;
       }
-      topPool = collectTopDraw(topPool, { teams, evaluation }, { teams: best, evaluation: bestEval });
+      topPool = collectTopDraw(topPool, { teams, evaluation }, { teams: best, evaluation: bestEval }, options);
       return;
     }
 
@@ -2005,13 +2024,13 @@ async function generateExactTwoTeamCandidate(players, teamSize, maxDiff, pairHis
     for (const item of topPool.slice(0, 8)) {
       const improved = await improveBySwapsAsync(item.teams, teamSize, pairHistory, weights, yieldToUi, options.pots);
       if (improved.evaluation.valid && !avoidSignatures.has(drawSignature(improved.teams))) {
-        topPool = collectTopDraw(topPool, improved);
+        topPool = collectTopDraw(topPool, improved, null, options);
       }
     }
   }
   const selectedDraw = await refineDrawFormations(topPool, pairHistory, weights, avoidSignatures, options);
   if (!selectedDraw) return null;
-  return { ...selectedDraw, bestEvaluation: bestEval, topSolutions: topPool.length, evaluatedCandidates, exhaustive: true, usedMaxDiff: Math.max(maxDiff, selectedDraw.evaluation.diff) };
+  return { ...selectedDraw, bestEvaluation: bestEval, topSolutions: topPool.length, evaluatedCandidates, exhaustive: true, usedMaxDiff: options.autoBalance ? selectedDraw.usedMaxDiff : Math.max(maxDiff, selectedDraw.evaluation.diff) };
 }
 
 async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, weights, avoidSignatures = new Set(), options = {}) {
@@ -2052,7 +2071,7 @@ async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, we
       best = teams;
       bestEval = evaluation;
     }
-    topPool = collectTopDraw(topPool, { teams, evaluation, potReferenceTeams }, { teams: best, evaluation: bestEval });
+    topPool = collectTopDraw(topPool, { teams, evaluation, potReferenceTeams }, { teams: best, evaluation: bestEval }, options);
   };
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await yieldToUi();
@@ -2077,7 +2096,7 @@ async function generateBalancedTeams(players, numTeams, maxDiff, pairHistory, we
   if (!best) return null;
   const selectedDraw = await refineDrawFormations(topPool, pairHistory, weights, avoidSignatures, options);
   if (!selectedDraw) return null;
-  return { ...selectedDraw, bestEvaluation: bestEval, topSolutions: topPool.length, evaluatedCandidates, exhaustive: false, usedMaxDiff: Math.max(maxDiff, selectedDraw.evaluation.diff) };
+  return { ...selectedDraw, bestEvaluation: bestEval, topSolutions: topPool.length, evaluatedCandidates, exhaustive: false, usedMaxDiff: options.autoBalance ? selectedDraw.usedMaxDiff : Math.max(maxDiff, selectedDraw.evaluation.diff) };
 }
 
 function assignmentSignatureForTeam(team, assignments = {}) {
@@ -3565,34 +3584,74 @@ function ScoringSettings({ players, mode, onModeChange, discount, onDiscountChan
   </section>;
 }
 
-function SeparationEditor({ players, pairs, onChange, disabled, proposalMode, numTeams, matchId, csrf }) {
-  const [selection, setSelection] = useState(['', '', '', '']);
-  const [size, setSize] = useState(2);
+function CommunityPlayerPicker({ players, value, onChange, disabled, label = 'Que jugador sos' }) {
+  const [query, setQuery] = useState('');
+  const normalize = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const filtered = players.filter(player => normalize(player.name).includes(normalize(query)));
+  return <div className="community-player-picker">
+    <label>Buscar jugador<input type="search" autoComplete="off" value={query} disabled={disabled} onChange={event => { setQuery(event.target.value); onChange(''); }} /></label>
+    <label>{label}<select size={6} aria-label={label} value={value} disabled={disabled} onChange={event => onChange(event.target.value)}><option value="" disabled>Elegir mi nombre</option>{filtered.map(player => <option key={player.id} value={player.id}>{player.name}</option>)}</select></label>
+    {!filtered.length && <p role="status">No hay jugadores con ese nombre.</p>}
+  </div>;
+}
+
+function CompactDrawDialog({ open, onClose, title, children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const dialog = ref.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    return () => { dialog.close(); document.body.style.overflow = previousOverflow; };
+  }, [open]);
+  return <dialog ref={ref} className="gf-compact-dialog" aria-label={title} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose(); } }}>
+    <header className="gf-compact-dialog-head"><h2>{title}</h2><button type="button" aria-label={`Cerrar ${title}`} onClick={onClose}>×</button></header>
+    <div className="gf-compact-dialog-body">{children}</div>
+  </dialog>;
+}
+
+function SeparationEditor({ players, pairs, onChange, disabled, proposalMode, numTeams, matchId, csrf, goalkeeperIds, children }) {
+  const [selection, setSelection] = useState([]);
+  const [restrictionsOpen, setRestrictionsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const names = new Map(players.map(player => [playerKey(player), player.nombre]));
-  const count = Math.min(size, numTeams);
-  const group = selection.slice(0, count);
+  const keeperSnapshot = JSON.stringify(goalkeeperIds);
+  useEffect(() => { setMessage(''); }, [keeperSnapshot]);
+  const group = selection;
   const exists = pairs.some(pair => JSON.stringify([...pair].sort()) === JSON.stringify([...group].sort()));
   async function save() {
     setSaving(true); setMessage('');
     try {
-      const response = await fetch('guardar_separaciones.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: matchId, csrf, separated_pairs: pairs }) });
+      const response = await fetch('guardar_separaciones.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: matchId, csrf, separated_pairs: pairs, goalkeeper_ids: goalkeeperIds }) });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.message || 'No se pudieron guardar las restricciones.');
-      setMessage('Restricciones guardadas para esta fecha.');
+      setMessage('Arqueros y restricciones guardados para esta fecha.');
     } catch (error) { setMessage(error.message); }
     finally { setSaving(false); }
   }
   return <section className="gf-separation-settings border-[#d5c49b]! bg-[#fffdf7]! p-3! shadow-none! sm:p-4!" aria-label="Separar jugadores">
-    <div className="gf-settings-heading -mx-3 -mt-3 rounded-t-md border-b border-[#d5c49b] bg-[#f1e8d2] px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4"><h3 className="text-[#574321]!">Separar jugadores</h3><span className="text-[#695631]!">{pairs.length ? `${pairs.length} restricciones` : 'Sin parejas obligatorias'}</span></div>
-    {numTeams > 2 && <label>Cantidad de jugadores<select aria-label="Cantidad de jugadores a separar" disabled={disabled} value={count} onChange={event => setSize(Number(event.target.value))}>{Array.from({ length: numTeams - 1 }, (_, i) => i + 2).map(n => <option key={n} value={n}>{n} jugadores</option>)}</select></label>}
-    <div className="gf-separation-fields">
-      {group.map((value, i) => <label key={i} className="grid min-w-0 gap-1">{['Primer jugador', 'Segundo jugador', 'Tercer jugador', 'Cuarto jugador'][i]}<select aria-label={['Primer jugador', 'Segundo jugador', 'Tercer jugador', 'Cuarto jugador'][i]} className="min-h-11 min-w-0 rounded border border-[#adc8bb] bg-white px-2" disabled={disabled || saving} value={value} onChange={event => setSelection(previous => previous.map((id, index) => index === i ? event.target.value : id))}><option value="">Elegir jugador</option>{players.map(player => <option key={playerKey(player)} value={playerKey(player)}>{player.nombre}</option>)}</select></label>)}
-      <button className="min-h-11 rounded border border-[#adc8bb] px-3 font-bold" type="button" disabled={disabled || saving || group.some(id => !id) || new Set(group).size !== count || exists || pairs.length >= 100} onClick={() => { onChange(normalizeSeparatedPairs([...pairs, group])); setSelection(['', '', '', '']); setMessage('Cambios sin guardar.'); }}>{count === 2 ? 'Agregar pareja' : count === 3 ? 'Agregar terna' : 'Agregar grupo de 4'}</button>
+    <div className="gf-settings-heading -mx-3 -mt-3 rounded-t-md border-b border-[#d5c49b] bg-[#f1e8d2] px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4"><h3 className="text-[#574321]!">Arqueros y restricciones</h3><span className="text-[#695631]!">{pairs.length ? `${pairs.length} restricciones` : 'Sin restricciones guardadas'}</span></div>
+    {children}
+    <div className="grid min-w-0 gap-2">
+      <label className="grid min-w-0 gap-1">Agregar jugadores que no pueden jugar juntos
+        <select aria-label="Agregar jugador a la restricción" className="min-h-11 min-w-0 rounded border border-[#adc8bb] bg-white px-2" value="" disabled={disabled || saving || group.length >= numTeams} onChange={event => { const id = event.target.value; if (id) setSelection(current => current.includes(id) || current.length >= numTeams ? current : [...current, id]); }}>
+          <option value="">Elegir jugador para añadir al grupo</option>
+          {players.filter(player => !group.includes(playerKey(player))).map(player => <option key={playerKey(player)} value={playerKey(player)}>{player.nombre}</option>)}
+        </select>
+      </label>
+      <p className="m-0 text-xs text-[#695631]">Añadí entre 2 y {numTeams} jugadores. Ninguno de los integrantes del grupo podrá compartir equipo.</p>
+      {group.length > 0 && <ul aria-label="Jugadores de la nueva restricción" className="m-0 grid list-none gap-1 p-0">{group.map(id => <li key={id} className="flex min-w-0 items-center justify-between gap-2 border-b border-[#d7e6df] py-1"><span>{names.get(id) || `Jugador ${id}`}</span><button type="button" className="min-h-9 rounded border border-[#adc8bb] px-2" disabled={disabled || saving} aria-label={`Quitar del grupo a ${names.get(id) || id}`} onClick={() => setSelection(current => current.filter(value => value !== id))}>Quitar del grupo</button></li>)}</ul>}
+      <button className="min-h-11 justify-self-start rounded border border-[#adc8bb] px-3 font-bold" type="button" disabled={disabled || saving || group.length < 2 || group.length > numTeams || exists || pairs.length >= 100} onClick={() => { onChange(normalizeSeparatedPairs([...pairs, group])); setSelection([]); setMessage('Cambios sin guardar.'); }}>Agregar restricción</button>
+      {exists && <p role="alert" className="m-0 text-xs text-[#695631]">Ese grupo ya tiene una restricción.</p>}
     </div>
-    {pairs.length ? <ul className="m-0 grid list-none gap-2 p-0">{pairs.map((rule, index) => <li key={rule.join('-')} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#d7e6df] pt-2"><span>{rule.map(id => names.get(id) || `Jugador ${id}`).join(' y ')} · un jugador por equipo{rule.some(id => !names.has(id)) ? ' (se aplica a los convocados)' : ''}</span><button type="button" disabled={disabled || saving} onClick={() => { onChange(pairs.filter((_, i) => i !== index)); setMessage('Cambios sin guardar.'); }} aria-label={`Quitar separación entre ${rule.map(id => names.get(id) || id).join(' y ')}`}>Quitar</button></li>)}</ul> : null}
-    {!proposalMode && matchId > 0 && <button type="button" className="min-h-11 rounded border border-[#adc8bb] px-3" disabled={disabled || saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar restricciones de esta fecha'}</button>}
+    <button type="button" className="min-h-11 rounded border border-[#adc8bb] px-3 text-left font-bold" onClick={() => setRestrictionsOpen(true)} aria-haspopup="dialog">Ver restricciones ({pairs.length})</button>
+    <CompactDrawDialog open={restrictionsOpen} onClose={() => setRestrictionsOpen(false)} title="Estos jugadores no pueden jugar juntos">
+    {pairs.length ? <ul className="m-0 grid list-none gap-2 p-0">{pairs.map((rule, index) => <li key={rule.join('-')} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#d7e6df] pt-2"><span>{rule.map(id => names.get(id) || `Jugador ${id}`).join(' y ')}{rule.some(id => !names.has(id)) ? ' (se aplica a los convocados)' : ''}</span><button type="button" className="gf-remove-restriction" disabled={disabled || saving} onClick={() => { onChange(pairs.filter((_, i) => i !== index)); setMessage('Cambios sin guardar.'); }} aria-label={`Quitar separación entre ${rule.map(id => names.get(id) || id).join(' y ')}`}>×</button></li>)}</ul> : null}
+      {!pairs.length && <p>No hay restricciones agregadas.</p>}
+    </CompactDrawDialog>
+    {!proposalMode && matchId > 0 && <button type="button" className="min-h-11 rounded border border-[#adc8bb] px-3" disabled={disabled || saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar arqueros y restricciones'}</button>}
     {message && <p role="status">{message}</p>}
     <details className="gf-scoring-help"><summary>Cómo funcionan las separaciones</summary><p>Cada integrante del grupo debe quedar en un equipo distinto. Se aplican al generar; los equipos actuales conservan su distribución hasta que hagas un intercambio o un nuevo sorteo. {proposalMode ? 'Estas reglas se usan en esta propuesta.' : 'Podés guardarlas antes del sorteo y reutilizarlas en esta fecha.'}</p></details>
   </section>;
@@ -3745,15 +3804,21 @@ export function SorteoLegacyPageIsland({ root }) {
     return next;
   }, [initialTeams]);
   const [players, setPlayers] = useState(() => payload.players.map(normalizePlayer));
-  const [manualGoalkeepers, setManualGoalkeepers] = useState(() => initialManualGoalkeepers(payload.players.map(normalizePlayer)));
+  const [manualGoalkeepers, setManualGoalkeepers] = useState(() => payload.savedGoalkeeperIds === null ? initialManualGoalkeepers(payload.players.map(normalizePlayer)) : Object.fromEntries(payload.savedGoalkeeperIds.map(id => [id, true])));
   const [numTeams] = useState(payload.numTeams);
-  const [maxDiff, setMaxDiff] = useState(0.7);
+  const [maxDiff, setMaxDiff] = useState(0);
+  const [autoBalance, setAutoBalance] = useState(true);
   const [drawMode, setDrawMode] = useState('standard');
   const [positionRatingDiscount, setPositionRatingDiscount] = useState(payload.proposalMode ? payload.positionRatingDiscount !== false : false);
   const [positionRatingMode, setPositionRatingMode] = useState(payload.proposalMode ? payload.positionRatingMode : 'skill');
   const [drawPots, setDrawPots] = useState(payload.pots);
   const [savedPots, setSavedPots] = useState(() => JSON.stringify(payload.pots));
   const [savingPots, setSavingPots] = useState(false);
+  const [postulationOpen, setPostulationOpen] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(Boolean(payload.invitationMode));
+  const [postulationAuthor, setPostulationAuthor] = useState('');
+  const [postulating, setPostulating] = useState(false);
+  const [postulationMessage, setPostulationMessage] = useState('');
   const [potsMessage, setPotsMessage] = useState('');
   const [generatedPots, setGeneratedPots] = useState(payload.generatedPots);
   const [separatedPairs, setSeparatedPairs] = useState(payload.separatedPairs);
@@ -3899,7 +3964,7 @@ export function SorteoLegacyPageIsland({ root }) {
     () => selectedPlayers.filter((player) => manualGoalkeepers[playerKey(player)] === true),
     [manualGoalkeepers, selectedPlayers],
   );
-  const preparationGoalkeepers = teams ? teams.flat().filter(player => (assignments[playerKey(player)] || player.assigned_position || getPrimaryPlayerPosition(player)) === 'ARQ') : selectedGoalkeepers;
+  const preparationGoalkeepers = selectedGoalkeepers;
   const preparationGoalkeepersReady = preparationGoalkeepers.length === numTeams;
   const goalkeeperLimitReached = selectedGoalkeepers.length >= numTeams;
   const availabilityAdjustedCount = useMemo(
@@ -3961,6 +4026,7 @@ export function SorteoLegacyPageIsland({ root }) {
   }, [availabilityAdjustedCount, drawMode, drawPots, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.redrawLimit, redrawsRemaining, selectedGoalkeepers.length, selectedPlayers]);
 
   const savePotsTemplate = async () => {
+    if (payload.invitationMode) return;
     setSavingPots(true);
     setPotsMessage('');
     try {
@@ -4025,6 +4091,7 @@ export function SorteoLegacyPageIsland({ root }) {
   }, [getTeamColor]);
 
   const persistPlayerAvailability = useCallback(async (playerId, percent) => {
+    if (payload.invitationMode) return;
     if (!payload.matchId) return;
     try {
       const response = await fetch('guardar_estado_jugadores.php', {
@@ -4051,6 +4118,7 @@ export function SorteoLegacyPageIsland({ root }) {
   }, [teams]);
 
   const updatePlayerAvailability = useCallback((player, percent, persist = false) => {
+    if (payload.invitationMode) return;
     const key = playerKey(player);
     const nextPercent = normalizeAvailabilityPercent(percent);
     const updateOne = (item) => (playerKey(item) === key ? normalizePlayer({ ...item, availability_percent: nextPercent }, 0) : item);
@@ -4064,6 +4132,7 @@ export function SorteoLegacyPageIsland({ root }) {
   }, [markDrawDirty, persistPlayerAvailability, teams]);
 
   const toggleManualGoalkeeper = useCallback((player) => {
+    if (payload.invitationMode) return;
     const key = playerKey(player);
     setManualGoalkeepers((current) => {
       const next = { ...current };
@@ -4173,9 +4242,7 @@ export function SorteoLegacyPageIsland({ root }) {
     setSuccess('');
     const rawSelected = withSeparatedPairs([(lockedMatch ? players.slice() : players.filter((player) => player.selected))
       .map(player => ({ ...player, position_rating_discount: positionRatingMode === 'legacy' ? positionRatingDiscount : positionRatingMode === 'penalty', position_rating_mode: positionRatingMode }))], separatedPairs)[0];
-    const naturalGoalkeepers = rawSelected.filter((player) => getPrimaryPlayerPosition(player) === 'ARQ');
-    const requiredNaturalKeys = new Set(naturalGoalkeepers.length === numTeams ? naturalGoalkeepers.map(playerKey) : []);
-    const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true || requiredNaturalKeys.has(playerKey(player))).map(playerKey));
+    const selectedGoalkeeperKeys = new Set(rawSelected.filter((player) => manualGoalkeepers[playerKey(player)] === true).map(playerKey));
     const selectedWithGoalkeepers = rawSelected.map((player) => (
       selectedGoalkeeperKeys.has(playerKey(player)) ? { ...player, manualGoalkeeper: true } : player
     ));
@@ -4216,7 +4283,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setError(`Ya se usaron los ${payload.redrawLimit} re-sorteos permitidos para esta fecha.`);
       return null;
     }
-    if (nextGenerationIsRedraw && !window.confirm('Vas a rehacer el sorteo actual. Se reemplazan los equipos generados en pantalla.')) {
+    if (nextGenerationIsRedraw && !payload.invitationMode && !window.confirm('Vas a rehacer el sorteo actual. Se reemplazan los equipos generados en pantalla.')) {
       return null;
     }
 
@@ -4226,6 +4293,7 @@ export function SorteoLegacyPageIsland({ root }) {
     };
 
     setGenerating(true);
+    if (autoBalance) setMaxDiff(0);
     setGenerationProgress(0);
     await advanceGenerationStage('Preparando arqueros');
     try {
@@ -4244,7 +4312,7 @@ export function SorteoLegacyPageIsland({ root }) {
       await advanceGenerationStage('Buscando equipos distintos y minimizando diferencia');
       result = await generateBalancedTeams(candidates, numTeams, Math.min(Number(maxDiff), STRICT_MAX_DIFF),
         payload.pairHistory, payload.drawBalanceWeights, avoidSignatures,
-        { yieldToUi, onProgress: reportProgress, pots });
+        { yieldToUi, onProgress: reportProgress, pots, autoBalance });
       if (!result) {
         if (separatedPairs.length) {
           setError('No se encontró otro reparto válido respetando las parejas a separar y las demás reglas. Revisá las parejas, los potes o los puestos disponibles. Los equipos actuales se conservan.');
@@ -4255,7 +4323,11 @@ export function SorteoLegacyPageIsland({ root }) {
       }
       await advanceGenerationStage('Validando sorteo');
       const signature = drawSignature(result.teams);
-      if (signature) seenDrawSignatures.current.add(signature);
+      if (!signature || avoidSignatures.has(signature)) {
+        setError('No se encontro un reparto nuevo. Los equipos actuales se conservan.');
+        return null;
+      }
+      seenDrawSignatures.current.add(signature);
       setTeams(result.teams);
       setGeneratedPots(pots);
       setBenches({});
@@ -4270,7 +4342,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setPlayerExchanges([]);
       setAnalysisVisible(false);
       setManualComparisonBefore(null);
-      setMaxDiff(Math.min(Number(maxDiff), STRICT_MAX_DIFF).toFixed(1));
+      setMaxDiff(autoBalance ? result.usedMaxDiff.toFixed(1) : Math.min(Number(maxDiff), STRICT_MAX_DIFF).toFixed(1));
       if (nextGenerationIsRedraw) setRedrawsUsedThisSession((value) => value + 1);
       setGeneratedOnce(true);
       setSaveState('dirty');
@@ -4283,7 +4355,7 @@ export function SorteoLegacyPageIsland({ root }) {
         ? ` Arqueros de emergencia: ${prepared.emergencyGoalkeepers.map((player) => player.nombre).join(', ')}.`
         : '';
       const balanceMessage = `Mejor resultado encontrado entre ${result.evaluatedCandidates} combinaciones validas, equilibrando defensa, medio y ataque. Diferencia de despliegue: ${result.evaluation.enduranceGap.toFixed(2)}. Diferencia de puntos: ${result.evaluation.diff.toFixed(2)}.`;
-      setSuccess(`${pots ? 'Sorteo por potes con compensación de cantidad y fuerza. ' : ''}${balanceMessage}${emergencyMessage}${result.evaluation.diff > STRICT_MAX_DIFF ? ' La búsqueda no encontró un reparto distinto con diferencia de 2 puntos o menos; se muestra el mejor encontrado.' : ''}`);
+      setSuccess(`${autoBalance ? `Equilibrio automático: margen ${result.usedMaxDiff.toFixed(1)} entre los candidatos encontrados. ` : ''}${pots ? 'Sorteo por potes con compensación de cantidad y fuerza. ' : ''}${balanceMessage}${emergencyMessage}${result.evaluation.diff > STRICT_MAX_DIFF ? ' La búsqueda no encontró un reparto distinto con diferencia de 2 puntos o menos; se muestra el mejor encontrado.' : ''}`);
       return result.teams;
     } catch (error) {
       setError(error.message || 'No se pudo generar el sorteo. Intentá nuevamente.');
@@ -4293,7 +4365,7 @@ export function SorteoLegacyPageIsland({ root }) {
       setGenerationStage('');
       setGenerationProgress(0);
     }
-  }, [applyDefaultFormationVariants, positionRatingDiscount, positionRatingMode, drawMode, drawPots, separatedPairs, lockedMatch, manualGoalkeepers, maxDiff, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
+  }, [applyDefaultFormationVariants, positionRatingDiscount, positionRatingMode, drawMode, drawPots, separatedPairs, lockedMatch, manualGoalkeepers, maxDiff, autoBalance, nextGenerationIsRedraw, numTeams, payload.allowRedraw, payload.drawBalanceWeights, payload.pairHistory, payload.redrawLimit, players, redrawsRemaining, scrollTeamsIntoView, teams]);
 
   useEffect(() => {
     const previous = window.generarEquipos;
@@ -4311,6 +4383,7 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const updatePlayer = (updated) => {
+    if (payload.invitationMode) return;
     setPlayers((current) => current.map((player) => (playerKey(player) === playerKey(updated) ? normalizePlayer(updated, 0) : player)));
     setFormModal(null);
   };
@@ -4548,6 +4621,7 @@ export function SorteoLegacyPageIsland({ root }) {
         separated_pairs: separatedPairs,
         mobility: { very_slow_max: 2, slow_max: 3, debt_formula: 'max(0, 3 - effective_speed)^2', priority: ['slow_count_excess', 'very_slow_spread', 'mobility_debt_gap', 'same_sector_concentration'] },
         max_diff_requested: Number(maxDiff || 0),
+        automatic_balance: autoBalance,
         strict_max_diff: STRICT_MAX_DIFF,
         flexible_max_diff: FLEXIBLE_MAX_DIFF,
         rules: drawAnalysis.ruleChecks,
@@ -4589,7 +4663,7 @@ export function SorteoLegacyPageIsland({ root }) {
         adapted_players: summary.adaptedPlayers,
       })),
     };
-  }, [assignments, drawAnalysis, lockedPlayerPositions, maxDiff, teamFormations, teams, separatedPairs]);
+  }, [assignments, drawAnalysis, lockedPlayerPositions, maxDiff, teamFormations, teams, separatedPairs, autoBalance]);
 
   const setTeamColor = (teamIndex, colorName) => {
     if (teamColorTaken(colorName, teamIndex)) {
@@ -4810,6 +4884,9 @@ export function SorteoLegacyPageIsland({ root }) {
       ? String(resolvedTargetPlayerKey)
       : null;
     const sourceLine = String(source.assignedPosition || '').toUpperCase();
+    if (payload.invitationMode && targetLine && ((manualGoalkeepers[key] === true) !== (targetLine === 'ARQ') || (targetPlayer && (manualGoalkeepers[playerKey(targetPlayer)] === true) !== (sourceLine === 'ARQ')))) {
+      return { ok: false, message: 'Los arqueros estan fijados por la fecha. Solo pueden intercambiar su lugar con otro arquero definido.' };
+    }
     if (targetLine && !FORMATION_LINES.includes(targetLine)) {
       return { ok: false, message: 'Esa zona no es una posicion valida de la cancha.' };
     }
@@ -5852,7 +5929,21 @@ export function SorteoLegacyPageIsland({ root }) {
     }
   };
 
+  const submitCommunityProposal = async () => {
+    if (!payload.invitationMode || !teams || !postulationAuthor || postulating) return;
+    setPostulating(true); setPostulationMessage('');
+    try {
+      const submittedTeams = teams.map((team, index) => ({ color_name: getTeamColor(index).name, players: [...team, ...(benches[index] || [])].map(player => ({ id: player.id, assigned_position: assignments[playerKey(player)] || getPrimaryPlayerPosition(player), is_substitute: !team.some(item => playerKey(item) === playerKey(player)) })) }));
+      const response = await fetch('postular_formacion.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: payload.matchId, invite: new URLSearchParams(location.search).get('invite'), csrf: payload.communityCsrf, player_id: postulationAuthor, teams: submittedTeams, separated_pairs: separatedPairs }) });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.message || 'No se pudo enviar la propuesta.');
+      setPostulationMessage('Propuesta recibida. Sera anonima en la votacion. Si ya habias postulado, se reemplazo tu propuesta anterior.');
+    } catch (error) { setPostulationMessage(error.message); }
+    finally { setPostulating(false); }
+  };
+
   const saveDraw = async () => {
+    if (payload.invitationMode) return;
     if (savingDraw) return;
     if (teams && separationViolations(withSeparatedPairs(teams.map((team, i) => [...team, ...(benches[i] || [])]), separatedPairs))) {
       setError('Hay una pareja marcada para separar en el mismo equipo. Intercambiá un jugador o quitá esa regla antes de guardar.'); return;
@@ -5931,6 +6022,7 @@ export function SorteoLegacyPageIsland({ root }) {
   };
 
   const saveFormations = async () => {
+    if (payload.invitationMode) return;
     if (payload.proposalMode) return saveDraw();
     if (savingDraw) return;
     if (teams && separationViolations(withSeparatedPairs(teams.map((team, i) => [...team, ...(benches[i] || [])]), separatedPairs))) {
@@ -6015,10 +6107,10 @@ export function SorteoLegacyPageIsland({ root }) {
     ? teams[Number(mobileMoveSource.teamIndex)].find((player) => playerKey(player) === String(mobileMoveSource.playerKey))
     : null;
   const playersPanelCollapsed = !playersPanelOpen && !isFormationEditor;
-  const goalkeeperPanelCollapsed = !goalkeeperPanelOpen && !isFormationEditor;
+  const goalkeeperPanelCollapsed = payload.invitationMode || (!goalkeeperPanelOpen && !isFormationEditor);
   const mobileActionGridClass = lockedMatch ? 'grid-cols-3' : 'grid-cols-2';
   const displayedSaveState = isFormationEditor ? saveState : workflowSaveState;
-  const saveStateLabel = savingDraw ? 'Guardando…' : displayedSaveState === 'dirty' ? 'Cambios sin guardar' : displayedSaveState === 'saved' ? 'Equipos guardados' : 'Sin guardar';
+  const saveStateLabel = payload.invitationMode ? 'Solo para exportar' : savingDraw ? 'Guardando…' : displayedSaveState === 'dirty' ? 'Cambios sin guardar' : displayedSaveState === 'saved' ? 'Equipos guardados' : 'Sin guardar';
   const saveStateClass = displayedSaveState === 'dirty'
     ? 'border-amber-200 bg-amber-50 text-[#7a4b00]'
     : displayedSaveState === 'saved'
@@ -6158,7 +6250,7 @@ export function SorteoLegacyPageIsland({ root }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button className={quietButtonClass} type="button" onClick={() => navigate(payload.links?.back || 'editar_partidos.php')}>
             <Icon name="arrowLeft" />
-            Volver a fechas
+            {payload.invitationMode ? 'Volver al inicio' : 'Volver a fechas'}
           </button>
           {payload.match && payload.links?.finish ? (
             <button className={secondaryButtonClass} type="button" onClick={() => navigate(payload.links?.finish)}>
@@ -6173,6 +6265,8 @@ export function SorteoLegacyPageIsland({ root }) {
           ) : null}
         </div>
 
+        {payload.invitationMode ? <p role="status" className="m-0 rounded border border-[#adc8bb] bg-white p-3">Sorteo de invitado: generá y exportá tus equipos. El plantel y los arqueros están fijados por la fecha. Podés ajustar restricciones, sorteos y formaciones para exportar. Los cambios no se guardan en la fecha oficial.</p> : null}
+        {payload.invitationUrl ? <label className="grid gap-2">Enlace de invitación para generar y exportar equipos<input readOnly aria-label="Enlace de invitación" className="min-h-11 rounded border border-[#adc8bb] bg-white px-3" value={new URL(payload.invitationUrl, window.location.href).href} onFocus={event => event.target.select()} /><button type="button" className={quietButtonClass} onClick={async event => { const button = event.currentTarget; try { await navigator.clipboard.writeText(new URL(payload.invitationUrl, window.location.href).href); button.textContent = 'Enlace copiado'; } catch { button.textContent = 'Seleccioná y copiá el enlace'; } }}>Copiar enlace de invitación</button></label> : null}
         {payload.proposalMode && isFormationEditor ? (
           <form method="post" action="reiniciar_propuesta.php" onSubmit={(event) => { if (!window.confirm('Borrar toda tu propuesta y volver a elegir sorteo o armado manual?')) event.preventDefault(); }}>
             <input type="hidden" name="match_id" value={payload.matchId} />
@@ -6230,8 +6324,8 @@ export function SorteoLegacyPageIsland({ root }) {
             <li data-step="teams" aria-current={!formationsReady ? 'step' : undefined}><span>{formationsReady ? '✓' : '●'}</span> Equipos</li>
             <li data-step="formations" aria-current={formationsReady ? 'step' : undefined}><span>{formationsReady ? '●' : '🔒'}</span> Formaciones</li>
           </ol>
-          <p className="gf-next-step">{formationsReady ? 'Equipos guardados. Continuá con las formaciones.' : hasSavedDraw ? 'Guardá los cambios para continuar a Formaciones.' : 'Guardá los equipos para continuar a Formaciones.'}</p>
-          {formationsReady && formationsUrl ? <button type="button" className={secondaryButtonClass} onClick={() => navigate(formationsUrl)}>Configurar formaciones →</button> : null}
+          <p className="gf-next-step">{payload.invitationMode ? 'Genera tus equipos y exportalos como imagen o texto.' : formationsReady ? 'Equipos guardados. Continuá con las formaciones.' : hasSavedDraw ? 'Guardá los cambios para continuar a Formaciones.' : 'Guardá los equipos para continuar a Formaciones.'}</p>
+          {!payload.invitationMode && (formationsReady && formationsUrl ? <button type="button" className={secondaryButtonClass} onClick={() => navigate(formationsUrl)}>Configurar formaciones →</button> : null)}
         </header>
 
         )}
@@ -6241,36 +6335,10 @@ export function SorteoLegacyPageIsland({ root }) {
         {!isFormationEditor ? <div className="grid min-w-0 content-start gap-4" data-draw-preparation>
         <ScoringSettings players={selectedPlayers} mode={positionRatingMode} onModeChange={setPositionRatingMode} discount={positionRatingDiscount} onDiscountChange={setPositionRatingDiscount} disabled={generating || savingDraw || payload.proposalMode} />
         {!isFormationEditor && !payload.proposalMode ? (
-        <aside className="gf-player-preparation grid content-start gap-3 rounded-lg border border-[#c5cdc4]! bg-white! p-3! shadow-none! sm:p-4!">
-          <div className="-mx-3 -mt-3 flex items-center justify-between gap-3 rounded-t-md border-b border-[#c5cdc4]! bg-[#e9ede7] px-3! py-3! sm:-mx-4 sm:-mt-4 sm:px-4!">
-            <div>
-              <h2 className="m-0 text-base font-black text-[#07130f]">{playersPanelCollapsed ? `✓ ${selectedPlayers.length} jugadores seleccionados` : 'Jugadores disponibles'}</h2>
-              <p className="m-0 text-xs font-semibold text-slate-500">{lockedMatch ? 'Plantel de la fecha' : 'Lista editable local'}</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {(!isFormationEditor || teams) ? (
-                <button className={quietButtonClass} type="button" onClick={() => setPlayersPanelOpen((open) => !open)} aria-expanded={playersPanelOpen}>
-                  {playersPanelOpen ? 'Cerrar' : 'Editar'}
-                </button>
-              ) : null}
-              {!lockedMatch ? (
-                <label className={quietButtonClass}>
-                  CSV
-                  <input className="sr-only" type="file" accept=".csv" onChange={importPlayersCsv} />
-                </label>
-              ) : null}
-            </div>
-          </div>
-
-          {playersPanelCollapsed ? (
-            <div className="grid gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] p-3 text-sm font-bold text-[#526b62]">
-              <div className="flex items-center justify-between gap-3">
-                <span>{availabilityAdjustedCount ? `${availabilityAdjustedCount} con estado ajustado` : 'Todos con estado al 100%'}</span>
-              </div>
-              {isFormationEditor ? <button className={secondaryButtonClass} type="button" onClick={() => setPlayersPanelOpen(true)}>Editar jugadores</button> : null}
-            </div>
-          ) : (
-            <>
+        <aside className="gf-player-preparation gf-roster-summary">
+          <button className="gf-roster-summary-button" type="button" onClick={() => setPlayersPanelOpen(true)} aria-haspopup="dialog" aria-expanded={playersPanelOpen}>Ver {selectedPlayers.length} jugadores seleccionados<Icon name="users" /></button>
+          <CompactDrawDialog open={playersPanelOpen} onClose={() => setPlayersPanelOpen(false)} title="Jugadores de la fecha">
+              {!lockedMatch && <label className={quietButtonClass}>Importar CSV<input className="sr-only" type="file" accept=".csv" onChange={importPlayersCsv} /></label>}
               {!lockedMatch ? (
                 <div className="flex flex-wrap gap-2">
                   <button className={quietButtonClass} type="button" onClick={exportPlayersCsv}><Icon name="download" />Guardar CSV</button>
@@ -6302,7 +6370,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <span id="diffDisplay" className="hidden">{maxDiff}</span>
               </div>
 
-              <div className="grid max-h-[62vh] gap-2 overflow-auto rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2" id="jugadores-container">
+              <div className="gf-modal-roster grid gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] p-2" id="jugadores-container">
                 {sortedPlayers.map((player) => (
                   <article key={playerKey(player)} className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border p-2 ${player.selected ? 'border-[#9fc8b5] bg-white' : 'border-[#d7e6df] bg-white'}`}>
                     <input
@@ -6338,11 +6406,12 @@ export function SorteoLegacyPageIsland({ root }) {
                           </span>
                         </span>
                       </div>
-                      <div className="mt-1.5 grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1">
+                      {payload.invitationMode ? <span className="block text-[11px] font-bold text-[#526b62]">Estado {player.availability_percent}%</span> : <div className="mt-1.5 grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border border-[#d7e6df] bg-[#f8fbfa] px-2 py-1">
                         <span className="text-[10px] font-black uppercase text-[#526b62]">Estado</span>
                         <span className="shrink-0 text-[10px] font-black text-[#063d2b]">{player.availability_percent}%</span>
                         <input
                           className="player-availability-range col-span-2"
+                          disabled={payload.invitationMode}
                           type="range"
                           min="1"
                           max="100"
@@ -6355,10 +6424,10 @@ export function SorteoLegacyPageIsland({ root }) {
                           style={{ '--availability-fill': `${player.availability_percent}%` }}
                           aria-label={`Porcentaje de estado de ${player.nombre}`}
                         />
-                      </div>
+                      </div>}
                     </div>
                     <div className="flex flex-col gap-1">
-                      <button className={iconButtonClass} type="button" onClick={() => setFormModal({ mode: 'edit', player })} aria-label={`Editar ${player.nombre}`}><Icon name="pencil" /></button>
+                      {!payload.invitationMode && <button className={iconButtonClass} type="button" onClick={() => { if (!payload.invitationMode) { setPlayersPanelOpen(false); setFormModal({ mode: 'edit', player }); } }} aria-label={`Editar ${player.nombre}`}><Icon name="pencil" /></button>}
                       {!lockedMatch ? (
                         <button className={dangerButtonClass} type="button" onClick={() => removePlayer(player)} aria-label={`Eliminar ${player.nombre}`}><Icon name="trash" /></button>
                       ) : null}
@@ -6366,21 +6435,13 @@ export function SorteoLegacyPageIsland({ root }) {
                   </article>
                 ))}
               </div>
-            </>
-          )}
+          </CompactDrawDialog>
         </aside>
         ) : null}
         </div> : null}
 
         <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'gf-workflow-main'}`}>
-          <SeparationEditor numTeams={numTeams} matchId={payload.matchId} csrf={payload.potsCsrf} players={players} pairs={separatedPairs} disabled={generating || savingDraw} proposalMode={payload.proposalMode} onChange={pairs => { setSeparatedPairs(pairs); markDrawDirty(true); }} />
-          {!isFormationEditor ? (
-          <div className="gf-generation-panel grid gap-4! rounded-lg border border-[#a8bfae]! bg-white! p-3! shadow-none! sm:p-4! [&_.draw-pots-section-title]:-mx-3! [&_.draw-pots-section-title]:-mt-3! [&_.draw-pots-section-title]:rounded-t-md [&_.draw-pots-section-title]:border-0! [&_.draw-pots-section-title]:bg-[#204735]! [&_.draw-pots-section-title]:p-3! [&_.draw-pots-section-title]:text-base! [&_.draw-pots-section-title]:text-white! sm:[&_.draw-pots-section-title]:-mx-4! sm:[&_.draw-pots-section-title]:-mt-4! sm:[&_.draw-pots-section-title]:px-4!">
-            <DrawPotsEditor mode={drawMode} onModeChange={setDrawMode} pots={drawPots} onChange={pots => { setDrawPots(pots); setPotsMessage(''); }} onAutoBuild={gap => {
-              const roster = selectedPlayers.map(player => ({ ...player, manualGoalkeeper: manualGoalkeepers[playerKey(player)] === true }));
-              setDrawPots(buildAutomaticDrawPots(roster, numTeams, gap, drawPots));
-              setPotsMessage('Propuesta automática lista. Podés editarla, reordenarla y guardarla.');
-            }} players={selectedPlayers} numTeams={numTeams} disabled={generating || savingDraw || savingPots} onSave={savePotsTemplate} saving={savingPots} saved={JSON.stringify(drawPots) === savedPots} message={potsMessage} />
+          <SeparationEditor numTeams={numTeams} matchId={payload.matchId} goalkeeperIds={Object.keys(manualGoalkeepers).filter(id => manualGoalkeepers[id])} csrf={payload.potsCsrf} players={players} pairs={separatedPairs} disabled={generating || savingDraw} proposalMode={payload.proposalMode || payload.invitationMode} onChange={pairs => { setSeparatedPairs(pairs); markDrawDirty(true); }} >
             <div className="gf-goalkeeper-preparation grid gap-3! rounded-md border border-[#c3cebd]! bg-[#f0f3ed]! p-3!">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -6388,7 +6449,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   <p className="m-0 text-[11px] font-semibold text-[#526b62]">Se eligen antes de realizar el sorteo.</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {(!isFormationEditor || teams) ? (
+                  {!payload.invitationMode && (!isFormationEditor || teams) ? (
                     <button className={quietButtonClass} type="button" onClick={() => setGoalkeeperPanelOpen((open) => !open)} aria-expanded={goalkeeperPanelOpen}>
                       {goalkeeperPanelOpen ? 'Cerrar' : 'Editar'}
                     </button>
@@ -6450,6 +6511,15 @@ export function SorteoLegacyPageIsland({ root }) {
                 </>
               )}
             </div>
+          </SeparationEditor>
+          {!isFormationEditor ? (
+          <div className="gf-generation-panel grid gap-4! rounded-lg border border-[#a8bfae]! bg-white! p-3! shadow-none! sm:p-4! [&_.draw-pots-section-title]:-mx-3! [&_.draw-pots-section-title]:-mt-3! [&_.draw-pots-section-title]:rounded-t-md [&_.draw-pots-section-title]:border-0! [&_.draw-pots-section-title]:bg-[#204735]! [&_.draw-pots-section-title]:p-3! [&_.draw-pots-section-title]:text-base! [&_.draw-pots-section-title]:text-white! sm:[&_.draw-pots-section-title]:-mx-4! sm:[&_.draw-pots-section-title]:-mt-4! sm:[&_.draw-pots-section-title]:px-4!">
+            <DrawPotsEditor allowSave={!payload.invitationMode} mode={drawMode} onModeChange={setDrawMode} pots={drawPots} onChange={pots => { setDrawPots(pots); setPotsMessage(''); }} onAutoBuild={gap => {
+              const roster = selectedPlayers.map(player => ({ ...player, manualGoalkeeper: manualGoalkeepers[playerKey(player)] === true }));
+              setDrawPots(buildAutomaticDrawPots(roster, numTeams, gap, drawPots));
+              setPotsMessage('Propuesta automática lista. Podés editarla, reordenarla y guardarla.');
+            }} players={selectedPlayers} numTeams={numTeams} disabled={generating || savingDraw || savingPots} onSave={savePotsTemplate} saving={savingPots} saved={JSON.stringify(drawPots) === savedPots} message={potsMessage} />
+
             <div className="gf-generate-actions flex flex-wrap items-center gap-2">
               {drawReadiness.issues.length || drawReadiness.warnings.length ? (
                 <div className="grid w-full gap-1.5">
@@ -6470,11 +6540,13 @@ export function SorteoLegacyPageIsland({ root }) {
                 <Icon name="dice" className="h-5 w-5" />
                 {generating ? 'Generando...' : generateButtonLabel}
               </button>
-              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-3 text-xs font-extrabold text-[#526b62]">
+              {!payload.invitationMode && <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-3 text-xs font-extrabold text-[#526b62]">
                 Equilibrio objetivo
-                <input className="h-8 w-16 rounded-md border border-[#adc8bb] bg-white px-2 text-center text-sm font-black text-[#07130f]" type="number" min="0.5" max="6" step="0.1" value={maxDiff} onChange={(event) => setMaxDiff(event.target.value)} />
-              </label>
+                <input className="h-8 w-16 rounded-md border border-[#adc8bb] bg-white px-2 text-center text-sm font-black text-[#07130f]" type="number" min="0" max="6" step="0.1" aria-label="Equilibrio objetivo" disabled={autoBalance || generating} value={maxDiff} onChange={(event) => setMaxDiff(event.target.value)} />
+              </label>}
             </div>
+            {!payload.invitationMode && <label className="flex items-center gap-2 text-xs font-bold text-[#526b62]"><input type="checkbox" checked={autoBalance} disabled={generating} onChange={event => { setAutoBalance(event.target.checked); if (event.target.checked) setMaxDiff(0); }} />Equilibrio automático desde 0,0</label>}
+            {autoBalance && !payload.invitationMode && <p className="m-0 text-xs text-[#526b62]">Busca desde 0,0 y amplía el margen de 0,1 en 0,1 según los equipos válidos encontrados, respetando las reglas de la fecha.</p>}
             <p className="gf-attempts" data-draw-attempts>{payload.allowRedraw ? `${redrawsRemaining} intentos disponibles para rehacer` : 'Esta fecha no permite rehacer el sorteo'}</p>
             <div id="generateTeamsLoading" className={`${generating ? 'grid' : 'hidden'} gap-2 rounded-lg border border-[#9fc8b5] bg-[#f4fbf7] px-4 py-3 text-sm font-bold text-[#063d2b]`} role="status" aria-live="polite" aria-busy={generating}>
               <div className="flex items-center justify-between gap-3">
@@ -7013,15 +7085,16 @@ export function SorteoLegacyPageIsland({ root }) {
                   <button className={`${quietButtonClass} w-full justify-start border-transparent px-3 shadow-none`} type="button" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); downloadTeamsText(); }}><Icon name="download" />Descargar texto</button>
                 </div>
               </details>
+              {payload.invitationMode && <button className={primaryButtonClass} type="button" onClick={() => setPostulationOpen(true)}>Postular mi formación</button>}
               {isFormationEditor ? <button className={secondaryButtonClass} type="button" onClick={toggleAnalysisPanel} aria-expanded={analysisVisible}>{analysisVisible ? 'Ocultar analisis' : 'Analizar equipos'}</button> : null}
-              {lockedMatch ? (
+              {lockedMatch && !payload.invitationMode ? (
                 formationsReady && !isFormationEditor && formationsUrl ? <button className={primaryButtonClass} type="button" onClick={() => navigate(formationsUrl)}>Configurar formaciones →</button> :
                 <button className={primaryButtonClass} type="button" onClick={isFormationEditor ? saveFormations : saveDraw} disabled={savingDraw}>
                   <Icon name="save" />{savingDraw ? 'Guardando…' : payload.proposalMode ? 'Guardar mi propuesta' : isFormationEditor ? 'Guardar formaciones' : 'Guardar equipos y continuar'}
                 </button>
               ) : null}
             </div>
-            {!isFormationEditor ? <p className="gf-save-help">{formationsReady ? 'Equipos guardados. El siguiente paso es configurar formaciones.' : 'Al guardar se habilitará la edición de formaciones.'}</p> : null}
+            {!isFormationEditor && !payload.invitationMode ? <p className="gf-save-help">{formationsReady ? 'Equipos guardados. El siguiente paso es configurar formaciones.' : 'Al guardar se habilitará la edición de formaciones.'}</p> : null}
             {manualActionCount > 0 || lockedPositionCount > 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
                 {manualActionCount > 0
@@ -7044,7 +7117,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar' : 'Analizar'}
               </button>
-              {lockedMatch ? (
+              {lockedMatch && !payload.invitationMode ? (
                 <button className={`${primaryButtonClass} sorteo-mobile-action-button`} type="button" onClick={isFormationEditor ? saveFormations : saveDraw}>
                   <Icon name="save" />
                   Guardar
@@ -7267,12 +7340,23 @@ export function SorteoLegacyPageIsland({ root }) {
                   <button className={quietButtonClass} type="button" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); downloadTeamsText(); }}>Descargar texto</button>
                 </div>
               </details>
-              {formationsReady && formationsUrl ? <button className={primaryButtonClass} type="button" onClick={() => navigate(formationsUrl)}>Formaciones →</button> : <button className={primaryButtonClass} type="button" disabled={savingDraw} onClick={saveDraw}>{savingDraw ? 'Guardando…' : 'Guardar'}</button>}
+              {payload.invitationMode && <button className={primaryButtonClass} type="button" onClick={() => setPostulationOpen(true)}>Postular mi formación</button>}
+              {!payload.invitationMode && (formationsReady && formationsUrl ? <button className={primaryButtonClass} type="button" onClick={() => navigate(formationsUrl)}>Formaciones →</button> : <button className={primaryButtonClass} type="button" disabled={savingDraw} onClick={saveDraw}>{savingDraw ? 'Guardando…' : 'Guardar'}</button>)}
             </div>
           ) : null}
         </main>
       </div>
 
+      <CompactDrawDialog open={identityOpen} onClose={() => { if(postulationAuthor) setIdentityOpen(false); }} title="Que jugador sos">
+        <CommunityPlayerPicker players={payload.communityPlayers || []} value={postulationAuthor} onChange={setPostulationAuthor} />
+        <button type="button" className={primaryButtonClass} disabled={!postulationAuthor} onClick={() => setIdentityOpen(false)}>Continuar</button>
+      </CompactDrawDialog>
+      <CompactDrawDialog open={postulationOpen} onClose={() => { if (!postulating) setPostulationOpen(false); }} title="Postular mi formación">
+        <p>Elegí tu nombre del padrón. Podés enviar una propuesta por fecha y reemplazarla hasta que el administrador abra la votación. Los votantes no verán quién la propuso.</p>
+        <CommunityPlayerPicker players={payload.communityPlayers || []} value={postulationAuthor} onChange={setPostulationAuthor} disabled={postulating} label="Nombre del postulante" />
+        <button type="button" className={primaryButtonClass} disabled={postulating || !postulationAuthor} onClick={submitCommunityProposal}>{postulating ? 'Enviando...' : 'Enviar mi propuesta'}</button>
+        {postulationMessage && <p role="status">{postulationMessage}</p>}
+      </CompactDrawDialog>
       {formModal ? (
         <PlayerFormModal
           mode={formModal.mode}

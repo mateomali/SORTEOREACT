@@ -7,10 +7,22 @@ require_once __DIR__ . '/lib/draw_pots.php';
 require_once __DIR__ . '/lib/draw_separations.php';
 
 require_once __DIR__ . '/lib/director_proposals.php';
-ensure_director_proposals_schema();
-$proposalMode = isset($_GET['proposal']) && $_GET['proposal'] === '1';
-require_directivo_or_admin();
-if (!$proposalMode && is_directivo()) redirect('crear_propuesta.php?match_id=' . (int) ($_GET['match_id'] ?? 0));
+$invitationToken = (string) ($_GET['invite'] ?? '');
+$invitationMode = $invitationToken !== '';
+$proposalMode = !$invitationMode && isset($_GET['proposal']) && $_GET['proposal'] === '1';
+if ($invitationMode) {
+    $invitedMatch = repo_match_by_id((int) ($_GET['match_id'] ?? 0));
+    if (!preg_match('/^[a-f0-9]{64}$/D', $invitationToken) || !$invitedMatch || empty($invitedMatch['draw_invitation_token']) || !hash_equals((string) $invitedMatch['draw_invitation_token'], $invitationToken)) {
+        http_response_code(404);
+        exit('Invitacion no disponible.');
+    }
+    header('Referrer-Policy: no-referrer');
+    header('Cache-Control: private, no-store');
+} else {
+    require_directivo_or_admin();
+    ensure_director_proposals_schema();
+    if (!$proposalMode && is_directivo()) redirect('crear_propuesta.php?match_id=' . (int) ($_GET['match_id'] ?? 0));
+}
 if ($proposalMode) {
     require_directivo_or_admin();
     if (!is_directivo()) { flash('error', 'Las propuestas son de los directivos.'); redirect('propuestas_equipos.php'); }
@@ -19,8 +31,10 @@ if ($proposalMode) {
         flash('error', 'La propuesta esta bloqueada porque la votacion ya comenzo.'); redirect('propuestas_equipos.php');
     }
 }
-ensure_control_schema();
-ensure_draw_pots_schema();
+if (!$invitationMode) {
+    ensure_control_schema();
+    ensure_draw_pots_schema();
+}
 
 if (!function_exists('repo_match_participants_basic')) {
     function repo_match_participants_basic(int $matchId): array
@@ -192,6 +206,20 @@ if ($proposalMode && $legacyMatch) {
     }
 }
 if ($proposalMode && $legacyMatch) $legacyTeamColors = match_team_kits($legacyMatch);
+$invitationUrl = '';
+if (!$invitationMode && !$proposalMode && is_admin() && $legacyMatch) {
+    if (empty($legacyMatch['draw_invitation_token'])) {
+        $newToken = bin2hex(random_bytes(32));
+        db()->prepare("UPDATE matches SET draw_invitation_token = ? WHERE id = ? AND (draw_invitation_token IS NULL OR draw_invitation_token = '')")->execute([$newToken, $legacyMatchId]);
+        $legacyMatch = repo_match_by_id($legacyMatchId);
+    }
+    $invitationUrl = 'sorteo_legacy_csv.php?match_id=' . $legacyMatchId . '&invite=' . rawurlencode($legacyMatch['draw_invitation_token']);
+}
+if ($invitationMode) {
+    $legacyInitialTeams = [];
+    $legacySavedDrawSignature = '';
+    $legacyTeamColors = match_team_kits($legacyMatch);
+}
 $drawBalanceWeights = player_draw_balance_weights();
 $legacyDrawWeightsJson = json_encode([
     'general' => $drawBalanceWeights['general'],
@@ -207,14 +235,20 @@ $legacyDrawWeightsJson = json_encode([
     'arquero' => $drawBalanceWeights['goalkeeper_skill'],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $legacyNumTeams = $legacyMatch ? (int) $legacyMatch['num_teams'] : 2;
+if ($invitationMode) { require_once __DIR__ . '/lib/community_proposals.php'; community_schema(); }
 $sorteoLegacyPayload = [
     'mode' => $proposalEditing ? 'formation_editor' : 'sorteo',
     'proposalMode' => $proposalMode,
+    'invitationMode' => $invitationMode,
+    'invitationUrl' => $invitationUrl,
+    'communityCsrf' => $invitationMode ? director_proposal_csrf() : '',
+    'communityPlayers' => $invitationMode ? db()->query('SELECT id,name FROM players ORDER BY name')->fetchAll() : [],
     'proposalCsrf' => $proposalMode ? director_proposal_csrf() : '',
     'pots' => draw_pots_template(),
     'separatedPairs' => $proposalMode && isset($ownProposal['teams'][0]['separated_pairs'])
         ? draw_separations_validate($ownProposal['teams'][0]['separated_pairs']) : ($legacyMatch ? draw_separations_from_match($legacyMatch) : []),
-    'potsCsrf' => draw_pots_csrf(),
+    'potsCsrf' => $invitationMode ? '' : draw_pots_csrf(),
+              'savedGoalkeeperIds' => json_decode((string) ($legacyMatch['draw_preparation_json'] ?? '{}'), true)['goalkeeper_ids'] ?? null,
     'generatedPots' => !$proposalMode && $legacyMatch ? json_decode((string) ($legacyMatch['draw_pots_json'] ?? 'null'), true) : null,
     'positionRatingDiscount' => (int) ($legacyMatch['position_rating_discount'] ?? 1) === 1,
     'positionRatingMode' => (string) ($legacyMatch['position_rating_mode'] ?? 'legacy'),
@@ -231,16 +265,16 @@ $sorteoLegacyPayload = [
     'teamColors' => $legacyTeamColors,
     'pairHistory' => $legacyPairHistory,
     'drawBalanceWeights' => json_decode($legacyDrawWeightsJson ?: '{}', true),
-    'allowRedraw' => $legacyMatch ? ((int) ($legacyMatch['allow_redraw'] ?? 1) === 1) : true,
-    'redrawLimit' => $legacyMatch ? (int) ($legacyMatch['redraw_limit'] ?? 3) : 3,
-    'redrawCount' => $legacyMatch ? (int) ($legacyMatch['redraw_count'] ?? 0) : 0,
-    'hasSavedDraw' => $legacyMatch ? ((string) ($legacyMatch['status'] ?? '') === 'sorteado' && (string) ($legacyMatch['draw_mode'] ?? '') === 'random') : false,
+    'allowRedraw' => $invitationMode ? true : ($legacyMatch ? ((int) ($legacyMatch['allow_redraw'] ?? 1) === 1) : true),
+    'redrawLimit' => $invitationMode ? 6 : ($legacyMatch ? (int) ($legacyMatch['redraw_limit'] ?? 6) : 6),
+    'redrawCount' => !$invitationMode && $legacyMatch ? (int) ($legacyMatch['redraw_count'] ?? 0) : 0,
+    'hasSavedDraw' => !$invitationMode && $legacyMatch ? ((string) ($legacyMatch['status'] ?? '') === 'sorteado' && (string) ($legacyMatch['draw_mode'] ?? '') === 'random') : false,
     'savedDrawSignature' => $legacySavedDrawSignature,
     'maxFieldPlayersPerLine' => 5,
     'numTeams' => $legacyNumTeams,
     'links' => [
-        'back' => $proposalMode ? 'propuestas_equipos.php?match_id=' . $legacyMatchId : 'editar_partidos.php',
-        'finish' => !$proposalMode && $legacyMatch ? 'finalizar_partido.php?match_id=' . (int) $legacyMatch['id'] : '',
+        'back' => $invitationMode ? 'index.php' : ($proposalMode ? 'propuestas_equipos.php?match_id=' . $legacyMatchId : 'editar_partidos.php'),
+        'finish' => !$invitationMode && !$proposalMode && $legacyMatch ? 'finalizar_partido.php?match_id=' . (int) $legacyMatch['id'] : '',
     ],
 ];
 $sorteoLegacyPayloadJson = json_encode(

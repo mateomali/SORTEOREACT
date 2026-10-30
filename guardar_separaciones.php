@@ -20,12 +20,26 @@ try {
     }
     $groups = draw_separations_validate($body['separated_pairs'] ?? null);
     draw_separations_assert_registered($groups);
+    ensure_draw_pots_schema();
     $pdo = db();
     $pdo->beginTransaction();
     $stmt = $pdo->prepare('SELECT * FROM matches WHERE id = ? FOR UPDATE');
     $stmt->execute([(int) ($body['match_id'] ?? 0)]);
     $match = $stmt->fetch();
-    if (!$match || $match['status'] === 'finalizado') throw new InvalidArgumentException('La fecha no existe o ya esta finalizada.');
+    if (!$match) throw new InvalidArgumentException('La fecha no existe.');
+    $preparation = json_decode((string) ($match['draw_preparation_json'] ?? '{}'), true) ?: [];
+    if (array_key_exists('goalkeeper_ids', $body)) {
+        if (!is_array($body['goalkeeper_ids']) || count($body['goalkeeper_ids']) > 4) throw new InvalidArgumentException('Seleccion de arqueros invalida.');
+        $ids = array_values(array_unique(array_map('intval', $body['goalkeeper_ids'])));
+        foreach ($ids as $id) {
+            $check = $pdo->prepare('SELECT COUNT(*) FROM match_players WHERE match_id = ? AND player_id = ?');
+            $check->execute([$match['id'], $id]);
+            if (!(int) $check->fetchColumn()) throw new InvalidArgumentException('El arquero debe estar convocado para esta fecha.');
+        }
+        $preparation['goalkeeper_ids'] = $ids;
+    }
+    $preparation['separated_pairs'] = $groups;
+    $pdo->prepare('UPDATE matches SET draw_preparation_json = ? WHERE id = ?')->execute([json_encode($preparation, JSON_THROW_ON_ERROR), $match['id']]);
     $audit = json_decode((string) ($match['draw_audit_snapshot'] ?? '{}'), true) ?: [];
     $audit['criteria']['separated_pairs'] = $groups;
     $pdo->prepare('UPDATE matches SET draw_audit_snapshot = ? WHERE id = ?')->execute([json_encode($audit, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $match['id']]);

@@ -1250,6 +1250,8 @@ if ($showHistoryPage) {
     $headExtraHtml = ($headExtraHtml ?? '') . '<link rel="stylesheet" href="assets/history-directory.css?v=' . (string) filemtime(__DIR__ . '/assets/history-directory.css') . '">';
 }
 require __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/lib/community_proposals.php';
+community_home_controls();
 ?>
 <?php if (!$showHistoryPage && $liveFollowMatches): ?>
   <section class="card" aria-labelledby="home-live-follow-title">
