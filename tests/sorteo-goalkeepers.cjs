@@ -66,7 +66,15 @@ const concentrated = [
   [players[1], linePools.DEF[3], linePools.DEF[4], linePools.MED[0], linePools.MED[1], linePools.DEL[1], linePools.DEL[4]],
   [players[2], linePools.DEF[2], linePools.DEF[5], linePools.MED[2], linePools.MED[5], linePools.DEL[2], linePools.DEL[5]],
 ];
-const redistributed = originalImprove(concentrated, 7, {}, {});
+// Unequal keepers can require compensating field strength. Never sacrifice
+// the primary 50/50 balance merely to distribute natural-line stars.
+const compensated = originalImprove(concentrated, 7, {}, {});
+const comparable = concentrated.map((team, index) => [
+  normalizePlayer({ id: players[index].id, name: 'Arquero ' + index,
+    positions: 'ARQ', overall: 3.4, rhythm: 4, manualGoalkeeper: true }, index),
+  ...team.slice(1),
+]);
+const redistributed = originalImprove(comparable, 7, {}, {});
 const distributedEvaluation = redistributed.evaluation;
 const concentratedEvaluation = scoreTeams(concentrated, {}, {}, {});
 const forcedAssignments = Object.fromEntries(concentrated.flat().map(player => [playerKey(player), 'MED']));
@@ -77,6 +85,7 @@ globalThis.results = {
   shortageAssignment: buildTeamAssignment([players[0], linePools.DEF[0], linePools.DEF[3], linePools.DEF[4], linePools.MED[0], linePools.MED[3], linePools.MED[4]]),
   draws: [draw], examined, progress, exact, oracle,
   concentratedEvaluation, distributedEvaluation, redistributed,
+  compensatedEvaluation: compensated.evaluation,
   hiddenEliteExcess: lineStrengthBalance(concentrated, forcedAssignments).eliteExcess,
   prefersSmallDiff: isBetterDraw({ diff: 0.1, value: 10000 }, { diff: 0.5, value: 1 }),
 };
@@ -99,6 +108,10 @@ assert.ok(context.results.exact.exhaustive);
 assert.ok(Math.abs(context.results.exact.bestEvaluation.balanceScore - context.results.oracle.balanceScore) < 0.000001, 'Exhaustive two-team result agrees with independent enumeration');
 assert.ok(context.results.concentratedEvaluation.eliteExcess > 0);
 assert.equal(context.results.hiddenEliteExcess, context.results.concentratedEvaluation.eliteExcess, 'Changing formation cannot hide natural line concentration');
+context.compensatedEvaluation = context.results.compensatedEvaluation;
+context.concentratedEvaluation = context.results.concentratedEvaluation;
+assert.equal(vm.runInContext('isBetterDraw(concentratedEvaluation, compensatedEvaluation)', context), false,
+  'Line optimization must preserve the primary balance with unequal keepers');
 assert.equal(context.results.distributedEvaluation.eliteExcess, 0, 'Separate the strongest defenders and midfielders');
 for (const line of ['DEF', 'MED', 'DEL']) {
   assert.deepEqual(Array.from(context.results.distributedEvaluation.lineBalance.details[line].eliteCounts), [1, 1, 1], 'One of the three best ' + line + ' players per team');

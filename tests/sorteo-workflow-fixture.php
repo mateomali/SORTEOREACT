@@ -11,7 +11,7 @@ if ($action === 'list') { echo json_encode($pdo->query("SELECT id FROM matches W
 if ($action === 'create') {
     $players = repo_match_participants(204);
     if (count($players) < 10 || count($players) % 2) throw new RuntimeException('Source fixture must have an even roster.');
-    $pdo->prepare("INSERT INTO matches (title, match_date, status, num_teams, players_per_team, draw_mode, allow_redraw, redraw_limit) VALUES ('Temporary UI workflow validation', DATE_ADD(NOW(), INTERVAL 7 DAY), 'programado', 2, ?, 'random', 1, 3)")->execute([intdiv(count($players), 2)]);
+    $pdo->prepare("INSERT INTO matches (title, match_date, status, num_teams, players_per_team, draw_mode, allow_redraw, redraw_limit) VALUES ('Temporary UI workflow validation', DATE_ADD(NOW(), INTERVAL 7 DAY), 'programado', 2, ?, 'random', 1, 6)")->execute([intdiv(count($players), 2)]);
     $id = (int) $pdo->lastInsertId();
     $insert = $pdo->prepare('INSERT INTO match_players (match_id, player_id, availability_percent) VALUES (?, ?, ?)');
     foreach ($players as $player) $insert->execute([$id, $player['id'], $player['availability_percent']]);

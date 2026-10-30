@@ -5,6 +5,7 @@ const rating = require('../assets/player-rating.js');
 rating.configure(JSON.parse(fs.readFileSync('assets/player-rating-policy.json','utf8')));
 const source = fs.readFileSync('src/pages/SorteoLegacyPageIsland.jsx','utf8');
 const helpers = source.slice(0,source.indexOf('function iconPath(')).replace(/^import .*;\r?\n/gm,'')
+  .replace(/^export /gm,'')
   .replace(/function TeamRadar\([\s\S]*?(?=const LINE_STRENGTH_BALANCE_WEIGHTS)/,'');
 const context = vm.createContext({console,performance,GoodfellasRating:rating});
 vm.runInContext(helpers,context);

@@ -1,3 +1,8 @@
+async function selectRestrictionPlayer(editor, id) {
+ const dialog=editor.getByRole('dialog',{name:'Jugadores que no pueden compartir equipo',exact:true});
+ if(!await dialog.isVisible())await editor.getByRole('button',{name:'Crear restricción',exact:true}).click();
+ await dialog.locator(`[data-restriction-player="${id}"]`).check();
+}
 const { test, expect } = require('@playwright/test');
 const { execFileSync } = require('node:child_process');
 const fixture = (action, id) => execFileSync('php', ['tests/sorteo-workflow-fixture.php', action, ...(id ? [String(id)] : [])], { encoding:'utf8' }).trim();
@@ -36,8 +41,8 @@ test('invitation allows anonymous generation and export without changing the dat
     for (const input of await tab.locator('#jugadores-container input').all()) await expect(input).toBeDisabled();
     for (const button of await tab.locator('#jugadores-container button[aria-label^="Editar "]').all()) await expect(button).toBeDisabled();
     const restrictions = tab.getByRole('region', { name:'Separar jugadores', exact:true });
-    await restrictions.getByLabel('Agregar jugador a la restricción', { exact:true }).selectOption(String(ids[0]));
-    await restrictions.getByLabel('Agregar jugador a la restricción', { exact:true }).selectOption(String(ids[1]));
+    await selectRestrictionPlayer(restrictions, String(ids[0]));
+    await selectRestrictionPlayer(restrictions, String(ids[1]));
     await restrictions.getByRole('button', { name:'Agregar restricción', exact:true }).click();
     await expect(restrictions.getByRole('button', { name:/Quitar/, includeHidden:true })).toHaveCount(1);
     await tab.locator('#generateTeamsButton').click();

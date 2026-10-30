@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DrawHelp } from './DrawHelp';
 
 export function DrawPotsEditor({ allowSave = true, mode, onModeChange, pots, onChange: updatePots, onAutoBuild, players, numTeams, disabled, onSave, saving, saved, message }) {
   const [assembly, setAssembly] = useState('automatic');
@@ -57,7 +58,7 @@ export function DrawPotsEditor({ allowSave = true, mode, onModeChange, pots, onC
     onChange(next);
   };
   const control = 'min-h-10 rounded-md border border-[#adc8bb] bg-white px-2 text-sm text-[#07130f] disabled:opacity-50';
-  const button = `${control} font-bold hover:bg-[#eef5f1]`;
+  const button = `gf-button gf-button-quiet ${control} font-bold hover:bg-[#eef5f1]`;
   const playerRow = player => <div key={player.id} draggable={!disabled}
     onPointerDown={() => { if (!disabled) setSelectedPlayer(String(player.id)); }}
     onFocusCapture={() => { if (!disabled) setSelectedPlayer(String(player.id)); }}
@@ -82,13 +83,13 @@ export function DrawPotsEditor({ allowSave = true, mode, onModeChange, pots, onC
     <h3 className="draw-pots-section-title [-webkit-text-fill-color:currentColor]!">Configuración del sorteo</h3>
     <label className="grid gap-1 text-sm font-bold text-[#07130f]">
       Modalidad de sorteo
-      <select className={control} value={mode} onChange={event => onModeChange(event.target.value)} disabled={disabled}>
+      <select aria-label="Modalidad de sorteo" className={control} value={mode} onChange={event => onModeChange(event.target.value)} disabled={disabled}>
         <option value="standard">Sorteo habitual</option>
         <option value="pots">Sorteo por potes</option>
       </select>
     </label>
     {mode === 'pots' ? <>
-      <p className="m-0 text-sm text-[#526b62]">Cada pote reúne jugadores de la misma posición y puntaje similar, para repartir alternativas equivalentes entre los {numTeams} equipos. El número indica el orden de reparto, no el nivel del grupo. Se mantienen las reglas de arqueros y posiciones.</p>
+      <DrawHelp title="Cómo funcionan los potes"><p className="m-0 text-sm text-[#526b62]">Cada pote reúne jugadores de la misma posición y puntaje similar, para repartir alternativas equivalentes entre los {numTeams} equipos. El número indica el orden de reparto, no el nivel del grupo. Se mantienen las reglas de arqueros y posiciones.</p></DrawHelp>
       <label className="grid gap-1 text-sm font-bold text-[#07130f]">Armado de potes
         <select className={control} value={assembly} disabled={disabled} onChange={event => setAssembly(event.target.value)} aria-label="Armado de potes">
           <option value="manual">Manual</option>
@@ -96,13 +97,13 @@ export function DrawPotsEditor({ allowSave = true, mode, onModeChange, pots, onC
         </select>
       </label>
       {assembly === 'automatic' ? <div className="grid gap-2">
-        <p className="m-0 text-xs text-[#526b62]">Agrupa por posición principal y generales similares. Para evitar jugadores solos, considera la posición secundaria y LAT como comodín de DEF/MED. Si aún queda un jugador aislado, lo incorpora al pote de campo con puntaje más cercano, aunque requiera mezclar posiciones o superar la diferencia máxima. Todos los arqueros seleccionados van en un único pote. Podés editar y reordenar la propuesta. Los ausentes guardados se conservan aparte.</p>
+        <DrawHelp title="Armado automático de potes"><p className="m-0 text-xs text-[#526b62]">Agrupa por posición principal y generales similares. Para evitar jugadores solos, considera la posición secundaria y LAT como comodín de DEF/MED. Si aún queda un jugador aislado, lo incorpora al pote de campo con puntaje más cercano, aunque requiera mezclar posiciones o superar la diferencia máxima. Todos los arqueros seleccionados van en un único pote. Podés editar y reordenar la propuesta. Los ausentes guardados se conservan aparte.</p></DrawHelp>
         <label className="grid gap-1 text-xs font-bold text-[#526b62]">Diferencia máxima de general dentro del pote
           <input className={control} type="number" min="0" max="64" step="1" value={maxGeneralGap} disabled={disabled} onChange={event => setMaxGeneralGap(event.target.value)} aria-label="Diferencia máxima de general dentro del pote" />
         </label>
         <button className={`${button} justify-self-start`} type="button" disabled={disabled || !players.length || maxGeneralGap === '' || Number(maxGeneralGap) < 0 || Number(maxGeneralGap) > 64} onClick={buildAutomatic}>Armar potes automáticamente</button>
       </div> : null}
-      <p className="m-0 text-xs font-bold text-[#063d2b]">Si un pote tiene exactamente 2 convocados, deben jugar en equipos distintos. Con más de 2, pueden compartir equipo.</p>
+      <DrawHelp title="Separación de jugadores por pote"><p className="m-0 text-xs font-bold text-[#063d2b]">Si un pote tiene exactamente 2 convocados, deben jugar en equipos distintos. Con más de 2, pueden compartir equipo.</p></DrawHelp>
     </> : null}
     </div>
     {mode === 'pots' ? <>
@@ -116,7 +117,7 @@ export function DrawPotsEditor({ allowSave = true, mode, onModeChange, pots, onC
         <h3 className="m-0 text-base font-bold text-[#07130f]">Jerarquía de potes</h3>
         <span className="text-sm text-[#526b62]">{pots.length} potes · {players.filter(player => !membership.has(String(player.id))).length} sin asignar</span>
       </div>
-      <p className="m-0 text-xs text-[#526b62]">Grupos por características similares; un pote posterior puede tener mayor promedio. Arrastrá jugadores a otro pote o elegí su destino en la lista.</p>
+      <DrawHelp title="Orden y edición de potes"><p className="m-0 text-xs text-[#526b62]">Grupos por características similares; un pote posterior puede tener mayor promedio. Arrastrá jugadores a otro pote o elegí su destino en la lista.</p></DrawHelp>
       <div className="grid gap-3" aria-label="Asignar jugadores a potes">
         {pots.map((pot, index) => {
           const members = players.filter(player => membership.get(String(player.id)) === index)
@@ -160,7 +161,7 @@ export function DrawPotsEditor({ allowSave = true, mode, onModeChange, pots, onC
         {players.filter(player => !membership.has(String(player.id))).map(playerRow)}
         {players.every(player => membership.has(String(player.id))) ? <p className="m-0 pt-2 text-sm text-[#526b62]">Todos los convocados tienen pote.</p> : null}
       </div>
-      <p className="m-0 text-xs text-[#526b62]">Todos los seleccionados deben tener un pote. Los jugadores ausentes conservan su grupo para próximas fechas. Eliminar un pote deja a sus jugadores sin pote.</p>
+      <DrawHelp title="Guardar y conservar los potes"><p className="m-0 text-xs text-[#526b62]">Todos los seleccionados deben tener un pote. Los jugadores ausentes conservan su grupo para próximas fechas. Eliminar un pote deja a sus jugadores sin pote.</p></DrawHelp>
       {allowSave && <div className="draw-pots-save flex flex-wrap items-center gap-2">
         <button className={button} type="button" disabled={disabled || saving || saved} onClick={onSave}>{saving ? 'Guardando…' : 'Guardar potes para próximas fechas'}</button>
         <span className="text-xs text-[#526b62]" role="status">{message || (saved ? 'Plantilla guardada' : 'Cambios sin guardar en la plantilla')}</span>

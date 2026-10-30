@@ -25652,3 +25652,104 @@ html body #menuToggle{background:#faf8f1!important;color:#203329!important;borde
   .community-player-context .btn { flex: 0 0 auto; }
   .community-team-list { grid-template-columns: 60px minmax(0,1fr); }
 }
+
+/* Explanations stay in context on desktop and open as full-width help on phones. */
+.draw-help { min-width: 0; }
+.draw-help-mobile { display: none; }
+.draw-help-dialog { margin: auto; padding: 0; width: min(640px, calc(100vw - 24px)); max-width: none; max-height: calc(100dvh - 24px); border: 1px solid #adc8bb; border-radius: 8px; background: #fffdf7; color: #07130f; overflow-y: auto; }
+.draw-help-dialog::backdrop { background: rgb(0 0 0 / .5); }
+.draw-help-dialog > header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #d5c49b; background: #f1e8d2; }
+.draw-help-dialog h2 { margin: 0; font-size: 18px; line-height: 1.3; color: #173c2e !important; }
+.draw-help-content { padding: 20px 16px; }
+.draw-help-content p { display: block !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; font-size: 16px !important; font-weight: 400 !important; line-height: 1.65 !important; color: #173c2e !important; -webkit-text-fill-color: currentColor !important; overflow-wrap: anywhere; }
+.draw-help-dialog button { min-height: 44px; padding: 8px 12px; border: 1px solid #adc8bb; border-radius: 6px; font-size: 14px; font-weight: 700; background: white; color: #063d2b; }
+@media(max-width:760px) {
+  .draw-help-inline { display: none; }
+  .draw-help-mobile { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; color: #526b62; font-size: 13px; line-height: 1.35; }
+  .draw-help-trigger { display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid #adc8bb; border-radius: 6px; font-size: 18px; font-weight: 700; background: white; color: #063d2b; }
+  .draw-help-trigger:focus-visible { outline: 2px solid #063d2b; outline-offset: 2px; }
+  .gf-flow-intro .draw-help-mobile { color: #e2ebdf; }
+  .draw-help-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .draw-help-dialog > header { padding: 12px; }
+  .draw-help-content { padding: 20px 16px; }
+  .sorteo-react-page .gf-button { min-height: 44px !important; min-width: 44px; padding: 8px 12px !important; border-radius: 6px !important; font-size: 14px !important; font-weight: 700 !important; line-height: 1.35 !important; box-shadow: none !important; text-align: center; white-space: normal; }
+  .sorteo-react-page .gf-button-primary { border: 1px solid #063d2b !important; background: #063d2b !important; color: white !important; }
+  .sorteo-react-page .gf-button-quiet, .sorteo-react-page .gf-button-secondary { border: 1px solid #adc8bb !important; background: white !important; color: #063d2b !important; }
+  .sorteo-react-page .gf-icon-button { width: 44px; height: 44px; min-height: 44px; border-radius: 6px; }
+}
+
+@media(max-width:760px) {
+  .sorteo-react-page .gf-scoring-settings { position: relative; }
+  .sorteo-react-page .gf-scoring-settings > .gf-settings-heading { padding-right: 60px !important; min-height: 52px; }
+  .sorteo-react-page .gf-scoring-settings > .draw-help[data-heading-help] { display: contents; }
+  .sorteo-react-page .gf-scoring-settings > .draw-help[data-heading-help] > .draw-help-mobile { position: absolute; top: 4px; right: 8px; }
+  .sorteo-react-page .gf-scoring-settings > .draw-help[data-heading-help] > .draw-help-mobile > span { display: none; }
+}
+
+.draw-help-content { display: grid; gap: 16px; }
+.draw-help-content table { font-size: 14px; line-height: 1.5; }
+
+@media(max-width:760px) {
+  @layer components { .sorteo-react-page.gf-draw-workflow:has(.gf-sticky-save) { padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important; } }
+  .draw-help-trigger { scroll-margin-top: 100px; scroll-margin-bottom: 120px; }
+}
+
+/* Restriction editing: start a group, choose players, then confirm once. */
+.gf-restriction-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; border-top: 1px solid #d5c49b; padding-top: 12px; }
+.gf-restriction-review { min-height: 44px; padding: 8px 0; border: 0; border-radius: 0; background: transparent; color: #526b62; font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+.gf-restriction-review:focus-visible { outline: 2px solid #063d2b; outline-offset: 3px; }
+.gf-compact-dialog:has(.gf-restriction-picker) { margin: auto; width: min(520px, calc(100vw - 16px)); }
+.gf-restriction-picker { display: grid; gap: 12px; min-width: 0; }
+.gf-restriction-search { display: grid; gap: 4px; font-size: 14px; font-weight: 700; }
+.gf-restriction-search input { width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid #adc8bb; border-radius: 6px; background: white; font-size: 16px; }
+.gf-restriction-count { margin: 0; font-size: 14px; color: #526b62; }
+.gf-restriction-results { display: grid; max-height: 35dvh; overflow-y: auto; border: 1px solid #d7e6df; border-radius: 6px; }
+.gf-restriction-player { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 12px; border-bottom: 1px solid #d7e6df; background: white; font-size: 15px; cursor: pointer; overflow-wrap: anywhere; }
+.gf-restriction-player:last-child { border-bottom: 0; }
+.gf-restriction-player[data-selected=true] { background: #eaf7f0; font-weight: 700; }
+.gf-restriction-player input { flex: 0 0 20px; width: 20px; height: 20px; accent-color: #063d2b; }
+.gf-restriction-player:has(input:disabled):not([data-selected=true]) { opacity: .5; cursor: default; }
+.gf-restriction-selected { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.gf-restriction-selected li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.gf-restriction-selected button { min-height: 44px; padding: 8px; border: 0; background: transparent; color: #526b62; text-decoration: underline; }
+.gf-restriction-confirm { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; border-top: 1px solid #d7e6df; padding-top: 12px; }
+.gf-restriction-confirm button { min-height: 44px; }
+
+.sorteo-react-page .gf-restriction-selected button { border: 0 !important; border-radius: 0 !important; background: transparent !important; color: #526b62 !important; -webkit-text-fill-color: currentColor !important; font-weight: 500 !important; box-shadow: none !important; }
+
+/* Restriction list is a readable navigation row, separate from editing actions. */
+.sorteo-react-page .gf-restriction-actions { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; }
+.sorteo-react-page .gf-restriction-create { justify-self: start; }
+.sorteo-react-page .gf-restriction-review { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px !important; padding: 10px 12px !important; border: 1px solid #c5d5ca !important; border-radius: 6px !important; background: #f5f8f4 !important; color: #173c2e !important; -webkit-text-fill-color: currentColor !important; font-size: 14px !important; font-weight: 600 !important; line-height: 1.4; text-align: left; text-decoration: none; box-shadow: none !important; }
+.gf-restriction-review > span:last-child { flex: 0 0 auto; font-size: 24px; font-weight: 400; }
+.draw-help[data-modal-only] > .draw-help-mobile { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: #526b62; }
+.draw-help[data-modal-only] .draw-help-trigger { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid #adc8bb; border-radius: 6px; background: white; color: #063d2b; font-size: 18px; font-weight: 700; }
+
+/* Two preparation tasks with aligned headings, quiet help and readable names. */
+.draw-help[data-compact] { display: inline-flex; flex: 0 0 44px; }
+.draw-help[data-compact] > .draw-help-mobile > span { display: none; }
+.sorteo-react-page .gf-keeper-heading { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; }
+.gf-keeper-title, .gf-keeper-controls { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gf-keeper-title h3, .gf-restriction-section-heading h3 { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 700; }
+.gf-keeper-title h3 { white-space: nowrap; }
+.gf-keeper-title h3 > span { font-size: 14px; color: #237343; }
+.sorteo-react-page .gf-keeper-count { font-size: 13px; font-weight: 600; color: #526b62; white-space: nowrap; }
+.sorteo-react-page .gf-keeper-count[data-ready=false] { color: #7a4b00; }
+.gf-keeper-names { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.gf-keeper-names li { font-size: 14px; line-height: 1.45; color: #173c2e; overflow-wrap: anywhere; }
+.gf-keeper-empty { margin: 0; font-size: 14px; }
+.sorteo-react-page .gf-restriction-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #d5c49b; padding-top: 8px; }
+.gf-restriction-section-heading h3 > span { color: #526b62; font-size: 14px; font-weight: 500; }
+.sorteo-react-page .gf-restriction-actions { border-top: 0; padding-top: 0; gap: 8px; }
+.sorteo-react-page .gf-preparation-save { width: 100%; }
+@media(max-width:760px) {
+  .sorteo-react-page .gf-goalkeeper-preparation { padding: 8px !important; gap: 8px !important; }
+  .sorteo-react-page .gf-keeper-controls .gf-button { padding-inline: 8px !important; }
+  .gf-keeper-title, .gf-keeper-controls { gap: 4px; }
+}
+
+.sorteo-react-page .gf-restriction-selected button { display: inline-flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; height: 44px; text-decoration: none; }
+.sorteo-react-page .gf-keeper-edit { width: 44px; padding-inline: 0 !important; }
+@media(max-width:760px) {
+  .gf-mobile-icon-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+}

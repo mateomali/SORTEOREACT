@@ -42,7 +42,9 @@ for(const width of [1440,390]) test(`line +/- redistributes players and undo res
   const formation = team.locator('select').nth(1);
   await formation.selectOption('2-0-2-2');
   await expect.poll(counts).toEqual({ARQ:1,DEF:2,MED:2,DEL:2});
-  await expect(team.locator('[data-exportable-line-balance] [role=meter]')).toHaveCount(3);
+  const comparison = page.locator('[data-exportable-line-balance]');
+  await expect(comparison.locator('[role=meter]')).toHaveCount(10);
+  await expect(comparison.locator('[data-comparison-line="MED"] [data-comparison-team="0"] .gf-comparison-name')).toContainText('2 jugadores');
   await team.getByRole('button',{name:'Deshacer ultimo cambio',exact:true}).click();
   await expect.poll(snapshot).toEqual(before);
   // Removing a minimum defender must explain the restriction and keep every card.

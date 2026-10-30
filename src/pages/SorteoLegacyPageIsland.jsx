@@ -1,6 +1,7 @@
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toJpeg } from 'html-to-image';
 import { DrawPotsEditor } from './DrawPotsEditor';
+import { DrawHelp } from './DrawHelp';
 import { comparePlayers } from '../player-equivalents.mjs';
 
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
@@ -129,11 +130,11 @@ function ratingStats(player) {
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-200/60';
 const inputClass = `min-h-10 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-bold text-[#07130f] outline-none transition focus:border-[#063d2b] focus:ring-2 focus:ring-lime-200/60`;
-const quietButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
-const primaryButtonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#063d2b] bg-[#063d2b] px-4 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#082f23] disabled:cursor-wait disabled:opacity-70 ${focusRing}`;
-const secondaryButtonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-4 text-sm font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
-const dangerButtonClass = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-extrabold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 ${focusRing}`;
-const iconButtonClass = `grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f5faf7] hover:text-[#063d2b] ${focusRing}`;
+const quietButtonClass = `gf-button gf-button-quiet inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#adc8bb] bg-white px-3 text-sm font-extrabold text-[#063d2b] transition-colors hover:border-[#9fc8b5] hover:bg-[#f4fbf7] ${focusRing}`;
+const primaryButtonClass = `gf-button gf-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#063d2b] bg-[#063d2b] px-4 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#082f23] disabled:cursor-wait disabled:opacity-70 ${focusRing}`;
+const secondaryButtonClass = `gf-button gf-button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#9fc8b5] bg-[#eaf7f0] px-4 text-sm font-black text-[#063d2b] transition-colors hover:border-[#063d2b] hover:bg-[#dff1e8] ${focusRing}`;
+const dangerButtonClass = `gf-button gf-button-danger inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-extrabold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 ${focusRing}`;
+const iconButtonClass = `gf-icon-button grid h-9 w-9 place-items-center rounded-lg border border-[#d7e6df] bg-white text-[#526b62] transition-colors hover:border-[#9fc8b5] hover:bg-[#f5faf7] hover:text-[#063d2b] ${focusRing}`;
 
 const pitchLineToneClasses = {
   ARQ: 'border-l-4 border-l-amber-300/80 bg-amber-200/7',
@@ -1884,6 +1885,46 @@ function* swapSearchSteps(teams, teamSize, pairHistory, weights, pots = null) {
         }
       }
     }
+    // A single exchange can worsen total balance even when two coordinated
+    // exchanges improve the lines. Explore those moves only at a local optimum.
+    if (!changed && bestEval.eliteExcess > 0) {
+      for (let a = 0; a < best.length; a += 1) {
+        for (let b = a + 1; b < best.length; b += 1) {
+          const exchanges = [];
+          for (let i = 0; i < best[a].length; i += 1) {
+            for (let j = 0; j < best[b].length; j += 1) {
+              const left = best[a][i], right = best[b][j];
+              if (isFixedGoalkeeper(left) || isFixedGoalkeeper(right)) continue;
+              const line = getPrimaryPlayerPosition(left);
+              if (line !== getPrimaryPlayerPosition(right)) continue;
+              const delta = adjustedPositionRating(right, line) - adjustedPositionRating(left, line);
+              if (Math.abs(delta) > 1e-6) exchanges.push({ i, j, line, delta });
+            }
+          }
+          for (let first = 0; first < exchanges.length; first += 1) {
+            for (let second = first + 1; second < exchanges.length; second += 1) {
+              const x = exchanges[first], y = exchanges[second];
+              if (x.i === y.i || x.j === y.j || x.line === y.line || x.delta * y.delta >= 0) continue;
+              const candidate = best.map(team => team.slice());
+              [candidate[a][x.i], candidate[b][x.j]] = [candidate[b][x.j], candidate[a][x.i]];
+              [candidate[a][y.i], candidate[b][y.j]] = [candidate[b][y.j], candidate[a][y.i]];
+              if (!teamsSeparateTwoPlayerPots(candidate, pots) || !teamsRespectGoalkeepers(candidate) || platinumSpread(candidate) > 1) continue;
+              const evaluation = scoreTeams(candidate, pairHistory, {}, weights, pots, potReferenceTeams);
+              if (isBetterDraw(evaluation, bestEval)) {
+                best = candidate;
+                bestEval = evaluation;
+                changed = true;
+                break;
+              }
+              yield;
+            }
+            if (changed) break;
+          }
+          if (changed) break;
+        }
+        if (changed) break;
+      }
+    }
   }
   return { teams: best, evaluation: bestEval, potReferenceTeams };
 }
@@ -3545,7 +3586,7 @@ function ScoringSettings({ players, mode, onModeChange, discount, onDiscountChan
       {modes.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       {mode === 'legacy' ? <option value="legacy">Configuración guardada de esta fecha</option> : null}
     </select></label>
-    <p id="draw-position-rating-help" className="m-0 text-xs text-[#526b62]">{descriptions[mode]}</p>
+    <DrawHelp title="Cálculo del puntaje" heading><p id="draw-position-rating-help" className="m-0 text-xs text-[#526b62]">{descriptions[mode]}</p></DrawHelp>
     <details className="gf-scoring-help" data-player-comparison>
       <summary>Jugador para comparar</summary>
       <div className="gf-scoring-help-body">
@@ -3572,15 +3613,14 @@ function ScoringSettings({ players, mode, onModeChange, discount, onDiscountChan
     </> : <p className="m-0 text-xs text-[#526b62]">Seleccioná jugadores para comparar su puntaje general.</p>}
       </div>
     </details>
-    <details className="gf-scoring-help">
-      <summary>Ver habilidades que influyen en cada puesto</summary>
+    <DrawHelp title="Ver habilidades que influyen en cada puesto" disclosure>
       <div className="gf-scoring-help-body">
         <table className="w-full table-fixed text-left text-xs"><thead><tr><th className="p-2" style={{ width: '25%' }}>Puesto</th><th className="p-2">Habilidades que más pesan</th></tr></thead><tbody>
           {FORMATION_LINES.map(position => <tr key={position} className="border-t border-[#d7e6df]"><td className="p-2">{POSITION_LABELS[position]}</td><td className="p-2">{Object.entries(weights[position] || {}).sort((a,b) => b[1] - a[1]).slice(0,3).map(([field, weight]) => `${fields[field] || field} ${Math.round(weight * 100)}%`).join(' · ')}</td></tr>)}
         </tbody></table>
         <p className="text-xs text-[#526b62]">Estos porcentajes se usan en el cálculo por habilidad. Si el jugador tiene habilidades parejas, su puntaje general puede ser parecido en varios puestos.</p>
       </div>
-    </details>
+    </DrawHelp>
   </section>;
 }
 
@@ -3613,47 +3653,70 @@ function CompactDrawDialog({ open, onClose, title, children }) {
 
 function SeparationEditor({ players, pairs, onChange, disabled, proposalMode, numTeams, matchId, csrf, goalkeeperIds, children }) {
   const [selection, setSelection] = useState([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const normalize = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const filteredPlayers = players.filter(player => normalize(player.nombre).includes(normalize(query)));
+  const togglePlayer = id => setSelection(current => current.includes(id) ? current.filter(key => key !== id) : current.length < numTeams ? [...current, id] : current);
   const [restrictionsOpen, setRestrictionsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const names = new Map(players.map(player => [playerKey(player), player.nombre]));
-  const keeperSnapshot = JSON.stringify(goalkeeperIds);
-  useEffect(() => { setMessage(''); }, [keeperSnapshot]);
+  const fingerprint = JSON.stringify({
+    keepers: goalkeeperIds.map(String).sort(),
+    groups: pairs.map(group => group.map(String).sort().join(',')).sort(),
+  });
+  const [savedFingerprint, setSavedFingerprint] = useState(fingerprint);
+  const hasChanges = fingerprint !== savedFingerprint;
+  useEffect(() => { setMessage(''); }, [fingerprint]);
   const group = selection;
   const exists = pairs.some(pair => JSON.stringify([...pair].sort()) === JSON.stringify([...group].sort()));
   async function save() {
+    if (!hasChanges || saving || disabled) return;
+    const submittedFingerprint = fingerprint;
     setSaving(true); setMessage('');
     try {
       const response = await fetch('guardar_separaciones.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: matchId, csrf, separated_pairs: pairs, goalkeeper_ids: goalkeeperIds }) });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.message || 'No se pudieron guardar las restricciones.');
+      setSavedFingerprint(submittedFingerprint);
       setMessage('Arqueros y restricciones guardados para esta fecha.');
     } catch (error) { setMessage(error.message); }
     finally { setSaving(false); }
   }
   return <section className="gf-separation-settings border-[#d5c49b]! bg-[#fffdf7]! p-3! shadow-none! sm:p-4!" aria-label="Separar jugadores">
-    <div className="gf-settings-heading -mx-3 -mt-3 rounded-t-md border-b border-[#d5c49b] bg-[#f1e8d2] px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4"><h3 className="text-[#574321]!">Arqueros y restricciones</h3><span className="text-[#695631]!">{pairs.length ? `${pairs.length} restricciones` : 'Sin restricciones guardadas'}</span></div>
+    <div className="gf-settings-heading -mx-3 -mt-3 rounded-t-md border-b border-[#d5c49b] bg-[#f1e8d2] px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4"><h3 className="text-[#574321]!">Arqueros y restricciones</h3></div>
     {children}
-    <div className="grid min-w-0 gap-2">
-      <label className="grid min-w-0 gap-1">Agregar jugadores que no pueden jugar juntos
-        <select aria-label="Agregar jugador a la restricción" className="min-h-11 min-w-0 rounded border border-[#adc8bb] bg-white px-2" value="" disabled={disabled || saving || group.length >= numTeams} onChange={event => { const id = event.target.value; if (id) setSelection(current => current.includes(id) || current.length >= numTeams ? current : [...current, id]); }}>
-          <option value="">Elegir jugador para añadir al grupo</option>
-          {players.filter(player => !group.includes(playerKey(player))).map(player => <option key={playerKey(player)} value={playerKey(player)}>{player.nombre}</option>)}
-        </select>
-      </label>
-      <p className="m-0 text-xs text-[#695631]">Añadí entre 2 y {numTeams} jugadores. Ninguno de los integrantes del grupo podrá compartir equipo.</p>
-      {group.length > 0 && <ul aria-label="Jugadores de la nueva restricción" className="m-0 grid list-none gap-1 p-0">{group.map(id => <li key={id} className="flex min-w-0 items-center justify-between gap-2 border-b border-[#d7e6df] py-1"><span>{names.get(id) || `Jugador ${id}`}</span><button type="button" className="min-h-9 rounded border border-[#adc8bb] px-2" disabled={disabled || saving} aria-label={`Quitar del grupo a ${names.get(id) || id}`} onClick={() => setSelection(current => current.filter(value => value !== id))}>Quitar del grupo</button></li>)}</ul>}
-      <button className="min-h-11 justify-self-start rounded border border-[#adc8bb] px-3 font-bold" type="button" disabled={disabled || saving || group.length < 2 || group.length > numTeams || exists || pairs.length >= 100} onClick={() => { onChange(normalizeSeparatedPairs([...pairs, group])); setSelection([]); setMessage('Cambios sin guardar.'); }}>Agregar restricción</button>
-      {exists && <p role="alert" className="m-0 text-xs text-[#695631]">Ese grupo ya tiene una restricción.</p>}
+    <div className="gf-restriction-section-heading"><h3>Restricciones <span>({pairs.length})</span></h3><DrawHelp title="Cómo funcionan las separaciones" modalOnly compact><p className="m-0 text-xs text-[#695631]">Añadí entre 2 y {numTeams} jugadores. Ninguno de los integrantes del grupo podrá compartir equipo.</p><p>Cada integrante del grupo debe quedar en un equipo distinto. Se aplican al generar; los equipos actuales conservan su distribución hasta que hagas un intercambio o un nuevo sorteo. {proposalMode ? 'Estas reglas se usan en esta propuesta.' : 'Podés guardarlas antes del sorteo y reutilizarlas en esta fecha.'}</p></DrawHelp></div>
+    <div className="gf-restriction-actions">
+      <button type="button" className={`${secondaryButtonClass} gf-restriction-create`} disabled={disabled || saving || pairs.length >= 100} onClick={() => { setQuery(''); setPickerOpen(true); }} aria-haspopup="dialog"><Icon name="plus" />Crear restricción</button>
+      <button type="button" className="gf-restriction-review" onClick={() => setRestrictionsOpen(true)} aria-haspopup="dialog" aria-expanded={restrictionsOpen}><span>Ver restricciones ({pairs.length})</span><span aria-hidden="true">›</span></button>
     </div>
-    <button type="button" className="min-h-11 rounded border border-[#adc8bb] px-3 text-left font-bold" onClick={() => setRestrictionsOpen(true)} aria-haspopup="dialog">Ver restricciones ({pairs.length})</button>
+    <CompactDrawDialog open={pickerOpen} onClose={() => setPickerOpen(false)} title="Jugadores que no pueden compartir equipo">
+      <div className="gf-restriction-picker">
+        <label className="gf-restriction-search">Buscar jugador<input type="search" autoComplete="off" value={query} onChange={event => setQuery(event.target.value)} /></label>
+        <p className="gf-restriction-count" role="status">{group.length} de {numTeams} seleccionados · mínimo 2</p>
+        <div className="gf-restriction-results" role="group" aria-label="Jugadores para la restricción">
+          {filteredPlayers.map(player => { const id = playerKey(player), checked = group.includes(id); return <label key={id} className="gf-restriction-player" data-selected={checked}>
+            <input type="checkbox" data-restriction-player={id} checked={checked} disabled={disabled || saving || (!checked && group.length >= numTeams)} onChange={() => togglePlayer(id)} aria-label={`Seleccionar a ${player.nombre}`} />
+            <span>{player.nombre}</span>
+          </label>; })}
+          {!filteredPlayers.length && <p role="status">No hay jugadores con ese nombre.</p>}
+        </div>
+        {group.length > 0 && <ul aria-label="Jugadores de la nueva restricción" className="gf-restriction-selected">{group.map(id => <li key={id}><span>{names.get(id) || `Jugador ${id}`}</span><button type="button" disabled={disabled || saving} aria-label={`Quitar del grupo a ${names.get(id) || id}`} title="Quitar del grupo" onClick={() => togglePlayer(id)}><Icon name="trash" /></button></li>)}</ul>}
+        {exists && <p role="alert">Ese grupo ya tiene una restricción.</p>}
+        <footer className="gf-restriction-confirm">
+          <button type="button" className={quietButtonClass} onClick={() => setPickerOpen(false)}>Cancelar</button>
+          <button className={primaryButtonClass} type="button" disabled={disabled || saving || group.length < 2 || group.length > numTeams || exists || pairs.length >= 100} onClick={() => { onChange(normalizeSeparatedPairs([...pairs, group])); setSelection([]); setPickerOpen(false); setMessage('Cambios sin guardar.'); }}>Agregar restricción</button>
+        </footer>
+      </div>
+    </CompactDrawDialog>
     <CompactDrawDialog open={restrictionsOpen} onClose={() => setRestrictionsOpen(false)} title="Estos jugadores no pueden jugar juntos">
     {pairs.length ? <ul className="m-0 grid list-none gap-2 p-0">{pairs.map((rule, index) => <li key={rule.join('-')} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#d7e6df] pt-2"><span>{rule.map(id => names.get(id) || `Jugador ${id}`).join(' y ')}{rule.some(id => !names.has(id)) ? ' (se aplica a los convocados)' : ''}</span><button type="button" className="gf-remove-restriction" disabled={disabled || saving} onClick={() => { onChange(pairs.filter((_, i) => i !== index)); setMessage('Cambios sin guardar.'); }} aria-label={`Quitar separación entre ${rule.map(id => names.get(id) || id).join(' y ')}`}>×</button></li>)}</ul> : null}
       {!pairs.length && <p>No hay restricciones agregadas.</p>}
     </CompactDrawDialog>
-    {!proposalMode && matchId > 0 && <button type="button" className="min-h-11 rounded border border-[#adc8bb] px-3" disabled={disabled || saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar arqueros y restricciones'}</button>}
-    {message && <p role="status">{message}</p>}
-    <details className="gf-scoring-help"><summary>Cómo funcionan las separaciones</summary><p>Cada integrante del grupo debe quedar en un equipo distinto. Se aplican al generar; los equipos actuales conservan su distribución hasta que hagas un intercambio o un nuevo sorteo. {proposalMode ? 'Estas reglas se usan en esta propuesta.' : 'Podés guardarlas antes del sorteo y reutilizarlas en esta fecha.'}</p></details>
+    {!proposalMode && matchId > 0 && (hasChanges || saving) && <button type="button" className={`${primaryButtonClass} gf-preparation-save`} aria-label="Guardar arqueros y restricciones" disabled={disabled || saving || !hasChanges} onClick={save}><Icon name="save" />{saving ? 'Guardando…' : 'Guardar cambios'}</button>}
+    {message && (hasChanges || message !== 'Cambios sin guardar.') && <p role="status">{message}</p>}
   </section>;
 }
 
@@ -3730,7 +3793,7 @@ function PlayerEquivalents({ teams, assignments, teamName }) {
   const balance = (value, a, b) => Math.abs(value) < 0.05 ? 'Parejos' : `${value > 0 ? a : b} +${Math.abs(value).toFixed(1)}`;
   return <div className="grid min-w-0 gap-3" data-player-equivalents="1">
     <h4 className="m-0 text-sm font-black text-[#07130f]">Comparativa jugador por jugador</h4>
-    <p className="m-0 text-xs text-[#526b62]">Equivalencias sin repetir jugadores: se busca la mejor combinación entre posición, sector y puntaje efectivo. El saldo muestra cómo se compensan las diferencias al sumar cada cruce. Es una lectura del resultado, no el orden de elección del sorteo.</p>
+    <DrawHelp title="Cómo se comparan los jugadores"><p className="m-0 text-xs text-[#526b62]">Equivalencias sin repetir jugadores: se busca la mejor combinación entre posición, sector y puntaje efectivo. El saldo muestra cómo se compensan las diferencias al sumar cada cruce. Es una lectura del resultado, no el orden de elección del sorteo.</p></DrawHelp>
     {teams.flatMap((team, i) => teams.slice(i + 1).map((other, offset) => {
       const j = i + offset + 1, a = teamName(i), b = teamName(j);
       const rows = comparePlayers(describe(team), describe(other));
@@ -6248,9 +6311,9 @@ export function SorteoLegacyPageIsland({ root }) {
     >
       <div className={`grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4 ${!isFormationEditor ? 'gf-flow-intro border-[#204735]! bg-[#204735]! shadow-none! [&_.gf-workflow-header_h1]:text-white! [&_.gf-workflow-header_p]:text-[#e2ebdf]! [&_.gf-match-summary_span]:text-[#d1dfcd]! [&_[data-draw-status]]:bg-[#e5efdf]! [&_[data-draw-status]]:text-[#204735]! [&_.gf-workflow-progress]:border-[#66816c]! [&_.gf-workflow-progress_li]:border-[#66816c]! [&_.gf-workflow-progress_li]:text-[#d1dfcd]! [&_.gf-workflow-progress_li[data-complete=true]]:text-white! [&_.gf-workflow-progress_li[aria-current=step]]:border-[#dcebcf]! [&_.gf-workflow-progress_li[aria-current=step]]:text-white!' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <button className={quietButtonClass} type="button" onClick={() => navigate(payload.links?.back || 'editar_partidos.php')}>
+          <button className={quietButtonClass} title={payload.invitationMode ? "Volver al inicio" : "Volver a fechas"} type="button" onClick={() => navigate(payload.links?.back || 'editar_partidos.php')}>
             <Icon name="arrowLeft" />
-            {payload.invitationMode ? 'Volver al inicio' : 'Volver a fechas'}
+            <span className="gf-mobile-icon-label">{payload.invitationMode ? 'Volver al inicio' : 'Volver a fechas'}</span>
           </button>
           {payload.match && payload.links?.finish ? (
             <button className={secondaryButtonClass} type="button" onClick={() => navigate(payload.links?.finish)}>
@@ -6265,7 +6328,7 @@ export function SorteoLegacyPageIsland({ root }) {
           ) : null}
         </div>
 
-        {payload.invitationMode ? <p role="status" className="m-0 rounded border border-[#adc8bb] bg-white p-3">Sorteo de invitado: generá y exportá tus equipos. El plantel y los arqueros están fijados por la fecha. Podés ajustar restricciones, sorteos y formaciones para exportar. Los cambios no se guardan en la fecha oficial.</p> : null}
+        {payload.invitationMode ? <DrawHelp title="Sorteo de invitado"><p role="status" className="m-0 rounded border border-[#adc8bb] bg-white p-3">Sorteo de invitado: generá y exportá tus equipos. El plantel y los arqueros están fijados por la fecha. Podés ajustar restricciones, sorteos y formaciones para exportar. Los cambios no se guardan en la fecha oficial.</p></DrawHelp> : null}
         {payload.invitationUrl ? <label className="grid gap-2">Enlace de invitación para generar y exportar equipos<input readOnly aria-label="Enlace de invitación" className="min-h-11 rounded border border-[#adc8bb] bg-white px-3" value={new URL(payload.invitationUrl, window.location.href).href} onFocus={event => event.target.select()} /><button type="button" className={quietButtonClass} onClick={async event => { const button = event.currentTarget; try { await navigator.clipboard.writeText(new URL(payload.invitationUrl, window.location.href).href); button.textContent = 'Enlace copiado'; } catch { button.textContent = 'Seleccioná y copiá el enlace'; } }}>Copiar enlace de invitación</button></label> : null}
         {payload.proposalMode && isFormationEditor ? (
           <form method="post" action="reiniciar_propuesta.php" onSubmit={(event) => { if (!window.confirm('Borrar toda tu propuesta y volver a elegir sorteo o armado manual?')) event.preventDefault(); }}>
@@ -6324,7 +6387,7 @@ export function SorteoLegacyPageIsland({ root }) {
             <li data-step="teams" aria-current={!formationsReady ? 'step' : undefined}><span>{formationsReady ? '✓' : '●'}</span> Equipos</li>
             <li data-step="formations" aria-current={formationsReady ? 'step' : undefined}><span>{formationsReady ? '●' : '🔒'}</span> Formaciones</li>
           </ol>
-          <p className="gf-next-step">{payload.invitationMode ? 'Genera tus equipos y exportalos como imagen o texto.' : formationsReady ? 'Equipos guardados. Continuá con las formaciones.' : hasSavedDraw ? 'Guardá los cambios para continuar a Formaciones.' : 'Guardá los equipos para continuar a Formaciones.'}</p>
+          <DrawHelp title="Siguiente paso"><p className="gf-next-step">{payload.invitationMode ? 'Genera tus equipos y exportalos como imagen o texto.' : formationsReady ? 'Equipos guardados. Continuá con las formaciones.' : hasSavedDraw ? 'Guardá los cambios para continuar a Formaciones.' : 'Guardá los equipos para continuar a Formaciones.'}</p></DrawHelp>
           {!payload.invitationMode && (formationsReady && formationsUrl ? <button type="button" className={secondaryButtonClass} onClick={() => navigate(formationsUrl)}>Configurar formaciones →</button> : null)}
         </header>
 
@@ -6443,27 +6506,15 @@ export function SorteoLegacyPageIsland({ root }) {
         <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'gf-workflow-main'}`}>
           <SeparationEditor numTeams={numTeams} matchId={payload.matchId} goalkeeperIds={Object.keys(manualGoalkeepers).filter(id => manualGoalkeepers[id])} csrf={payload.potsCsrf} players={players} pairs={separatedPairs} disabled={generating || savingDraw} proposalMode={payload.proposalMode || payload.invitationMode} onChange={pairs => { setSeparatedPairs(pairs); markDrawDirty(true); }} >
             <div className="gf-goalkeeper-preparation grid gap-3! rounded-md border border-[#c3cebd]! bg-[#f0f3ed]! p-3!">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="m-0 text-sm font-black text-[#07130f]">{goalkeeperPanelCollapsed && preparationGoalkeepersReady ? `✓ ${numTeams} arqueros definidos` : 'Definir arqueros'}</h3>
-                  <p className="m-0 text-[11px] font-semibold text-[#526b62]">Se eligen antes de realizar el sorteo.</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {!payload.invitationMode && (!isFormationEditor || teams) ? (
-                    <button className={quietButtonClass} type="button" onClick={() => setGoalkeeperPanelOpen((open) => !open)} aria-expanded={goalkeeperPanelOpen}>
-                      {goalkeeperPanelOpen ? 'Cerrar' : 'Editar'}
-                    </button>
-                  ) : null}
-                  <span className={`rounded-md border px-2 py-1 text-xs font-black ${(goalkeeperPanelCollapsed ? preparationGoalkeepersReady : selectedGoalkeepers.length === numTeams) ? 'border-[#9fc8b5] bg-white text-[#063d2b]' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
-                    {goalkeeperPanelCollapsed ? preparationGoalkeepers.length : selectedGoalkeepers.length}/{numTeams}
-                  </span>
+              <div className="gf-keeper-heading">
+                <div className="gf-keeper-title"><h3>Arqueros{preparationGoalkeepersReady && <span aria-label="Arqueros definidos"> ✓</span>}</h3><DrawHelp title="Arqueros de la fecha" modalOnly compact><p>Se eligen antes de realizar el sorteo.</p></DrawHelp></div>
+                <div className="gf-keeper-controls">
+                  <span className="gf-keeper-count" data-ready={goalkeeperPanelCollapsed ? preparationGoalkeepersReady : selectedGoalkeepers.length === numTeams}>{goalkeeperPanelCollapsed ? preparationGoalkeepers.length : selectedGoalkeepers.length}/{numTeams}</span>
+                  {!payload.invitationMode && (!isFormationEditor || teams) ? <button className={`${quietButtonClass} gf-keeper-edit`} title={goalkeeperPanelOpen ? "Cerrar edicion de arqueros" : "Editar arqueros"} type="button" onClick={() => setGoalkeeperPanelOpen(open => !open)} aria-expanded={goalkeeperPanelOpen}><Icon name={goalkeeperPanelOpen ? 'x' : 'pencil'} /><span className="sr-only">{goalkeeperPanelOpen ? 'Cerrar' : 'Editar'}</span></button> : null}
                 </div>
               </div>
               {goalkeeperPanelCollapsed ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#d7e6df] bg-white px-3 py-2 text-xs font-bold text-[#526b62]">
-                  <span>Arqueros</span>
-                  <strong className="text-[#07130f]">{goalkeeperSummary}</strong>
-                </div>
+                preparationGoalkeepers.length ? <ul className="gf-keeper-names" aria-label="Arqueros definidos">{preparationGoalkeepers.map(player => <li key={playerKey(player)}>{player.nombre}</li>)}</ul> : <p className="gf-keeper-empty">{goalkeeperSummary}</p>
               ) : (
                 <>
                   {selectedGoalkeepers.length > numTeams ? (
@@ -6540,13 +6591,13 @@ export function SorteoLegacyPageIsland({ root }) {
                 <Icon name="dice" className="h-5 w-5" />
                 {generating ? 'Generando...' : generateButtonLabel}
               </button>
-              {!payload.invitationMode && <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-3 text-xs font-extrabold text-[#526b62]">
+              {!payload.invitationMode && !autoBalance && <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-3 text-xs font-extrabold text-[#526b62]">
                 Equilibrio objetivo
                 <input className="h-8 w-16 rounded-md border border-[#adc8bb] bg-white px-2 text-center text-sm font-black text-[#07130f]" type="number" min="0" max="6" step="0.1" aria-label="Equilibrio objetivo" disabled={autoBalance || generating} value={maxDiff} onChange={(event) => setMaxDiff(event.target.value)} />
               </label>}
             </div>
             {!payload.invitationMode && <label className="flex items-center gap-2 text-xs font-bold text-[#526b62]"><input type="checkbox" checked={autoBalance} disabled={generating} onChange={event => { setAutoBalance(event.target.checked); if (event.target.checked) setMaxDiff(0); }} />Equilibrio automático desde 0,0</label>}
-            {autoBalance && !payload.invitationMode && <p className="m-0 text-xs text-[#526b62]">Busca desde 0,0 y amplía el margen de 0,1 en 0,1 según los equipos válidos encontrados, respetando las reglas de la fecha.</p>}
+            {autoBalance && !payload.invitationMode && <DrawHelp title="Equilibrio automático"><p className="m-0 text-xs text-[#526b62]">Busca desde 0,0 y amplía el margen de 0,1 en 0,1 según los equipos válidos encontrados, respetando las reglas de la fecha.</p></DrawHelp>}
             <p className="gf-attempts" data-draw-attempts>{payload.allowRedraw ? `${redrawsRemaining} intentos disponibles para rehacer` : 'Esta fecha no permite rehacer el sorteo'}</p>
             <div id="generateTeamsLoading" className={`${generating ? 'grid' : 'hidden'} gap-2 rounded-lg border border-[#9fc8b5] bg-[#f4fbf7] px-4 py-3 text-sm font-bold text-[#063d2b]`} role="status" aria-live="polite" aria-busy={generating}>
               <div className="flex items-center justify-between gap-3">
@@ -6602,7 +6653,7 @@ export function SorteoLegacyPageIsland({ root }) {
                       <button key={index} type="button" className={visibleTeamIndex === index ? secondaryButtonClass : quietButtonClass} aria-pressed={visibleTeamIndex === index} onClick={() => scrollToTeam(index)}>{getTeamDisplayName(index)}</button>
                     ))}
                   </div>
-                  <p className="m-0 text-sm text-[#063d2b] min-[761px]:hidden"><strong>← Deslizá entre canchas →</strong><br />Para intercambiar: llevá el jugador al borde, esperá que avance la cancha y soltalo sobre otro jugador. También podés tocar su tarjeta.</p>
+                  <DrawHelp title="Mover jugadores entre canchas"><p className="m-0 text-sm text-[#063d2b] min-[761px]:hidden"><strong>← Deslizá entre canchas →</strong><br />Para intercambiar: llevá el jugador al borde, esperá que avance la cancha y soltalo sobre otro jugador. También podés tocar su tarjeta.</p></DrawHelp>
                   <p className="m-0 hidden text-sm text-[#063d2b] min-[761px]:block"><strong>Intercambiar jugadores ↔</strong> Arrastrá una tarjeta hasta un jugador del otro equipo y soltala. Ambos cambian de equipo.</p>
                 </div>
                 ) : (
@@ -6613,7 +6664,7 @@ export function SorteoLegacyPageIsland({ root }) {
                       <button key={index} type="button" className={visibleTeamIndex === index ? secondaryButtonClass : quietButtonClass} aria-pressed={visibleTeamIndex === index} onClick={() => scrollToTeam(index)}>{getTeamDisplayName(index)}</button>
                     ))}
                   </div>
-                  <p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado y llevá la tarjeta al borde para avanzar a la otra cancha; soltala sobre el jugador destino. También podés tocar un jugador y después su destino.{generatedPots ? ' Conviene intercambiar dentro del mismo pote o con potes vecinos; los saltos grandes pueden desbalancear los equipos.' : ''}</p>
+                  <DrawHelp title="Intercambiar jugadores"><p className="gf-exchange-help" data-html2canvas-ignore="true">Arrastrá a un jugador del otro equipo para intercambiar. En móvil, mantené pulsado y llevá la tarjeta al borde para avanzar a la otra cancha; soltala sobre el jugador destino. También podés tocar un jugador y después su destino.{generatedPots ? ' Conviene intercambiar dentro del mismo pote o con potes vecinos; los saltos grandes pueden desbalancear los equipos.' : ''}</p></DrawHelp>
                   </>
                 )}
                 <div ref={teamsScrollerRef} data-teams-scroller="1" data-show-both={!isFormationEditor && showBothTeams ? 'true' : 'false'} data-dragging={dragState ? 'true' : 'false'} className="sorteo-teams-scroller grid gap-4 xl:grid-cols-2" onScroll={event => {
@@ -7094,7 +7145,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 </button>
               ) : null}
             </div>
-            {!isFormationEditor && !payload.invitationMode ? <p className="gf-save-help">{formationsReady ? 'Equipos guardados. El siguiente paso es configurar formaciones.' : 'Al guardar se habilitará la edición de formaciones.'}</p> : null}
+            {!isFormationEditor && !payload.invitationMode ? <DrawHelp title="Guardar equipos y continuar"><p className="gf-save-help">{formationsReady ? 'Equipos guardados. El siguiente paso es configurar formaciones.' : 'Al guardar se habilitará la edición de formaciones.'}</p></DrawHelp> : null}
             {manualActionCount > 0 || lockedPositionCount > 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-[#7a4b00]">
                 {manualActionCount > 0
@@ -7146,7 +7197,7 @@ export function SorteoLegacyPageIsland({ root }) {
               <section className="grid gap-2 rounded border border-[#d7e6df] p-3 text-xs text-[#526b62]" aria-label="Intercambios para mejorar movilidad">
                 <h4 className="m-0 text-sm font-black text-[#07130f]">Intercambios para mejorar movilidad</h4>
                 {drawAnalysis.separationConflicts ? <p role="alert" className="m-0 text-[#7a4b00]">Hay parejas que deben separarse en el mismo equipo, contando titulares y suplentes. Resolvé el cruce antes de guardar.</p> : null}
-                <p className="m-0">Se buscan cruces que mejoren la movilidad sin empeorar el equilibrio 50/50 de Despliegue y puntaje, o que resuelvan una separación obligatoria. Respetan puestos naturales, posiciones fijadas y parejas de potes, y mantienen la diferencia total y por línea dentro del margen actual o de 2 puntos. Cada cambio requiere que lo apliques.</p>
+                <DrawHelp title="Cómo se sugieren los intercambios"><p className="m-0">Se buscan cruces que mejoren la movilidad sin empeorar el equilibrio 50/50 de Despliegue y puntaje, o que resuelvan una separación obligatoria. Respetan puestos naturales, posiciones fijadas y parejas de potes, y mantienen la diferencia total y por línea dentro del margen actual o de 2 puntos. Cada cambio requiere que lo apliques.</p></DrawHelp>
                 {swapSuggestions.length ? swapSuggestions.map(swap => <div key={`${playerKey(swap.left)}-${playerKey(swap.right)}`} className="grid gap-1 border-t border-[#d7e6df] pt-2" data-mobility-suggestion>
                   <strong>{swap.left.nombre} ({getTeamDisplayName(swap.a)}) ↔ {swap.right.nombre} ({getTeamDisplayName(swap.b)})</strong>
                   <span>Puestos: {swap.leftPosition} ↔ {swap.rightPosition}, ambos con posición natural de destino.</span>

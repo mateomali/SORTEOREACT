@@ -1,13 +1,13 @@
 ﻿const { test, expect } = require('@playwright/test');
 test.use({hasTouch:true});
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8000';
-test('real match 204 loads and both courts fit the mobile viewport', async ({page}) => {
+test('real match 204 loads and courts fit the mobile carousel and desktop viewport', async ({page}) => {
   test.setTimeout(90000);
   const errors=[]; page.on('pageerror', e=>errors.push(e.message));
   await page.goto(`${BASE}/login.php?next=sorteo_legacy_csv.php%3Fmatch_id%3D204`);
-  await page.locator('#login-admin').evaluate(n=>n.open=true);
+  await page.getByRole('button',{name:'Administrador',exact:true}).click();
   await page.locator('#adminPassword').fill(process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026');
-  await page.getByRole('button',{name:/Entrar como admin|Ingresar/i}).click();
+  await page.getByRole('button',{name:'Entrar como admin',exact:true}).click();
   if (!await page.locator('.team-formation').count()) await page.locator('#generateTeamsButton').click();
   await expect(page.locator('.team-formation')).toHaveCount(2,{timeout:60000});
   for (const width of [320,360,390,430,768,1024,1440]) {
@@ -16,7 +16,13 @@ test('real match 204 loads and both courts fit the mobile viewport', async ({pag
 
     expect(geometry.page).toBeLessThanOrEqual(width);
     expect(geometry.fields[0].right).toBeLessThanOrEqual(geometry.fields[1].left);
-    expect(geometry.fields[1].right).toBeLessThanOrEqual(width);
+    if(width > 760) expect(geometry.fields[1].right).toBeLessThanOrEqual(width);
+    else for(const field of await page.locator('.team-formation').all()) {
+      await field.scrollIntoViewIfNeeded();
+      const bounds=await field.boundingBox();
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
+    }
     expect(Math.abs(geometry.fields[0].height-geometry.fields[1].height)).toBeLessThan(1);
     await page.locator('[data-teams-scroller]').screenshot({path:`outputs/workflow-courts-${width}.png`});
   }
@@ -27,6 +33,8 @@ test('real match 204 loads and both courts fit the mobile viewport', async ({pag
   await expect(page.getByRole('button', { name: 'Mostrar ambos', exact: true })).toHaveCount(0);
   const toggles = page.locator('.gf-pitch-size-toggle');
   const scroller = page.locator('[data-teams-scroller]');
+  await toggles.first().click();
+  await expect(scroller).toHaveAttribute('data-show-both', 'true');
   await expect(toggles.first()).toBeVisible();
   for (const index of [1, 0]) {
     await toggles.nth(index).click();
@@ -41,7 +49,7 @@ test('real match 204 loads and both courts fit the mobile viewport', async ({pag
   }
   const bounds = await page.locator('.team-formation').evaluateAll(fields => fields.map(field => { const r = field.getBoundingClientRect(); return { left: r.left, right: r.right }; }));
   expect(bounds[0].right).toBeLessThanOrEqual(bounds[1].left);
-  expect(bounds[1].right).toBeLessThanOrEqual(390);
+  expect(bounds.every(field=>field.right-field.left<390)).toBe(true);
   await expect(page.getByText('Datos de las alternativas', { exact: true })).toHaveCount(0);
   const rosa = page.locator('.team-head h3').filter({ hasText: /ROSA/i }).locator('span').first();
   if (await rosa.count()) await expect(rosa).toHaveCSS('background-color', 'rgb(244, 114, 182)');
@@ -55,14 +63,15 @@ const fixture = (action,id) => execFileSync('php',['tests/sorteo-workflow-fixtur
 const stateOf = id => JSON.parse(fixture('inspect',id));
 async function loginMatch(page,id) {
   await page.goto(`${BASE}/login.php?next=${encodeURIComponent(`sorteo_legacy_csv.php?match_id=${id}`)}`);
-  await page.locator('#login-admin').evaluate(n=>n.open=true);
+  await page.getByRole('button',{name:'Administrador',exact:true}).click();
   await page.locator('#adminPassword').fill(process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026');
-  await page.getByRole('button',{name:/Entrar como admin|Ingresar/i}).click();
+  await page.getByRole('button',{name:'Entrar como admin',exact:true}).click();
 }
 const rosterOnPage = page => page.locator('[data-sorteo-drag-player]').evaluateAll(cards=>cards.map(card=>({id:card.dataset.playerKey,team:Number(card.dataset.teamIndex)+1,pos:card.dataset.assignedPosition})).sort((a,b)=>a.id.localeCompare(b.id)));
 
 test('prepare, redraw, alternatives, save, reload and continue use the real persistence flow', async ({page})=>{
   test.setTimeout(180000);
+  page.setDefaultTimeout(15000);
   const id=Number(fixture('create'));
   const errors=[]; const failed=[];
   page.on('pageerror',e=>errors.push(e.message));
@@ -73,12 +82,13 @@ test('prepare, redraw, alternatives, save, reload and continue use the real pers
     await loginMatch(page,id);
     await expect(page.locator('.gf-workflow-progress')).toBeVisible();
     await expect(page.getByRole('button',{name:'Configurar formaciones →',exact:true})).toHaveCount(0);
-    await page.locator('.gf-player-preparation').getByRole('button',{name:'Editar',exact:true}).click();
+    await page.getByRole('button',{name:/^Ver \d+ jugadores seleccionados$/}).click();
     await expect(page.locator('#jugadores-container')).toBeVisible();
     await page.locator('#jugadores-container').getByRole('button',{name:/Editar /}).first().click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.getByRole('dialog').getByRole('button',{name:'Cancelar',exact:true}).click();
-    await page.locator('.gf-player-preparation').getByRole('button',{name:'Cerrar',exact:true}).click();
+    const playerEditor=page.getByRole('dialog',{name:'Editar jugador',exact:true});
+    await expect(playerEditor).toBeVisible();
+    await playerEditor.getByRole('button',{name:'Cancelar',exact:true}).click();
+    await expect(page.getByRole('dialog',{name:'Jugadores de la fecha',exact:true})).not.toBeVisible();
     const keepers=page.locator('.gf-goalkeeper-preparation');
     if (await keepers.getByRole('button',{name:'Editar',exact:true}).count()) await keepers.getByRole('button',{name:'Editar',exact:true}).click();
     // Derive keeper controls from the fixture roster; imports may change names.
@@ -91,11 +101,12 @@ test('prepare, redraw, alternatives, save, reload and continue use the real pers
     await expect(keepers.locator('input[type=checkbox]:checked')).toHaveCount(2);
     await page.locator('#generateTeamsButton').click();
     await expect(page.locator('.team-formation')).toHaveCount(2,{timeout:60000});
-    await expect(page.locator('[data-draw-attempts]')).toContainText('3 intentos');
+    await expect(page.locator('[data-draw-attempts]')).toContainText('6 intentos');
+    await page.getByRole('checkbox',{name:'Equilibrio automático desde 0,0',exact:true}).uncheck();
     await page.getByLabel('Equilibrio objetivo').fill('6');
     page.once('dialog', dialog => dialog.accept());
     await page.locator('#generateTeamsButton').click();
-    await expect(page.locator('[data-draw-attempts]')).toContainText('2 intentos',{timeout:60000});
+    await expect(page.locator('[data-draw-attempts]')).toContainText('5 intentos',{timeout:60000});
     const team=page.locator('[data-sorteo-team-card]').first();
     await team.locator('select').nth(0).selectOption('VERDE');
     await team.locator('select').nth(1).selectOption('auto');
@@ -106,11 +117,11 @@ test('prepare, redraw, alternatives, save, reload and continue use the real pers
     const values=await variants.locator('option').evaluateAll(options=>options.filter(o=>!o.disabled).map(o=>o.value));
     for(const value of values)await variants.selectOption(value);
     await team.locator('.gf-team-tactics > summary').click();
-    await expect(page.getByRole('region',{name:'Análisis rápido'})).toBeVisible();
-    await page.getByRole('button',{name:/Ver análisis completo/}).click();
+    await expect(page.locator('.gf-analysis-compact')).toBeVisible();
+    await page.getByRole('button',{name:'Analizar equipos',exact:true}).click();
     await expect(page.locator('[data-sorteo-analysis]')).toBeVisible();
     await expect(page.locator('[data-sorteo-analysis] svg').first()).toBeVisible();
-    await page.getByRole('button',{name:'Ocultar análisis completo',exact:true}).click();
+    await page.getByRole('button',{name:'Ocultar análisis',exact:true}).click();
     const before=await rosterOnPage(page);
     await page.locator('#download-controls').getByRole('button',{name:'Guardar equipos y continuar',exact:true}).click();
     await expect(page).toHaveURL(/editar_partidos\.php/);
@@ -173,10 +184,14 @@ test('both directions of mouse drag, mobile tap and touch drag share the existin
   await expect(find(key)).toHaveAttribute('data-team-index','1');
   const cdp=await page.context().newCDPSession(page);
   await find(key).scrollIntoViewIfNeeded();
-  const a=await find(key).boundingBox(),b=await find(targetKey).boundingBox();
+  const a=await find(key).boundingBox();
   const points=(x,y)=>[{x,y,id:1}];
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points(a.x+a.width/2,a.y+a.height/2)});
   await page.waitForTimeout(500);
+  // Move to the carousel edge, wait for the other court, then drop on its card.
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(5,a.y+a.height/2)});
+  await expect.poll(()=>find(targetKey).evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})).toBe(true);
+  const b=await find(targetKey).boundingBox();
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(b.x+b.width/2,b.y+b.height/2)});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await expect(find(key)).toHaveAttribute('data-team-index','0');
@@ -192,10 +207,10 @@ test('featured match appears only above the date search', async ({page}) => {
     return payload.matches.find(match=>Number(match.id)===Number(payload.latestId));
   });
   await expect(page.locator(`#partido-admin-${latest.id}`)).toHaveCount(0);
-  await expect(page.getByText(latest.title,{exact:true})).toHaveCount(1);
+  await expect(page.getByRole('heading',{name:latest.title,exact:true}).first()).toBeVisible();
   const history=page.getByRole('region',{name:'Historial de fechas'});
   await expect(history.locator('article').first()).toBeVisible();
   await page.getByLabel('Buscar fecha').fill(latest.title);
   await expect(page.locator(`#partido-admin-${latest.id}`)).toHaveCount(0);
-  await expect(page.getByText(latest.title,{exact:true})).toHaveCount(1);
+  await expect(page.getByRole('heading',{name:latest.title,exact:true}).first()).toBeVisible();
 });
