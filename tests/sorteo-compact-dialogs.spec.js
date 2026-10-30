@@ -9,7 +9,8 @@ for (const invitationMode of [false,true]) test(`compact dialogs and equal pitch
   await page.route('**/__compact', route=>route.fulfill({ contentType:'text/html',body:`<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/tailwind.css"></head><body class="page-sorteo-legacy sorteo-page"><main class="content"><script src="/assets/player-rating.js"></script><script type="application/json" data-player-rating-policy>${policy}</script><div data-react-root data-react-island="sorteo_legacy_page" data-payload='${JSON.stringify(payload)}'></div></main><script type="module" src="/assets/react/react-app.js"></script></body></html>` }));
   await page.setViewportSize({width:390,height:844});
   await page.goto('http://127.0.0.1:8000/__compact');
-  if(invitationMode){const identity=page.getByRole('dialog',{name:'Que jugador sos',exact:true});await identity.getByLabel('Que jugador sos',{exact:true}).selectOption('1');await identity.getByRole('button',{name:'Continuar',exact:true}).click();}
+  if(invitationMode) await expect(page.getByRole('dialog',{name:'Que jugador sos',exact:true})).not.toBeVisible();
+  if(invitationMode) await page.locator('[data-invitation-draw-settings] > summary').click();
   for(const width of [320,390]) {
     await page.setViewportSize({width,height:844});
     const help=page.getByRole('button',{name:'Ayuda: Cálculo del puntaje',exact:true});

@@ -3852,7 +3852,8 @@ function TeamStrengthComparison({ views, teamName, revision }) {
 export function SorteoLegacyPageIsland({ root }) {
   const payload = useMemo(() => parsePayload(root), [root]);
   const lockedMatch = payload.matchId > 0;
-  const isFormationEditor = payload.mode === 'formation_editor';
+  const [invitationBuildMode, setInvitationBuildMode] = useState('draw');
+  const isFormationEditor = payload.mode === 'formation_editor' || (payload.invitationMode && invitationBuildMode === 'manual');
   const initialTeams = useMemo(() => (
     payload.initialTeams.map((team) => (Array.isArray(team) ? team.map(normalizePlayer) : []))
   ), [payload.initialTeams]);
@@ -3878,7 +3879,6 @@ export function SorteoLegacyPageIsland({ root }) {
   const [savedPots, setSavedPots] = useState(() => JSON.stringify(payload.pots));
   const [savingPots, setSavingPots] = useState(false);
   const [postulationOpen, setPostulationOpen] = useState(false);
-  const [identityOpen, setIdentityOpen] = useState(Boolean(payload.invitationMode));
   const [postulationAuthor, setPostulationAuthor] = useState('');
   const [postulating, setPostulating] = useState(false);
   const [postulationMessage, setPostulationMessage] = useState('');
@@ -6309,7 +6309,7 @@ export function SorteoLegacyPageIsland({ root }) {
         setDragHoverTarget(null);
       }}
     >
-      <div className={`grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4 ${!isFormationEditor ? 'gf-flow-intro border-[#204735]! bg-[#204735]! shadow-none! [&_.gf-workflow-header_h1]:text-white! [&_.gf-workflow-header_p]:text-[#e2ebdf]! [&_.gf-match-summary_span]:text-[#d1dfcd]! [&_[data-draw-status]]:bg-[#e5efdf]! [&_[data-draw-status]]:text-[#204735]! [&_.gf-workflow-progress]:border-[#66816c]! [&_.gf-workflow-progress_li]:border-[#66816c]! [&_.gf-workflow-progress_li]:text-[#d1dfcd]! [&_.gf-workflow-progress_li[data-complete=true]]:text-white! [&_.gf-workflow-progress_li[aria-current=step]]:border-[#dcebcf]! [&_.gf-workflow-progress_li[aria-current=step]]:text-white!' : ''}`}>
+      <div className={`grid gap-3 rounded-lg border border-[#d7e6df] bg-white p-3 shadow-sm sm:p-4 ${!isFormationEditor && !payload.invitationMode ? 'gf-flow-intro border-[#204735]! bg-[#204735]! shadow-none! [&_.gf-workflow-header_h1]:text-white! [&_.gf-workflow-header_p]:text-[#e2ebdf]! [&_.gf-match-summary_span]:text-[#d1dfcd]! [&_[data-draw-status]]:bg-[#e5efdf]! [&_[data-draw-status]]:text-[#204735]! [&_.gf-workflow-progress]:border-[#66816c]! [&_.gf-workflow-progress_li]:border-[#66816c]! [&_.gf-workflow-progress_li]:text-[#d1dfcd]! [&_.gf-workflow-progress_li[data-complete=true]]:text-white! [&_.gf-workflow-progress_li[aria-current=step]]:border-[#dcebcf]! [&_.gf-workflow-progress_li[aria-current=step]]:text-white!' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button className={quietButtonClass} title={payload.invitationMode ? "Volver al inicio" : "Volver a fechas"} type="button" onClick={() => navigate(payload.links?.back || 'editar_partidos.php')}>
             <Icon name="arrowLeft" />
@@ -6328,7 +6328,39 @@ export function SorteoLegacyPageIsland({ root }) {
           ) : null}
         </div>
 
-        {payload.invitationMode ? <DrawHelp title="Sorteo de invitado"><p role="status" className="m-0 rounded border border-[#adc8bb] bg-white p-3">Sorteo de invitado: generá y exportá tus equipos. El plantel y los arqueros están fijados por la fecha. Podés ajustar restricciones, sorteos y formaciones para exportar. Los cambios no se guardan en la fecha oficial.</p></DrawHelp> : null}
+        {payload.invitationMode ? <>
+          <header className="grid gap-1" data-invitation-summary>
+            <h1 className="m-0 text-lg font-bold">Armá tu formación</h1>
+            {payload.match ? <p className="m-0 text-xs">{payload.match.title} · {payload.match.matchDate}</p> : null}
+            <p className="m-0 text-xs">{selectedPlayers.length} jugadores · {numTeams} equipos · {drawReadiness.teamSizeLabel}</p>
+          </header>
+          <label className="grid gap-1 text-sm font-bold">Armado de equipos
+            <select className={inputClass} aria-label="Armado de equipos" value={invitationBuildMode} disabled={generating || postulating} onChange={event => {
+              const mode = event.target.value;
+              if (mode === 'manual' && !teams) {
+                const keepers = selectedPlayers.filter(player => manualGoalkeepers[playerKey(player)] === true);
+                if (keepers.length !== numTeams || selectedPlayers.length % numTeams !== 0) {
+                  setError('La fecha debe tener un arquero por equipo y un plantel divisible en equipos iguales.');
+                  return;
+                }
+                const nextTeams = keepers.map(player => [{ ...player, manualGoalkeeper: true }]);
+                selectedPlayers.filter(player => manualGoalkeepers[playerKey(player)] !== true).forEach((player, index) => nextTeams[index % numTeams].push(player));
+                const nextAssignments = Object.assign({}, ...nextTeams.map(team => buildTeamAssignment(team)));
+                keepers.forEach(player => { nextAssignments[playerKey(player)] = 'ARQ'; });
+                setTeams(nextTeams);
+                setAssignments(nextAssignments);
+                setGeneratedPots(null);
+                setSaveState('dirty');
+                setSuccess('Formación manual lista para editar. Intercambiá jugadores y ajustá sus puestos antes de postular.');
+              }
+              setInvitationBuildMode(mode);
+              setMobileMoveSource(null);
+            }}>
+              <option value="draw">Sorteo</option>
+              <option value="manual">Formación manual</option>
+            </select>
+          </label>
+        </> : null}
         {payload.invitationUrl ? <label className="grid gap-2">Enlace de invitación para generar y exportar equipos<input readOnly aria-label="Enlace de invitación" className="min-h-11 rounded border border-[#adc8bb] bg-white px-3" value={new URL(payload.invitationUrl, window.location.href).href} onFocus={event => event.target.select()} /><button type="button" className={quietButtonClass} onClick={async event => { const button = event.currentTarget; try { await navigator.clipboard.writeText(new URL(payload.invitationUrl, window.location.href).href); button.textContent = 'Enlace copiado'; } catch { button.textContent = 'Seleccioná y copiá el enlace'; } }}>Copiar enlace de invitación</button></label> : null}
         {payload.proposalMode && isFormationEditor ? (
           <form method="post" action="reiniciar_propuesta.php" onSubmit={(event) => { if (!window.confirm('Borrar toda tu propuesta y volver a elegir sorteo o armado manual?')) event.preventDefault(); }}>
@@ -6338,7 +6370,10 @@ export function SorteoLegacyPageIsland({ root }) {
           </form>
         ) : null}
 
-        {isFormationEditor ? (
+        {payload.invitationMode ? <DrawHelp title="Información de la fecha" modalOnly>
+          <p>{drawReadiness.ready ? 'Plantel listo.' : 'Revisar preparación.'} Media GEN: {selectedPlayers.length ? playerCardRating(selectedAverageRating) : '—'}. {drawAnalysis ? `Diferencia: ${drawAnalysis.diff.toFixed(1)} puntos.` : ''}</p>
+          <p>Plantel y arqueros definidos por la fecha. Elegí cómo armar los equipos, ajustá la formación y exportala o postulala.</p>
+        </DrawHelp> : isFormationEditor ? (
         <header className="grid gap-3 rounded-lg border border-[#d7e6df] bg-[#f8fbfa] px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div className="min-w-0">
             <p className="m-0 text-xs font-extrabold uppercase tracking-[.12em] text-[#526b62]">{isFormationEditor ? 'Formaciones' : 'Sorteo de equipos'}</p>
@@ -6396,7 +6431,7 @@ export function SorteoLegacyPageIsland({ root }) {
 
       <div className={`grid gap-4 ${isFormationEditor ? '' : 'gf-workflow-body min-[1100px]:grid-cols-[340px_minmax(0,1fr)]! min-[1100px]:items-start'}`}>
         {!isFormationEditor ? <div className="grid min-w-0 content-start gap-4" data-draw-preparation>
-        <ScoringSettings players={selectedPlayers} mode={positionRatingMode} onModeChange={setPositionRatingMode} discount={positionRatingDiscount} onDiscountChange={setPositionRatingDiscount} disabled={generating || savingDraw || payload.proposalMode} />
+        {!payload.invitationMode ? <ScoringSettings players={selectedPlayers} mode={positionRatingMode} onModeChange={setPositionRatingMode} discount={positionRatingDiscount} onDiscountChange={setPositionRatingDiscount} disabled={generating || savingDraw || payload.proposalMode} /> : null}
         {!isFormationEditor && !payload.proposalMode ? (
         <aside className="gf-player-preparation gf-roster-summary">
           <button className="gf-roster-summary-button" type="button" onClick={() => setPlayersPanelOpen(true)} aria-haspopup="dialog" aria-expanded={playersPanelOpen}>Ver {selectedPlayers.length} jugadores seleccionados<Icon name="users" /></button>
@@ -6570,6 +6605,10 @@ export function SorteoLegacyPageIsland({ root }) {
               setDrawPots(buildAutomaticDrawPots(roster, numTeams, gap, drawPots));
               setPotsMessage('Propuesta automática lista. Podés editarla, reordenarla y guardarla.');
             }} players={selectedPlayers} numTeams={numTeams} disabled={generating || savingDraw || savingPots} onSave={savePotsTemplate} saving={savingPots} saved={JSON.stringify(drawPots) === savedPots} message={potsMessage} />
+            {payload.invitationMode ? <details className="border-t border-[#d7e6df] pt-2" data-invitation-draw-settings>
+              <summary className="cursor-pointer text-sm font-bold">Criterios del sorteo</summary>
+              <ScoringSettings players={selectedPlayers} mode={positionRatingMode} onModeChange={setPositionRatingMode} discount={positionRatingDiscount} onDiscountChange={setPositionRatingDiscount} disabled={generating || savingDraw} />
+            </details> : null}
 
             <div className="gf-generate-actions flex flex-wrap items-center gap-2">
               {drawReadiness.issues.length || drawReadiness.warnings.length ? (
@@ -7168,6 +7207,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <Icon name="clipboard" />
                 {analysisVisible ? 'Ocultar' : 'Analizar'}
               </button>
+              {payload.invitationMode ? <button className={`${primaryButtonClass} sorteo-mobile-action-button`} type="button" onClick={() => setPostulationOpen(true)}>Postular</button> : null}
               {lockedMatch && !payload.invitationMode ? (
                 <button className={`${primaryButtonClass} sorteo-mobile-action-button`} type="button" onClick={isFormationEditor ? saveFormations : saveDraw}>
                   <Icon name="save" />
@@ -7183,7 +7223,7 @@ export function SorteoLegacyPageIsland({ root }) {
                 <div>
                   <h3 className="m-0 text-base font-black text-[#07130f]">Analisis de equipos</h3>
                   <p className="m-0 text-xs font-semibold text-[#526b62]">
-                    Resumen claro del equilibrio, los puntos fuertes, los puntos a cuidar y los jugadores mas determinantes.
+                    Diferencias clave del reparto actual.
                   </p>
                 </div>
                 <span className="inline-flex min-h-9 items-center justify-center rounded-md border border-[#9fc8b5] bg-[#eaf7f0] px-3 text-sm font-black text-[#063d2b]">
@@ -7191,6 +7231,14 @@ export function SorteoLegacyPageIsland({ root }) {
                 </span>
               </div>
 
+              <div className="grid gap-2 text-sm" aria-label="Diferencias clave">
+                <p className="m-0">Puntaje: diferencia de <strong>{drawAnalysis.diff.toFixed(1)} puntos</strong>. {drawAnalysis.diff <= 1 ? 'Equipos muy parejos.' : drawAnalysis.diff <= 2 ? 'Ventaja moderada.' : 'Ventaja clara a revisar.'}</p>
+                {drawAnalysis.comparisons.length ? [...drawAnalysis.comparisons].sort((a, b) => b.diff - a.diff).slice(0, 3).map(item => (
+                  <p key={item.field} className="m-0"><strong>{item.label}:</strong> {item.highTeam} supera a {item.lowTeam} por {item.diff.toFixed(1)} puntos.</p>
+                )) : <p className="m-0">Sin diferencias destacadas en los atributos.</p>}
+                {drawAnalysis.ruleChecks.filter(rule => !rule.ok).map(rule => <p key={rule.label} className="m-0 text-[#7a4b00]">Revisar: {rule.label}.</p>)}
+              </div>
+              <DrawHelp title="Detalle del análisis e intercambios" modalOnly>
               <PlayerEquivalents teams={teams} assignments={assignments} teamName={getTeamDisplayName} />
               <DespliegueExplanation teams={teams} teamName={getTeamDisplayName} analysis={drawAnalysis} assignments={assignments} />
               <PaceExplanation teams={teams} assignments={assignments} teamName={getTeamDisplayName} analysis={drawAnalysis} />
@@ -7378,6 +7426,7 @@ export function SorteoLegacyPageIsland({ root }) {
                   </div>
                 </div>
               ) : null}
+              </DrawHelp>
             </section>
           ) : null}
           {teams && !isFormationEditor ? (
@@ -7398,10 +7447,6 @@ export function SorteoLegacyPageIsland({ root }) {
         </main>
       </div>
 
-      <CompactDrawDialog open={identityOpen} onClose={() => { if(postulationAuthor) setIdentityOpen(false); }} title="Que jugador sos">
-        <CommunityPlayerPicker players={payload.communityPlayers || []} value={postulationAuthor} onChange={setPostulationAuthor} />
-        <button type="button" className={primaryButtonClass} disabled={!postulationAuthor} onClick={() => setIdentityOpen(false)}>Continuar</button>
-      </CompactDrawDialog>
       <CompactDrawDialog open={postulationOpen} onClose={() => { if (!postulating) setPostulationOpen(false); }} title="Postular mi formación">
         <p>Elegí tu nombre del padrón. Podés enviar una propuesta por fecha y reemplazarla hasta que el administrador abra la votación. Los votantes no verán quién la propuso.</p>
         <CommunityPlayerPicker players={payload.communityPlayers || []} value={postulationAuthor} onChange={setPostulationAuthor} disabled={postulating} label="Nombre del postulante" />
