@@ -8,8 +8,8 @@ function draw_separations_validate($raw): array
     }
     $pairs = [];
     foreach ($raw as $pair) {
-        if (!is_array($pair) || array_values($pair) !== $pair || count($pair) !== 2) {
-            throw new InvalidArgumentException('Cada separación debe contener dos jugadores.');
+        if (!is_array($pair) || array_values($pair) !== $pair || (count($pair) < 2 || count($pair) > 4)) {
+            throw new InvalidArgumentException('Cada separación debe contener entre dos y cuatro jugadores.');
         }
         foreach ($pair as $id) {
             if (!is_scalar($id) || !preg_match('/^[1-9][0-9]*$/', (string) $id)) {
@@ -18,7 +18,7 @@ function draw_separations_validate($raw): array
         }
         $ids = array_map('strval', $pair);
         sort($ids, SORT_STRING);
-        if ($ids[0] === $ids[1]) throw new InvalidArgumentException('Elegí dos jugadores distintos.');
+        if (count(array_unique($ids)) !== count($ids)) throw new InvalidArgumentException('Elegí jugadores distintos.');
         $pairs[implode(':', $ids)] = $ids;
     }
     return array_values($pairs);
@@ -32,9 +32,15 @@ function draw_separations_from_match(array $match): array
 
 function draw_separations_assert(array $pairs, array $teamsByPlayer): void
 {
-    foreach ($pairs as [$a, $b]) {
-        if (isset($teamsByPlayer[$a], $teamsByPlayer[$b]) && (int) $teamsByPlayer[$a] > 0 && (int) $teamsByPlayer[$a] === (int) $teamsByPlayer[$b]) {
-            throw new InvalidArgumentException('Hay una pareja marcada para separar en el mismo equipo. Intercambiá un jugador o quitá esa regla.');
+    foreach ($pairs as $group) {
+        $seen = [];
+        foreach ($group as $id) {
+            $team = (int) ($teamsByPlayer[$id] ?? 0);
+            if ($team <= 0) continue;
+            if (isset($seen[$team])) {
+                throw new InvalidArgumentException('Hay jugadores marcados para separar en el mismo equipo. Intercambiá un jugador o quitá esa regla.');
+            }
+            $seen[$team] = true;
         }
     }
 }

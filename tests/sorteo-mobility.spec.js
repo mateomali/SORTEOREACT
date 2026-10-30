@@ -53,6 +53,17 @@ test('separations persist with a temporary date and are enforced by both save en
     await page.locator('#adminPassword').fill(process.env.GOODFELLAS_ADMIN_PASSWORD || 'Goodfellas2026');
     await page.getByRole('button', { name:'Entrar como admin', exact:true }).click();
     const payload = await page.locator('[data-react-island="sorteo_legacy_page"]').evaluate(node => JSON.parse(node.dataset.payload));
+    const rulesEditor = page.getByRole('region', { name:'Separar jugadores', exact:true });
+    await rulesEditor.getByLabel('Primer jugador', { exact:true }).selectOption(String(payload.players[0].id));
+    await rulesEditor.getByLabel('Segundo jugador', { exact:true }).selectOption(String(payload.players[1].id));
+    await rulesEditor.getByRole('button', { name:'Agregar pareja', exact:true }).click();
+    await rulesEditor.getByRole('button', { name:'Guardar restricciones de esta fecha', exact:true }).click();
+    await expect(rulesEditor.getByRole('status')).toHaveText('Restricciones guardadas para esta fecha.');
+    await page.reload();
+    await expect(rulesEditor.getByRole('button', { name:/Quitar separación/ })).toHaveCount(1);
+    await rulesEditor.getByRole('button', { name:/Quitar separación/ }).click();
+    await rulesEditor.getByRole('button', { name:'Guardar restricciones de esta fecha', exact:true }).click();
+    await expect(rulesEditor.getByRole('status')).toHaveText('Restricciones guardadas para esta fecha.');
     await page.locator('#draw-rating-mode').selectOption('skill');
     const keepers = page.locator('.gf-goalkeeper-preparation');
     if (await keepers.getByRole('button', { name:'Editar', exact:true }).count()) await keepers.getByRole('button', { name:'Editar', exact:true }).click();
@@ -113,3 +124,18 @@ test('separations persist with a temporary date and are enforced by both save en
     expect(formationPayload.positionRatingDiscount).toBe(false);
   } finally { fixture('delete', id); }
 });
+
+for (const numTeams of [3, 4]) {
+  test(`separation editor accepts ${numTeams} players`, async ({ page }) => {
+    const players = Array.from({ length: 12 }, (_, i) => ({ id:i + 1, name:`Jugador ${i+1}`, positions:'MED', skill:4 }));
+    const payload = { players, numTeams, links:{} };
+    await page.route('**/__groups', route => route.fulfill({ contentType:'text/html', body:`<html><body><script src="/assets/player-rating.js"></script><script type="application/json" data-player-rating-policy>${policy}</script><div data-react-root data-react-island="sorteo_legacy_page" data-payload='${JSON.stringify(payload)}'></div><script type="module" src="/assets/react/react-app.js"></script></body></html>` }));
+    await page.goto('http://127.0.0.1:8000/__groups');
+    const editor = page.getByRole('region', { name:'Separar jugadores', exact:true });
+    await editor.getByLabel('Cantidad de jugadores a separar').selectOption(String(numTeams));
+    for (let i = 0; i < numTeams; i++) await editor.getByLabel(['Primer jugador','Segundo jugador','Tercer jugador','Cuarto jugador'][i], { exact:true }).selectOption(String(i+1));
+    await editor.getByRole('button', { name:numTeams === 3 ? 'Agregar terna' : 'Agregar grupo de 4', exact:true }).click();
+    await expect(editor.locator('li')).toHaveCount(1);
+    await expect(editor.locator('li')).toContainText(`Jugador ${numTeams}`);
+  });
+}

@@ -1438,6 +1438,7 @@ require __DIR__ . '/includes/header.php';
               'positionRatingMode' => (string) ($selectedMatch['position_rating_mode'] ?? 'legacy'),
               'positionRatingDiscount' => (int) ($selectedMatch['position_rating_discount'] ?? 1) === 1,
               'separatedPairs' => draw_separations_from_match($selectedMatch),
+              'potsCsrf' => draw_pots_csrf(),
               'generatedPots' => json_decode((string) ($selectedMatch['draw_pots_json'] ?? 'null'), true),
               'matchId' => (int) $selectedMatch['id'],
               'match' => [

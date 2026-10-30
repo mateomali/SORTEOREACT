@@ -65,3 +65,7 @@ assert.ok(run('suggestions.every(s => s.after.lineStrengthSpread <= Math.max(2,s
   }
   console.log('OK mobility intensity, sector concentration, swaps, separation enforcement and impossible rules');
 })().catch(error => { console.error(error); process.exitCode = 1; });
+
+assert.equal(run("normalizeSeparatedPairs([[1,2,3],[3,2,1],[1,2,3,4],[1,2,2]]).length"), 2);
+assert.equal(run("separationViolations(withSeparatedPairs([[{id:1},{id:3}], [{id:2}], [{id:4}]], [[1,2,3,4]]))"), 1);
+assert.equal(run("separationViolations(withSeparatedPairs([[{id:1}], [{id:2}], [{id:3}], [{id:4}]], [[1,2,3,4]]))"), 0);

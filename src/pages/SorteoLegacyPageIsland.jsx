@@ -440,19 +440,18 @@ function isLowRhythmPlayer(player) {
 function normalizeSeparatedPairs(raw) {
   if (!Array.isArray(raw)) return [];
   const seen = new Set();
-  return raw.slice(0, 100).filter(pair => Array.isArray(pair) && pair.length === 2)
+  return raw.slice(0, 100).filter(pair => Array.isArray(pair) && pair.length >= 2 && pair.length <= 4)
     .map(pair => pair.map(String).sort()).filter(pair => {
       const key = JSON.stringify(pair);
-      if (!pair[0] || pair[0] === pair[1] || seen.has(key)) return false;
+      if (!pair[0] || new Set(pair).size !== pair.length || seen.has(key)) return false;
       seen.add(key); return true;
     });
 }
 
 function withSeparatedPairs(teams, pairs) {
   const partners = new Map();
-  for (const [a, b] of normalizeSeparatedPairs(pairs)) {
-    partners.set(a, [...(partners.get(a) || []), b]);
-    partners.set(b, [...(partners.get(b) || []), a]);
+  for (const group of normalizeSeparatedPairs(pairs)) {
+    for (const id of group) partners.set(id, [...new Set([...(partners.get(id) || []), ...group.filter(other => other !== id)])]);
   }
   return teams.map(team => team.map(player => ({ ...player, separateFrom: partners.get(playerKey(player)) || [] })));
 }
@@ -3566,19 +3565,36 @@ function ScoringSettings({ players, mode, onModeChange, discount, onDiscountChan
   </section>;
 }
 
-function SeparationEditor({ players, pairs, onChange, disabled, proposalMode }) {
-  const [first, setFirst] = useState('');
-  const [second, setSecond] = useState('');
+function SeparationEditor({ players, pairs, onChange, disabled, proposalMode, numTeams, matchId, csrf }) {
+  const [selection, setSelection] = useState(['', '', '', '']);
+  const [size, setSize] = useState(2);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
   const names = new Map(players.map(player => [playerKey(player), player.nombre]));
-  const exists = pairs.some(pair => pair.includes(first) && pair.includes(second));
+  const count = Math.min(size, numTeams);
+  const group = selection.slice(0, count);
+  const exists = pairs.some(pair => JSON.stringify([...pair].sort()) === JSON.stringify([...group].sort()));
+  async function save() {
+    setSaving(true); setMessage('');
+    try {
+      const response = await fetch('guardar_separaciones.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: matchId, csrf, separated_pairs: pairs }) });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.message || 'No se pudieron guardar las restricciones.');
+      setMessage('Restricciones guardadas para esta fecha.');
+    } catch (error) { setMessage(error.message); }
+    finally { setSaving(false); }
+  }
   return <section className="gf-separation-settings border-[#d5c49b]! bg-[#fffdf7]! p-3! shadow-none! sm:p-4!" aria-label="Separar jugadores">
-    <div className="gf-settings-heading -mx-3 -mt-3 rounded-t-md border-b border-[#d5c49b] bg-[#f1e8d2] px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4"><h3 className="text-[#574321]!">Separar jugadores</h3><span className="text-[#695631]!">{pairs.length ? `${pairs.length} pareja${pairs.length === 1 ? '' : 's'}` : 'Sin parejas obligatorias'}</span></div>
+    <div className="gf-settings-heading -mx-3 -mt-3 rounded-t-md border-b border-[#d5c49b] bg-[#f1e8d2] px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4"><h3 className="text-[#574321]!">Separar jugadores</h3><span className="text-[#695631]!">{pairs.length ? `${pairs.length} restricciones` : 'Sin parejas obligatorias'}</span></div>
+    {numTeams > 2 && <label>Cantidad de jugadores<select aria-label="Cantidad de jugadores a separar" disabled={disabled} value={count} onChange={event => setSize(Number(event.target.value))}>{Array.from({ length: numTeams - 1 }, (_, i) => i + 2).map(n => <option key={n} value={n}>{n} jugadores</option>)}</select></label>}
     <div className="gf-separation-fields">
-      {[['Primer jugador', first, setFirst], ['Segundo jugador', second, setSecond]].map(([label, value, setValue]) => <label key={label} className="grid min-w-0 gap-1">{label}<select aria-label={label} className="min-h-11 min-w-0 rounded border border-[#adc8bb] bg-white px-2" disabled={disabled} value={value} onChange={event => setValue(event.target.value)}><option value="">Elegir jugador</option>{players.map(player => <option key={playerKey(player)} value={playerKey(player)}>{player.nombre}</option>)}</select></label>)}
-      <button className="min-h-11 rounded border border-[#adc8bb] px-3 font-bold" type="button" disabled={disabled || !first || !second || first === second || exists || pairs.length >= 100} onClick={() => { onChange(normalizeSeparatedPairs([...pairs, [first, second]])); setFirst(''); setSecond(''); }}>Agregar pareja</button>
+      {group.map((value, i) => <label key={i} className="grid min-w-0 gap-1">{['Primer jugador', 'Segundo jugador', 'Tercer jugador', 'Cuarto jugador'][i]}<select aria-label={['Primer jugador', 'Segundo jugador', 'Tercer jugador', 'Cuarto jugador'][i]} className="min-h-11 min-w-0 rounded border border-[#adc8bb] bg-white px-2" disabled={disabled || saving} value={value} onChange={event => setSelection(previous => previous.map((id, index) => index === i ? event.target.value : id))}><option value="">Elegir jugador</option>{players.map(player => <option key={playerKey(player)} value={playerKey(player)}>{player.nombre}</option>)}</select></label>)}
+      <button className="min-h-11 rounded border border-[#adc8bb] px-3 font-bold" type="button" disabled={disabled || saving || group.some(id => !id) || new Set(group).size !== count || exists || pairs.length >= 100} onClick={() => { onChange(normalizeSeparatedPairs([...pairs, group])); setSelection(['', '', '', '']); setMessage('Cambios sin guardar.'); }}>{count === 2 ? 'Agregar pareja' : count === 3 ? 'Agregar terna' : 'Agregar grupo de 4'}</button>
     </div>
-    {pairs.length ? <ul className="m-0 grid list-none gap-2 p-0">{pairs.map(([a, b]) => <li key={`${a}-${b}`} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#d7e6df] pt-2"><span>{names.get(a) || `Jugador ${a}`} y {names.get(b) || `Jugador ${b}`} · separados{!names.has(a) || !names.has(b) ? ' (se aplica cuando ambos están convocados)' : ''}</span><button type="button" disabled={disabled} className="min-h-9 rounded border border-[#adc8bb] px-2" onClick={() => onChange(pairs.filter(pair => pair[0] !== a || pair[1] !== b))} aria-label={`Quitar separación entre ${names.get(a) || a} y ${names.get(b) || b}`}>Quitar</button></li>)}</ul> : null}
-    <details className="gf-scoring-help"><summary>Cómo funcionan las separaciones</summary><p>Las parejas elegidas deben quedar en equipos distintos. Se aplican al generar; los equipos actuales conservan su distribución hasta que hagas un intercambio o un nuevo sorteo. {proposalMode ? 'Estas reglas se usan en esta propuesta.' : 'Se guardan con los equipos de esta fecha.'}</p></details>
+    {pairs.length ? <ul className="m-0 grid list-none gap-2 p-0">{pairs.map((rule, index) => <li key={rule.join('-')} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#d7e6df] pt-2"><span>{rule.map(id => names.get(id) || `Jugador ${id}`).join(' y ')} · un jugador por equipo{rule.some(id => !names.has(id)) ? ' (se aplica a los convocados)' : ''}</span><button type="button" disabled={disabled || saving} onClick={() => { onChange(pairs.filter((_, i) => i !== index)); setMessage('Cambios sin guardar.'); }} aria-label={`Quitar separación entre ${rule.map(id => names.get(id) || id).join(' y ')}`}>Quitar</button></li>)}</ul> : null}
+    {!proposalMode && matchId > 0 && <button type="button" className="min-h-11 rounded border border-[#adc8bb] px-3" disabled={disabled || saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar restricciones de esta fecha'}</button>}
+    {message && <p role="status">{message}</p>}
+    <details className="gf-scoring-help"><summary>Cómo funcionan las separaciones</summary><p>Cada integrante del grupo debe quedar en un equipo distinto. Se aplican al generar; los equipos actuales conservan su distribución hasta que hagas un intercambio o un nuevo sorteo. {proposalMode ? 'Estas reglas se usan en esta propuesta.' : 'Podés guardarlas antes del sorteo y reutilizarlas en esta fecha.'}</p></details>
   </section>;
 }
 
@@ -6357,7 +6373,7 @@ export function SorteoLegacyPageIsland({ root }) {
         </div> : null}
 
         <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'gf-workflow-main'}`}>
-          <SeparationEditor players={players} pairs={separatedPairs} disabled={generating || savingDraw} proposalMode={payload.proposalMode} onChange={pairs => { setSeparatedPairs(pairs); markDrawDirty(true); }} />
+          <SeparationEditor numTeams={numTeams} matchId={payload.matchId} csrf={payload.potsCsrf} players={players} pairs={separatedPairs} disabled={generating || savingDraw} proposalMode={payload.proposalMode} onChange={pairs => { setSeparatedPairs(pairs); markDrawDirty(true); }} />
           {!isFormationEditor ? (
           <div className="gf-generation-panel grid gap-4! rounded-lg border border-[#a8bfae]! bg-white! p-3! shadow-none! sm:p-4! [&_.draw-pots-section-title]:-mx-3! [&_.draw-pots-section-title]:-mt-3! [&_.draw-pots-section-title]:rounded-t-md [&_.draw-pots-section-title]:border-0! [&_.draw-pots-section-title]:bg-[#204735]! [&_.draw-pots-section-title]:p-3! [&_.draw-pots-section-title]:text-base! [&_.draw-pots-section-title]:text-white! sm:[&_.draw-pots-section-title]:-mx-4! sm:[&_.draw-pots-section-title]:-mt-4! sm:[&_.draw-pots-section-title]:px-4!">
             <DrawPotsEditor mode={drawMode} onModeChange={setDrawMode} pots={drawPots} onChange={pots => { setDrawPots(pots); setPotsMessage(''); }} onAutoBuild={gap => {

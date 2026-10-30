@@ -568,7 +568,7 @@ Las habilidades que influyen en cada puesto se consultan en otro desplegable.
 La actualizacion agrega automaticamente matches.position_rating_mode con valor
 legacy para conservar el calculo de fechas anteriores. No cambia notas ni requiere
 importar SQL. El selector afecta al proximo sorteo, no a los equipos ya generados.
-Separar jugadores permite elegir parejas obligatorias que se guardan con la fecha;
+Separar jugadores permite parejas, ternas para triangulares y grupos de cuatro para cuadrangulares, con un jugador por equipo. El boton Guardar restricciones de esta fecha permite conservarlas antes de generar equipos y reutilizarlas al recargar la fecha;
 el servidor rechaza guardados que las incumplan. El analisis propone intercambios
 con su antes/despues de Despliegue, movilidad, puntaje y fuerza por linea.
 
