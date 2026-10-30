@@ -304,6 +304,8 @@ $navIsActive = static function (string $file) use ($activePage): bool {
     <main class="content">
       <script src="assets/formation-policy.js?v=<?= h((string) md5_file(__DIR__ . '/../assets/formation-policy.js')) ?>"></script>
       <script src="assets/player-rating.js?v=<?= h((string) md5_file(__DIR__ . '/../assets/player-rating.js')) ?>"></script>
+      <link rel="stylesheet" href="assets/team-attributes.css?v=<?= h((string) md5_file(__DIR__ . '/../assets/team-attributes.css')) ?>">
+      <script src="assets/team-attributes.js?v=<?= h((string) md5_file(__DIR__ . '/../assets/team-attributes.js')) ?>"></script>
       <script type="application/json" data-player-rating-policy><?= json_encode(array_replace(player_rating_policy(), ['weights' => player_position_stat_weights_config()]), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
       <?php foreach ($flashMessages as $msg): ?>
         <div class="flash flash-<?= h($msg['type']) ?>"><?= h($msg['message']) ?></div>

@@ -5,6 +5,7 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/repository.php';
 require_once __DIR__ . '/lib/draw_pots.php';
 require_once __DIR__ . '/lib/draw_separations.php';
+require_once __DIR__ . '/lib/draw_invitation.php';
 
 require_once __DIR__ . '/lib/director_proposals.php';
 $invitationToken = (string) ($_GET['invite'] ?? '');
@@ -213,7 +214,7 @@ if (!$invitationMode && !$proposalMode && is_admin() && $legacyMatch) {
         db()->prepare("UPDATE matches SET draw_invitation_token = ? WHERE id = ? AND (draw_invitation_token IS NULL OR draw_invitation_token = '')")->execute([$newToken, $legacyMatchId]);
         $legacyMatch = repo_match_by_id($legacyMatchId);
     }
-    $invitationUrl = 'sorteo_legacy_csv.php?match_id=' . $legacyMatchId . '&invite=' . rawurlencode($legacyMatch['draw_invitation_token']);
+    $invitationUrl = 'i.php?' . draw_invitation_short_code((string) $legacyMatch['draw_invitation_token']);
 }
 if ($invitationMode) {
     $legacyInitialTeams = [];

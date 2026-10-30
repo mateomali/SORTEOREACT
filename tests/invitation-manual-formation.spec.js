@@ -7,7 +7,7 @@ test('invitation manual formation, deferred identity and compact analysis', asyn
   const roles=['ARQ','DEF','DEF','MED','MED','DEL','DEL'];
   const teams=[0,1,2].map(t => roles.map((positions,i)=>({ id:t*7+i+1, name: t === 1 ? `Jugador de nombre largo ${i+1}` : `Jugador ${t*7+i+1}`, positions, assigned_position:positions, skill:4 })));
   const payload={ players:teams.flat(), initialTeams:[], numTeams:3, matchId:42, invitationMode, communityPlayers:teams.flat().map(player=>({id:player.id,name:player.name})), savedGoalkeeperIds:['1','8','15'], separatedPairs:[['2','9','16'],['3','10']], links:{} };
-  await page.route('**/__compact', route=>route.fulfill({ contentType:'text/html',body:`<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/tailwind.css"></head><body class="page-sorteo-legacy sorteo-page"><main class="content"><script src="/assets/player-rating.js"></script><script type="application/json" data-player-rating-policy>${policy}</script><div data-react-root data-react-island="sorteo_legacy_page" data-payload='${JSON.stringify(payload)}'></div></main><script type="module" src="/assets/react/react-app.js"></script></body></html>` }));
+  await page.route('**/__compact', route=>route.fulfill({ contentType:'text/html',body:`<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/tailwind.css"><link rel="stylesheet" href="/assets/team-attributes.css"></head><body class="page-sorteo-legacy sorteo-page"><main class="content"><script src="/assets/player-rating.js"></script><script type="application/json" data-player-rating-policy>${policy}</script><div data-react-root data-react-island="sorteo_legacy_page" data-payload='${JSON.stringify(payload)}'></div></main><script type="module" src="/assets/react/react-app.js"></script></body></html>` }));
   await page.setViewportSize({width:390,height:844});
   await page.goto('http://127.0.0.1:8000/__compact');
 
@@ -15,7 +15,37 @@ test('invitation manual formation, deferred identity and compact analysis', asyn
   await expect(page.locator('[data-invitation-summary]')).toBeVisible();
   await expect(page.locator('[data-invitation-draw-settings]')).not.toHaveAttribute('open', '');
   await page.getByLabel('Armado de equipos',{exact:true}).selectOption('manual');
+  await expect(page.locator('[data-sorteo-team-card]')).toHaveCount(0);
+  const roster = page.locator('[data-manual-roster]');
+  await expect(roster.getByRole('combobox')).toHaveCount(21);
+  await expect(roster.getByRole('button',{name:'Ubicar en cancha'})).toBeDisabled();
+  for (const [index, team] of teams.entries()) {
+    for (const player of team) await roster.getByLabel(`Equipo de ${player.name}`,{exact:true}).selectOption(String(index));
+  }
+  await roster.getByLabel('Buscar jugador',{exact:true}).fill('Jugador 2');
+  await expect(roster.getByLabel('Equipo de Jugador 2',{exact:true})).toHaveValue('0');
+  await roster.getByLabel('Buscar jugador',{exact:true}).fill('');
+  await expect(roster.getByRole('button',{name:'Ubicar en cancha'})).toBeEnabled();
+  await roster.getByLabel('Equipo de Jugador 2',{exact:true}).selectOption('1');
+  await expect(roster.getByRole('button',{name:'Ubicar en cancha'})).toBeDisabled();
+  await roster.getByLabel('Equipo de Jugador de nombre largo 3',{exact:true}).selectOption('0');
+  await expect(roster.getByRole('button',{name:'Ubicar en cancha'})).toBeDisabled();
+  await expect(roster.getByRole('alert')).toContainText('Jugador 2 y Jugador de nombre largo 2 no pueden jugar juntos por restricción');
+  await expect(page.locator('[data-sorteo-team-card]')).toHaveCount(0);
+  await roster.getByLabel('Equipo de Jugador 2',{exact:true}).selectOption('0');
+  await roster.getByLabel('Equipo de Jugador de nombre largo 3',{exact:true}).selectOption('1');
+  await expect(roster.getByRole('alert')).toHaveCount(0);
+  await expect(roster.getByRole('button',{name:'Ubicar en cancha'})).toBeEnabled();
+  for (const width of [320,390,1440]) {
+    await page.setViewportSize({width,height:844});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  }
+  await page.setViewportSize({width:390,height:844});
+  await roster.screenshot({path:'.tmp/invitation-manual-roster.png'});
+  await roster.getByRole('button',{name:'Ubicar en cancha'}).click();
   await expect(page.locator('[data-sorteo-team-card]')).toHaveCount(3);
+  await expect(page.locator('[data-sorteo-team-card]').first().getByRole('meter')).toHaveCount(9);
+  await page.locator('[data-sorteo-team-card]').first().locator('.sorteo-team-stats').screenshot({path:'.tmp/team-attribute-chart-real.png'});
   await expect(page.locator('#generateTeamsButton')).toHaveCount(0);
   await expect(page.locator('[data-invitation-draw-settings]')).toHaveCount(0);
   await page.getByRole('button',{name:'Postular mi formación',exact:true}).first().click();
@@ -33,6 +63,7 @@ test('invitation manual formation, deferred identity and compact analysis', asyn
   await expect(submit.getByRole('status')).toContainText('Propuesta recibida');
   expect(submitted.player_id).toBe('1');
   expect(submitted.teams).toHaveLength(3);
+  for (const [index, team] of submitted.teams.entries()) expect(team.players.map(player => player.id).sort((a,b)=>a-b)).toEqual(teams[index].map(player => player.id));
   expect(submitted.teams.flatMap(team => team.players).map(player => player.id).sort((a,b)=>a-b)).toEqual(Array.from({length:21},(_,index)=>index+1));
   for (const team of submitted.teams) expect(team.players.filter(player => player.assigned_position === 'ARQ')).toHaveLength(1);
   await page.keyboard.press('Escape');

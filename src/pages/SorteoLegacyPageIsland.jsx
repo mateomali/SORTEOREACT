@@ -2,6 +2,8 @@ import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useR
 import { toJpeg } from 'html-to-image';
 import { DrawPotsEditor } from './DrawPotsEditor';
 import { DrawHelp } from './DrawHelp';
+import { InvitationManualRoster } from './InvitationManualRoster';
+import '../../assets/team-attributes.js';
 import { comparePlayers } from '../player-equivalents.mjs';
 
 const FORMATION_LINES = ['ARQ', 'DEF', 'LAT', 'MED', 'DEL'];
@@ -6337,22 +6339,6 @@ export function SorteoLegacyPageIsland({ root }) {
           <label className="grid gap-1 text-sm font-bold">Armado de equipos
             <select className={inputClass} aria-label="Armado de equipos" value={invitationBuildMode} disabled={generating || postulating} onChange={event => {
               const mode = event.target.value;
-              if (mode === 'manual' && !teams) {
-                const keepers = selectedPlayers.filter(player => manualGoalkeepers[playerKey(player)] === true);
-                if (keepers.length !== numTeams || selectedPlayers.length % numTeams !== 0) {
-                  setError('La fecha debe tener un arquero por equipo y un plantel divisible en equipos iguales.');
-                  return;
-                }
-                const nextTeams = keepers.map(player => [{ ...player, manualGoalkeeper: true }]);
-                selectedPlayers.filter(player => manualGoalkeepers[playerKey(player)] !== true).forEach((player, index) => nextTeams[index % numTeams].push(player));
-                const nextAssignments = Object.assign({}, ...nextTeams.map(team => buildTeamAssignment(team)));
-                keepers.forEach(player => { nextAssignments[playerKey(player)] = 'ARQ'; });
-                setTeams(nextTeams);
-                setAssignments(nextAssignments);
-                setGeneratedPots(null);
-                setSaveState('dirty');
-                setSuccess('Formación manual lista para editar. Intercambiá jugadores y ajustá sus puestos antes de postular.');
-              }
               setInvitationBuildMode(mode);
               setMobileMoveSource(null);
             }}>
@@ -6539,6 +6525,32 @@ export function SorteoLegacyPageIsland({ root }) {
         </div> : null}
 
         <main className={`grid content-start gap-4 ${isFormationEditor ? '' : 'gf-workflow-main'}`}>
+          {payload.invitationMode && invitationBuildMode === 'manual' ? <InvitationManualRoster
+            players={selectedPlayers} teams={teams} benches={benches} numTeams={numTeams} separatedPairs={separatedPairs}
+            goalkeeperIds={new Set(Object.keys(manualGoalkeepers).filter(id => manualGoalkeepers[id]))}
+            teamName={getTeamDisplayName}
+            onApply={groups => {
+              if (separationViolations(withSeparatedPairs(groups, separatedPairs))) return 'Hay jugadores que deben estar separados. Revisá sus equipos o ajustá las restricciones.';
+              const nextTeams = groups.map(group => group.map(player => ({ ...player, manualGoalkeeper: manualGoalkeepers[playerKey(player)] === true })));
+              const keeperOverrides = Object.fromEntries(nextTeams.flat().filter(player => player.manualGoalkeeper).map(player => [playerKey(player), 'ARQ']));
+              const nextAssignments = Object.assign({}, ...nextTeams.map(team => buildTeamAssignment(team, keeperOverrides)));
+              setTeams(nextTeams);
+              setBenches({});
+              setLockedPlayerPositions({});
+              applyDefaultFormationVariants(nextTeams, nextAssignments, {}, true);
+              setGeneratedPots(null);
+              setUndoStacks({});
+              setPlayerExchanges([]);
+              setManualComparisonBefore(null);
+              setManualActionCount(0);
+              setComparisonGeneration(value => value + 1);
+              setSaveState('dirty');
+              setMobileMoveSource(null);
+              setError('');
+              setSuccess('Equipos ubicados según tu selección. Podés ajustar sus puestos en cancha.');
+              return '';
+            }}
+          /> : null}
           <SeparationEditor numTeams={numTeams} matchId={payload.matchId} goalkeeperIds={Object.keys(manualGoalkeepers).filter(id => manualGoalkeepers[id])} csrf={payload.potsCsrf} players={players} pairs={separatedPairs} disabled={generating || savingDraw} proposalMode={payload.proposalMode || payload.invitationMode} onChange={pairs => { setSeparatedPairs(pairs); markDrawDirty(true); }} >
             <div className="gf-goalkeeper-preparation grid gap-3! rounded-md border border-[#c3cebd]! bg-[#f0f3ed]! p-3!">
               <div className="gf-keeper-heading">

@@ -1,0 +1,37 @@
+.gf-team-attribute-chart {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px 16px !important;
+  width: 100%;
+}
+.gf-team-attribute-chart::before {
+  content: 'Atributos · escala de 0 a 6';
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 500;
+  color: #526b62;
+}
+.gf-team-attribute-chart > .gf-team-attribute-bar {
+  position: relative;
+  display: block !important;
+  min-width: 0;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 0 10px !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  color: #173c2e !important;
+}
+.gf-team-attribute-bar::before,
+.gf-team-attribute-bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 5px;
+  border-radius: 2px;
+}
+.gf-team-attribute-bar::before { width: 100%; background: #e2ebe6; }
+.gf-team-attribute-bar::after { width: var(--attribute-width); background: #287250; }
